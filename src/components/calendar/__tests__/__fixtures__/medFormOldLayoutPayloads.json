@@ -1,0 +1,983 @@
+{
+  "create-morning-default-daily": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-evening-explicit-daily": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "18:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-other-time": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "07:15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-once": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "12:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-weekly": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "21:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-every-other-day": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "every_other_day",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-monthly": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "monthly",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-yearly": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "yearly",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-cycle": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "18:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "cycle:21:7",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-some-days": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "recurrence_days": [
+        1,
+        3,
+        5
+      ],
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-as-needed": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "notifications_enabled": true,
+      "as_needed": true,
+      "as_needed_reason": "Headache",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-start-date": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-20",
+      "scheduled_time": "21:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-start-date-after-time": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-03-14",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-start-date-some-days": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-17",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "recurrence_days": [
+        3,
+        6
+      ],
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-end-date": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "recurrence_end_date": "2027-03-31",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-weekly-end-date": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "recurrence_end_date": "2027-05-01",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-extra-doses": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    },
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "12:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form",
+      "track_refills": false,
+      "refill_group_id": "new"
+    },
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "18:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form",
+      "track_refills": false,
+      "refill_group_id": "new"
+    }
+  ],
+  "create-extra-doses-every-other-day": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "every_other_day",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    },
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "12:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "every_other_day",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form",
+      "track_refills": false,
+      "refill_group_id": "new"
+    }
+  ],
+  "create-instructions-reminders": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "description": "With food",
+      "scheduled_date": "2027-02-10",
+      "scheduled_time": "21:00",
+      "notifications_enabled": true,
+      "reminder_at_due": false,
+      "reminder_24h": false,
+      "reminder_1h": true,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    }
+  ],
+  "create-everything": [
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "description": "Before breakfast",
+      "scheduled_date": "2027-02-15",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": false,
+      "reminder_24h": false,
+      "reminder_1h": true,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "recurrence_end_date": "2027-06-30",
+      "recurrence_days": [
+        1,
+        3,
+        5
+      ],
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form"
+    },
+    {
+      "event_type": "medication",
+      "title": "Metformin",
+      "description": "Before breakfast",
+      "scheduled_date": "2027-02-15",
+      "scheduled_time": "12:00",
+      "notifications_enabled": true,
+      "reminder_at_due": false,
+      "reminder_24h": false,
+      "reminder_1h": true,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "recurrence_end_date": "2027-06-30",
+      "recurrence_days": [
+        1,
+        3,
+        5
+      ],
+      "medication_name": "Metformin",
+      "medication_dosage": "500 mg",
+      "entry_source": "form",
+      "track_refills": false,
+      "refill_group_id": "new"
+    }
+  ],
+  "edit-untouched-daily": {
+    "eventId": "med-1",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-untouched-oneOff": {
+    "eventId": "med-2",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-20",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-untouched-weekly": {
+    "eventId": "med-3",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-untouched-someDays": {
+    "eventId": "med-4",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "recurrence_days": [
+        1,
+        3,
+        5
+      ],
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-untouched-everyOther": {
+    "eventId": "med-5",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "every_other_day",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-untouched-monthly": {
+    "eventId": "med-6",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "monthly",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-untouched-yearly": {
+    "eventId": "med-7",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "yearly",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-untouched-cycle": {
+    "eventId": "med-8",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "cycle:21:7",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-untouched-dailyEnd": {
+    "eventId": "med-9",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "description": "With food",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "recurrence_end_date": "2027-03-31",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-untouched-future": {
+    "eventId": "med-10",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-20",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-untouched-asNeeded": {
+    "eventId": "med-11",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-10",
+      "notifications_enabled": true,
+      "as_needed_reason": "Pain",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-chip": {
+    "eventId": "med-1",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "18:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-other-time": {
+    "eventId": "med-1",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "09:30",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-start-date-future": {
+    "eventId": "med-10",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-25",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-daily-to-weekly": {
+    "eventId": "med-1",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-daily-to-once": {
+    "eventId": "med-10",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-20",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-once-to-daily": {
+    "eventId": "med-2",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-20",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-daily-to-some-days": {
+    "eventId": "med-1",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "recurrence_days": [
+        1,
+        6
+      ],
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-some-days-change": {
+    "eventId": "med-4",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "recurrence_days": [
+        0,
+        1,
+        3
+      ],
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-some-days-to-daily": {
+    "eventId": "med-4",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "recurrence_days": null,
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-monthly-to-yearly": {
+    "eventId": "med-6",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "yearly",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-every-other-to-cycle": {
+    "eventId": "med-5",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "cycle:5:2",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-cycle-change": {
+    "eventId": "med-8",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "cycle:14:14",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-weekly-to-every-other": {
+    "eventId": "med-3",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "every_other_day",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-end-date": {
+    "eventId": "med-9",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "description": "With food",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "recurrence_end_date": "2027-04-30",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-instructions": {
+    "eventId": "med-9",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "description": "After food",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "recurrence_end_date": "2027-03-31",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-reminders": {
+    "eventId": "med-1",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": false,
+      "reminder_24h": false,
+      "reminder_1h": true,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-as-needed-reason": {
+    "eventId": "med-11",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril",
+      "scheduled_date": "2027-02-10",
+      "notifications_enabled": true,
+      "as_needed_reason": "Pain or fever",
+      "medication_name": "Lisinopril",
+      "medication_dosage": "10 mg"
+    }
+  },
+  "edit-name-dose": {
+    "eventId": "med-3",
+    "data": {
+      "event_type": "medication",
+      "title": "Lisinopril HCT",
+      "scheduled_date": "2027-02-01",
+      "scheduled_time": "08:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "medication_name": "Lisinopril HCT",
+      "medication_dosage": "20 mg"
+    }
+  }
+}

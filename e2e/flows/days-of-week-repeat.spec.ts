@@ -263,8 +263,9 @@ test('EN: Mon/Wed/Fri medication and Tue/Thu task land only on those days and re
   // The option sits after Cycle and just before "As needed" (the PRN option, medication-only, is LAST).
   const options = await medDialog.locator('#recurrence_rule option').allTextContents();
   expect(options[options.length - 1]).toBe('As needed');
-  expect(options[options.length - 2]).toBe('Days of the week');
-  expect(options[options.length - 3]).toMatch(/^Cycle/);
+  // The Repeat select speaks the tile words (owner 2026-11-08): "Some days", "Days on / off".
+  expect(options[options.length - 2]).toBe('Some days');
+  expect(options[options.length - 3]).toBe('Days on / off');
   await medDialog.locator('#recurrence_rule').selectOption('days_of_week');
 
   const medGroup = chipGroup(medDialog);
@@ -498,13 +499,12 @@ test('started series: anchor chip locked (+axe); switching back to Weekly stores
   await page.getByRole('menu').getByRole('menuitem', { name: 'Edit', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Edit medication' });
   await expect(dialog).toBeVisible();
-  // The edit is the add form's simple layout (owner 1.4.0): "How often?" reads Some days, the day chips
-  // open under it; the Repeat select is in More details.
+  // The edit is the add form's simple layout: "How often?" opens Custom… on Some days (the task / shift
+  // pattern, owner 2026-11-08), the day chips under it; there is no Repeat select any more.
   await expect(
-    dialog.getByRole('radiogroup', { name: 'How often?' }).getByRole('radio', { name: 'Some days' })
+    dialog.getByTestId('repeat-custom-panel').getByRole('radio', { name: 'Some days' })
   ).toBeChecked({ timeout: 20_000 });
-  await dialog.getByRole('button', { name: /More details/ }).click();
-  await expect(dialog.locator('#recurrence_rule')).toHaveValue('days_of_week', { timeout: 20_000 });
+  await expect(dialog.locator('#recurrence_rule')).toHaveCount(0);
 
   const group = chipGroup(dialog);
   const anchorName = longWeekday(a);

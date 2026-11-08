@@ -237,8 +237,7 @@ describe("the chips are the recipient's clock (mobile parity)", () => {
     const user = userEvent.setup();
     renderMed();
     await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
-    await user.click(screen.getByRole('button', { name: /More details/ }));
-    await user.clear(screen.getByLabelText(/^Start date/));
+    await user.clear(screen.getByLabelText(/^Starts/));
     await user.click(chip(/Evening/));
     expect(chip(/Evening/)).toBeChecked();
     expect(await save(user)).toMatchObject({ scheduled_date: '2026-11-01', scheduled_time: '18:00' });

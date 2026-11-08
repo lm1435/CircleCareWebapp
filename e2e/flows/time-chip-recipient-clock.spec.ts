@@ -239,7 +239,7 @@ test.describe("the browser's repeated (fall-back) hour", () => {
     await card.getByRole('button', { name: `More actions for ${name}` }).click();
     await page.getByRole('menu').getByRole('menuitem', { name: 'Edit', exact: true }).click();
     // The edit is the add form's simple layout (owner 1.4.0): the stored 08:00 London lights Morning (the
-    // chip is the recipient's clock); the start date (More details) is the viewer's day of that instant.
+    // chip is the recipient's clock); the start date ("Starts") is the viewer's day of that instant.
     const dialog = page.getByRole('dialog', { name: 'Edit medication' });
     await expect(dialog).toBeVisible({ timeout: 15_000 });
     await expect(dialog.locator('#scheduled_date')).toHaveValue(pastViewer.date, { timeout: 20_000 });
@@ -274,8 +274,7 @@ test.describe("the browser's repeated (fall-back) hour", () => {
     const name = `ZZ_E2E_REPEAT_${uniqueSuffix()}`;
     const dialog = await openMedForm(page, a.circleId);
     await dialog.locator('#medication_name').fill(name);
-    // The start date is behind More details; with no time yet it is the recipient's day the chip lands on.
-    await dialog.getByRole('button', { name: /More details/ }).click();
+    // The start date ("Starts") opens When?; with no time yet it is the recipient's day the chip lands on.
     await dialog.locator('#scheduled_date').fill(recipient.date);
     const morning = dialog.getByRole('radio', { name: /Morning/ });
     await morning.click();

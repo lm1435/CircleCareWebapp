@@ -1,6 +1,8 @@
 {
   "addEvent": {
-    "seriesEditNote": "S’applique seulement aux tâches à venir."
+    "seriesEditNote": "S’applique seulement aux tâches à venir.",
+    "seriesEditNoteMedication": "S’applique seulement aux doses à venir.",
+    "seriesEditNoteAppointment": "S’applique seulement aux rendez-vous à venir."
   },
   "eventTypes": {
     "shift": "Quart"

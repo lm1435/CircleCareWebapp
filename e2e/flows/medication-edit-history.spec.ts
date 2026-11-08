@@ -113,7 +113,8 @@ async function openEditFromMedsPage(page: Page, circleId: string, name: string):
   await expect(card).toBeVisible({ timeout: 20_000 });
   await card.getByRole('button', { name: `More actions for ${name}` }).click();
   await page.getByRole('menu').getByRole('menuitem', { name: 'Edit', exact: true }).click();
-  // The edit is the add form's simple layout (owner 1.4.0); its date and Repeat sit under More details.
+  // The edit is the add form's simple layout: the date ("Starts") opens When?, the repeat is How often?
+  // (the task / shift pattern, owner 2026-11-08).
   const dialog = page.getByRole('dialog', { name: 'Edit medication' });
   await expect(dialog).toBeVisible({ timeout: 15_000 });
   return dialog;
@@ -249,9 +250,9 @@ test('frequency edit (daily -> weekly) keeps the taken history and prunes the of
   expect(takenRows).toHaveLength(3);
 
   const dialog = await openEditFromMedsPage(page, circleId, name);
-  await openMoreDetails(dialog);
-  await expect(dialog.locator('#recurrence_rule')).toHaveValue('daily', { timeout: 20_000 });
-  await dialog.locator('#recurrence_rule').selectOption('weekly');
+  const howOften = dialog.getByRole('radiogroup', { name: 'How often?' });
+  await expect(howOften.getByRole('radio', { name: 'Every day' })).toBeChecked({ timeout: 20_000 });
+  await howOften.getByRole('radio', { name: 'Every week' }).click();
   await saveChanges(page, dialog, circleId, rootId);
 
   const rows = seriesRows(rootId);

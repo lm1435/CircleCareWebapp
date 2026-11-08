@@ -2368,12 +2368,18 @@ describe('AddEventModal — days of the week', () => {
     return user;
   }
 
-  it('offers "Days of the week" as the LAST repeat option, right after Cycle', () => {
+  it('offers "Some days" as the LAST repeat option, right after Days on / off (the tile words)', () => {
     render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
     const options = within(screen.getByLabelText('Repeat')).getAllByRole('option');
-    expect(options.map((o) => o.textContent).slice(-2)).toEqual([
-      'Cycle (days on / off)',
-      'Days of the week',
+    expect(options.map((o) => o.textContent)).toEqual([
+      'Once',
+      'Every day',
+      'Every other day',
+      'Every week',
+      'Monthly',
+      'Yearly',
+      'Days on / off',
+      'Some days',
     ]);
     expect(options[options.length - 1]).toHaveValue('days_of_week');
     // Hidden until chosen, like the Cycle inputs.
@@ -2683,7 +2689,7 @@ describe('AddEventModal — days of the week', () => {
 
 // ── B9b: PK21 start/end + PK23 zone note ─────────────────────────────────────
 describe('PK21: moving the start moves the end', () => {
-  const timeInput = () => screen.getByLabelText(/^Time/) as HTMLInputElement;
+  const timeInput = () => screen.getByLabelText(/^Time/, { selector: 'input' }) as HTMLInputElement;
   const endInput = () => screen.getByLabelText(/^End time/) as HTMLInputElement;
 
   it('keeps the duration when the start changes (edit: 14:00 NY = 12:00 MT, 60 min)', async () => {
@@ -2751,7 +2757,7 @@ describe('PK21: editing a row stored without a duration', () => {
   it('moving its start does not invent an end', async () => {
     const stored = makeEvent({ scheduled_time: '14:00:00' });
     render(<AddEventModal circleId={CIRCLE_ID} event={stored} onClose={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/^Time/), { target: { value: '16:00' } });
+    fireEvent.change(screen.getByLabelText(/^Time/, { selector: 'input' }), { target: { value: '16:00' } });
     expect((screen.getByLabelText(/^End time/) as HTMLInputElement).value).toBe('');
   });
 });
@@ -2940,7 +2946,7 @@ describe('AddEventModal — editing a recurring TASK series from any occurrence'
     expect(titleInput()).toHaveValue('Water the plants');
   });
 
-  describe('the series note is for recurring TASK edits only', () => {
+  describe('the series note: one line above Save on every recurring edit, in that type\'s words', () => {
     it('absent on a one-off task edit', () => {
       render(
         <AddEventModal
@@ -2954,7 +2960,7 @@ describe('AddEventModal — editing a recurring TASK series from any occurrence'
       expect(document.getElementById('add-event-form')).not.toHaveAttribute('aria-describedby');
     });
 
-    it('absent on a recurring APPOINTMENT edit', () => {
+    it('a recurring APPOINTMENT edit: "Applies to upcoming appointments only.", no notice card', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
@@ -2963,10 +2969,19 @@ describe('AddEventModal — editing a recurring TASK series from any occurrence'
         />
       );
       expect(screen.getByLabelText(/^Date/)).toBeInTheDocument();
+      expect(screen.getByTestId('series-edit-note')).toHaveTextContent('Applies to upcoming appointments only.');
+      expect(screen.getAllByTestId('series-edit-note')).toHaveLength(1);
+      expect(screen.queryByRole('note')).toBeNull();
+      expect(screen.queryByText(/This event repeats/)).toBeNull();
+      expect(document.getElementById('add-event-form')).toHaveAttribute('aria-describedby', 'series-edit-note');
+    });
+
+    it('a one-off APPOINTMENT edit has no note', () => {
+      render(<AddEventModal circleId={CIRCLE_ID} event={makeEvent({ event_type: 'appointment' })} onClose={vi.fn()} />);
       expect(screen.queryByTestId('series-edit-note')).toBeNull();
     });
 
-    it('absent on a recurring MEDICATION edit', () => {
+    it('a recurring MEDICATION edit: "Applies to upcoming doses only."', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
@@ -2980,7 +2995,8 @@ describe('AddEventModal — editing a recurring TASK series from any occurrence'
         />
       );
       expect(screen.getByTestId('simple-medication-form')).toBeInTheDocument();
-      expect(screen.queryByTestId('series-edit-note')).toBeNull();
+      expect(screen.getByTestId('series-edit-note')).toHaveTextContent('Applies to upcoming doses only.');
+      expect(screen.queryByRole('note')).toBeNull();
     });
 
     it('absent when creating a task', () => {

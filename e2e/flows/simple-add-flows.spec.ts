@@ -10,11 +10,12 @@ import { checkA11y } from '../helpers';
 //
 //   Add menu: Med, Appt, Task, Note, Shift for EVERYONE. At a large root font
 //   (24px) it becomes a vertical list of full-word rows.
-//   New medication: "What is it?" / "When?" (4 time chips + Other time + "+ Another
-//   dose") / "How often?" (Every day, Some days, When needed) / "More details".
-//   Save = "Add medication". No Medication/Appointment/Task type switch.
-//   New appointment: "What is it?" then "When?" then "Who's going?", optional rows
-//   after. Save = "Add appointment".
+//   New medication: "What is it?" / "When?" ("Starts" date, 4 time chips + Other time +
+//   "+ Another dose") / "How often?" (Every day, Every week, When needed, Custom…) /
+//   "More details". Save = "Add medication". No Medication/Appointment/Task type switch.
+//   New appointment (the task / shift pattern, owner 2026-11-08): "What is it?" / "When?"
+//   (date, Time tile, Any time) / "How often?" / "Who's going?" / "More details".
+//   Save = "Add appointment".
 //
 // A fresh owner + circle per test: the writes are asserted in the REAL database.
 
@@ -201,8 +202,11 @@ test.describe('New medication (simple form)', () => {
     await expect(dialog.getByRole('button', { name: 'Other time' })).toBeVisible();
     // No "+ Another dose" until a time is chosen.
     await expect(dialog.getByTestId('add-another-dose')).toHaveCount(0);
-    // Every day is the default How-often answer.
+    // The "Starts" date opens When?; Every day is the default How-often answer, Custom… holds the rest.
+    await expect(dialog.getByLabel(/^Starts/)).toBeVisible();
     await expect(dialog.getByRole('radio', { name: 'Every day' })).toBeChecked();
+    await expect(dialog.getByRole('radio', { name: 'Every week' })).toBeVisible();
+    await expect(dialog.getByTestId('repeat-custom')).toHaveAttribute('aria-expanded', 'false');
     // More details starts collapsed.
     await expect(dialog.getByRole('button', { name: /More details/ })).toHaveAttribute('aria-expanded', 'false');
   });
@@ -298,6 +302,7 @@ test.describe('New medication (simple form)', () => {
     let dialog = await openMedForm(page, a.circleId);
     await dialog.locator('#medication_name').fill(daysName);
     await dialog.getByRole('radio', { name: /Midday/ }).click();
+    await dialog.getByTestId('repeat-custom').click();
     await dialog.getByRole('radio', { name: 'Some days' }).click();
     // The weekday picker appears; pick Monday and Friday on top of the start day.
     const picker = dialog.getByRole('group', { name: 'Repeat on' });
@@ -471,12 +476,11 @@ test.describe('New appointment (simple form)', () => {
     await expect(dialog).toBeVisible();
 
     const headings = await dialog.locator('[id^="sf-"]').evaluateAll((els) => els.map((e) => e.textContent?.trim()));
-    expect(headings).toEqual(['What is it?', 'When?', "Who's going?"]);
-    // Optional rows after the three sections, in order.
-    const rows = await dialog
-      .locator('#row-doctor, #row-place, #row-notes, #row-repeat')
-      .evaluateAll((els) => els.map((e) => e.id));
-    expect(rows.length).toBeGreaterThan(0);
+    expect(headings).toEqual(['What is it?', 'When?', 'How often?', "Who's going?"]);
+    // One More details (no Doctor / Place / Notes / Repeat rows).
+    await expect(dialog.locator('#row-doctor, #row-place, #row-notes, #row-repeat')).toHaveCount(0);
+    await expect(dialog.locator('#more-details')).toHaveAttribute('aria-expanded', 'false');
+    await expect(dialog.getByRole('radio', { name: 'Once' })).toBeChecked();
     // "Anyone" first in Who's going.
     await expect(dialog.getByRole('radio', { name: 'Anyone' })).toBeChecked();
 
@@ -484,7 +488,9 @@ test.describe('New appointment (simple form)', () => {
     await dialog.locator('#title').fill(title);
     const tz = TZ;
     await dialog.locator('#scheduled_date').fill(dateInTz(tz, 3));
+    await dialog.getByTestId('appt-time-tile').click();
     await dialog.locator('#scheduled_time').fill('14:30');
+    await dialog.locator('#more-details').click();
     await dialog.locator('#endTime').fill('15:30');
     const posts = countRequests(page, 'POST', EVENTS_POST);
     await dialog.getByRole('button', { name: 'Add appointment' }).click();

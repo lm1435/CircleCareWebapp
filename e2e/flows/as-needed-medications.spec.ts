@@ -134,8 +134,8 @@ test('add a PRN medication in the form: As needed hides the schedule, saves the 
     await form.getByRole('radio', { name: 'When needed' }).click();
     await expect(form.getByRole('radiogroup', { name: /time/i })).toHaveCount(0);
     await expect(form.getByTestId('add-another-dose')).toHaveCount(0);
+    await expect(form.getByLabel(/^Starts/)).toHaveCount(0);
     await form.getByRole('button', { name: /More details/ }).click();
-    await expect(form.getByLabel(/^Start date/)).toHaveCount(0);
     await expect(form.getByLabel(/minimum|maximum|interval/i)).toHaveCount(0);
     await checkA11y(page, 'add medication dialog (How often: When needed)', testInfo, { wcag22: true });
     await form.getByLabel(/What is it for\?/).fill('back pain');

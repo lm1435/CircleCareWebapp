@@ -38,7 +38,7 @@ import {
 } from '@/lib/analytics';
 import { MED_TIME_CHIPS, chipForTime } from '@/lib/medTimeOfDay';
 import {
-  simpleAppointmentOpenRows,
+  simpleAppointmentMoreOpen,
   simpleMedicationMoreOpen,
   simpleTaskMoreOpen,
 } from '@/utils/simpleEditDisclosure';
@@ -535,10 +535,19 @@ function AddEventForm({
   const targetEventId = isEditing ? event.parent_event_id || event.id : undefined;
   // Editing any instance of a recurring event rewrites the whole series — warn.
   const isRecurringEdit = isEditing && (!!event.parent_event_id || !!event.recurrence_rule);
-  // A recurring TASK can be edited from ANY occurrence, completed and past ones
+  // A recurring series can be edited from ANY occurrence, completed and past ones
   // included (owner decision 2026-10-10). The save rewrites the series but the
-  // backend leaves completed/past days as they were — say so, calmly.
-  const showSeriesEditNote = isRecurringEdit && event.event_type === 'task';
+  // backend leaves completed/past days as they were — say so, calmly, ONCE, above
+  // Save (owner 2026-11-08: the same line on the medication, appointment and task
+  // forms, in that type's words; no notice card at the top).
+  const showSeriesEditNote = isRecurringEdit;
+  const seriesEditNoteText = !isEditing
+    ? ''
+    : event.event_type === 'medication'
+      ? t('addEvent.seriesEditNoteMedication')
+      : event.event_type === 'appointment'
+        ? t('addEvent.seriesEditNoteAppointment')
+        : t('addEvent.seriesEditNote');
 
   // History-based title quick-fill source (QP6) — and the first place the
   // series root is looked for, below. Cache read only, no fetching.
@@ -934,21 +943,18 @@ function AddEventForm({
     () =>
       isEditing &&
       ((simpleKind === 'medication' && simpleMedicationMoreOpen(event)) ||
+        (simpleKind === 'appointment' && simpleAppointmentMoreOpen(event, DEFAULT_DURATION_MINUTES)) ||
         (simpleKind === 'task' && simpleTaskMoreOpen(event, DEFAULT_DURATION_MINUTES)))
   );
   const [otherTimeOpen, setOtherTimeOpen] = useState(false);
-  // The task form's "Time" tile (reveals the time field) and "Custom…" (reveals the rarer repeat rules).
+  // The task / appointment forms' "Time" tile (reveals the time field) and every simple form's "Custom…"
+  // (reveals the rarer repeat rules). One form is mounted at a time, so they share the state.
   const [pickTimeOpen, setPickTimeOpen] = useState(false);
   const [taskCustomOpen, setTaskCustomOpen] = useState(false);
   // "+ Another dose" (NEW medication only): extra dose times, viewer-frame HH:MM. Each one is saved
   // as its OWN medication row after the primary (the same sequence as mobile's AddEventScreen and
   // the first-run wizard), pointing at the primary's bottle through `refill_group_id`.
   const [extraTimes, setExtraTimes] = useState<string[]>([]);
-  const [openRows, setOpenRows] = useState<Record<string, boolean>>(() =>
-    isEditing && simpleKind === 'appointment' ? simpleAppointmentOpenRows(event) : {}
-  );
-  const setRowOpen = (rowId: string, open: boolean): void =>
-    setOpenRows((prev) => ({ ...prev, [rowId]: open }));
   // The schedule (rule, days, end date) is the series ROOT's, which may land after mount:
   // once it does, a repeat stored there opens its disclosure too. Once per form, opening only.
   const editDisclosureRootRef = useRef(false);
@@ -957,7 +963,7 @@ function AddEventForm({
     editDisclosureRootRef.current = true;
     const source = { ...event, ...scheduleSource };
     if (simpleKind === 'medication' && simpleMedicationMoreOpen(source)) setMoreOpen(true);
-    if (simpleKind === 'appointment' && simpleAppointmentOpenRows(source).repeat) setRowOpen('repeat', true);
+    if (simpleKind === 'appointment' && simpleAppointmentMoreOpen(source, DEFAULT_DURATION_MINUTES)) setMoreOpen(true);
     if (simpleKind === 'task' && simpleTaskMoreOpen(source, DEFAULT_DURATION_MINUTES)) setMoreOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the root resolves
   }, [scheduleSource]);
@@ -1435,9 +1441,8 @@ function AddEventForm({
     setLocation(address);
     setLocationFilledFrom(provider.name);
     clearError('location');
-    // The simple form's Place row opens on what it was filled with (mobile parity); its
-    // toggle folds it again like any other row, the address shown in the row.
-    setRowOpen('place', true);
+    // The simple form's More details opens on what it was filled with (mobile parity).
+    if (simpleKind === 'appointment') setMoreOpen(true);
   }
 
   useEffect(() => {
@@ -1860,7 +1865,7 @@ function AddEventForm({
     if (simpleKind === null) return false;
     let revealed = false;
     if (simpleKind === 'medication') {
-      const hidden = ['scheduled_date', 'description', 'recurrence_rule', 'recurrence_end_date'];
+      const hidden = ['description', 'recurrence_end_date'];
       if (hidden.some((k) => fieldErrors[k]) && !moreOpen) {
         setMoreOpen(true);
         revealed = true;
@@ -1876,16 +1881,14 @@ function AddEventForm({
         revealed = true;
       }
     } else {
-      const rows: Record<string, string[]> = {
-        place: ['location'],
-        notes: ['description'],
-        repeat: ['recurrence_rule', RECURRENCE_DAYS_ID, 'recurrence_end_date'],
-      };
-      for (const [row, keys] of Object.entries(rows)) {
-        if (keys.some((k) => fieldErrors[k]) && !openRows[row]) {
-          setRowOpen(row, true);
-          revealed = true;
-        }
+      const hidden = ['provider_id', 'location', 'description', 'endTime', 'recurrence_end_date'];
+      if (hidden.some((k) => fieldErrors[k]) && !moreOpen) {
+        setMoreOpen(true);
+        revealed = true;
+      }
+      if (fieldErrors.scheduled_time && !showTaskTimeField) {
+        setPickTimeOpen(true);
+        revealed = true;
       }
     }
     return revealed;
@@ -2073,12 +2076,6 @@ function AddEventForm({
       el.scrollIntoView?.({ block: 'center' });
       el.focus({ preventScroll: true });
     };
-    // The start date lives in "More details" on the simple medication form.
-    if (simpleKind === 'medication' && missingField === 'date' && !moreOpen) {
-      setMoreOpen(true);
-      setTimeout(focusIt, 0);
-      return;
-    }
     focusIt();
   }
 
@@ -2621,14 +2618,17 @@ function AddEventForm({
     return Number.isFinite(h) && Number.isFinite(m) ? formatTimeOfDay(h, m, hourCycle) : undefined;
   })();
 
-  const howOftenValue = ['daily', 'days_of_week', 'as_needed'].includes(recurrence)
-    ? recurrence
-    : null;
-
   const dateFieldBlock = !isAsNeeded ? (
     <DateField
       id="scheduled_date"
-      label={isMedication ? t('addEvent.simple.startDate') : t('addEvent.fields.date')}
+      // The simple medication form's "When?" opens on it: "Starts" (the task / shift pattern's date row).
+      label={
+        simpleKind === 'medication'
+          ? t('addEvent.simple.starts')
+          : isMedication
+            ? t('addEvent.simple.startDate')
+            : t('addEvent.fields.date')
+      }
       required
       value={dateStr}
       today={pickerToday}
@@ -2660,6 +2660,88 @@ function AddEventForm({
       }}
     />
   );
+
+  // ── "How often?" on the medication and appointment forms (owner 2026-11-08, "cohesiveness") ──
+  // The task / shift form's grid: the common answers as tiles, then "Custom…" opening the rarer repeats in
+  // place (the day chips and the cycle inputs under it). Same `chooseRecurrence` as the Repeat select it
+  // replaces, so the save is unchanged (medPayloadEquality / apptPayloadEquality pin it).
+  const sharedCustomRepeatOptions = [
+    { value: 'every_other_day', label: t('addEvent.simple.everyOtherDay') },
+    { value: 'cycle', label: t('addEvent.simple.daysOnOff') },
+    { value: 'days_of_week', label: t('addEvent.simple.someDays') },
+    { value: 'monthly', label: t('addEvent.simple.monthly') },
+    { value: 'yearly', label: t('addEvent.simple.yearly') },
+  ];
+  function howOftenGrid(
+    main: Array<{ value: string; label: string }>,
+    custom: Array<{ value: string; label: string }>,
+    locked: boolean
+  ): ReactElement {
+    const mainValue = main.some((o) => o.value === recurrence) ? recurrence : null;
+    const customSelected = custom.some((o) => o.value === recurrence);
+    const customShown = !locked && (taskCustomOpen || customSelected);
+    const pick = (next: string | null): void => {
+      if (!next) return;
+      chooseRecurrence(next as RecurrenceChoice);
+      completeStep('how_often');
+    };
+    return (
+      <>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 [&_[role=radio]]:w-full [&>button]:w-full">
+          <ChipSelect
+            id="how-often"
+            label={t('addEvent.simple.howOften')}
+            variant="tile"
+            contents
+            allowDeselect={false}
+            disabled={locked}
+            options={main}
+            value={mainValue}
+            onChange={(next) => {
+              pick(next);
+              if (next) setTaskCustomOpen(false);
+            }}
+          />
+          <ChoiceTileButton
+            testId="repeat-custom"
+            label={t('addEvent.simple.custom')}
+            selected={customSelected}
+            expanded={customShown}
+            disabled={locked}
+            onClick={() => {
+              // While a custom rule is the answer the options stay open (the choice lives there).
+              if (customSelected) return;
+              setTaskCustomOpen(!taskCustomOpen);
+            }}
+          />
+        </div>
+        {customShown && (
+          <Card
+            variant="outlined"
+            padding="none"
+            className="flex flex-col gap-2 p-3"
+            data-testid="repeat-custom-panel"
+          >
+            <Eyebrow id="sf-repeat-custom">{t('addEvent.simple.customHeading')}</Eyebrow>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 [&_[role=radio]]:w-full">
+              <ChipSelect
+                id="how-often-custom"
+                label={t('addEvent.simple.customHeading')}
+                variant="tile"
+                contents
+                allowDeselect={false}
+                options={custom}
+                value={customSelected ? recurrence : null}
+                onChange={pick}
+              />
+            </div>
+          </Card>
+        )}
+        {daysBlock}
+        {cycleBlock}
+      </>
+    );
+  }
 
   const simpleMedicationFields = (
     <div className="flex flex-col gap-6" data-testid="simple-medication-form" data-large-text={largeText}>
@@ -2718,6 +2800,8 @@ function AddEventForm({
       {!isAsNeeded && (
         <section aria-labelledby="sf-when" className="flex flex-col gap-3">
           {sectionHeading('sf-when', t('addEvent.simple.when'))}
+          {/* The task / shift pattern: the date first ("Starts"), then the dose times. */}
+          {dateFieldBlock}
           <TimeChips
             id="time-chips"
             value={recipientClock}
@@ -2738,20 +2822,19 @@ function AddEventForm({
               time: timeStr !== '' && litChip === null ? otherTimeClock : undefined,
               onClick: openOtherTime,
             }}
+            // Create only, as on the full form: each extra dose is saved as its own medication. A tile of the
+            // same row (owner 2026-11-08), after "Other time".
+            extra={
+              !isEditing && timeStr && extraTimes.length < 3 ? (
+                <ChoiceTileButton
+                  testId="add-another-dose"
+                  label={t('addEvent.simple.anotherDose')}
+                  subSpacer
+                  onClick={addExtraDose}
+                />
+              ) : undefined
+            }
           />
-          {/* Create only, as on the full form: each extra dose is saved as its own medication. */}
-          {!isEditing && timeStr && extraTimes.length < 3 && (
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                data-testid="add-another-dose"
-                onClick={addExtraDose}
-                className="min-h-[44px] cursor-pointer border-0 bg-transparent p-0 text-base font-semibold text-moss-deep underline-offset-2 hover:underline"
-              >
-                {t('addEvent.simple.anotherDose')}
-              </button>
-            </div>
-          )}
           {showOtherTime && (
             <TimeField
               id="scheduled_time"
@@ -2839,63 +2922,49 @@ function AddEventForm({
 
       <section aria-labelledby="sf-how-often" className="flex flex-col gap-3">
         {sectionHeading('sf-how-often', t('addEvent.simple.howOften'))}
-        <ChipSelect
-          id="how-often"
-          label={t('addEvent.simple.howOften')}
-          allowDeselect={false}
-          // The SAME tiles and wrap as the "When?" chips, on add and edit alike (owner 1.4.0).
-          variant="tile"
-          // Scheduled <-> as needed is locked after create (the server refuses it): an edit of a
-          // scheduled medication never offers "When needed"; an as-needed one shows it, disabled.
-          disabled={isAsNeededEdit}
-          options={[
+        {/* Every day / Every week / When needed, then Custom… (Once and the rarer repeats). Scheduled <-> as
+            needed is locked after create (the server refuses it): an edit of a scheduled medication never
+            offers "When needed"; an as-needed one shows it lit and the whole choice disabled. */}
+        {howOftenGrid(
+          [
             { value: 'daily', label: t('addEvent.simple.everyDay') },
-            { value: 'days_of_week', label: t('addEvent.simple.someDays') },
+            { value: 'weekly', label: t('addEvent.simple.everyWeek') },
             ...(isEditing && !isAsNeededEdit
               ? []
               : [{ value: 'as_needed', label: t('addEvent.simple.whenNeeded') }]),
-          ]}
-          value={howOftenValue}
-          onChange={(next) => {
-            if (!next) return;
-            chooseRecurrence(next as RecurrenceChoice);
-            completeStep('how_often');
-          }}
-        />
+          ],
+          // "Once" (a one-off dose) has no tile of its own on a medication: it lives behind Custom….
+          [{ value: 'none', label: t('addEvent.simple.once') }, ...sharedCustomRepeatOptions],
+          isAsNeededEdit
+        )}
         {isAsNeededEdit && (
           <p className="m-0 text-sm text-ink-2" data-testid="as-needed-locked-how-often">
             {t('addEvent.asNeeded.lockedRepeat')}
           </p>
         )}
-        {/* A repeat the three answers cannot name (monthly, a cycle...) is named here, and
-            stays editable under More details (mobile parity: never converted). */}
-        {!isAsNeeded && howOftenValue === null && recurrence !== 'none' && (
-          <Text variant="caption" data-testid="how-often-summary">
-            {recurrenceOptions.find((o) => o.value === recurrence)?.label}
-          </Text>
-        )}
         {asNeededReasonBlock}
-        {daysBlock}
       </section>
 
       <DisclosureRow
         id="more-details"
         title={t('addEvent.simple.moreDetails')}
         summary={t('addEvent.simple.moreDetailsSummary')}
+        wrapSummary
         open={moreOpen}
         onToggle={setMoreOpen}
       >
-        {dateFieldBlock}
         {detailsBlock}
-        {repeatSelectBlock}
-        {cycleBlock}
         {endDateBlock}
         {reminderBlock}
       </DisclosureRow>
     </div>
   );
 
-  const placeSummary = location.trim() || t('addEvent.simple.add');
+  /** The appointment's start on the VIEWER's clock (its field's frame), as the "Time" tile names it once set. */
+  const viewerTimeClock = (() => {
+    const [h, m] = timeStr.split(':').map(Number);
+    return timeStr && Number.isFinite(h) && Number.isFinite(m) ? formatTimeOfDay(h, m, hourCycle) : undefined;
+  })();
   const simpleAppointmentFields = (
     <div className="flex flex-col gap-6" data-testid="simple-appointment-form" data-large-text={largeText}>
       <section
@@ -2919,11 +2988,12 @@ function AddEventForm({
             clearError(titleFieldId, 'title');
           }}
         />
-        {showTitleSuggestions && (
+        {/* At most 3, on a NEW appointment, only while the title is empty (the task form's rule). */}
+        {!isEditing && title.trim() === '' && titleSuggestions.length > 0 && (
           <ChipSelect
             id="title-suggestions"
             label={t('addEvent.titleSuggestions.label')}
-            options={titleSuggestions}
+            options={titleSuggestions.slice(0, 3)}
             value={title}
             onChange={(next) => {
               setTitle(next ?? '');
@@ -2938,33 +3008,119 @@ function AddEventForm({
 
       <section aria-labelledby="sf-when" className="flex flex-col gap-3">
         {sectionHeading('sf-when', t('addEvent.simple.when'))}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {dateFieldBlock}
+        {/* The task / shift pattern: the date, then a "Time" tile (revealing the time field) and "Any time".
+            The same viewer-frame fields as before, so the save is unchanged. */}
+        {dateFieldBlock}
+        <div className="flex flex-wrap gap-2" data-testid="appt-time-row">
+          <ChoiceTileButton
+            hierarchy="value"
+            label={t('addEvent.fields.time')}
+            sub={viewerTimeClock ?? t('addEvent.simple.pickTime')}
+            selected={timeStr !== ''}
+            expanded={showTaskTimeField}
+            testId="appt-time-tile"
+            onClick={toggleTaskTime}
+          />
+          <ChipSelect
+            id="appt-time"
+            label={t('addEvent.fields.time')}
+            variant="tile"
+            contents
+            allowDeselect={false}
+            options={[{ value: 'any', label: t('addEvent.simple.anyTime') }]}
+            value={timeStr ? null : 'any'}
+            onChange={() => {
+              setPickTimeOpen(false);
+              changeTime('');
+              completeStep('when');
+            }}
+          />
+        </div>
+        {showTaskTimeField && (
           <TimeField
             id="scheduled_time"
             label={t('addEvent.fields.time')}
             value={timeStr}
             error={errors.scheduled_time ?? missingErrorFor('time')}
-            hint={conversionText ?? t('addEvent.hints.timeOptional')}
+            hint={conversionText ?? undefined}
             onChange={(e) => {
               changeTime(e.target.value);
               if (e.target.value) completeStep('when');
             }}
           />
-        </div>
+        )}
+      </section>
+
+      <section aria-labelledby="sf-how-often" className="flex flex-col gap-3">
+        {sectionHeading('sf-how-often', t('addEvent.simple.howOften'))}
+        {howOftenGrid(
+          [
+            { value: 'none', label: t('addEvent.simple.once') },
+            { value: 'daily', label: t('addEvent.simple.everyDay') },
+            { value: 'weekly', label: t('addEvent.simple.everyWeek') },
+          ],
+          sharedCustomRepeatOptions,
+          false
+        )}
+      </section>
+
+      <section aria-labelledby="sf-who" className="flex flex-col gap-3">
+        {sectionHeading('sf-who', t('addEvent.simple.whoIsGoing'))}
+        {/* The task's "Who's doing it?" tiles: Anyone, Me (the signed-in member), then every other member. */}
+        <ChipSelect
+          id="assigned_to"
+          label={t('addEvent.simple.whoIsGoing')}
+          variant="tile"
+          allowDeselect={false}
+          options={taskWhoOptions}
+          value={assignedTo ?? ''}
+          onChange={(next) => {
+            setAssignedTo(next || null);
+            completeStep('who');
+          }}
+        />
+      </section>
+
+      <DisclosureRow
+        id="more-details"
+        title={t('addEvent.simple.moreDetails')}
+        summary={t('addEvent.simple.apptMoreHint')}
+        wrapSummary
+        open={moreOpen}
+        onToggle={setMoreOpen}
+      >
+        <DoctorField
+          circleId={circleId}
+          value={providerId}
+          storedValue={isEditing ? storedProviderId : null}
+          appliesToSeries={isRecurringEdit}
+          busy={isPending}
+          onChange={(id, provider) => {
+            setProviderId(id);
+            chooseDoctorLocation(provider);
+          }}
+        />
+        <TextField
+          id="location"
+          label={t('addEvent.fields.location')}
+          value={location}
+          maxLength={250}
+          error={errors.location}
+          hint={
+            locationFilledFrom
+              ? t('addEvent.doctor.filledFrom', { name: locationFilledFrom })
+              : undefined
+          }
+          placeholder={t('addEvent.placeholders.location')}
+          onChange={(e) => {
+            setLocation(e.target.value);
+            setLocationFilledFrom(null);
+            clearError('location');
+          }}
+        />
+        {/* Length: only with a time to measure from. */}
         {timeStr && (
           <>
-            <TimeField
-              id="endTime"
-              label={t('addEvent.fields.endTime')}
-              required={!isEditingWithoutDuration}
-              value={endTimeStr}
-              error={errors.endTime}
-              onChange={(e) => {
-                setEndTimeStr(e.target.value);
-                clearError('endTime');
-              }}
-            />
             <ChipSelect
               id="duration-presets"
               label={t('addEvent.fields.duration')}
@@ -2979,94 +3135,23 @@ function AddEventForm({
                 clearError('endTime');
               }}
             />
+            <TimeField
+              id="endTime"
+              label={t('addEvent.fields.endTime')}
+              required={!isEditingWithoutDuration}
+              value={endTimeStr}
+              error={errors.endTime}
+              onChange={(e) => {
+                setEndTimeStr(e.target.value);
+                clearError('endTime');
+              }}
+            />
           </>
         )}
-      </section>
-
-      <section aria-labelledby="sf-who" className="flex flex-col gap-3">
-        {sectionHeading('sf-who', t('addEvent.simple.whoIsGoing'))}
-        <ChipSelect
-          id="assigned_to"
-          label={t('addEvent.simple.whoIsGoing')}
-          allowDeselect={false}
-          options={assigneeOptions}
-          value={assignedTo ?? ''}
-          onChange={(next) => {
-            setAssignedTo(next || null);
-            completeStep('who');
-          }}
-        />
-      </section>
-
-      <div className="flex flex-col">
-        <DisclosureRow
-          id="row-doctor"
-          title={t('addEvent.simple.doctor')}
-          summary={providerId ? t('addEvent.simple.added') : t('addEvent.simple.add')}
-          open={!!openRows.doctor}
-          onToggle={(open) => setRowOpen('doctor', open)}
-        >
-          <DoctorField
-            circleId={circleId}
-            value={providerId}
-            storedValue={isEditing ? storedProviderId : null}
-            appliesToSeries={isRecurringEdit}
-            busy={isPending}
-            onChange={(id, provider) => {
-              setProviderId(id);
-              chooseDoctorLocation(provider);
-            }}
-          />
-        </DisclosureRow>
-        <DisclosureRow
-          id="row-place"
-          title={t('addEvent.simple.place')}
-          summary={placeSummary}
-          open={!!openRows.place}
-          onToggle={(open) => setRowOpen('place', open)}
-        >
-          <TextField
-            id="location"
-            label={t('addEvent.fields.location')}
-            value={location}
-            maxLength={250}
-            error={errors.location}
-            hint={
-              locationFilledFrom
-                ? t('addEvent.doctor.filledFrom', { name: locationFilledFrom })
-                : undefined
-            }
-            placeholder={t('addEvent.placeholders.location')}
-            onChange={(e) => {
-              setLocation(e.target.value);
-              setLocationFilledFrom(null);
-              clearError('location');
-            }}
-          />
-        </DisclosureRow>
-        <DisclosureRow
-          id="row-notes"
-          title={t('addEvent.simple.notesAndReminders')}
-          summary={description.trim() ? t('addEvent.simple.added') : t('addEvent.simple.add')}
-          open={!!openRows.notes}
-          onToggle={(open) => setRowOpen('notes', open)}
-        >
-          {detailsBlock}
-          {reminderBlock}
-        </DisclosureRow>
-        <DisclosureRow
-          id="row-repeat"
-          title={t('addEvent.simple.repeat')}
-          summary={recurrenceOptions.find((o) => o.value === recurrence)?.label}
-          open={!!openRows.repeat}
-          onToggle={(open) => setRowOpen('repeat', open)}
-        >
-          {repeatSelectBlock}
-          {daysBlock}
-          {cycleBlock}
-          {endDateBlock}
-        </DisclosureRow>
-      </div>
+        {detailsBlock}
+        {endDateBlock}
+        {reminderBlock}
+      </DisclosureRow>
     </div>
   );
 
@@ -3351,14 +3436,14 @@ function AddEventForm({
       closeOnBackdropClick={false}
       footer={
         <>
-          {showSeriesEditNote && simpleKind === 'task' && (
+          {showSeriesEditNote && (
             <Text
               variant="caption"
               id="series-edit-note"
               data-testid="series-edit-note"
               className="mr-auto self-center"
             >
-              {t('addEvent.seriesEditNote')}
+              {seriesEditNoteText}
             </Text>
           )}
           <Button
@@ -3413,19 +3498,6 @@ function AddEventForm({
         noValidate
         aria-describedby={showSeriesEditNote ? 'series-edit-note' : undefined}
       >
-        {/* Recurring edits rewrite the whole series — keep the warning visible. */}
-        {isRecurringEdit && simpleKind !== 'task' && (
-          <Card variant="filled" padding="sm" as="p" role="note" className="m-0 text-sm text-ink-2">
-            {t('addEvent.recurringEditNotice')}
-          </Card>
-        )}
-
-        {showSeriesEditNote && simpleKind !== 'task' && (
-          <Text variant="caption" id="series-edit-note" data-testid="series-edit-note">
-            {t('addEvent.seriesEditNote')}
-          </Text>
-        )}
-
         {firstRun && (
           <header className="flex flex-col gap-1.5" data-testid="first-run-form-heading">
             <Eyebrow>

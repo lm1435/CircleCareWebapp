@@ -1,4 +1,4 @@
-import { type ReactElement } from 'react';
+import { type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MED_TIME_CHIPS, chipForTime, type MedTimeChipId } from '@/lib/medTimeOfDay';
 import { formatTimeOfDay } from '@/utils/timezone';
@@ -30,6 +30,8 @@ export interface TimeChipsProps {
   describedBy?: string;
   /** "Other time": the last tile of the row, same shape, a button that reveals the time field. */
   other?: TimeChipsOther;
+  /** One more tile after "Other time" in the same row ("+ Another dose", the task-pattern medication form). */
+  extra?: ReactNode;
 }
 
 export interface TimeChipsOther {
@@ -67,6 +69,7 @@ export function TimeChips({
   onChange,
   describedBy,
   other,
+  extra,
 }: TimeChipsProps): ReactElement {
   const { t } = useTranslation('calendar');
   const chipTexts = MED_TIME_CHIPS.map((chip) => {
@@ -154,6 +157,7 @@ export function TimeChips({
     <div data-testid="time-chip-row" className="flex flex-wrap gap-2">
       {group}
       {otherButton}
+      {extra}
     </div>
   );
 }

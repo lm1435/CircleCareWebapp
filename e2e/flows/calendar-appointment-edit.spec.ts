@@ -203,7 +203,9 @@ test.describe('recurring appointment: edit + delete scope', () => {
     await moreMenu(page, detail, 'Edit');
     const edit = page.getByRole('dialog', { name: 'Edit appointment' });
     await expect(edit).toBeVisible();
-    await expect(edit.getByText('This event repeats. Changes you save here will apply to the whole series.')).toBeVisible();
+    // One calm line above Save (owner 2026-11-08), no notice card at the top.
+    await expect(edit.getByTestId('series-edit-note')).toHaveText('Applies to upcoming appointments only.');
+    await expect(edit.getByText(/This event repeats/)).toHaveCount(0);
     // The form hydrates its schedule from the series ROOT, which it may still be
     // fetching (AddEventModal `seriesRootPending`): the date/time fields are empty
     // until it lands. Wait for that, or the edit races the hydration.

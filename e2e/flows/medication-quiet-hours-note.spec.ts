@@ -95,10 +95,9 @@ test('with quiet hours ON the note shows for a 10 PM dose, not a 9 AM one, and n
     await expect(form.getByTestId('dose-quiet-hours-note')).toBeVisible();
     await form.getByLabel(/Medication name/i).fill(`Metformin ${uniq('x').slice(-6)}`);
     await form.getByLabel(/Dosage/i).fill('500 mg');
-    // The start date lives in "More details" on the simple form.
-    await form.getByRole('button', { name: /More details/ }).click();
-    await form.getByLabel(/^Start date/).fill(futureDate);
-    await expect(form.getByLabel(/^Start date/)).toHaveValue(futureDate);
+    // The start date opens "When?" ("Starts", the task / shift pattern).
+    await form.getByLabel(/^Starts/).fill(futureDate);
+    await expect(form.getByLabel(/^Starts/)).toHaveValue(futureDate);
     await expect(form.getByTestId('dose-quiet-hours-note')).toBeVisible();
     await form.getByRole('button', { name: 'Add medication' }).click();
     await expect(page.getByText('Medication added')).toBeVisible({ timeout: 20_000 });

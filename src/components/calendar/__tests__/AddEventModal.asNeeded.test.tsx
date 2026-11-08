@@ -127,14 +127,14 @@ describe('creating: Repeat -> As needed', () => {
   });
 
   it.each(['medication', 'appointment', 'task'] as const)(
-    'the %s Repeat field has a VISIBLE "Repeat" label and reads "Never" by default',
+    'the %s Repeat field has a VISIBLE "Repeat" label and reads "Once" by default (the tile words)',
     (initialType) => {
       render(<AddEventModal circleId={CIRCLE_ID} initialType={initialType} layout="full" onClose={onClose} />);
       const select = screen.getByRole('combobox', { name: 'Repeat' }) as HTMLSelectElement;
       const label = document.querySelector(`label[for="${select.id}"]`);
       expect(label).toHaveTextContent(/^Repeat$/);
       expect(label).toBeVisible();
-      expect(select.options[select.selectedIndex].textContent).toBe('Never');
+      expect(select.options[select.selectedIndex].textContent).toBe('Once');
     }
   );
 
@@ -308,10 +308,15 @@ describe('creating: Repeat -> As needed', () => {
 });
 
 describe('editing: LOCKED after create', () => {
-  it('a PRN medication shows Repeat READ-ONLY (no select), reason editable, schedule fields absent', () => {
+  it('a PRN medication shows How often? READ-ONLY (When needed lit, all disabled), reason editable, schedule fields absent', () => {
     render(<AddEventModal circleId={CIRCLE_ID} event={prnEvent()} onClose={onClose} />);
     expect(screen.queryByLabelText('Repeat', { selector: 'select' })).toBeNull();
-    expect(screen.getByTestId('as-needed-locked-repeat')).toHaveTextContent(
+    const needed = screen.getByRole('radio', { name: 'When needed' });
+    expect(needed).toHaveAttribute('aria-checked', 'true');
+    expect(needed).toBeDisabled();
+    expect(screen.getByRole('radio', { name: 'Every day' })).toBeDisabled();
+    expect(screen.getByTestId('repeat-custom')).toBeDisabled();
+    expect(screen.getByTestId('as-needed-locked-how-often')).toHaveTextContent(
       "As needed · can't be changed. To put this medication on a schedule, discontinue it and add it again."
     );
     expect(screen.getByLabelText(/What is it for\?/)).toHaveValue('pain');
@@ -349,9 +354,8 @@ describe('editing: LOCKED after create', () => {
         onClose={onClose}
       />
     );
-    const options = Array.from(
-      (screen.getByLabelText('Repeat') as HTMLSelectElement).options
-    ).map((o) => o.value);
-    expect(options).not.toContain('as_needed');
+    expect(screen.queryByRole('radio', { name: 'When needed' })).toBeNull();
+    expect(screen.queryByLabelText('Repeat', { selector: 'select' })).toBeNull();
+    expect(screen.getByRole('radio', { name: 'Every day' })).toHaveAttribute('aria-checked', 'true');
   });
 });

@@ -158,13 +158,12 @@ function renderMed() {
   return render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
 }
 
-/** Start date (More details) then the "Other time" field, the way a person fills them. */
+/** The start date ("Starts", the top of When?) then the "Other time" field, the way a person fills them. */
 async function fill(user: ReturnType<typeof userEvent.setup>, zone: string, day: string, time: string) {
   useCircleResult.timezone = zone;
   renderMed();
   await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
-  await user.click(screen.getByRole('button', { name: /More details/ }));
-  fireEvent.change(screen.getByLabelText(/^Start date/), { target: { value: day } });
+  fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: day } });
   await user.click(screen.getByRole('button', { name: 'Other time' }));
   const field = await screen.findByLabelText(/^Time/);
   await user.clear(field);

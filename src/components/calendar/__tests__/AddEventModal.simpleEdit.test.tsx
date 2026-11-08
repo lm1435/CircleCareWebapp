@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
@@ -13,7 +13,7 @@ import { AddEventModal } from '../AddEventModal';
 //     (`layout="full"`, the layout every edit used before) must be identical;
 //   - the prefill of every "How often?" kind and of the time chips, "Other time" included;
 //   - the locks an edit keeps (no "When needed" on a scheduled med, no "+ Another dose");
-//   - a stored value behind a disclosure opens it; the Place row a doctor filled opens and folds;
+//   - a stored value behind "More details" opens it; a doctor's address filling the location opens it;
 //   - the add-form funnel never counts an edit; entry_save_tapped carries `layout`.
 // Mobile parity: mobile/src/__tests__/screens/AddEventSimpleEdit.test.tsx.
 
@@ -208,12 +208,17 @@ describe('it looks like the add form', () => {
     expect(screen.queryByLabelText('Type')).toBeNull();
   });
 
-  it('appointment: "Edit appointment" and the add form rows', () => {
+  it('appointment: "Edit appointment", the add form questions, one More details', () => {
     renderEdit(EVENTS.appt);
     expect(screen.getByRole('dialog', { name: 'Edit appointment' })).toBeInTheDocument();
     expect(screen.getByTestId('simple-appointment-form')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: "Who's going?" })).toBeInTheDocument();
-    for (const id of ['row-doctor', 'row-place', 'row-notes', 'row-repeat']) expect(row(id)).toBeInTheDocument();
+    for (const h of ['What is it?', 'When?', 'How often?', "Who's going?"]) {
+      expect(screen.getByRole('heading', { name: h })).toBeInTheDocument();
+    }
+    for (const id of ['row-doctor', 'row-place', 'row-notes', 'row-repeat']) expect(row(id)).toBeNull();
+    expect(moreToggle()).toBeInTheDocument();
+    // Suggestions are for a NEW appointment only.
+    expect(screen.queryByRole('radiogroup', { name: 'Title suggestions' })).toBeNull();
   });
 
   it('a task edit gets the simple task form too (owner 1.4.0); layout="full" keeps the old one', () => {
@@ -268,9 +273,12 @@ describe('"How often?" reflects the stored repeat', () => {
     expect(within(howOften()).queryByRole('radio', { name: 'When needed' })).toBeNull();
   });
 
-  it('weekly on days -> Some days, the day picker open', () => {
+  it('weekly on days -> Custom… lit and open on Some days, the day picker open', () => {
     renderEdit(EVENTS.medDays);
-    expect(within(howOften()).getByRole('radio', { name: 'Some days' })).toBeChecked();
+    for (const r of within(howOften()).getAllByRole('radio')) expect(r).not.toBeChecked();
+    expect(screen.getByTestId('repeat-custom')).toHaveAttribute('aria-expanded', 'true');
+    const panel = within(screen.getByTestId('repeat-custom-panel'));
+    expect(panel.getByRole('radio', { name: 'Some days' })).toBeChecked();
     expect(screen.getByRole('group', { name: 'Repeat on' })).toBeInTheDocument();
   });
 
@@ -284,14 +292,26 @@ describe('"How often?" reflects the stored repeat', () => {
   });
 
   it.each([
-    ['medMonthly', 'Monthly', 'monthly'],
-    ['medCycle', 'Cycle', 'cycle'],
-  ])('%s: no simple choice lit, the rule named under it, More details open on it', (key, label, value) => {
+    ['medMonthly', 'Monthly'],
+    ['medCycle', 'Days on / off'],
+  ])('%s: its Custom… tile lit and open; More details stays closed (the rule is not behind it)', (key, label) => {
     renderEdit(EVENTS[key]);
     for (const r of within(howOften()).getAllByRole('radio')) expect(r).not.toBeChecked();
-    expect(screen.getByTestId('how-often-summary')).toHaveTextContent(new RegExp(label, 'i'));
-    expect(moreToggle()).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByLabelText('Repeat')).toHaveValue(value);
+    const panel = within(screen.getByTestId('repeat-custom-panel'));
+    expect(panel.getByRole('radio', { name: label })).toBeChecked();
+    expect(moreToggle()).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('combobox', { name: 'Repeat', hidden: true })).toBeNull();
+  });
+
+  it('a one-off medication -> Once under Custom…', () => {
+    renderEdit(med({ recurrence_rule: null }));
+    const panel = within(screen.getByTestId('repeat-custom-panel'));
+    expect(panel.getByRole('radio', { name: 'Once' })).toBeChecked();
+  });
+
+  it('appointment rules light the task grid: weekly on days -> Custom… / Some days', () => {
+    renderEdit(EVENTS.apptWeekly);
+    expect(within(screen.getByTestId('repeat-custom-panel')).getByRole('radio', { name: 'Some days' })).toBeChecked();
   });
 });
 
@@ -305,35 +325,38 @@ describe('a saved value behind a disclosure opens it', () => {
     expect(screen.getByLabelText('Instructions')).toHaveValue('With food');
   });
 
-  it('appointment: place and notes open their rows (notes reads "Added" folded); doctor and repeat too', () => {
-    const { unmount } = renderEdit(EVENTS.appt);
-    expect(row('row-place')).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByLabelText(/^Location/)).toHaveValue('1 Main St');
-    expect(row('row-notes')).toHaveAttribute('aria-expanded', 'true');
-    expect(row('row-doctor')).toHaveAttribute('aria-expanded', 'false');
-    expect(row('row-repeat')).toHaveAttribute('aria-expanded', 'false');
-    fireEvent.click(row('row-notes'));
-    expect(row('row-notes')).toHaveTextContent('Added');
-    unmount();
-    renderEdit(EVENTS.apptWeekly);
-    expect(row('row-doctor')).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('combobox', { name: 'Doctor' })).toHaveValue(PATEL_ID);
-    expect(row('row-repeat')).toHaveAttribute('aria-expanded', 'true');
-    expect(row('row-place')).toHaveAttribute('aria-expanded', 'false');
+  it.each([
+    ['location + notes', { location: '1 Main St', description: 'Bring the list' }],
+    ['location', { location: '1 Main St', description: '' }],
+    ['notes', { location: '', description: 'Bring the list' }],
+    ['a doctor', { location: '', description: '', provider_id: PATEL_ID }],
+    ['a length other than 30 min', { location: '', description: '', duration_minutes: 45 }],
+    ['a repeat end date', { location: '', description: '', duration_minutes: 30, recurrence_rule: 'weekly', recurrence_end_date: '2099-03-31' }],
+  ])('appointment: %s opens More details', (_name, over) => {
+    renderEdit(appt(over as Partial<CalendarEvent>));
+    expect(moreToggle()).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('the Place row a doctor filled opens, and its toggle folds (address in the row) and reopens it', async () => {
+  it('appointment: nothing stored behind it keeps More details closed', () => {
+    renderEdit(appt({ location: '', description: '', duration_minutes: 30 }));
+    expect(moreToggle()).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('appointment: the stored doctor and location show inside More details', () => {
+    const { unmount } = renderEdit(EVENTS.apptWeekly);
+    expect(screen.getByRole('combobox', { name: 'Doctor' })).toHaveValue(PATEL_ID);
+    unmount();
+    renderEdit(EVENTS.appt);
+    expect(screen.getByLabelText(/^Location/)).toHaveValue('1 Main St');
+  });
+
+  it("a doctor's address fills the empty location, under the same More details", async () => {
     const user = userEvent.setup();
     renderEdit(appt({ location: '', description: '' }));
-    fireEvent.click(row('row-doctor'));
+    expect(moreToggle()).toHaveAttribute('aria-expanded', 'true'); // 45 min is not the default length
     await user.selectOptions(screen.getByRole('combobox', { name: 'Doctor' }), PATEL_ID);
-    expect(row('row-place')).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByLabelText(/^Location/)).toHaveValue('1200 Heart Center Dr');
-    fireEvent.click(row('row-place'));
-    expect(row('row-place')).toHaveAttribute('aria-expanded', 'false');
-    expect(row('row-place')).toHaveTextContent('1200 Heart Center Dr');
-    fireEvent.click(row('row-place'));
-    expect(row('row-place')).toHaveAttribute('aria-expanded', 'true');
+    expect(moreToggle()).toHaveAttribute('aria-expanded', 'true');
   });
 });
 

@@ -146,6 +146,9 @@ async function editAppointmentChip(zone: string, day: string, time: string, chip
   const view = render(
     <AddEventModal circleId={CIRCLE_ID} event={appt({ scheduled_date: day, scheduled_time: `${time}:00` })} onClose={vi.fn()} />
   );
+  // The length sits in More details on the appointment form (owner 2026-11-08, the task / shift pattern).
+  const more = screen.getByRole('button', { name: /^More details/ });
+  if (more.getAttribute('aria-expanded') !== 'true') await user.click(more);
   await user.click(screen.getByRole('radio', { name: chip }));
   mutateUpdate.mockClear();
   await user.click(screen.getByTestId('add-event-save'));

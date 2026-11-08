@@ -149,18 +149,19 @@ function appt(over: Partial<CalendarEvent> = {}): CalendarEvent {
   };
 }
 
-// An EDIT uses the simple layout (owner 1.4.0): the select sits in the "Doctor" row, open when a
-// doctor is stored, and Location in the "Place" row. The create tests here pin the full layout.
+// An EDIT uses the simple layout (owner 1.4.0): the Doctor select and Location sit in "More details"
+// (owner 2026-11-08, the task / shift pattern), open when a doctor is stored. The create tests here pin
+// the full layout.
 function openRow(rowId: string): void {
   const row = document.getElementById(rowId);
   if (row && row.getAttribute('aria-expanded') === 'false') fireEvent.click(row);
 }
 const doctorSelect = () => {
-  openRow('row-doctor');
+  openRow('more-details');
   return screen.getByRole('combobox', { name: 'Doctor' }) as HTMLSelectElement;
 };
 const locationInput = () => {
-  openRow('row-place');
+  openRow('more-details');
   return screen.getByLabelText(/^Location/) as HTMLInputElement;
 };
 

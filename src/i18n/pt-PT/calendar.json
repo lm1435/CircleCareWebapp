@@ -33,11 +33,13 @@
     "saveChanges": "Guardar alterações",
     "creating": "A guardar…",
     "updated": "Alterações guardadas",
-    "recurringEditNotice": "Este evento repete-se. As alterações que guardar aqui valerão para a série inteira.",
     "seriesEditNote": "Aplica-se apenas às próximas tarefas.",
+    "seriesEditNoteMedication": "Aplica-se apenas às próximas doses.",
+    "seriesEditNoteAppointment": "Aplica-se apenas às próximas consultas.",
     "viewOnly": "Apenas visualização",
     "recurrence": {
-      "asNeededHint": "Sem horários fixos. Registe cada dose quando ela for dada."
+      "asNeededHint": "Sem horários fixos. Registe cada dose quando ela for dada.",
+      "weekly": "Todas as semanas"
     },
     "reminders": {
       "atTimeOff": "Nada será enviado no horário agendado, apenas os lembretes antecipados que escolher abaixo.",

@@ -200,6 +200,8 @@ test('Add menu + medication form funnel: add_menu_opened, option tapped, entry_f
   });
   expect(props(when)).toEqual({ type: 'medication', step: 'when' });
 
+  // How often? is the task / shift grid (owner 2026-11-08): Some days sits behind Custom….
+  await dialog.getByTestId('repeat-custom').click();
   await dialog.getByRole('radio', { name: 'Some days' }).click();
   const oft = await posthog.waitForEvent('entry_form_step_completed', {
     timeoutMs: 20_000,
@@ -245,7 +247,7 @@ test('Appointment form: entry_form_opened + the who/what/when steps + appointmen
   });
   const dialog = page.getByRole('dialog', { name: 'New appointment' });
   await dialog.locator('#title').fill('ZZ_E2E_FUNNEL_APPT');
-  await dialog.locator('#scheduled_time').click(); // blur title
+  await dialog.locator('#scheduled_date').click(); // blur title (the time field opens from its tile)
   await posthog.waitForEvent('entry_form_step_completed', {
     timeoutMs: 20_000,
     predicate: (e) => e.properties.type === 'appointment' && e.properties.step === 'what',

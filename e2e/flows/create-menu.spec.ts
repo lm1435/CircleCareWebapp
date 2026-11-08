@@ -250,8 +250,7 @@ test('create a medication end-to-end via the global create menu', async ({ page,
   const doseTime = futureDoseTimeToday();
   await dialog.locator('#medication_name').fill(title);
   await dialog.locator('#medication_dosage').fill('1 tablet');
-  // The simple form: the start date lives in "More details", a custom time behind "Other time".
-  await dialog.getByRole('button', { name: /More details/ }).click();
+  // The simple form: the start date ("Starts") opens When?, a custom time behind "Other time".
   await dialog.locator('#scheduled_date').fill(todayISO());
   await dialog.getByRole('button', { name: 'Other time' }).click();
   await dialog.locator('#scheduled_time').fill(doseTime ?? '09:00');
