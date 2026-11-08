@@ -123,5 +123,8 @@
     "storageFull": "Dieser Kreis hat sein Speicherlimit erreicht. Schaffen Sie Platz, um weitere Dokumente hinzuzufügen.",
     "permissionDenied": "Dafür haben Sie keine Berechtigung.",
     "saveFailed": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+  },
+  "summary": {
+    "none": "Noch nichts hochgeladen"
   }
 }

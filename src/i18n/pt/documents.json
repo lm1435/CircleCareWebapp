@@ -123,5 +123,8 @@
     "storageFull": "Este círculo atingiu o limite de armazenamento. Libere espaço para adicionar mais documentos.",
     "permissionDenied": "Você não tem permissão para fazer isso.",
     "saveFailed": "Algo deu errado. Tente novamente."
+  },
+  "summary": {
+    "none": "Nada enviado ainda"
   }
 }

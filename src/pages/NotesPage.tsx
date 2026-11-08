@@ -22,7 +22,10 @@ import { CareTabs } from '@/components/layout/CareTabs';
 import { ViewOnlyBanner } from '@/components/ViewOnlyBanner';
 import { useSessionDraft } from '@/hooks/useSessionDraft';
 import { NoteComposer, EMPTY_NOTE_DRAFT, type NoteDraft } from '@/components/notes/NoteComposer';
-import { NoteRow } from '@/components/notes/NoteRow';
+import { NoteRow, formatNoteTime } from '@/components/notes/NoteRow';
+import { formatDateForDisplay } from '@/components/calendar/dateMath';
+import { useHourCycle } from '@/hooks/useHourCycle';
+import { HOLD, notesSummary } from '@/lib/pageSummaries';
 import { MoodWeekStrip } from '@/components/notes/MoodWeekStrip';
 import {
   useCareNotes,
@@ -217,6 +220,7 @@ export default function NotesPage(): ReactElement {
     [notesQuery.data, older.notes]
   );
   const timezone = notesQuery.data?.timezone ?? 'America/New_York';
+  const hourCycle = useHourCycle();
 
   // Widen the window to include `pendingDate` (older pages past 92 days), then
   // scroll to it once loaded — a single effect re-evaluated on every render
@@ -583,7 +587,16 @@ export default function NotesPage(): ReactElement {
 
   return (
     <section className="mx-auto w-full max-w-5xl pb-8">
-      <PageMasthead section={t('common:nav.notes')} tone="dusk" title={t('notes:title')} subtitle={t('notes:subtitle')}>
+      <PageMasthead section={t('common:nav.notes')} tone="dusk" title={t('notes:title')} subtitle={
+          notesQuery.isLoading || notesQuery.isError
+            ? HOLD
+            : notesSummary(t, notes, {
+                today,
+                formatTime: (iso) => formatNoteTime(iso, timezone, hourCycle),
+                formatDate: (d) => formatDateForDisplay(d, { month: 'short', day: 'numeric' }),
+              })
+        }
+      >
         <CareTabs />
       </PageMasthead>
 

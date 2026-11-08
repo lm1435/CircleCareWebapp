@@ -7,6 +7,16 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Consultas importadas do calendário: 1",
     "2 consultas importadas do calendário",
   ],
+  "pt activity:summary.week": [
+    "Atualizações esta semana: 0",
+    "Atualizações esta semana: 1",
+    "2 atualizações esta semana",
+  ],
+  "pt activity:summary.weekMore": [
+    "Atualizações esta semana: 0+",
+    "Atualizações esta semana: 1+",
+    "2+ atualizações esta semana",
+  ],
   "pt calendar:addEvent.alerts.someDoseTimesFailed": [
     "Salvo, mas horários de dose não adicionados: 0 (08:00). Abra o medicamento e adicione novamente.",
     "Salvo, mas horários de dose não adicionados: 1 (08:00). Abra o medicamento e adicione novamente.",
@@ -372,6 +382,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "1 plantão · {{open}}",
     "2 plantões · {{open}}",
   ],
+  "pt tasks:summary.completed": [
+    "Concluídas: 0",
+    "Concluídas: 1",
+    "2 concluídas",
+  ],
+  "pt tasks:summary.dueToday": [
+    "Vencem hoje: 0",
+    "Vencem hoje: 1",
+    "2 vencem hoje",
+  ],
+  "pt tasks:summary.open": [
+    "Abertas: 0",
+    "Abertas: 1",
+    "2 abertas",
+  ],
   "pt upgrade:trialPeriod.day": [
     "0 dia",
     "1 dia",
@@ -396,6 +421,16 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Consultas importadas do calendário: 0",
     "Consultas importadas do calendário: 1",
     "2 consultas importadas do calendário",
+  ],
+  "pt-PT activity:summary.week": [
+    "Atualizações esta semana: 0",
+    "Atualizações esta semana: 1",
+    "2 atualizações esta semana",
+  ],
+  "pt-PT activity:summary.weekMore": [
+    "Atualizações esta semana: 0+",
+    "Atualizações esta semana: 1+",
+    "2+ atualizações esta semana",
   ],
   "pt-PT calendar:addEvent.alerts.someDoseTimesFailed": [
     "Guardado, mas 0 horários de dose não puderam ser adicionados (08:00). Abra o medicamento e adicione-os novamente.",
@@ -761,6 +796,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "0 turnos · {{open}}",
     "1 turno · {{open}}",
     "2 turnos · {{open}}",
+  ],
+  "pt-PT tasks:summary.completed": [
+    "Concluídas: 0",
+    "Concluídas: 1",
+    "2 concluídas",
+  ],
+  "pt-PT tasks:summary.dueToday": [
+    "Vencem hoje: 0",
+    "Vencem hoje: 1",
+    "2 vencem hoje",
+  ],
+  "pt-PT tasks:summary.open": [
+    "Abertas: 0",
+    "Abertas: 1",
+    "2 abertas",
   ],
   "pt-PT upgrade:trialPeriod.day": [
     "0 dia",

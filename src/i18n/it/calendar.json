@@ -464,5 +464,17 @@
     "appointments_other": "{{count}} appuntamenti",
     "tasks_one": "{{count}} incarico",
     "tasks_other": "{{count}} incarichi"
+  },
+  "summary": {
+    "today": "{{items}} oggi",
+    "day": "{{items}} in questo giorno",
+    "week": "{{items}} questa settimana",
+    "month": "{{items}} questo mese",
+    "none": {
+      "today": "Niente in programma oggi",
+      "day": "Niente in programma in questo giorno",
+      "week": "Niente in programma questa settimana",
+      "month": "Niente in programma questo mese"
+    }
   }
 }

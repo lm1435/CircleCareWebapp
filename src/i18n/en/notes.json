@@ -65,5 +65,11 @@
     "futureError": "Pick today or an earlier date."
   },
   "showOlder": "Show older notes",
-  "noOlder": "No older notes"
+  "noOlder": "No older notes",
+  "summary": {
+    "lastToday": "Last note today at {{time}} by {{name}}",
+    "lastYesterday": "Last note yesterday at {{time}} by {{name}}",
+    "lastOn": "Last note on {{date}} at {{time}} by {{name}}",
+    "none": "Nothing written yet"
+  }
 }

@@ -14,6 +14,7 @@ import {
 } from '@/components/ui';
 import { prefersReducedMotion } from '@/components/ui/motion';
 import { PageMasthead } from '@/components/layout/PageMasthead';
+import { HOLD, calendarSummary } from '@/lib/pageSummaries';
 import { CareTabs } from '@/components/layout/CareTabs';
 import { CalendarSkeleton } from '@/components/calendar/CalendarSkeleton';
 import { EventDetailModal } from '@/components/calendar/EventDetailModal';
@@ -405,6 +406,29 @@ export default function CalendarPage(): ReactElement {
         })
       : '\u00a0';
 
+  // Schedule mode header: a live summary of the shown day / week / month, from the events already loaded
+  // (owner 2026-11-07). Holds a non-breaking space while loading so the header never jumps.
+  const scheduleHeaderSummary =
+    !shiftsMode &&
+    range &&
+    anchor &&
+    todayStr &&
+    !tzQuery.isLoading &&
+    !eventsQuery.isLoading &&
+    !eventsQuery.isError
+      ? calendarSummary(t, events, {
+          view,
+          isToday: anchor === todayStr,
+          locale: i18n.language,
+          inRange:
+            view === 'day'
+              ? (d) => d === anchor
+              : view === 'week'
+                ? (d) => d >= range.start && d <= range.end
+                : (d) => d.slice(0, 7) === anchor.slice(0, 7),
+        })
+      : HOLD;
+
   const readonlyNotice =
     shiftsMode && shiftsEntry === 'readonly' ? (
       <ShiftsReadOnlyNotice
@@ -519,7 +543,7 @@ export default function CalendarPage(): ReactElement {
         section={shiftsMode ? t('shifts:eyebrow') : t('common:nav.calendar')}
         tone="dusk"
         title={t('calendar:title')}
-        subtitle={shiftsMode ? shiftsHeaderSummary : t('calendar:subtitle')}
+        subtitle={shiftsMode ? shiftsHeaderSummary : scheduleHeaderSummary}
         tight
         rightAction={
           (shiftsMode ? shiftsCanWrite : canEdit)

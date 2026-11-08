@@ -156,14 +156,12 @@ describe('DocumentsPage', () => {
     expect(screen.getByText(/2\.5 MB of 200\.0 MB used/)).toBeInTheDocument();
   });
 
-  it('renders the subtitle under the page title', async () => {
+  it('the subtitle is a live count of the circle documents, shown once', async () => {
     mockDocuments();
     renderPage();
-
     expect(await screen.findByText('Insurance Card')).toBeInTheDocument();
-    expect(
-      screen.getByText('Insurance cards, records, and directives, in one place.')
-    ).toBeInTheDocument();
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent('2 documents');
+    expect(screen.getAllByText(/^2 documents/)).toHaveLength(1);
   });
 
   it('filters by category client-side without refetching', async () => {

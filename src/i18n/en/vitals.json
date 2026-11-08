@@ -138,5 +138,11 @@
   "errors": {
     "permissionDenied": "You don't have permission to make this change.",
     "saveFailed": "Couldn't save your changes. Please try again."
+  },
+  "summary": {
+    "lastToday": "Last reading: {{type}}, today {{time}}",
+    "lastYesterday": "Last reading: {{type}}, yesterday {{time}}",
+    "lastOn": "Last reading: {{type}}, {{date}} {{time}}",
+    "none": "Nothing logged yet"
   }
 }

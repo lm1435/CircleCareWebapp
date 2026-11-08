@@ -123,5 +123,8 @@
     "storageFull": "Ce cercle a atteint sa limite de stockage. Libérez de l’espace pour ajouter des documents.",
     "permissionDenied": "Vous n’avez pas l’autorisation d’effectuer cette action.",
     "saveFailed": "Une erreur s’est produite. Veuillez réessayer."
+  },
+  "summary": {
+    "none": "Rien d’importé pour l’instant"
   }
 }

@@ -52,5 +52,15 @@
   "toast": {
     "completed": "Tarea completada",
     "reopened": "Tarea reabierta"
+  },
+  "summary": {
+    "open_one": "{{count}} abierta",
+    "open_other": "{{count}} abiertas",
+    "dueToday_one": "{{count}} vence hoy",
+    "dueToday_other": "{{count}} vencen hoy",
+    "completed_one": "{{count}} completada",
+    "completed_other": "{{count}} completadas",
+    "none": "Nada abierto por ahora",
+    "noneCompleted": "Ninguna completada todavía"
   }
 }

@@ -295,6 +295,19 @@ describe('CalendarPage', () => {
     expect(screen.getByRole('heading', { name: 'Jun 7 – Jun 13, 2026' })).toBeInTheDocument();
   });
 
+  // Owner 2026-11-07 (option C): the subtitle summarises the shown window, per view.
+  it('the subtitle is a live summary per view: week, month and day', async () => {
+    renderPage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent(/^.*(dose|appointment|task).* this week$/);
+    fireEvent.click(screen.getByRole('tab', { name: 'Month' }));
+    await screen.findByRole('grid', { name: /month/i });
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent(/this month$/);
+    fireEvent.click(screen.getByRole('tab', { name: 'Day' }));
+    await screen.findByTestId('day-view');
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent(/(today|on this day)$/);
+  });
+
   it('prefetches the adjacent week windows after the visible one loads', async () => {
     renderPage();
     await screen.findByRole('grid', { name: 'Week view calendar' });

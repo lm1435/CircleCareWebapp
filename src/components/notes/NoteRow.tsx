@@ -77,7 +77,7 @@ interface NoteRowProps {
  * renders through the shared `formatTimeOfDay` — the same two-step every other
  * display site uses.
  */
-function formatNoteTime(isoString: string, timezone: string, cycle: HourCycle): string {
+export function formatNoteTime(isoString: string, timezone: string, cycle: HourCycle): string {
   try {
     const date = new Date(isoString);
     const parts = new Intl.DateTimeFormat('en-US', {

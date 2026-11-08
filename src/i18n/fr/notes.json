@@ -65,5 +65,11 @@
     "futureError": "Choisissez aujourd’hui ou une date antérieure."
   },
   "showOlder": "Afficher les notes plus anciennes",
-  "noOlder": "Aucune note plus ancienne"
+  "noOlder": "Aucune note plus ancienne",
+  "summary": {
+    "lastToday": "Dernière note aujourd’hui à {{time}} par {{name}}",
+    "lastYesterday": "Dernière note hier à {{time}} par {{name}}",
+    "lastOn": "Dernière note le {{date}} à {{time}} par {{name}}",
+    "none": "Rien d’écrit pour l’instant"
+  }
 }

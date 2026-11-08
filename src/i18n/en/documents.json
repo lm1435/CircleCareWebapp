@@ -123,5 +123,8 @@
     "storageFull": "This circle has reached its storage limit. Free up space to add more documents.",
     "permissionDenied": "You don't have permission to do that.",
     "saveFailed": "Something went wrong. Please try again."
+  },
+  "summary": {
+    "none": "Nothing uploaded yet"
   }
 }

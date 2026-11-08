@@ -156,6 +156,20 @@ describe('ActivityFeedPage', () => {
     expect(mockedGetActivityFeed).toHaveBeenCalledWith('circle-1', { limit: 30, offset: 0 });
   });
 
+  it('the subtitle counts this week\'s updates', async () => {
+    mockedGetActivityFeed.mockResolvedValueOnce({
+      activities: [
+        makeActivity({ id: 'a1', created_at: new Date(Date.now() - HOUR_MS).toISOString() }),
+        makeActivity({ id: 'a2', created_at: new Date(Date.now() - 2 * HOUR_MS).toISOString() }),
+        makeActivity({ id: 'a3', created_at: new Date(Date.now() - 20 * 24 * HOUR_MS).toISOString() }),
+      ],
+      hasMore: false,
+    });
+    renderPage();
+    await screen.findAllByText('Confirmed Medication: Aspirin 100mg (taken)');
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent('2 updates this week');
+  });
+
   it('groups activities under Today / Yesterday / formatted date headings', async () => {
     const now = new Date();
     const oldDate = new Date(now.getTime() - 30 * DAY_MS);

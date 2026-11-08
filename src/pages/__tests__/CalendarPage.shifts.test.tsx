@@ -294,11 +294,11 @@ describe('Shifts mode', () => {
     expect(screen.getByTestId('page-subtitle')).toHaveTextContent(/^3 shifts · 1 open$/);
   });
 
-  it('header keeps the Schedule subtitle in Schedule mode and reserves the same height (no layout shift)', async () => {
+  it('header keeps a live Schedule summary in Schedule mode and reserves the same height (no layout shift)', async () => {
     const user = userEvent.setup();
     renderPage();
     const sub = await screen.findByTestId('page-subtitle');
-    expect(sub).toHaveTextContent('Medications, appointments, and tasks in one place.');
+    await waitFor(() => expect(sub).toHaveTextContent(/this week$/)); // live summary of the shown week (owner 2026-11-07)
     expect(sub).toHaveClass('mt-1', 'min-h-[45px]');
     await openShifts(user);
     expect(screen.getByTestId('page-subtitle')).toHaveClass('mt-1', 'min-h-[45px]');

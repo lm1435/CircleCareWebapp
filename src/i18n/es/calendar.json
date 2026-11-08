@@ -464,5 +464,17 @@
     "appointments_other": "{{count}} citas",
     "tasks_one": "{{count}} tarea",
     "tasks_other": "{{count}} tareas"
+  },
+  "summary": {
+    "today": "{{items}} hoy",
+    "day": "{{items}} este día",
+    "week": "{{items}} esta semana",
+    "month": "{{items}} este mes",
+    "none": {
+      "today": "Nada programado hoy",
+      "day": "Nada programado este día",
+      "week": "Nada programado esta semana",
+      "month": "Nada programado este mes"
+    }
   }
 }

@@ -138,5 +138,11 @@
   "errors": {
     "permissionDenied": "Vous n’avez pas l’autorisation d’effectuer cette modification.",
     "saveFailed": "Impossible d’enregistrer vos modifications. Réessayez."
+  },
+  "summary": {
+    "lastToday": "Dernière mesure : {{type}}, aujourd’hui à {{time}}",
+    "lastYesterday": "Dernière mesure : {{type}}, hier à {{time}}",
+    "lastOn": "Dernière mesure : {{type}}, {{date}} à {{time}}",
+    "none": "Rien d’enregistré pour l’instant"
   }
 }

@@ -21,6 +21,7 @@ import {
   useToast,
 } from '@/components/ui';
 import { PageMasthead } from '@/components/layout/PageMasthead';
+import { HOLD, documentsSummary } from '@/lib/pageSummaries';
 import { HealthTabs } from '@/components/layout/HealthTabs';
 import { useDocuments, useDeleteDocument } from '@/hooks/useDocuments';
 import { useCircle } from '@/hooks/useCircle';
@@ -119,7 +120,7 @@ export default function DocumentsPage(): ReactElement {
         section={t('common:nav.documents')}
         tone="moss"
         title={t('documents:title')}
-        subtitle={t('documents:subtitle')}
+        subtitle={isLoading || isError ? HOLD : documentsSummary(t, allDocuments.length)}
         rightAction={
           canEdit
             ? {
@@ -166,7 +167,7 @@ export default function DocumentsPage(): ReactElement {
 
       <div className="px-5 pb-8 pt-4">
         {/* "0 documents" over the starter kit would restate its premise. */}
-        {!isLoading && !isError && !isFirstRun && (
+        {!isLoading && !isError && !isFirstRun && category !== 'all' && (
           <Text variant="caption" className="mb-3">
             {t('documents:count', { count: documents.length })}
           </Text>

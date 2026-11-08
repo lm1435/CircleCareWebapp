@@ -52,5 +52,15 @@
   "toast": {
     "completed": "Incarico completato",
     "reopened": "Incarico riaperto"
+  },
+  "summary": {
+    "open_one": "{{count}} aperto",
+    "open_other": "{{count}} aperti",
+    "dueToday_one": "{{count}} in scadenza oggi",
+    "dueToday_other": "{{count}} in scadenza oggi",
+    "completed_one": "{{count}} completato",
+    "completed_other": "{{count}} completati",
+    "none": "Niente di aperto al momento",
+    "noneCompleted": "Nessun incarico completato"
   }
 }

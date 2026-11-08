@@ -15,6 +15,7 @@ import {
   type MoreMenuItem,
 } from '@/components/ui';
 import { PageMasthead } from '@/components/layout/PageMasthead';
+import { HOLD, tasksSummary } from '@/lib/pageSummaries';
 import { CareTabs } from '@/components/layout/CareTabs';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
 import { DeleteEventDialog } from '@/components/calendar/DeleteEventDialog';
@@ -207,7 +208,9 @@ export default function TasksPage(): ReactElement {
         section={t('common:nav.tasks')}
         tone="moss"
         title={t('title')}
-        subtitle={t('subtitle')}
+        subtitle={
+          tasksQuery.isLoading || tasksQuery.isError ? HOLD : tasksSummary(t, tasks, { status, today })
+        }
         rightAction={
           canEdit
             ? {

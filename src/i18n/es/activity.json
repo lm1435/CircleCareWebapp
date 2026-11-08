@@ -102,5 +102,12 @@
     "addedNotes": "Agregó notas a {{title}}",
     "memberRoleChanged": "Cambió el rol de un miembro en el círculo"
   },
-  "noActivityHintSelf": "La actividad aparecerá aquí."
+  "noActivityHintSelf": "La actividad aparecerá aquí.",
+  "summary": {
+    "week_one": "{{count}} actualización esta semana",
+    "week_other": "{{count}} actualizaciones esta semana",
+    "weekMore_one": "{{count}}+ actualización esta semana",
+    "weekMore_other": "{{count}}+ actualizaciones esta semana",
+    "none": "Sin actualizaciones esta semana"
+  }
 }

@@ -52,5 +52,15 @@
   "toast": {
     "completed": "Task completed",
     "reopened": "Task reopened"
+  },
+  "summary": {
+    "open_one": "{{count}} open",
+    "open_other": "{{count}} open",
+    "dueToday_one": "{{count}} due today",
+    "dueToday_other": "{{count}} due today",
+    "completed_one": "{{count}} completed",
+    "completed_other": "{{count}} completed",
+    "none": "Nothing open right now",
+    "noneCompleted": "None completed yet"
   }
 }

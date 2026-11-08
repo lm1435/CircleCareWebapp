@@ -191,6 +191,20 @@ describe('VitalsPage', () => {
 
   // ── Masthead ──────────────────────────────────────────────────────────────
 
+  it('the subtitle names the latest reading: "Last reading: heart rate, ..."', () => {
+    mockUseLatestVitals.mockReturnValue({
+      data: { ...EMPTY_LATEST, heart_rate: makeVital({ recorded_at: '2026-06-15T16:00:00.000Z' }) },
+      isLoading: false,
+    });
+    renderPage();
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent(/^Last reading: heart rate, .+/);
+  });
+
+  it('the subtitle says "No readings yet" when nothing was ever logged', () => {
+    renderPage();
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent('Nothing logged yet');
+  });
+
   it('wears the Vitals masthead with a way back to the circle', () => {
     renderPage();
     expect(screen.getByRole('heading', { name: 'Vitals', level: 1 })).toBeInTheDocument();

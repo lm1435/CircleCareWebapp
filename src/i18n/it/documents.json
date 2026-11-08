@@ -123,5 +123,8 @@
     "storageFull": "Questa cerchia ha raggiunto il limite di spazio. Libera spazio per aggiungere altri documenti.",
     "permissionDenied": "Non hai il permesso di farlo.",
     "saveFailed": "Qualcosa è andato storto. Riprova."
+  },
+  "summary": {
+    "none": "Niente caricato ancora"
   }
 }

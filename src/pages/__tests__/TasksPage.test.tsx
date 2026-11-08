@@ -914,6 +914,13 @@ describe('TasksPage', () => {
     ).toHaveLength(2);
   });
 
+  // Owner 2026-11-07 (option C): the subtitle is a LIVE summary of the loaded rows, not marketing copy.
+  it('the subtitle summarises the loaded tasks: "2 open"', () => {
+    renderPage();
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent(/^2 open/);
+    expect(screen.queryByText(/assign, track, and check them off/)).not.toBeInTheDocument();
+  });
+
   it('task rows use tabular figures for their due times (audit 2026-11-07 #18)', () => {
     renderPage();
     expect(screen.getByText('Pick up groceries').closest('li')).toHaveClass('tabular-nums');

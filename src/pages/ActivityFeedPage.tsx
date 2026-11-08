@@ -8,6 +8,7 @@ import { LatestHero } from '@/components/activity/LatestHero';
 import { formatDayLabel, getLocalDateKey } from '@/components/activity/activityFormat';
 import { Button, Card, EmptyState, Icon, Skeleton, Text } from '@/components/ui';
 import { PageMasthead } from '@/components/layout/PageMasthead';
+import { HOLD, activitySummary } from '@/lib/pageSummaries';
 import { useActivityFeed } from '@/hooks/useActivityFeed';
 import { useCircle } from '@/hooks/useCircle';
 import { useLatestDailyUpdatePath } from '@/hooks/useDailyUpdate';
@@ -126,7 +127,7 @@ export default function ActivityFeedPage(): ReactElement {
         section={t('common:nav.activity')}
         tone="dusk"
         title={t('activity:title')}
-        subtitle={t('activity:subtitle')}
+        subtitle={isLoading || isError ? HOLD : activitySummary(t, activities, { hasMore: !!hasNextPage })}
       />
 
       {/* The way back to the daily updates (docs/plans/daily-update.md "Design

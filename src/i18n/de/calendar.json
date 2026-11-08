@@ -464,5 +464,17 @@
     "appointments_other": "{{count}} Termine",
     "tasks_one": "{{count}} Aufgabe",
     "tasks_other": "{{count}} Aufgaben"
+  },
+  "summary": {
+    "today": "{{items}} heute",
+    "day": "{{items}} an diesem Tag",
+    "week": "{{items}} diese Woche",
+    "month": "{{items}} diesen Monat",
+    "none": {
+      "today": "Heute ist nichts geplant",
+      "day": "An diesem Tag ist nichts geplant",
+      "week": "Diese Woche ist nichts geplant",
+      "month": "Diesen Monat ist nichts geplant"
+    }
   }
 }

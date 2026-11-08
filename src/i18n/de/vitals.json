@@ -138,5 +138,11 @@
   "errors": {
     "permissionDenied": "Sie haben keine Berechtigung für diese Änderung.",
     "saveFailed": "Ihre Änderungen konnten nicht gespeichert werden. Bitte versuchen Sie es erneut."
+  },
+  "summary": {
+    "lastToday": "Letzte Messung: {{type}}, heute {{time}}",
+    "lastYesterday": "Letzte Messung: {{type}}, gestern {{time}}",
+    "lastOn": "Letzte Messung: {{type}}, {{date}} {{time}}",
+    "none": "Noch nichts erfasst"
   }
 }

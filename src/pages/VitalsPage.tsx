@@ -49,7 +49,8 @@ import {
 import { formatAverageDelta } from '@/lib/vitalsTrend';
 import { utcISOToRecipientWallTime } from '@/components/vitals/vitalDateTime';
 import { getLoggedByLabel } from '@/components/vitals/loggedBy';
-import { formatTimeOfDay } from '@/utils/timezone';
+import { formatTimeOfDay, getDateInTimezone } from '@/utils/timezone';
+import { HOLD, vitalsSummary } from '@/lib/pageSummaries';
 
 // Task 21 (mobile parity) — vitals page. MIRRORS
 // mobile/src/screens/vitals/VitalsDetailScreen.tsx: masthead (moss), type
@@ -476,6 +477,7 @@ export default function VitalsPage(): ReactElement {
   const { showToast } = useToast();
 
   const { canEdit, timezone } = useCircle(circleId);
+  const hourCycle = useHourCycle();
   const { data: unitPrefs } = useUnitPreferences();
   const weightUnit: WeightUnit = unitPrefs?.weight_unit ?? DEFAULT_UNIT_PREFERENCES.weight_unit;
   const glucoseUnit: GlucoseUnit = unitPrefs?.glucose_unit ?? DEFAULT_UNIT_PREFERENCES.glucose_unit;
@@ -999,7 +1001,25 @@ export default function VitalsPage(): ReactElement {
         section={t('common:nav.vitals')}
         tone="moss"
         title={t('title')}
-        subtitle={t('subtitle')}
+        subtitle={
+          timezone === null || latestQuery.isLoading
+            ? HOLD
+            : vitalsSummary(t, latestQuery.data, {
+                today: getDateInTimezone(timezone),
+                toWall: (iso) => utcISOToRecipientWallTime(iso, timezone),
+                formatTime: (time) => {
+                  const [hh, mm] = time.split(':').map(Number);
+                  return formatTimeOfDay(hh ?? 0, mm ?? 0, hourCycle);
+                },
+                formatDate: (d) =>
+                  new Intl.DateTimeFormat(i18n.language, {
+                    month: 'short',
+                    day: 'numeric',
+                    timeZone: 'UTC',
+                  }).format(new Date(`${d}T12:00:00Z`)),
+                locale: i18n.language,
+              })
+        }
         backTo={`/circles/${circleId}`}
         {...(canEdit
           ? {

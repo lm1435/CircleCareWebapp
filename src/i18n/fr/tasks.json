@@ -52,5 +52,15 @@
   "toast": {
     "completed": "Tâche terminée",
     "reopened": "Tâche rouverte"
+  },
+  "summary": {
+    "open_one": "{{count}} ouverte",
+    "open_other": "{{count}} ouvertes",
+    "dueToday_one": "{{count}} à échéance aujourd’hui",
+    "dueToday_other": "{{count}} à échéance aujourd’hui",
+    "completed_one": "{{count}} terminée",
+    "completed_other": "{{count}} terminées",
+    "none": "Rien d’ouvert pour l’instant",
+    "noneCompleted": "Aucune tâche terminée pour l’instant"
   }
 }

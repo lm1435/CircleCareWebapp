@@ -464,5 +464,17 @@
     "appointments_other": "{{count}} rendez-vous",
     "tasks_one": "{{count}} tâche",
     "tasks_other": "{{count}} tâches"
+  },
+  "summary": {
+    "today": "{{items}} aujourd’hui",
+    "day": "{{items}} ce jour-là",
+    "week": "{{items}} cette semaine",
+    "month": "{{items}} ce mois-ci",
+    "none": {
+      "today": "Rien de prévu aujourd’hui",
+      "day": "Rien de prévu ce jour-là",
+      "week": "Rien de prévu cette semaine",
+      "month": "Rien de prévu ce mois-ci"
+    }
   }
 }

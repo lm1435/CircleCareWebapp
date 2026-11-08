@@ -252,6 +252,21 @@ describe('NotesPage — collapsed composer', () => {
   });
 });
 
+describe('NotesPage — live summary subtitle', () => {
+  it('names the newest note, its day, time and author', () => {
+    mockUseCareNotes.mockReturnValue(
+      notesResult([makeNote({ note_date: TODAY, created_at: '2026-03-15T14:10:00Z' })])
+    );
+    renderCollapsed();
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent(/^Last note today at .+ by Ana Lopez$/);
+  });
+  it('says "No notes yet" with none', () => {
+    mockUseCareNotes.mockReturnValue(notesResult([]));
+    renderCollapsed();
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent('Nothing written yet');
+  });
+});
+
 describe('NotesPage — composer gate', () => {
   it('disables Post until body or mood is set, re-disables when cleared', async () => {
     const user = userEvent.setup();
