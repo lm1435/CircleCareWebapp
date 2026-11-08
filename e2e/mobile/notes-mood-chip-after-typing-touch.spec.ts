@@ -1,4 +1,5 @@
 import { test, expect, uniqueLabel } from '../fixtures';
+import { openNoteComposer } from '../helpers';
 import { dbQuery, sqlStr } from '../unhappy';
 import { sqlExec } from '../db';
 
@@ -16,8 +17,7 @@ test('touch: type a note, tap a mood chip ONCE, post: the stored note has that m
   const body = uniqueLabel('ZZ_E2E_MOODCHIP_TOUCH');
   try {
     await page.goto(`/circles/${circleId}/notes`, { waitUntil: 'domcontentloaded' });
-    const composer = page.getByLabel(/^Add a note/);
-    await expect(composer).toBeVisible({ timeout: 20_000 });
+    const composer = await openNoteComposer(page);
 
     await composer.tap();
     await composer.pressSequentially(body);

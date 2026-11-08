@@ -1,4 +1,5 @@
 import type { APIRequestContext, BrowserContext, Page } from '@playwright/test';
+import { openNoteComposer } from '../../helpers';
 import { test, expect } from '../../fixtures';
 import { countRequests, dbCount, failRequest, sqlStr } from '../../unhappy';
 import {
@@ -50,8 +51,7 @@ async function postWithDeadSession(
   opts: { killRefresh: boolean }
 ): Promise<{ dispose: () => Promise<void> }> {
   await page.goto(`/circles/${circleId}/notes`);
-  const composer = page.getByLabel(/^Add a note/);
-  await expect(composer).toBeVisible({ timeout: 20_000 });
+  const composer = await openNoteComposer(page);
   await composer.fill(draft);
   const handles: { dispose: () => Promise<void> }[] = [];
   if (opts.killRefresh) {
@@ -149,8 +149,7 @@ test('PK9: the typed draft is restored after re-login, with the notice, then del
   await loginViaForm(page, acct);
   await openNotes(page, circleId);
 
-  const composer = page.getByLabel(/^Add a note/);
-  await expect(composer).toBeVisible({ timeout: 20_000 });
+  const composer = await openNoteComposer(page);
   await expect(composer).toHaveValue(draft, { timeout: 5_000 });
   await expect(page.getByText('We restored your unsaved draft.')).toBeVisible();
   expect(await DRAFT_ENTRIES(page)).toHaveLength(0);
@@ -198,8 +197,7 @@ test('PK9 privacy: an EXPIRED (>30 min) draft is purged, not restored', async ({
   await loginViaForm(page, acct);
   await openNotes(page, circleId);
 
-  const composer = page.getByLabel(/^Add a note/);
-  await expect(composer).toBeVisible({ timeout: 20_000 });
+  const composer = await openNoteComposer(page);
   await expect(composer).toHaveValue('');
   await expect(page.getByText('We restored your unsaved draft.')).toHaveCount(0);
   expect(await DRAFT_ENTRIES(page)).toHaveLength(0);
@@ -240,7 +238,7 @@ test('PK9 privacy: a VOLUNTARY sign-out purges any saved draft; re-login restore
   // A voluntary sign-out with a live draft in the composer saves nothing.
   await loginViaForm(page, acct);
   await openNotes(page, circleId);
-  const composer = page.getByLabel(/^Add a note/);
+  const composer = await openNoteComposer(page);
   await expect(composer).toHaveValue('');
   await composer.fill(draft);
   await page.getByRole('button', { name: 'Account' }).click();
@@ -250,7 +248,7 @@ test('PK9 privacy: a VOLUNTARY sign-out purges any saved draft; re-login restore
   expect(await DRAFT_ENTRIES(page)).toHaveLength(0);
   await loginViaForm(page, acct);
   await openNotes(page, circleId);
-  await expect(page.getByLabel(/^Add a note/)).toHaveValue('');
+  await expect(page.getByLabel(/^Add a note/)).toHaveCount(0); // folded back into its button
   await expect(page.getByText('We restored your unsaved draft.')).toHaveCount(0);
 });
 
@@ -279,12 +277,12 @@ test('sign out in one tab signs out the other tab (BroadcastChannel) and it writ
 }) => {
   const { circleId } = await setup(request, context, baseURL);
   await page.goto(`/circles/${circleId}/notes`);
-  await expect(page.getByLabel(/^Add a note/)).toBeVisible({ timeout: 20_000 });
+  await openNoteComposer(page);
 
   const page2 = await context.newPage();
   const posts2 = countRequests(page2, 'POST', NOTES);
   await page2.goto(`/circles/${circleId}/notes`);
-  await expect(page2.getByLabel(/^Add a note/)).toBeVisible({ timeout: 20_000 });
+  await openNoteComposer(page2);
 
   await page.getByRole('button', { name: 'Account' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();

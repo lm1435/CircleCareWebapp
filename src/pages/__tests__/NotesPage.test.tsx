@@ -133,7 +133,8 @@ function LocationProbe() {
   return <div data-testid="location-search">{location.search}</div>;
 }
 
-function renderPage(initialPath = `/circles/${CIRCLE_ID}/notes`) {
+/** Raw render: the composer starts COLLAPSED (owner 2026-11-07). */
+function renderCollapsed(initialPath: string | { pathname: string; state?: unknown } = `/circles/${CIRCLE_ID}/notes`) {
   return render(
     <ToastProvider>
       <MemoryRouter initialEntries={[initialPath]}>
@@ -144,6 +145,14 @@ function renderPage(initialPath = `/circles/${CIRCLE_ID}/notes`) {
       </MemoryRouter>
     </ToastProvider>
   );
+}
+
+/** Render and open the composer, for the many tests that exercise an OPEN composer. */
+function renderPage(initialPath = `/circles/${CIRCLE_ID}/notes`) {
+  const utils = renderCollapsed(initialPath);
+  const trigger = screen.queryByRole('button', { name: 'Add a note' });
+  if (trigger) fireEvent.click(trigger);
+  return utils;
 }
 
 /** The <li> entry card containing the given note body text. */
@@ -174,6 +183,73 @@ beforeEach(() => {
   circleState = { circle: { owner_id: 'owner-1' }, canEdit: true };
   currentUserId = 'user-1';
   mockUseCareNotes.mockReturnValue(notesResult([makeNote()]));
+});
+
+// Owner 2026-11-07: the composer is COLLAPSED by default into an "Add a note" button that expands it in
+// place (mobile parity: note-composer-expand). Focus follows: the textarea on open, the button on close.
+describe('NotesPage — collapsed composer', () => {
+  it('starts as a single "Add a note" button: no textarea, date, mood or categories', () => {
+    renderCollapsed();
+    const trigger = screen.getByRole('button', { name: 'Add a note' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: 'Mood' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Categories' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Post' })).not.toBeInTheDocument();
+  });
+
+  it('expands in place and moves focus into the textarea', async () => {
+    const user = userEvent.setup();
+    renderCollapsed();
+    await user.click(screen.getByRole('button', { name: 'Add a note' }));
+    expect(screen.getByLabelText(/^Add a note/)).toHaveFocus();
+    expect(screen.getByRole('radiogroup', { name: 'Mood' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add a note' })).not.toBeInTheDocument();
+  });
+
+  it('Cancel collapses it again and returns focus to the button', async () => {
+    const user = userEvent.setup();
+    renderCollapsed();
+    await user.click(screen.getByRole('button', { name: 'Add a note' }));
+    await user.type(screen.getByLabelText(/^Add a note/), 'half a thought');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add a note' })).toHaveFocus();
+  });
+
+  it('collapses after a successful post and returns focus to the button', async () => {
+    mockCreate.mockImplementation((_v, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
+    const user = userEvent.setup();
+    renderCollapsed();
+    await user.click(screen.getByRole('button', { name: 'Add a note' }));
+    await user.type(screen.getByLabelText(/^Add a note/), 'Ate lunch');
+    await user.click(screen.getByRole('button', { name: 'Post' }));
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add a note' })).toHaveFocus();
+  });
+
+  it('a failed post keeps the composer open with the text (nothing is lost)', async () => {
+    mockCreate.mockImplementation((_v, opts?: { onError?: (e: unknown) => void }) => opts?.onError?.(new Error('x')));
+    const user = userEvent.setup();
+    renderCollapsed();
+    await user.click(screen.getByRole('button', { name: 'Add a note' }));
+    await user.type(screen.getByLabelText(/^Add a note/), 'Rough evening');
+    await user.click(screen.getByRole('button', { name: 'Post' }));
+    expect(screen.getByLabelText(/^Add a note/)).toHaveValue('Rough evening');
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
+
+  it('arrives OPEN from the New menu (navigation state composeNote), with the textarea focused', () => {
+    renderCollapsed({ pathname: `/circles/${CIRCLE_ID}/notes`, state: { composeNote: true } });
+    expect(screen.getByLabelText(/^Add a note/)).toHaveFocus();
+    expect(screen.queryByRole('button', { name: 'Add a note' })).not.toBeInTheDocument();
+  });
+
+  it('view-only members get neither the button nor the composer', () => {
+    circleState = { circle: { owner_id: 'owner-1' }, canEdit: false };
+    renderCollapsed();
+    expect(screen.queryByRole('button', { name: 'Add a note' })).not.toBeInTheDocument();
+  });
 });
 
 describe('NotesPage — composer gate', () => {
@@ -296,7 +372,9 @@ describe('NotesPage — posting', () => {
     });
     expect(mockCareNoteAdded.mock.calls[0][1]).not.toHaveProperty('mood');
 
-    // Composer cleared optimistically.
+    // Composer cleared optimistically and folded back into the "Add a note" button.
+    expect(screen.queryByRole('button', { name: 'Post' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add a note' }));
     expect(screen.getByLabelText(/^Add a note/)).toHaveValue('');
     expect(screen.getByRole('button', { name: 'Post' })).toBeDisabled();
   });
@@ -404,7 +482,7 @@ describe('NotesPage — mood strip', () => {
     mockUseCareNotes.mockReturnValue(
       notesResult([makeNote({ note_date: TODAY, mood: 'good', body: 'Good day' })])
     );
-    renderPage();
+    renderCollapsed();
 
     // Same query the list itself uses — no second call with different args.
     expect(mockUseCareNotes).toHaveBeenCalledTimes(1);
@@ -850,8 +928,9 @@ describe('NotesPage — double submit', () => {
 
     await submitFormTwice(composerForm());
     expect(mockCreate).toHaveBeenCalledTimes(2);
-    // The retry clears the previous failure (a new one mounts if it fails too).
-    expect(within(composerForm()).queryByRole('alert')).toBeNull();
+    // The retry clears the previous failure (a new one mounts if it fails too); the composer folds
+    // back into its button while the request is in flight.
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 

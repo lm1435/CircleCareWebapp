@@ -183,7 +183,7 @@ export function AppLayout(): ReactElement {
     // Notes have no create modal — the composer lives at the top of the Notes
     // page (mirrors mobile's New-menu note entry).
     if (kind === 'note') {
-      if (circleId) navigate(`/circles/${circleId}/notes`);
+      if (circleId) navigate(`/circles/${circleId}/notes`, { state: { composeNote: true } });
       return;
     }
     if (kind === 'shift' && shiftEntry === 'teaser') {

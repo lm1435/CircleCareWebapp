@@ -1,4 +1,4 @@
-import { expect, type BrowserContext, type Page, type TestInfo } from '@playwright/test';
+import { expect, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { sqlExec, sqlStr } from './db';
 
@@ -303,4 +303,18 @@ export async function refuseZoneSync(target: Page | BrowserContext): Promise<voi
       ? route.abort()
       : route.continue()
   );
+}
+
+/**
+ * The Notes composer starts COLLAPSED into an "Add a note" button (owner 2026-11-07). Open it when it is
+ * folded (it is already open when the page arrived from the New menu or restored a draft) and return the
+ * textarea.
+ */
+export async function openNoteComposer(page: Page): Promise<Locator> {
+  const field = page.getByLabel(/^Add a note/);
+  const trigger = page.getByRole('button', { name: 'Add a note', exact: true });
+  await expect(trigger.or(field)).toBeVisible({ timeout: 20_000 });
+  if (await trigger.isVisible()) await trigger.click();
+  await expect(field).toBeVisible({ timeout: 10_000 });
+  return field;
 }

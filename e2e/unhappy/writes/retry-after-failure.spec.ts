@@ -1,4 +1,5 @@
 import { gotoCalendarSettled } from '../../notesFirstClassShared';
+import { openNoteComposer } from '../../helpers';
 import type { Locator, Page } from '@playwright/test';
 import { test, expect, uniqueLabel } from '../../fixtures';
 import { sqlExec } from '../../db';
@@ -123,14 +124,14 @@ const SURFACES: Surface[] = [
     async prepare({ page, circleId, label }) {
       await page.goto(`/circles/${circleId}/notes`, { waitUntil: 'domcontentloaded' });
       await expect(page.getByRole('heading', { name: 'Notes', exact: true })).toBeVisible({ timeout: 20_000 });
-      await page.getByLabel(/^Add a note/).fill(label);
+      await (await openNoteComposer(page)).fill(label);
       return page.getByRole('button', { name: 'Post', exact: true });
     },
     async inputKept({ page, label }) {
       await expect(page.getByLabel(/^Add a note/)).toHaveValue(label);
     },
     async succeeded({ page, label }) {
-      await expect(page.getByLabel(/^Add a note/)).toHaveValue('', { timeout: 20_000 });
+      await expect(page.getByLabel(/^Add a note/)).toHaveCount(0, { timeout: 20_000 }); // folded back into its button after the post
       await expect(page.locator('li').filter({ hasText: label }).first()).toBeVisible({ timeout: 20_000 });
     },
     rows: (ctx) => `select 1 from care_notes where circle_id = ${c(ctx)} and body = ${sqlStr(ctx.label)}`,

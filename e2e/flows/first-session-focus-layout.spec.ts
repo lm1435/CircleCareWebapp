@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
-import { checkA11y } from '../helpers';
+import { openNoteComposer, checkA11y } from '../helpers';
 
 // 1.2.3 "first session focus", sections E + F — the parts jsdom cannot see.
 //
@@ -307,8 +307,7 @@ test.describe('Notes composer: the Post row is a sticky footer', () => {
     circleId,
   }) => {
     await page.goto(`/circles/${circleId}/notes`, { waitUntil: 'domcontentloaded' });
-    const body = page.getByLabel(/^Add a note/);
-    await expect(body).toBeVisible({ timeout: NAV_TIMEOUT });
+    const body = await openNoteComposer(page);
     const footer = page.getByTestId('note-composer-footer').first();
     const post = footer.getByRole('button', { name: 'Post', exact: true });
     await expect(post).toBeDisabled();

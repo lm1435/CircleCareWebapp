@@ -495,7 +495,7 @@ export const SURFACES: Surface[] = [
       await gotoCirclePage(page, d.circleId, 'notes');
       await expect(page.getByText(need(d.careNoteBody, 'a care note')).first()).toBeVisible({ timeout: 20_000 });
       return [
-        { label: 'note composer', locator: page.getByLabel(/^Add a note/) },
+        { label: 'note composer', locator: page.getByRole('button', { name: 'Add a note', exact: true }) },
         { label: 'Post', locator: page.getByRole('button', { name: 'Post', exact: true }), offered: 'visible' },
         { label: 'note row actions', locator: page.getByRole('button', { name: /^Actions for note by / }) },
       ];

@@ -12,7 +12,7 @@ test.use({ persona: 'premiumOwner' });
 
 test('AI entry is present on the navigation this viewport renders (control)', async ({ page, circleId }) => {
   await gotoCirclePage(page, circleId, 'notes');
-  await expect(page.getByLabel(/^Add a note/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: 'Add a note', exact: true })).toBeVisible({ timeout: 20_000 });
 
   const surface = aiEntrySurface(page);
   await expect(surface.navSignal, `${surface.kind} navigation rendered`).toBeVisible();

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { openNoteComposer } from '../helpers';
 import { readFileSync } from 'node:fs';
 import type { APIRequestContext, BrowserContext, Locator, Page, Route } from '@playwright/test';
 import { test, expect } from '../fixtures';
@@ -663,7 +664,7 @@ const SURFACES: Surface[] = [
     path: '/api/circles/:id/care-notes',
     async prepare({ page, o, label }) {
       await page.goto(`/circles/${o.circleId}/notes`, { waitUntil: 'domcontentloaded' });
-      await page.getByLabel(/^Add a note/).fill(label, { timeout: 20_000 });
+      await (await openNoteComposer(page)).fill(label, { timeout: 20_000 });
       return page.getByRole('button', { name: 'Post', exact: true });
     },
     async kept({ page, label }) {
@@ -673,7 +674,7 @@ const SURFACES: Surface[] = [
     before: 0,
     after: 1,
     async succeeded({ page }) {
-      await expect(page.getByLabel(/^Add a note/)).toHaveValue('', { timeout: 20_000 });
+      await expect(page.getByLabel(/^Add a note/)).toHaveCount(0, { timeout: 20_000 }); // folded back into its button after the post
     },
   },
   {
@@ -961,12 +962,12 @@ test('4. rotation: with sha256 and sha256_next both present, a backend with EITH
     // And through the UI on the new-key backend.
     const label = `ZZ_E2E_WG_ROTUI_${uniqueSuffix()}`;
     await page.goto(`/circles/${o.circleId}/notes`, { waitUntil: 'domcontentloaded' });
-    await page.getByLabel(/^Add a note/).fill(label, { timeout: 20_000 });
+    await (await openNoteComposer(page)).fill(label, { timeout: 20_000 });
     const via = await routeVia(page, 'POST', '/api/circles/:id/care-notes', ALT_API, 1);
     try {
       await page.getByRole('button', { name: 'Post', exact: true }).click();
       await expect.poll(() => via.answered[0], { timeout: 20_000 }).toBe(201);
-      await expect(page.getByLabel(/^Add a note/)).toHaveValue('', { timeout: 20_000 });
+      await expect(page.getByLabel(/^Add a note/)).toHaveCount(0, { timeout: 20_000 }); // folded back into its button after the post
       expect(noteCount(o, label)).toBe(1);
     } finally {
       await via.dispose();

@@ -1,13 +1,14 @@
 import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { prefersReducedMotion } from '@/components/ui/motion';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
   Card,
   ConfirmDialog,
   EmptyState,
+  Icon,
   Sheet,
   Skeleton,
   careCardListGap,
@@ -164,6 +165,16 @@ export default function NotesPage(): ReactElement {
 
   const [draft, setDraft] = useState<NoteDraft>(EMPTY_NOTE_DRAFT);
   const [postError, setPostError] = useState<string | null>(null);
+  // The create composer is COLLAPSED into an "Add a note" button (owner 2026-11-07, mobile parity).
+  // It also shows whenever there is something in it (a restored session draft, or the text kept after
+  // a failed post) so nothing typed is ever hidden.
+  // The New menu's "Note" entry navigates here with `composeNote` state: arrive with it open.
+  const location = useLocation();
+  const [composerOpen, setComposerOpen] = useState(
+    () => (location.state as { composeNote?: boolean } | null)?.composeNote === true
+  );
+  const addNoteRef = useRef<HTMLButtonElement>(null);
+  const wasComposerShownRef = useRef(false);
   // PK9: the post clears the composer optimistically, so a session that dies
   // MID-post would otherwise find it empty. Holds the submitted draft until the
   // post settles; the forced-sign-out snapshot falls back to it.
@@ -179,6 +190,14 @@ export default function NotesPage(): ReactElement {
     },
     (restored) => setDraft({ ...EMPTY_NOTE_DRAFT, ...restored })
   );
+  const draftIsLive = draft.body.trim() !== '' || draft.mood !== null || draft.categories.length > 0;
+  const composerShown = composerOpen || draftIsLive || postError !== null;
+  // Focus management: when the composer closes (posted, cancelled), the focused control is gone, so
+  // hand focus to the button that reopens it instead of dropping it on <body>.
+  useEffect(() => {
+    if (wasComposerShownRef.current && !composerShown) addNoteRef.current?.focus();
+    wasComposerShownRef.current = composerShown;
+  }, [composerShown]);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
@@ -340,6 +359,7 @@ export default function NotesPage(): ReactElement {
     inFlightDraftRef.current = submitted;
     // Optimistic: the hook prepends the note; clear the composer now.
     setDraft(EMPTY_NOTE_DRAFT);
+    setComposerOpen(false);
     createMutation.mutate(
       { circleId, input },
       {
@@ -582,18 +602,37 @@ export default function NotesPage(): ReactElement {
           inline edit is active (mirrors mobile). */}
       {canEdit && editingNoteId === null && (
         <div className="px-5 pb-4 pt-4">
-          <Sheet padding="sm">
-            <NoteComposer
-              idPrefix="care-note"
-              draft={draft}
-              onChange={setDraft}
-              onSubmit={handlePost}
-              submitLabel={t('notes:composer.post')}
-              submitting={createMutation.isPending}
-              error={postError}
-              today={today}
-            />
-          </Sheet>
+          {composerShown ? (
+            <Sheet padding="sm">
+              <NoteComposer
+                idPrefix="care-note"
+                draft={draft}
+                onChange={setDraft}
+                onSubmit={handlePost}
+                submitLabel={t('notes:composer.post')}
+                submitting={createMutation.isPending}
+                error={postError}
+                today={today}
+                autoFocus={composerOpen}
+                onCancel={() => {
+                  setDraft(EMPTY_NOTE_DRAFT);
+                  setPostError(null);
+                  setComposerOpen(false);
+                }}
+              />
+            </Sheet>
+          ) : (
+            <Button
+              ref={addNoteRef}
+              variant="outline"
+              size="sm"
+              leftIcon={<Icon name="add-outline" size="row" />}
+              aria-expanded={false}
+              onClick={() => setComposerOpen(true)}
+            >
+              {t('notes:composer.label')}
+            </Button>
+          )}
         </div>
       )}
 

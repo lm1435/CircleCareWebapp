@@ -1,4 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
+import { openNoteComposer } from '../helpers';
 import { test, expect } from '../fixtures';
 import { apiSession, dbQuery, sqlStr, type ApiSession } from '../unhappy';
 import { assertLocalDbTargets, sqlExec } from '../db';
@@ -180,7 +181,7 @@ test.describe('notes first-class: feed previews + deep links', () => {
     const noteBody = `E2E care note ${uniqueSuffix()}`;
 
     await page.goto(`/circles/${circleId}/notes`, { waitUntil: 'domcontentloaded' });
-    await page.getByLabel('Add a note', { exact: true }).fill(noteBody);
+    await (await openNoteComposer(page)).fill(noteBody);
     await page.getByRole('button', { name: 'Post' }).click();
     await expect(page.getByText(noteBody)).toBeVisible({ timeout: 25_000 });
 

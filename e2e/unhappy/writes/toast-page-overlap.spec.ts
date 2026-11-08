@@ -1,4 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
+import { openNoteComposer } from '../../helpers';
 import { test, expect, uniqueLabel } from '../../fixtures';
 import { failRequest } from '../../unhappy';
 import { errorToast } from './_helpers';
@@ -312,7 +313,7 @@ test.describe('save failures', () => {
       test('NotesPage: the failed "Post" is reported inline in the composer, never as a toast over the page', async ({ page, circleId }) => {
         await page.goto(`/circles/${circleId}/notes`, { waitUntil: 'domcontentloaded' });
         await pageSettled(page);
-        const composer = page.getByLabel(/^Add a note/);
+        const composer = await openNoteComposer(page);
         await actInPlace(page, composer, () => composer.fill(uniqueLabel('TPO')));
         const injected = await failRequest(page, 'POST', '/api/circles/:id/care-notes', { status: 500, times: 1 });
         const post = page.getByRole('button', { name: 'Post', exact: true });
@@ -344,7 +345,7 @@ test.describe('Notes composer failed-Post alert at 320px and 200% text', () => {
         content:
           ':root { --text-xs: 24px !important; --text-sm: 28px !important; --text-base: 36px !important; --text-lg: 48px !important; --text-xl: 64px !important; }',
       });
-      const composer = page.getByLabel(/^Add a note/);
+      const composer = await openNoteComposer(page);
       await composer.fill(uniqueLabel('TPO'));
       const injected = await failRequest(page, 'POST', '/api/circles/:id/care-notes', { status: 500, times: 1 });
       const post = page.getByRole('button', { name: 'Post', exact: true });

@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { openNoteComposer } from '../../helpers';
 import { test, expect, uniqueLabel } from '../../fixtures';
 import { sqlExec } from '../../db';
 import { apiSession, countRequests, dbCount, dbQuery, holdRequest, sqlStr } from '../../unhappy';
@@ -79,7 +80,7 @@ test('care note post: a same-tick burst posts one note; while it is pending a NE
     dbCount(`select 1 from care_notes where circle_id = ${sqlStr(circleId)}::uuid and body = ${sqlStr(body)}`);
   try {
     await openNotes(page, circleId);
-    const composer = page.getByLabel(/^Add a note/);
+    const composer = await openNoteComposer(page);
     const form = page.locator('form').filter({ has: composer });
     const post = form.getByRole('button', { name: 'Post', exact: true });
     await composer.fill(first);
@@ -89,11 +90,12 @@ test('care note post: a same-tick burst posts one note; while it is pending a NE
     try {
       await burstClick(post);
       await hold.waitForHeld(1);
-      await expect(composer, 'the composer cleared optimistically').toHaveValue('');
+      await expect(composer, 'the composer cleared optimistically and folded into its button').toHaveCount(0);
       // Well past any plausible cooldown guard (see doubleSubmitWhileHeld).
       await page.waitForTimeout(1_000);
       expect(sent.count, 'the burst sent exactly one POST').toBe(1);
 
+      await openNoteComposer(page); // reopen it for the next note
       await composer.fill(second);
       await expect(post, 'Post is disabled while the first POST is pending').toBeDisabled();
       await post.click({ force: true });
