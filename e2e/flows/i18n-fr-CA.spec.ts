@@ -74,7 +74,7 @@ test('fr-CA chrome: Quebec delta over the fr base, no English, html lang fr-CA',
 test('profile language selector is in French and Français (Canada) is active', async ({
   page,
 }) => {
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await page.goto('/profile/language', { waitUntil: 'domcontentloaded' });
   await expect(page.getByText('Langue', { exact: true }).first()).toBeVisible({
     timeout: NAV_TIMEOUT,
   });

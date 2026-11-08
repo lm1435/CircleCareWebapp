@@ -1,5 +1,4 @@
 {
-  "heading": "Perfil e definições",
   "account": {
     "lastName": "Apelido",
     "save": "Guardar",
@@ -30,7 +29,7 @@
   },
   "delete": {
     "title": "Eliminar conta",
-    "description": "Elimine permanentemente a sua conta e todos os círculos de cuidado dos quais é proprietário. Esta ação não pode ser desfeita. Quer uma cópia das suas informações antes? Use 'Transferir os meus dados' acima.",
+    "description": "Elimine permanentemente a sua conta e todos os círculos de cuidado dos quais é proprietário. Esta ação não pode ser desfeita. Quer uma cópia das suas informações antes? Use 'Transferir os meus dados' nas Definições.",
     "cta": "Eliminar a minha conta",
     "confirmTitle": "Eliminar a sua conta?",
     "confirmBody": "Isto elimina permanentemente a sua conta e todos os círculos de cuidado dos quais é proprietário — incluindo todos os medicamentos, consultas, tarefas, notas, sinais vitais, documentos e informações de emergência neles. Todas as outras pessoas desses círculos perdem o acesso e serão notificadas. Os círculos dos quais faz parte, mas que não são seus, não são eliminados; apenas deixa de fazer parte deles. Esta ação não pode ser desfeita.",
@@ -70,5 +69,17 @@
   "appearance": {
     "title": "Aspeto",
     "hint": "Sistema acompanha o seu dispositivo. Esta escolha aplica-se apenas a este dispositivo."
+  },
+  "settingsList": {
+    "title": "Definições",
+    "groups": {
+      "you": "O seu perfil"
+    },
+    "rows": {
+      "myCircles": "Os meus círculos"
+    },
+    "values": {
+      "free": "Gratuito"
+    }
   }
 }

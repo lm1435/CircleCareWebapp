@@ -1,6 +1,6 @@
 import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -48,6 +48,9 @@ import { AvatarColorPicker } from '@/components/profile/AvatarColorPicker';
 import { SubscriptionSection } from '@/components/profile/SubscriptionSection';
 import { DataExportSection } from '@/components/profile/DataExportSection';
 import { ThemePreferenceSelector } from '@/components/profile/ThemePreferenceSelector';
+import { SettingsList, type SettingsListGroup } from '@/components/profile/SettingsList';
+import { isSettingsPage, settingsPath, type SettingsPage } from '@/lib/settingsSections';
+import { isDarkModeEnabled, useThemeStore } from '@/lib/theme';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useCircles } from '@/hooks/useCircles';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
@@ -97,17 +100,20 @@ function SettingsCard({
   description,
   children,
 }: {
-  title: string;
+  /** Omitted on a settings page of its own, whose `<h1>` already names it. */
+  title?: string;
   description?: string;
   children: ReactNode;
 }): ReactElement {
   return (
-    <section className="mt-8">
-      <Text variant="sectionLabel" as="h2">
-        {title}
-      </Text>
+    <section className={title ? 'mt-8' : undefined}>
+      {title ? (
+        <Text variant="sectionLabel" as="h2">
+          {title}
+        </Text>
+      ) : null}
       {description ? (
-        <Text variant="caption" className="mt-1">
+        <Text variant="caption" className={title ? 'mt-1' : undefined}>
           {description}
         </Text>
       ) : null}
@@ -122,17 +128,20 @@ function SettingsSheetSection({
   description,
   children,
 }: {
-  title: string;
+  /** Omitted on a settings page of its own, whose `<h1>` already names it. */
+  title?: string;
   description?: string;
   children: ReactNode;
 }): ReactElement {
   return (
-    <div className="mt-8">
-      <Text variant="sectionLabel" as="h2">
-        {title}
-      </Text>
+    <div className={title ? 'mt-8' : undefined}>
+      {title ? (
+        <Text variant="sectionLabel" as="h2">
+          {title}
+        </Text>
+      ) : null}
       {description ? (
-        <Text variant="caption" className="mt-1">
+        <Text variant="caption" className={title ? 'mt-1' : undefined}>
           {description}
         </Text>
       ) : null}
@@ -151,6 +160,18 @@ function formatQuietEnd(value: string, cycle: HourCycle): string {
 export default function ProfilePage(): ReactElement {
   const { t } = useTranslation('profile');
   const navigate = useNavigate();
+  const location = useLocation();
+  // Design pass 2026-11-08: `/profile` is the header + four grouped lists of rows;
+  // `/profile/:section` is one row's page (lib/settingsSections.ts). One component
+  // serves both so every control keeps its handlers, state and testIDs unchanged.
+  const { section: rawSection } = useParams<{ section?: string }>();
+  const section: SettingsPage | null = isSettingsPage(rawSection) ? rawSection : null;
+  const unknownSection = rawSection !== undefined && section === null;
+  const themePreference = useThemeStore((s) => s.preference);
+  // One `settings_section_viewed` per page opened (mobile parity; enum only).
+  useEffect(() => {
+    if (section) Analytics.settingsSectionViewed(section);
+  }, [section]);
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const signOut = useAuthStore((s) => s.signOut);
@@ -189,16 +210,28 @@ export default function ProfilePage(): ReactElement {
   const deleteGuard = useSubmitGuard();
 
   // ── Name (inline edit) ────────────────────────────────────────────────
-  const [editingName, setEditingName] = useState(false);
-  // The header pencil opens the name fields further down the page, so it also
-  // moves focus (and the viewport) to them; the Account card's own Edit button
-  // sits right beside the fields and leaves focus where it is.
-  const focusNameOnEdit = useRef(false);
+  // The header pencil (on the list) opens the Account page with the name fields
+  // open, and moves focus to them: it says so in router state, which is also how
+  // RouteFocus knows to leave focus alone (`focusManaged`).
+  const editNameRequested =
+    section === 'account' &&
+    Boolean((location.state as { editName?: boolean } | null)?.editName);
+  const [editingName, setEditingName] = useState(editNameRequested);
+  const focusNameOnEdit = useRef(editNameRequested);
+  // Also when the list and the page share one mounted instance (same element on
+  // both routes): open the fields on each such navigation.
   useEffect(() => {
-    if (!editingName || !focusNameOnEdit.current) return;
+    if (!editNameRequested) return;
+    focusNameOnEdit.current = true;
+    setEditingName(true);
+  }, [editNameRequested, location.key]);
+  // The fields only render once the user has loaded, so wait for that too.
+  const userLoaded = Boolean(userQuery.data);
+  useEffect(() => {
+    if (!editingName || !focusNameOnEdit.current || !userLoaded) return;
     focusNameOnEdit.current = false;
     document.getElementById('profile-first-name')?.focus();
-  }, [editingName]);
+  }, [editingName, userLoaded]);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   // A FAILED NAME SAVE IS SHOWN INLINE IN THE FORM, NOT AS A TOAST.
@@ -273,6 +306,13 @@ export default function ProfilePage(): ReactElement {
   const [analyticsEnabled, setAnalyticsEnabledState] = useState<boolean>(() =>
     getAnalyticsConsent(),
   );
+
+  if (unknownSection) return <Navigate to="/profile" replace />;
+  // Rows the list hides have no page either (same gates as the list below).
+  if (section === 'appearance' && !isDarkModeEnabled()) return <Navigate to="/profile" replace />;
+  if (section === 'digest' && circles && !showDigestSection) {
+    return <Navigate to="/profile" replace />;
+  }
 
   if (userQuery.isLoading || !user) {
     return (
@@ -500,439 +540,174 @@ export default function ProfilePage(): ReactElement {
     label: t(`emailDigest.days.${i}`),
   }));
 
-  return (
-    <section className="mx-auto w-full max-w-2xl p-6 md:p-8">
-      {/* Compact identity header (mobile ProfileScreen's): avatar LEFT, the
-          name with its edit pencil immediately beside it, the email under the
-          name, and — for Premium accounts only — a small labelled chip on its
-          own line, left-aligned with the name. The page's old title moves to
-          the eyebrow. The row is NOT one pressable: the pencil is its own
-          button, so nothing swallows it. */}
-      <header className="flex items-center gap-4" data-testid="profile-header">
-        <Avatar
-          size="lg"
-          name={fullName || user.email}
-          colorKey={user.avatar_color}
-          className="h-15! w-15!"
-        />
-        <div className="min-w-0 flex-1">
-          <Eyebrow as="p" className="mb-0.5">
-            {t('heading')}
-          </Eyebrow>
-          <div className="flex items-center gap-1">
-            <Text variant="heroName" className="min-w-0 break-words">
-              {fullName || t('account.namePlaceholder')}
-            </Text>
-            <button
-              type="button"
-              aria-label={t('account.editNameLabel')}
-              onClick={() => {
-                focusNameOnEdit.current = true;
-                setEditingName(true);
-              }}
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors duration-fast hover:bg-bg-2 hover:text-ink"
-            >
-              <Icon name="pencil-outline" size="row" />
-            </button>
-          </div>
-          <p className="m-0 break-all text-sm text-ink-2">{user.email}</p>
-          {isPremium ? (
-            <p className="m-0 mt-1.5" data-testid="profile-premium-chip">
-              <Badge variant="accent" size="sm" icon="star">
-                {t('header.premium')}
-              </Badge>
-            </p>
-          ) : null}
-        </div>
-      </header>
+  // ── Settings list (rows + their current values; mobile ProfileScreen twin) ──
+  // Literal keys (not template strings) so the key-coverage scan can resolve them.
+  const pageTitles: Record<SettingsPage, string> = {
+    subscription: t('subscription.title'),
+    color: t('avatarColor.label'),
+    alerts: t('settingsList.rows.alerts'),
+    quietHours: t('sections.quietHours'),
+    digest: t('emailDigest.premiumFeature'),
+    appearance: t('appearance.title'),
+    language: t('sections.language'),
+    units: t('settingsList.rows.units'),
+    timezone: t('account.timezone'),
+    privacy: t('settingsList.rows.privacySecurity'),
+    data: t('dataExport.cta'),
+    account: t('sections.account'),
+  };
+  const offLabel = t('settingsList.values.off');
+  const colorNames: Record<string, string> = {
+    moss: t('avatarColor.names.moss'),
+    coral: t('avatarColor.names.coral'),
+    dusk: t('avatarColor.names.dusk'),
+    clay: t('avatarColor.names.clay'),
+    forest: t('avatarColor.names.forest'),
+    amber: t('avatarColor.names.amber'),
+  };
+  const alertsValue = (() => {
+    const prefs = savedPrefs();
+    const fullyOn = NOTIFICATION_GROUP_ORDER.every(
+      (g) => groupOn(prefs, g) && !groupMixed(prefs, g)
+    );
+    if (fullyOn) return t('settingsList.values.allOn');
+    const allOff = NOTIFICATION_GROUP_ORDER.every((g) => !groupOn(prefs, g));
+    return allOff ? t('settingsList.values.allOff') : t('settingsList.values.someOff');
+  })();
+  // The SAVED window (the server's), not an edit still on its way.
+  const quietValue =
+    user.quiet_hours_start && user.quiet_hours_end
+      ? `${formatQuietEnd(normalizeTimeOfDay(user.quiet_hours_start), hourCycle)} – ${formatQuietEnd(
+          normalizeTimeOfDay(user.quiet_hours_end),
+          hourCycle
+        )}`
+      : offLabel;
+  // A free owner sees an upgrade row on the page, so the row says Premium (mobile parity).
+  const digestValue =
+    ownsAnyCircle && !isPremium
+      ? t('header.premium')
+      : user.email_digest_enabled
+        ? dayOptions[user.email_digest_day ?? 0]?.label
+        : offLabel;
+  const appearanceValue =
+    themePreference === 'dark'
+      ? t('appearance.themeDark')
+      : themePreference === 'light'
+        ? t('appearance.themeLight')
+        : t('appearance.themeSystem');
+  const languageCode = (user.language as SupportedLanguage) ?? 'en';
+  // One lookup for the row value and the picker (endonyms, e.g. "Deutsch").
+  const languageName = (code: SupportedLanguage): string => t(`language.names.${code}`);
+  const timezoneValue = getTimezoneLabel(user.timezone ?? '') || t('timezoneAuto.otherZone');
 
-      {/* ── Subscription ──────────────────────────────────────────────── */}
-      <SubscriptionSection />
+  const settingsGroups: SettingsListGroup[] = [
+    {
+      key: 'you',
+      title: t('settingsList.groups.you'),
+      rows: [
+        {
+          id: 'subscription',
+          label: pageTitles.subscription,
+          value: subscription
+            ? isPremium
+              ? t('header.premium')
+              : t('settingsList.values.free')
+            : undefined,
+          to: settingsPath('subscription'),
+        },
+        {
+          id: 'circles',
+          label: t('settingsList.rows.myCircles'),
+          value: circles ? String(circles.length) : undefined,
+          to: '/circles',
+        },
+        {
+          id: 'color',
+          label: pageTitles.color,
+          value: user.avatar_color ? colorNames[user.avatar_color] : undefined,
+          to: settingsPath('color'),
+        },
+      ],
+    },
+    {
+      key: 'notifications',
+      title: t('settingsList.groups.notifications'),
+      rows: [
+        { id: 'alerts', label: pageTitles.alerts, value: alertsValue, to: settingsPath('alerts') },
+        {
+          id: 'quietHours',
+          label: pageTitles.quietHours,
+          value: quietValue,
+          to: settingsPath('quietHours'),
+        },
+        ...(showDigestSection
+          ? [
+              {
+                id: 'digest' as const,
+                label: pageTitles.digest,
+                value: digestValue,
+                to: settingsPath('digest'),
+              },
+            ]
+          : []),
+      ],
+    },
+    {
+      key: 'preferences',
+      title: t('settingsList.groups.preferences'),
+      rows: [
+        ...(isDarkModeEnabled()
+          ? [
+              {
+                id: 'appearance' as const,
+                label: pageTitles.appearance,
+                value: appearanceValue,
+                to: settingsPath('appearance'),
+              },
+            ]
+          : []),
+        {
+          id: 'language',
+          label: pageTitles.language,
+          // An endonym, in its own language (WCAG 3.1.2).
+          value: <span lang={languageCode}>{languageName(languageCode)}</span>,
+          to: settingsPath('language'),
+        },
+        {
+          id: 'units',
+          label: pageTitles.units,
+          value: `${weightUnit} · ${temperatureUnit}`,
+          to: settingsPath('units'),
+        },
+        {
+          id: 'timezone',
+          label: pageTitles.timezone,
+          value: timezoneValue,
+          to: settingsPath('timezone'),
+        },
+      ],
+    },
+    {
+      key: 'privacyAccount',
+      title: t('settingsList.groups.privacyAccount'),
+      rows: [
+        { id: 'privacy', label: pageTitles.privacy, to: settingsPath('privacy') },
+        { id: 'data', label: pageTitles.data, to: settingsPath('data') },
+        // The existing help center; the hub reports `help_center_opened` with this source.
+        {
+          id: 'help',
+          label: t('settingsList.rows.help'),
+          to: '/help',
+          state: { helpSource: 'profile' },
+        },
+        { id: 'account', label: pageTitles.account, to: settingsPath('account') },
+      ],
+    },
+  ];
 
-      {/* ── Account ───────────────────────────────────────────────────── */}
-      <SettingsCard title={t('sections.account')}>
-        <div>
-          <p className="m-0 text-sm font-medium text-ink-2">{t('account.email')}</p>
-          <p className="m-0 mt-1 text-base text-ink">{user.email}</p>
-        </div>
-
-        {/* The name itself (and its edit pencil) lives in the page header; the
-            fields open here, under the email, when it is pressed. */}
-        {editingName ? (
-          <>
-            <TextField
-              id="profile-first-name"
-              label={t('account.firstName')}
-              autoComplete="given-name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              maxLength={50}
-            />
-            <TextField
-              id="profile-last-name"
-              label={t('account.lastName')}
-              autoComplete="family-name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              maxLength={50}
-            />
-            {nameError ? (
-              <p role="alert" className="m-0 text-sm text-terracotta-deep text-balance">
-                {nameError}
-              </p>
-            ) : null}
-            <div className="flex gap-3">
-              <Button
-                size="sm"
-                onClick={handleSaveName}
-                offlineKind="save"
-                disabled={saveName.isPending || updateProfile.isPending}
-              >
-                {t('account.save')}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setFirstName(user.first_name ?? '');
-                  setLastName(user.last_name ?? '');
-                  setNameError(null);
-                  setEditingName(false);
-                }}
-              >
-                {t('account.cancel')}
-              </Button>
-            </div>
-          </>
-        ) : null}
-
-        <div data-testid="profile-timezone">
-          <div className="flex items-baseline justify-between gap-4">
-            <Text variant="label" as="p" id="profile-timezone-label">
-              {t('account.timezone')}
-            </Text>
-            <Text variant="body" as="p" id="profile-timezone-value">
-              {getTimezoneLabel(user.timezone ?? '') || t('timezoneAuto.otherZone')}
-            </Text>
-          </div>
-          <Text variant="caption" className="mt-1">
-            {t('timezoneAuto.helper')}
-          </Text>
-        </div>
-
-        {/* Password changes happen through the sign-in reset flow — point there. */}
-        <Text variant="caption">{t('account.changePasswordHint')}</Text>
-      </SettingsCard>
-
-      {/* ── Your colour (member avatar) ──────────────────────────────── */}
-      <SettingsCard title={t('avatarColor.label')} description={t('avatarColor.hint')}>
-        <div className="flex items-center gap-4">
-          <Avatar
-            size="lg"
-            name={fullName || user.email}
-            colorKey={user.avatar_color}
-          />
-          <AvatarColorPicker
-            value={user.avatar_color}
-            onChange={(key) => {
-              if (key === user.avatar_color) return;
-              if (blockOfflineWrite('save')) return;
-              setColorSaved(false);
-              updateAvatarColor.mutate(key, { onSuccess: () => setColorSaved(true) });
-            }}
-            busy={updateAvatarColor.isPending}
-          />
-        </div>
-        <p
-          role="status"
-          data-testid="avatar-color-saved"
-          className="m-0 min-h-5 text-sm font-medium text-moss-deep"
-        >
-          {colorSaved ? t('avatarColor.saved') : ''}
-        </p>
-      </SettingsCard>
-
-      {/* ── Language ──────────────────────────────────────────────────── */}
-      <SettingsCard title={t('sections.language')} description={t('language.description')}>
-        <RadioGroup
-          plain
-          label={t('sections.language')}
-          value={(user.language as SupportedLanguage) ?? 'en'}
-          onChange={handleLanguage}
-          busy={updateProfile.isPending || saveName.isPending}
-          options={(Object.keys(supportedLanguages) as SupportedLanguage[]).map((code) => ({
-            value: code,
-            // Endonyms ("Deutsch", "Français"): each is in its own language (WCAG 3.1.2).
-            label: <span lang={code}>{t(`language.names.${code}`)}</span>,
-          }))}
-        />
-      </SettingsCard>
-
-      {/* ── Notifications ─────────────────────────────────────────────── */}
-      <SettingsSheetSection
-        title={t('sections.notifications')}
-        description={t('notifications.description')}
-      >
-        {NOTIFICATION_GROUP_ORDER.map((group) => {
-          const prefs = savedPrefs();
-          const mixed = groupMixed(prefs, group);
-          // Literal keys (not template strings) so the key-coverage scan can resolve them.
-          const copy: Record<NotificationGroup, { title: string; desc: string }> = {
-            medications: {
-              title: t('notifications.groups.medications'),
-              desc: t('notifications.groups.medicationsDesc'),
-            },
-            tasks: {
-              title: t('notifications.groups.tasks'),
-              desc: t('notifications.groups.tasksDesc'),
-            },
-            notes: {
-              title: t('notifications.groups.notes'),
-              desc: t('notifications.groups.notesDesc'),
-            },
-            tips: {
-              title: t('notifications.groups.tips'),
-              desc: t('notifications.groups.tipsDesc'),
-            },
-            shifts: {
-              title: t('notifications.groups.shifts'),
-              desc: t('notifications.groups.shiftsDesc'),
-            },
-          };
-          return (
-            <SheetRow key={group}>
-              <div className="w-full">
-                <Toggle
-                  checked={groupOn(prefs, group)}
-                  onChange={(next) => handleNotifGroup(group, next)}
-                  busy={updateNotif.isPending}
-                  label={copy[group].title}
-                  hint={
-                    <>
-                      {copy[group].desc}
-                      {mixed ? (
-                        <span className="mt-0.5 block font-medium">
-                          {t('notifications.someTurnedOff')}
-                        </span>
-                      ) : null}
-                    </>
-                  }
-                />
-              </div>
-            </SheetRow>
-          );
-        })}
-      </SettingsSheetSection>
-
-      {/* ── Quiet hours ───────────────────────────────────────────────── */}
-      <SettingsSheetSection
-        title={t('sections.quietHours')}
-        description={t('quietHours.description')}
-      >
-        <SheetRow>
-          <div className="w-full">
-            <Toggle
-              checked={quietEnabled}
-              onChange={handleQuietEnabledToggle}
-              busy={updateQuiet.isPending}
-              label={t('quietHours.enable')}
-            />
-          </div>
-        </SheetRow>
-        {/* Help only while quiet hours are not set up (owner 2026-11-08, mobile parity). */}
-        {!quietEnabled ? (
-          <SheetRow>
-            <HowDoesThisWork slug="quiet-hours" />
-          </SheetRow>
-        ) : null}
-        {quietEnabled ? (
-          <SheetRow>
-            <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
-              <TimeField
-                id="profile-quiet-start"
-                label={t('quietHours.start')}
-                value={quietStart}
-                onChange={(e) => handleQuietTime(e.target.value, quietEnd)}
-                busy={updateQuiet.isPending}
-              />
-              <TimeField
-                id="profile-quiet-end"
-                label={t('quietHours.end')}
-                value={quietEnd}
-                onChange={(e) => handleQuietTime(quietStart, e.target.value)}
-                busy={updateQuiet.isPending}
-              />
-            </div>
-          </SheetRow>
-        ) : null}
-        {/* The live region is ALWAYS mounted and only its content comes and goes:
-            a region inserted together with its text is often not announced
-            (WCAG 4.1.3). Polite: a non-blocking warning should not cut off the
-            time field's own announcement. The wrapper carries the row's divider,
-            since the row inside it is a first child and drops its own. */}
-        <div
-          role="status"
-          data-testid="quiet-hours-almost-all-day-region"
-          className={quietWarning ? 'border-t border-line-2' : undefined}
-        >
-          {quietWarning ? (
-            <SheetRow>
-              <p
-                data-testid="quiet-hours-almost-all-day-warning"
-                className="m-0 text-sm text-amber-deep text-balance"
-              >
-                {t('quietHours.almostAllDayWarning', {
-                  endTime: formatQuietEnd(quietEnd, hourCycle),
-                })}
-              </p>
-            </SheetRow>
-          ) : null}
-        </div>
-      </SettingsSheetSection>
-
-      {/* ── Units ─────────────────────────────────────────────────────── */}
-      <SettingsCard title={t('sections.units')} description={t('units.description')}>
-        <RadioGroup
-          plain
-          label={t('units.weight')}
-          value={weightUnit}
-          onChange={handleWeightUnit}
-          busy={updateUnits.isPending}
-          options={[
-            { value: 'lbs', label: t('units.lbs') },
-            { value: 'kg', label: t('units.kg') },
-          ]}
-        />
-        <RadioGroup
-          plain
-          label={t('units.glucose')}
-          value={glucoseUnit}
-          onChange={handleGlucoseUnit}
-          busy={updateUnits.isPending}
-          options={[
-            { value: 'mg/dL', label: t('units.mgdl') },
-            { value: 'mmol/L', label: t('units.mmoll') },
-          ]}
-        />
-        <RadioGroup
-          plain
-          label={t('units.temperature')}
-          value={temperatureUnit}
-          onChange={handleTemperatureUnit}
-          busy={updateUnits.isPending}
-          options={[
-            { value: '°F', label: t('units.fahrenheit') },
-            { value: '°C', label: t('units.celsius') },
-          ]}
-        />
-      </SettingsCard>
-
-      {/* ── Appearance (System / Light / Dark) ─────────────────────────── */}
-      <ThemePreferenceSelector />
-
-      {/* ── Privacy ───────────────────────────────────────────────────── */}
-      {/*
-        The opt-in the privacy policy has always described, and the place to
-        CHANGE an answer — the signup flow is where it is first asked
-        (pages/SignUpPage.tsx). Both write through
-        `recordAnalyticsConsentDecision`, so this toggle always reflects
-        whatever the signup checkbox recorded. Defaults OFF: web does not
-        grandfather an unasked visitor into full analytics — see
-        `GRANDFATHER_UNASKED_WEB_USERS` in lib/analyticsMode.
-      */}
-      <SettingsSheetSection title={t('sections.privacy')} description={t('analytics.description')}>
-        <SheetRow>
-          <div className="w-full">
-            <Toggle
-              checked={analyticsEnabled}
-              onChange={handleAnalyticsToggle}
-              label={t('analytics.enable')}
-              hint={t('analytics.hint')}
-            />
-          </div>
-        </SheetRow>
-      </SettingsSheetSection>
-
-      {showDigestSection ? (
-      <>
-      {/* ── Email digest ──────────────────────────────────────────────── */}
-      <SettingsSheetSection
-        title={t('sections.emailDigest')}
-        description={t('emailDigest.description')}
-      >
-        {/* Turning it OFF is always allowed, so an owner whose Premium lapsed with the
-            summary still on keeps the switch. */}
-        {ownsAnyCircle && !isPremium && !user.email_digest_enabled ? (
-          <SheetRow>
-            <div className="flex w-full items-center justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <Text variant="label" as="p">
-                  {t('emailDigest.premiumFeature')}
-                </Text>
-                <Text variant="caption" className="mt-0.5">
-                  {t('emailDigest.premiumNote')}
-                </Text>
-              </div>
-              <Button variant="secondary" onClick={() => promptDigestUpgrade()}>
-                {t('emailDigest.upgrade')}
-              </Button>
-            </div>
-          </SheetRow>
-        ) : (
-          <SheetRow>
-            <div className="w-full">
-              <Toggle
-                checked={Boolean(user.email_digest_enabled)}
-                onChange={handleDigestEnabled}
-                busy={updateDigest.isPending}
-                label={t('emailDigest.enable')}
-              />
-            </div>
-          </SheetRow>
-        )}
-        {user.email_digest_enabled ? (
-          <SheetRow>
-            <div className="w-full">
-              <Select
-                id="profile-digest-day"
-                label={t('emailDigest.day')}
-                options={dayOptions}
-                value={String(user.email_digest_day ?? 0)}
-                onChange={(e) => handleDigestDay(Number(e.target.value))}
-                busy={updateDigest.isPending}
-              />
-            </div>
-          </SheetRow>
-        ) : null}
-      </SettingsSheetSection>
-      </>
-      ) : null}
-
-      {/* ── Your data (GDPR export) ───────────────────────────────────── */}
-      <DataExportSection />
-
-      {/* ── Danger zone ───────────────────────────────────────────────── */}
-      <Card variant="outlined" padding="lg" className="mt-8 border-terracotta-deep/30">
-        <Text variant="sectionLabel" as="h2">
-          {t('delete.title')}
-        </Text>
-        <Text variant="caption" className="mt-1">
-          {t('delete.description')}
-        </Text>
-        <Button
-          variant="danger"
-          className="mt-5"
-          onClick={() => {
-            // Clear any stale error from a previous attempt before re-opening.
-            deleteAccount.reset();
-            setShowDelete(true);
-          }}
-          disabled={deleteAccount.isPending}
-        >
-          {t('delete.cta')}
-        </Button>
-      </Card>
-
+  // Confirm dialogs, rendered on whichever page raised them.
+  const dialogs = (
+    <>
       {pendingMedicationsOff ? (
         <ConfirmDialog
           offlineKind="save"
@@ -945,8 +720,6 @@ export default function ProfilePage(): ReactElement {
           onCancel={cancelMedicationsOff}
         />
       ) : null}
-
-
 
       {showDelete ? (
         <ConfirmDialog
@@ -970,10 +743,494 @@ export default function ProfilePage(): ReactElement {
           onCancel={() => setShowDelete(false)}
         />
       ) : null}
+    </>
+  );
 
-      <Eyebrow as="p" className="mt-8 text-center">
-        {t('footer.version', { version: pkg.version })}
-      </Eyebrow>
+  // ── The list: header + four groups + version footer ───────────────────
+  if (!section) {
+    return (
+      <section className="mx-auto w-full max-w-2xl p-6 md:p-8">
+        {/* Compact identity header (mobile ProfileScreen's): avatar LEFT, the
+            name with its edit pencil immediately beside it, the email under the
+            name, and — for Premium accounts only — a small labelled chip on its
+            own line, left-aligned with the name. The page's old title moves to
+            the eyebrow. The row is NOT one pressable: the pencil is its own
+            button, so nothing swallows it. */}
+        <header className="flex items-center gap-4" data-testid="profile-header">
+          <Avatar
+            size="lg"
+            name={fullName || user.email}
+            colorKey={user.avatar_color}
+            className="h-15! w-15!"
+          />
+          <div className="min-w-0 flex-1">
+            <Eyebrow as="p" className="mb-0.5">
+              {t('settingsList.title')}
+            </Eyebrow>
+            <div className="flex items-center gap-1">
+              <Text variant="heroName" className="min-w-0 break-words">
+                {fullName || t('account.namePlaceholder')}
+              </Text>
+              <button
+                type="button"
+                aria-label={t('account.editNameLabel')}
+                onClick={() =>
+                  navigate(settingsPath('account'), {
+                    state: { editName: true, focusManaged: true },
+                  })
+                }
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors duration-fast hover:bg-bg-2 hover:text-ink"
+              >
+                <Icon name="pencil-outline" size="row" />
+              </button>
+            </div>
+            <p className="m-0 break-all text-sm text-ink-2">{user.email}</p>
+            {isPremium ? (
+              <p className="m-0 mt-1.5" data-testid="profile-premium-chip">
+                <Badge variant="accent" size="sm" icon="star">
+                  {t('header.premium')}
+                </Badge>
+              </p>
+            ) : null}
+          </div>
+        </header>
+
+        <SettingsList groups={settingsGroups} />
+
+        {dialogs}
+
+        <Eyebrow as="p" className="mt-8 text-center">
+          {t('footer.version', { version: pkg.version })}
+        </Eyebrow>
+      </section>
+    );
+  }
+
+  // ── One settings page ──────────────────────────────────────────────────
+  return (
+    <section
+      className="mx-auto w-full max-w-2xl p-6 md:p-8"
+      data-testid={`settings-page-${section}`}
+    >
+      <Link
+        to="/profile"
+        className="-ml-2 inline-flex min-h-11 items-center gap-1 rounded-full px-2 text-sm font-medium text-ink-2 transition-colors duration-fast hover:bg-bg-2 hover:text-ink"
+      >
+        <Icon name="chevron-back" size="inline" />
+        {t('settingsList.title')}
+      </Link>
+      <Text variant="h1" as="h1" className="mt-1">
+        {pageTitles[section]}
+      </Text>
+
+      <div className="mt-6">
+        {/* ── Subscription ──────────────────────────────────────────────── */}
+        {section === 'subscription' ? <SubscriptionSection hideTitle /> : null}
+
+        {/* ── Account ───────────────────────────────────────────────────── */}
+        {section === 'account' ? (
+          <>
+            <SettingsCard>
+              <div>
+                <p className="m-0 text-sm font-medium text-ink-2">{t('account.email')}</p>
+                <p className="m-0 mt-1 text-base text-ink">{user.email}</p>
+              </div>
+
+              {editingName ? (
+                <>
+                  <TextField
+                    id="profile-first-name"
+                    label={t('account.firstName')}
+                    autoComplete="given-name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    maxLength={50}
+                  />
+                  <TextField
+                    id="profile-last-name"
+                    label={t('account.lastName')}
+                    autoComplete="family-name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    maxLength={50}
+                  />
+                  {nameError ? (
+                    <p role="alert" className="m-0 text-sm text-terracotta-deep text-balance">
+                      {nameError}
+                    </p>
+                  ) : null}
+                  <div className="flex gap-3">
+                    <Button
+                      size="sm"
+                      onClick={handleSaveName}
+                      offlineKind="save"
+                      disabled={saveName.isPending || updateProfile.isPending}
+                    >
+                      {t('account.save')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setFirstName(user.first_name ?? '');
+                        setLastName(user.last_name ?? '');
+                        setNameError(null);
+                        setEditingName(false);
+                      }}
+                    >
+                      {t('account.cancel')}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                // The name, with its pencil right beside it (the list's header
+                // pencil lands here with the fields already open).
+                <div className="flex items-center gap-1" data-testid="profile-account-name">
+                  <p className="m-0 min-w-0 break-words text-base text-ink">
+                    {fullName || t('account.namePlaceholder')}
+                  </p>
+                  <button
+                    type="button"
+                    aria-label={t('account.editNameLabel')}
+                    onClick={() => setEditingName(true)}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors duration-fast hover:bg-bg-2 hover:text-ink"
+                  >
+                    <Icon name="pencil-outline" size="row" />
+                  </button>
+                </div>
+              )}
+
+              {/* Password changes happen through the sign-in reset flow — point there. */}
+              <Text variant="caption">{t('account.changePasswordHint')}</Text>
+            </SettingsCard>
+
+            {/* ── Danger zone ───────────────────────────────────────────── */}
+            <Card variant="outlined" padding="lg" className="mt-8 border-terracotta-deep/30">
+              <Text variant="sectionLabel" as="h2">
+                {t('delete.title')}
+              </Text>
+              <Text variant="caption" className="mt-1">
+                {t('delete.description')}
+              </Text>
+              <Button
+                variant="danger"
+                className="mt-5"
+                onClick={() => {
+                  // Clear any stale error from a previous attempt before re-opening.
+                  deleteAccount.reset();
+                  setShowDelete(true);
+                }}
+                disabled={deleteAccount.isPending}
+              >
+                {t('delete.cta')}
+              </Button>
+            </Card>
+          </>
+        ) : null}
+
+        {/* ── Time zone (read-only, follows the browser) ───────────────── */}
+        {section === 'timezone' ? (
+          <div data-testid="profile-timezone">
+            <div className="flex items-baseline justify-between gap-4">
+              <Text variant="label" as="p" id="profile-timezone-label">
+                {t('account.timezone')}
+              </Text>
+              <Text variant="body" as="p" id="profile-timezone-value">
+                {timezoneValue}
+              </Text>
+            </div>
+            <Text variant="caption" className="mt-1">
+              {t('timezoneAuto.helper')}
+            </Text>
+          </div>
+        ) : null}
+
+        {/* ── Your colour (member avatar) ──────────────────────────────── */}
+        {section === 'color' ? (
+          <SettingsCard description={t('avatarColor.hint')}>
+            <div className="flex items-center gap-4">
+              <Avatar size="lg" name={fullName || user.email} colorKey={user.avatar_color} />
+              <AvatarColorPicker
+                value={user.avatar_color}
+                onChange={(key) => {
+                  if (key === user.avatar_color) return;
+                  if (blockOfflineWrite('save')) return;
+                  setColorSaved(false);
+                  updateAvatarColor.mutate(key, { onSuccess: () => setColorSaved(true) });
+                }}
+                busy={updateAvatarColor.isPending}
+              />
+            </div>
+            <p
+              role="status"
+              data-testid="avatar-color-saved"
+              className="m-0 min-h-5 text-sm font-medium text-moss-deep"
+            >
+              {colorSaved ? t('avatarColor.saved') : ''}
+            </p>
+          </SettingsCard>
+        ) : null}
+
+        {/* ── Language ──────────────────────────────────────────────────── */}
+        {section === 'language' ? (
+          <SettingsCard description={t('language.description')}>
+            <RadioGroup
+              plain
+              label={t('sections.language')}
+              value={languageCode}
+              onChange={handleLanguage}
+              busy={updateProfile.isPending || saveName.isPending}
+              options={(Object.keys(supportedLanguages) as SupportedLanguage[]).map((code) => ({
+                value: code,
+                // Endonyms ("Deutsch", "Français"): each is in its own language (WCAG 3.1.2).
+                label: <span lang={code}>{languageName(code)}</span>,
+              }))}
+            />
+          </SettingsCard>
+        ) : null}
+
+        {/* ── Alerts (the notification groups) ─────────────────────────── */}
+        {section === 'alerts' ? (
+          <SettingsSheetSection description={t('notifications.description')}>
+            {NOTIFICATION_GROUP_ORDER.map((group) => {
+              const prefs = savedPrefs();
+              const mixed = groupMixed(prefs, group);
+              // Literal keys (not template strings) so the key-coverage scan can resolve them.
+              const copy: Record<NotificationGroup, { title: string; desc: string }> = {
+                medications: {
+                  title: t('notifications.groups.medications'),
+                  desc: t('notifications.groups.medicationsDesc'),
+                },
+                tasks: {
+                  title: t('notifications.groups.tasks'),
+                  desc: t('notifications.groups.tasksDesc'),
+                },
+                notes: {
+                  title: t('notifications.groups.notes'),
+                  desc: t('notifications.groups.notesDesc'),
+                },
+                tips: {
+                  title: t('notifications.groups.tips'),
+                  desc: t('notifications.groups.tipsDesc'),
+                },
+                shifts: {
+                  title: t('notifications.groups.shifts'),
+                  desc: t('notifications.groups.shiftsDesc'),
+                },
+              };
+              return (
+                <SheetRow key={group}>
+                  <div className="w-full">
+                    <Toggle
+                      checked={groupOn(prefs, group)}
+                      onChange={(next) => handleNotifGroup(group, next)}
+                      busy={updateNotif.isPending}
+                      label={copy[group].title}
+                      hint={
+                        <>
+                          {copy[group].desc}
+                          {mixed ? (
+                            <span className="mt-0.5 block font-medium">
+                              {t('notifications.someTurnedOff')}
+                            </span>
+                          ) : null}
+                        </>
+                      }
+                    />
+                  </div>
+                </SheetRow>
+              );
+            })}
+          </SettingsSheetSection>
+        ) : null}
+
+        {/* ── Quiet hours ───────────────────────────────────────────────── */}
+        {section === 'quietHours' ? (
+          <SettingsSheetSection description={t('quietHours.description')}>
+            <SheetRow>
+              <div className="w-full">
+                <Toggle
+                  checked={quietEnabled}
+                  onChange={handleQuietEnabledToggle}
+                  busy={updateQuiet.isPending}
+                  label={t('quietHours.enable')}
+                />
+              </div>
+            </SheetRow>
+            {/* Help only while quiet hours are not set up (owner 2026-11-08, mobile parity). */}
+            {!quietEnabled ? (
+              <SheetRow>
+                <HowDoesThisWork slug="quiet-hours" />
+              </SheetRow>
+            ) : null}
+            {quietEnabled ? (
+              <SheetRow>
+                <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
+                  <TimeField
+                    id="profile-quiet-start"
+                    label={t('quietHours.start')}
+                    value={quietStart}
+                    onChange={(e) => handleQuietTime(e.target.value, quietEnd)}
+                    busy={updateQuiet.isPending}
+                  />
+                  <TimeField
+                    id="profile-quiet-end"
+                    label={t('quietHours.end')}
+                    value={quietEnd}
+                    onChange={(e) => handleQuietTime(quietStart, e.target.value)}
+                    busy={updateQuiet.isPending}
+                  />
+                </div>
+              </SheetRow>
+            ) : null}
+            {/* The live region is ALWAYS mounted and only its content comes and goes:
+                a region inserted together with its text is often not announced
+                (WCAG 4.1.3). Polite: a non-blocking warning should not cut off the
+                time field's own announcement. The wrapper carries the row's divider,
+                since the row inside it is a first child and drops its own. */}
+            <div
+              role="status"
+              data-testid="quiet-hours-almost-all-day-region"
+              className={quietWarning ? 'border-t border-line-2' : undefined}
+            >
+              {quietWarning ? (
+                <SheetRow>
+                  <p
+                    data-testid="quiet-hours-almost-all-day-warning"
+                    className="m-0 text-sm text-amber-deep text-balance"
+                  >
+                    {t('quietHours.almostAllDayWarning', {
+                      endTime: formatQuietEnd(quietEnd, hourCycle),
+                    })}
+                  </p>
+                </SheetRow>
+              ) : null}
+            </div>
+          </SettingsSheetSection>
+        ) : null}
+
+        {/* ── Units ─────────────────────────────────────────────────────── */}
+        {section === 'units' ? (
+          <SettingsCard description={t('units.description')}>
+            <RadioGroup
+              plain
+              label={t('units.weight')}
+              value={weightUnit}
+              onChange={handleWeightUnit}
+              busy={updateUnits.isPending}
+              options={[
+                { value: 'lbs', label: t('units.lbs') },
+                { value: 'kg', label: t('units.kg') },
+              ]}
+            />
+            <RadioGroup
+              plain
+              label={t('units.glucose')}
+              value={glucoseUnit}
+              onChange={handleGlucoseUnit}
+              busy={updateUnits.isPending}
+              options={[
+                { value: 'mg/dL', label: t('units.mgdl') },
+                { value: 'mmol/L', label: t('units.mmoll') },
+              ]}
+            />
+            <RadioGroup
+              plain
+              label={t('units.temperature')}
+              value={temperatureUnit}
+              onChange={handleTemperatureUnit}
+              busy={updateUnits.isPending}
+              options={[
+                { value: '°F', label: t('units.fahrenheit') },
+                { value: '°C', label: t('units.celsius') },
+              ]}
+            />
+          </SettingsCard>
+        ) : null}
+
+        {/* ── Appearance (System / Light / Dark) ─────────────────────────── */}
+        {section === 'appearance' ? <ThemePreferenceSelector hideTitle /> : null}
+
+        {/* ── Privacy ───────────────────────────────────────────────────── */}
+        {/*
+          The opt-in the privacy policy has always described, and the place to
+          CHANGE an answer — the signup flow is where it is first asked
+          (pages/SignUpPage.tsx). Both write through
+          `recordAnalyticsConsentDecision`, so this toggle always reflects
+          whatever the signup checkbox recorded. Defaults OFF: web does not
+          grandfather an unasked visitor into full analytics — see
+          `GRANDFATHER_UNASKED_WEB_USERS` in lib/analyticsMode.
+        */}
+        {section === 'privacy' ? (
+          <SettingsSheetSection description={t('analytics.description')}>
+            <SheetRow>
+              <div className="w-full">
+                <Toggle
+                  checked={analyticsEnabled}
+                  onChange={handleAnalyticsToggle}
+                  label={t('analytics.enable')}
+                  hint={t('analytics.hint')}
+                />
+              </div>
+            </SheetRow>
+          </SettingsSheetSection>
+        ) : null}
+
+        {/* ── Weekly care summary (email digest) ────────────────────────── */}
+        {section === 'digest' && showDigestSection ? (
+          <SettingsSheetSection description={t('emailDigest.description')}>
+            {/* Turning it OFF is always allowed, so an owner whose Premium lapsed with the
+                summary still on keeps the switch. */}
+            {ownsAnyCircle && !isPremium && !user.email_digest_enabled ? (
+              <SheetRow>
+                <div className="flex w-full items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <Text variant="label" as="p">
+                      {t('emailDigest.premiumFeature')}
+                    </Text>
+                    <Text variant="caption" className="mt-0.5">
+                      {t('emailDigest.premiumNote')}
+                    </Text>
+                  </div>
+                  <Button variant="secondary" onClick={() => promptDigestUpgrade()}>
+                    {t('emailDigest.upgrade')}
+                  </Button>
+                </div>
+              </SheetRow>
+            ) : (
+              <SheetRow>
+                <div className="w-full">
+                  <Toggle
+                    checked={Boolean(user.email_digest_enabled)}
+                    onChange={handleDigestEnabled}
+                    busy={updateDigest.isPending}
+                    label={t('emailDigest.enable')}
+                  />
+                </div>
+              </SheetRow>
+            )}
+            {user.email_digest_enabled ? (
+              <SheetRow>
+                <div className="w-full">
+                  <Select
+                    id="profile-digest-day"
+                    label={t('emailDigest.day')}
+                    options={dayOptions}
+                    value={String(user.email_digest_day ?? 0)}
+                    onChange={(e) => handleDigestDay(Number(e.target.value))}
+                    busy={updateDigest.isPending}
+                  />
+                </div>
+              </SheetRow>
+            ) : null}
+          </SettingsSheetSection>
+        ) : null}
+
+        {/* ── Your data (GDPR export) ───────────────────────────────────── */}
+        {section === 'data' ? <DataExportSection hideTitle /> : null}
+      </div>
+
+      {dialogs}
     </section>
   );
 }

@@ -52,7 +52,7 @@ test.describe('Profile: notification groups', () => {
       };
       writePrefs(account.userId, base);
 
-      await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+      await page.goto('/profile/alerts', { waitUntil: 'domcontentloaded' });
       const meds = page.getByRole('switch', { name: 'Medications', exact: true });
       const tasks = page.getByRole('switch', { name: 'Tasks & appointments', exact: true });
       const notes = page.getByRole('switch', { name: 'Notes', exact: true });
@@ -72,7 +72,7 @@ test.describe('Profile: notification groups', () => {
         await expect(page.getByRole('switch', { name: old })).toHaveCount(0);
       }
 
-      await checkA11y(page, '/profile', testInfo);
+      await checkA11y(page, '/profile/alerts', testInfo);
 
       for (const sw of [meds, tasks, notes, tips]) await expect(sw).toHaveAttribute('aria-checked', 'true');
       await expect(page.getByText('Some turned off')).toHaveCount(0);
@@ -179,7 +179,7 @@ test.describe('Profile: notification groups', () => {
     const original = readPrefs(account.userId);
     try {
       writePrefs(account.userId, { ...original, event_notes: true, care_notes: false });
-      await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+      await page.goto('/profile/alerts', { waitUntil: 'domcontentloaded' });
       const notes = page.getByRole('switch', { name: 'Notes', exact: true });
       await expect(notes).toBeVisible({ timeout: 15_000 });
       await expect(notes).toHaveAttribute('aria-checked', 'true');
@@ -203,7 +203,7 @@ test.describe('Profile: notification groups', () => {
   }) => {
     const original = readPrefs(account.userId);
     try {
-      await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+      await page.goto('/profile/alerts', { waitUntil: 'domcontentloaded' });
       const tips = page.getByRole('switch', { name: 'Daily update & tips' });
       await expect(tips).toBeVisible({ timeout: 15_000 });
       const before = await tips.getAttribute('aria-checked');
@@ -232,6 +232,7 @@ test.describe('Profile: notification groups', () => {
     try {
       writePrefs(account.userId, { ...original, medication_confirmations: true, missed_medications: false });
       await setProfileLanguage(page, 'es');
+      await page.goto('/profile/alerts', { waitUntil: 'domcontentloaded' });
 
       await expect(page.getByRole('switch', { name: 'Medicamentos', exact: true })).toBeVisible({ timeout: 15_000 });
       await expect(page.getByRole('switch', { name: 'Tareas y citas', exact: true })).toBeVisible();
@@ -255,7 +256,7 @@ test.describe('Profile: notification groups', () => {
       const base = without(original, 'shift_alerts');
       writePrefs(account.userId, base);
 
-      await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+      await page.goto('/profile/alerts', { waitUntil: 'domcontentloaded' });
       const shifts = page.getByRole('switch', { name: 'Shifts', exact: true });
       await expect(shifts).toBeVisible({ timeout: 15_000 });
       await expect(shifts).toHaveAttribute('aria-checked', 'true');

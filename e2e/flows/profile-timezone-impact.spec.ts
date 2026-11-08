@@ -39,7 +39,7 @@ test('owner with a recipient-without-account circle: the zone follows the browse
   expect(zoneOf(owner.userId)).not.toBe('Asia/Tokyo');
 
   await cookieLogin(context, owner, baseURL);
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await page.goto('/profile/timezone', { waitUntil: 'domcontentloaded' });
   const row = page.getByTestId('profile-timezone');
   await expect(row).toContainText('Tokyo', { timeout: 20_000 });
   await expect(row).toContainText(
@@ -77,7 +77,7 @@ test('owner with no dependent circle: the zone follows the device with no prompt
   const owner = await createScopedAccount('tz-solo');
   await ownerApi(request, owner); // no circles at all
   await cookieLogin(context, owner, baseURL);
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await page.goto('/profile/timezone', { waitUntil: 'domcontentloaded' });
   await expect.poll(() => zoneOf(owner.userId), { timeout: 20_000 }).toBe('Asia/Tokyo');
   await expect(page.getByTestId('profile-timezone')).toContainText('Tokyo', { timeout: 20_000 });
   await expect(page.getByRole('dialog')).toHaveCount(0);

@@ -113,7 +113,7 @@ test('temperature unit: Profile switches °F to °C for display only, and "37,5"
   const [before] = rowFor(circleId, firstNote);
   expect(Math.abs(before.value1 - 37)).toBeLessThan(1e-3);
 
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await page.goto('/profile/units', { waitUntil: 'domcontentloaded' });
   const group = page.getByRole('radiogroup', { name: 'Temperature' });
   await expect(group.getByRole('radio', { name: 'Fahrenheit (°F)' })).toBeChecked({ timeout: 20_000 });
   const put = page.waitForResponse((r) => r.request().method() === 'PUT' && r.url().endsWith('/api/users/me/unit-preferences'));
@@ -134,7 +134,7 @@ test('temperature unit: Profile switches °F to °C for display only, and "37,5"
   await expect(page.getByRole('region', { name: 'Temperature' }).getByText('37.5 °C', { exact: true })).toBeVisible({ timeout: 20_000 });
 
   // The setting survives a reload of Profile.
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await page.goto('/profile/units', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('radiogroup', { name: 'Temperature' }).getByRole('radio', { name: 'Celsius (°C)' })).toBeChecked({ timeout: 20_000 });
 });
 

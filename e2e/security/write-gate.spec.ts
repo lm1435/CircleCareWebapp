@@ -470,7 +470,7 @@ test('2. the same writes through the app UI succeed and persist (event edit, tas
 
   // (c) users UPDATE — the profile first name, then a reload.
   const newFirst = `WG${uniqueSuffix()}`.slice(0, 20);
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await page.goto('/profile/account', { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Edit name', exact: true }).click();
   await page.locator('#profile-first-name').fill(newFirst);
   await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -800,7 +800,7 @@ const SURFACES: Surface[] = [
     path: '/api/users/me',
     async prepare(ctx) {
       ctx.state.first = `WG${uniqueSuffix()}`.slice(0, 20);
-      await ctx.page.goto('/profile', { waitUntil: 'domcontentloaded' });
+      await ctx.page.goto('/profile/account', { waitUntil: 'domcontentloaded' });
       await ctx.page.getByRole('button', { name: 'Edit name', exact: true }).click({ timeout: 20_000 });
       await ctx.page.locator('#profile-first-name').fill(ctx.state.first);
       return ctx.page.getByRole('button', { name: 'Save', exact: true });

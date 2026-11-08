@@ -111,8 +111,9 @@ for (const viewport of [
       );
       expect(overflow, 'no horizontal page scroll').toBeLessThanOrEqual(0);
 
-      // The pencil opens the name fields and moves focus into them.
+      // The pencil opens the name fields (on the Account sub-page) and moves focus into them.
       await pencil.click();
+      await expect(page).toHaveURL(/\/profile\/account$/);
       await expect(page.locator('#profile-first-name')).toBeFocused();
     });
 

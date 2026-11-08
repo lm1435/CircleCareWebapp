@@ -44,7 +44,7 @@ test('pick a colour: preview, persistence, reload, and a second member sees it',
   expect(colorOf(owner.userId)).toBeNull();
 
   await cookieLogin(context, owner, baseURL);
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await page.goto('/profile/color', { waitUntil: 'domcontentloaded' });
   const group = page.getByRole('radiogroup', { name: 'Choose your color' });
   await expect(group).toBeVisible({ timeout: 20_000 });
 
@@ -57,7 +57,7 @@ test('pick a colour: preview, persistence, reload, and a second member sees it',
     expect(box!.width).toBeGreaterThanOrEqual(44);
     expect(box!.height).toBeGreaterThanOrEqual(44);
   }
-  await checkA11y(page, '/profile', testInfo);
+  await checkA11y(page, '/profile/color', testInfo);
 
   // Pick Coral: checked + ring + check glyph (not colour alone), live message.
   const coral = group.getByRole('radio', { name: 'Coral' });
@@ -127,7 +127,7 @@ test('the picker survives a save failure: rolls back and says so', async ({
       await route.continue();
     }
   });
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await page.goto('/profile/color', { waitUntil: 'domcontentloaded' });
   const coral = page.getByRole('radio', { name: 'Coral' });
   await expect(coral).toBeVisible({ timeout: 20_000 });
   await coral.click();

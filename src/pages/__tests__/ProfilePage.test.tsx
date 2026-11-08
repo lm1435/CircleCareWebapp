@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import '@/i18n';
 import ProfilePage from '@/pages/ProfilePage';
@@ -137,19 +137,27 @@ vi.mock('@/lib/analytics', () => ({
     languageChanged: (...args: unknown[]) => mockLanguageChanged(...args),
     accountDeleted: (...args: unknown[]) => mockAccountDeleted(...args),
     errorOccurred: vi.fn(),
+    settingsSectionViewed: vi.fn(),
     themePreferenceChanged: vi.fn(),
     registerThemeProperties: vi.fn(),
   },
 }));
 
-function renderPage() {
+// Design pass 2026-11-08: each settings block lives on its own page at
+// `/profile/:section`; the list itself is `/profile` (ProfilePage.settingsList.test.tsx).
+function renderPage(path = '/profile') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const clearSpy = vi.spyOn(queryClient, 'clear');
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{children}</MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/profile" element={children} />
+          <Route path="/profile/:section" element={children} />
+        </Routes>
+      </MemoryRouter>
     </QueryClientProvider>
   );
   render(<ProfilePage />, { wrapper });
@@ -171,13 +179,13 @@ describe('ProfilePage', () => {
   // Owner 2026-11-08 (mobile parity): "How does this work?" only while quiet hours are not set up.
   describe('quiet hours help link', () => {
     it('shows while quiet hours are off', async () => {
-      renderPage();
+      renderPage('/profile/quietHours');
       expect(await screen.findByTestId('how-does-this-work-quiet-hours')).toBeInTheDocument();
     });
 
     it('hides once quiet hours are set', async () => {
       currentUser = { ...USER, quiet_hours_start: '22:00:00', quiet_hours_end: '07:00:00' };
-      renderPage();
+      renderPage('/profile/quietHours');
       await screen.findByRole('heading', { level: 1 });
       expect(screen.queryByTestId('how-does-this-work-quiet-hours')).toBeNull();
     });
@@ -212,7 +220,7 @@ describe('ProfilePage', () => {
     };
 
     it('renders exactly four group switches in order, and none of the retired labels', async () => {
-      renderPage();
+      renderPage('/profile/alerts');
       await screen.findByRole('switch', { name: GROUP_NAMES[0] });
       const names = screen
         .getAllByRole('switch')
@@ -240,7 +248,7 @@ describe('ProfilePage', () => {
           chat_messages: true,
         } as User['notification_preferences'],
       };
-      renderPage();
+      renderPage('/profile/alerts');
       for (const name of GROUP_NAMES) {
         expect(await screen.findByRole('switch', { name })).toHaveAttribute('aria-checked', 'true');
       }
@@ -249,7 +257,7 @@ describe('ProfilePage', () => {
 
     it('a group is OFF only when every child is false (fixes the old raw === true read)', async () => {
       seed({ event_notes: false, care_notes: false });
-      renderPage();
+      renderPage('/profile/alerts');
       expect(await screen.findByRole('switch', { name: GROUP_NAMES[2] })).toHaveAttribute(
         'aria-checked',
         'false'
@@ -263,7 +271,7 @@ describe('ProfilePage', () => {
 
     it('mixed fixture: group ON, "Some turned off" visible and inside the accessible description', async () => {
       seed({ missed_medications: false });
-      renderPage();
+      renderPage('/profile/alerts');
       const meds = await screen.findByRole('switch', { name: GROUP_NAMES[0] });
       expect(meds).toHaveAttribute('aria-checked', 'true');
       expect(screen.getAllByText('Some turned off')).toHaveLength(1);
@@ -276,7 +284,7 @@ describe('ProfilePage', () => {
 
     it('Medications click opens the confirm; "Keep on" does not write and the switch stays ON', async () => {
       const user = userEvent.setup();
-      renderPage();
+      renderPage('/profile/alerts');
       const meds = await screen.findByRole('switch', { name: GROUP_NAMES[0] });
       await user.click(meds);
 
@@ -304,7 +312,7 @@ describe('ProfilePage', () => {
 
     it('Medications "Turn off" writes both med keys false', async () => {
       const user = userEvent.setup();
-      renderPage();
+      renderPage('/profile/alerts');
       await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[0] }));
       await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Turn off' }));
 
@@ -324,7 +332,7 @@ describe('ProfilePage', () => {
     it('Medications off from the mixed state also confirms first', async () => {
       seed({ missed_medications: false });
       const user = userEvent.setup();
-      renderPage();
+      renderPage('/profile/alerts');
       await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[0] }));
       expect(updateNotif).not.toHaveBeenCalled();
       await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Turn off' }));
@@ -340,7 +348,7 @@ describe('ProfilePage', () => {
     it('turning Medications ON never opens the confirm', async () => {
       seed({ medication_confirmations: false, missed_medications: false });
       const user = userEvent.setup();
-      renderPage();
+      renderPage('/profile/alerts');
       await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[0] }));
       expect(screen.queryByRole('dialog')).toBeNull();
       expect(updateNotif.mock.calls[0][0]).toEqual({
@@ -351,7 +359,7 @@ describe('ProfilePage', () => {
 
     it('Tasks off sends the 4-key body with event_notes pinned true (absent)', async () => {
       const user = userEvent.setup();
-      renderPage();
+      renderPage('/profile/alerts');
       await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[1] }));
       expect(screen.queryByRole('dialog')).toBeNull();
       expect(updateNotif).toHaveBeenCalledTimes(1);
@@ -366,7 +374,7 @@ describe('ProfilePage', () => {
     it('Tasks off pins event_notes to its stored false', async () => {
       seed({ event_notes: false, care_notes: false });
       const user = userEvent.setup();
-      renderPage();
+      renderPage('/profile/alerts');
       await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[1] }));
       expect(updateNotif.mock.calls[0][0]).toEqual({
         task_assignments: false,
@@ -378,7 +386,7 @@ describe('ProfilePage', () => {
 
     it('Notes off sends exactly event_notes + care_notes, never note_nudges', async () => {
       const user = userEvent.setup();
-      renderPage();
+      renderPage('/profile/alerts');
       await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[2] }));
       expect(updateNotif).toHaveBeenCalledTimes(1);
       expect(updateNotif.mock.calls[0][0]).toEqual({ event_notes: false, care_notes: false });
@@ -388,7 +396,7 @@ describe('ProfilePage', () => {
     it('a mixed Notes group tap turns the whole group off', async () => {
       seed({ care_notes: false });
       const user = userEvent.setup();
-      renderPage();
+      renderPage('/profile/alerts');
       await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[2] }));
       expect(updateNotif.mock.calls[0][0]).toEqual({ event_notes: false, care_notes: false });
       expect(mockGroupToggled).toHaveBeenCalledWith({
@@ -400,14 +408,14 @@ describe('ProfilePage', () => {
 
     it('Tips sends exactly one key', async () => {
       const user = userEvent.setup();
-      renderPage();
+      renderPage('/profile/alerts');
       await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[3] }));
       expect(updateNotif.mock.calls[0][0]).toEqual({ tips_and_suggestions: false });
     });
 
     it('Daily update & tips off reports notification_group_toggled with group=tips, enabled=false (no confirm)', async () => {
       const user = userEvent.setup();
-      renderPage();
+      renderPage('/profile/alerts');
       await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[3] }));
       expect(screen.queryByRole('dialog')).toBeNull();
       expect(mockGroupToggled).toHaveBeenCalledTimes(1);
@@ -417,14 +425,14 @@ describe('ProfilePage', () => {
     it('Daily update & tips back on reports enabled=true', async () => {
       seed({ tips_and_suggestions: false });
       const user = userEvent.setup();
-      renderPage();
+      renderPage('/profile/alerts');
       await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[3] }));
       expect(mockGroupToggled).toHaveBeenCalledWith({ group: 'tips', enabled: true, was_mixed: false });
     });
 
     it('toasts success after a group write', async () => {
       const user = userEvent.setup();
-      renderPage();
+      renderPage('/profile/alerts');
       await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[3] }));
       act(() => updateNotif.mock.calls[0][1].onSuccess());
       expect(showToast).toHaveBeenCalledWith('Notification preferences updated.', 'success');
@@ -432,7 +440,7 @@ describe('ProfilePage', () => {
   });
 
   it('offers all eight registry languages in picker order, each as its endonym', async () => {
-    renderPage();
+    renderPage('/profile/language');
     const group = await screen.findByRole('radiogroup', { name: 'Language' });
     const names = within(group)
       .getAllByRole('radio')
@@ -451,14 +459,14 @@ describe('ProfilePage', () => {
 
   it('picking Français (Canada) saves the exact variant code', async () => {
     const user = userEvent.setup();
-    renderPage();
+    renderPage('/profile/language');
     await user.click(await screen.findByRole('radio', { name: 'Français (Canada)' }));
     expect(updateProfile.mock.calls[0][0]).toEqual({ language: 'fr-CA' });
   });
 
   it('fires useUpdateProfile({language}) when the language radio changes', async () => {
     const user = userEvent.setup();
-    renderPage();
+    renderPage('/profile/language');
 
     const spanish = await screen.findByRole('radio', { name: 'Español' });
     await user.click(spanish);
@@ -472,7 +480,7 @@ describe('ProfilePage', () => {
       opts?.onSuccess?.();
     });
     const user = userEvent.setup();
-    renderPage();
+    renderPage('/profile/language');
 
     const spanish = await screen.findByRole('radio', { name: 'Español' });
     await user.click(spanish);
@@ -486,7 +494,7 @@ describe('ProfilePage', () => {
     deleteAccount.mockImplementation((_vars, opts?: { onSuccess?: () => void }) => {
       opts?.onSuccess?.();
     });
-    const { clearSpy } = renderPage();
+    const { clearSpy } = renderPage('/profile/account');
 
     // Open the danger-zone confirm dialog.
     const cta = await screen.findByRole('button', { name: 'Delete my account' });
@@ -516,7 +524,7 @@ describe('ProfilePage', () => {
     // previous test's onSuccess-invoking implementation.
     deleteAccount.mockImplementation(() => {});
     deleteAccountState = { isError: true };
-    renderPage();
+    renderPage('/profile/account');
 
     await user.click(await screen.findByRole('button', { name: 'Delete my account' }));
     // Confirming while the mutation errors must NOT close the dialog.
@@ -529,8 +537,10 @@ describe('ProfilePage', () => {
 
   it('free owner: the weekly summary is an upgrade row, not a switch the server would refuse', async () => {
     const user = userEvent.setup();
-    renderPage();
-    expect(await screen.findByText('Weekly care summary')).toBeInTheDocument();
+    renderPage('/profile/digest');
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Weekly care summary' })
+    ).toBeInTheDocument();
     expect(screen.getByText('Included with Premium.')).toBeInTheDocument();
     expect(screen.queryByRole('switch', { name: /weekly digest/i })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Upgrade' }));
@@ -540,15 +550,17 @@ describe('ProfilePage', () => {
 
   it('premium owner: the weekly summary switch shows, with no premium note', async () => {
     subscriptionTier = 'premium';
-    renderPage();
+    renderPage('/profile/digest');
     await screen.findByRole('switch', { name: /weekly digest/i });
     expect(screen.queryByText('Included with Premium.')).not.toBeInTheDocument();
   });
 
   it('free member who owns no circle and is in no premium circle: no weekly summary section at all', async () => {
     mockCircles = [{ role: 'member', is_premium_circle: false }];
-    renderPage();
-    await screen.findByRole('button', { name: 'Delete my account' });
+    // The page itself is gated too: a direct visit falls back to the list.
+    renderPage('/profile/digest');
+    await screen.findByTestId('settings-group-you');
+    expect(screen.queryByTestId('settings-row-digest')).not.toBeInTheDocument();
     expect(screen.queryByRole('switch', { name: /weekly digest/i })).not.toBeInTheDocument();
     expect(screen.queryByText('Weekly care summary')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
@@ -556,14 +568,14 @@ describe('ProfilePage', () => {
 
   it('member of a premium circle: the switch shows', async () => {
     mockCircles = [{ role: 'member', is_premium_circle: true }];
-    renderPage();
+    renderPage('/profile/digest');
     expect(await screen.findByRole('switch', { name: /weekly digest/i })).toBeInTheDocument();
   });
 
   it('toggling analytics OFF calls syncAnalyticsConsent(false, <userId>)', async () => {
     setAnalyticsConsent(true); // start ON so the click turns it off
     const user = userEvent.setup();
-    renderPage();
+    renderPage('/profile/privacy');
 
     const toggle = await screen.findByRole('switch', { name: /Share usage data/i });
     await user.click(toggle);
@@ -574,7 +586,7 @@ describe('ProfilePage', () => {
   it('toggling analytics ON calls syncAnalyticsConsent(true, <userId>)', async () => {
     // Defaults OFF — click turns it on.
     const user = userEvent.setup();
-    renderPage();
+    renderPage('/profile/privacy');
 
     const toggle = await screen.findByRole('switch', { name: /Share usage data/i });
     await user.click(toggle);
@@ -596,7 +608,7 @@ describe('ProfilePage', () => {
   it('a signup DECLINE followed by a Profile ACCEPT syncs the restore', async () => {
     setAnalyticsConsent(false); // the state a signup decline leaves behind
     const user = userEvent.setup();
-    renderPage();
+    renderPage('/profile/privacy');
 
     const toggle = await screen.findByRole('switch', { name: /Share usage data/i });
     expect(toggle).toHaveAttribute('aria-checked', 'false');
@@ -612,7 +624,7 @@ describe('ProfilePage', () => {
    */
   it('fires the server sync exactly once per toggle', async () => {
     const user = userEvent.setup();
-    renderPage();
+    renderPage('/profile/privacy');
 
     const toggle = await screen.findByRole('switch', { name: /Share usage data/i });
     await user.click(toggle);
@@ -621,7 +633,7 @@ describe('ProfilePage', () => {
   });
 
   it('points to the sign-in reset flow for password changes', async () => {
-    renderPage();
+    renderPage('/profile/account');
     expect(
       await screen.findByText(
         "To change your password, sign out and choose 'Forgot password?' on the sign-in page."
@@ -648,9 +660,9 @@ describe('ProfilePage', () => {
 // uppercase labels; option lists lose their inner borders (selected-fill only). The destructive
 // "Delete account" section keeps its outlined box.
 describe('ProfilePage — plain grouped sections', () => {
-  it('boxes only the delete-account section', async () => {
-    renderPage();
-    await screen.findByRole('radiogroup', { name: 'Weight' });
+  it('boxes only the delete-account section on the Account page', async () => {
+    renderPage('/profile/account');
+    await screen.findByRole('button', { name: 'Delete my account' });
     const boxed = Array.from(document.querySelectorAll<HTMLElement>('.rounded-xl')).filter((el) =>
       /\bborder\b/.test(el.className)
     );
@@ -658,18 +670,15 @@ describe('ProfilePage — plain grouped sections', () => {
     expect(boxed[0]).toHaveTextContent(/delete/i);
   });
 
-  it('keeps every section label, in order', async () => {
-    renderPage();
+  it('a settings page is named by its own heading, not a repeated section label', async () => {
+    renderPage('/profile/units');
     await screen.findByRole('radiogroup', { name: 'Weight' });
-    const labels = Array.from(document.querySelectorAll('h2')).map((h) => h.textContent);
-    const idx = (re: RegExp): number => labels.findIndex((l) => re.test(l ?? ''));
-    expect(idx(/^Account$/i)).toBeGreaterThanOrEqual(0);
-    expect(idx(/^Account$/i)).toBeLessThan(idx(/language/i));
-    expect(idx(/language/i)).toBeLessThan(idx(/measurement units/i));
+    expect(screen.getByRole('heading', { level: 1, name: 'Units' })).toBeInTheDocument();
+    expect(document.querySelectorAll('h2')).toHaveLength(0);
   });
 
   it('option rows (Language, Units) have no inner border; the selected one is a fill only', async () => {
-    renderPage();
+    renderPage('/profile/units');
     const group = await screen.findByRole('radiogroup', { name: 'Weight' });
     const rows = Array.from(group.querySelectorAll('label'));
     expect(rows.length).toBeGreaterThan(1);
@@ -689,10 +698,10 @@ describe('ProfilePage — compact header', () => {
     const header = await screen.findByTestId('profile-header');
     expect(within(header).getByRole('heading', { level: 1, name: 'Sam Doe' })).toBeInTheDocument();
     expect(within(header).getByText('sam@example.com')).toBeInTheDocument();
-    expect(within(header).getByText('Profile & settings')).toBeInTheDocument();
+    expect(within(header).getByText('Settings')).toBeInTheDocument();
   });
 
-  it('the pencil beside the name is its own button and opens the name fields, focused', async () => {
+  it('the pencil beside the name is its own button and opens the Account page name fields', async () => {
     const user = userEvent.setup();
     renderPage();
     const header = await screen.findByTestId('profile-header');
@@ -702,7 +711,18 @@ describe('ProfilePage — compact header', () => {
       within(header).getByRole('heading', { level: 1 }).parentElement
     );
     await user.click(pencil);
-    expect(screen.getByLabelText(/^First name/)).toHaveFocus();
+    // Focus + open fields on arrival: ProfilePage.settingsList.test.tsx (real router).
+    expect(navigate).toHaveBeenCalledWith('/profile/account', {
+      state: { editName: true, focusManaged: true },
+    });
+  });
+
+  it('the Account page has its own name pencil that opens the fields', async () => {
+    const user = userEvent.setup();
+    renderPage('/profile/account');
+    const row = await screen.findByTestId('profile-account-name');
+    expect(row).toHaveTextContent('Sam Doe');
+    await user.click(within(row).getByRole('button', { name: 'Edit name' }));
     expect(screen.getByLabelText(/^First name/)).toHaveValue('Sam');
   });
 
@@ -729,7 +749,7 @@ describe('ProfilePage — compact header', () => {
 describe('ProfilePage — name form', () => {
   async function openNameForm() {
     const user = userEvent.setup();
-    renderPage();
+    renderPage('/profile/account');
     // "Edit name", not a bare "Edit" (a11y audit 2026-09-29, WCAG 2.4.6).
     await user.click(await screen.findByRole('button', { name: 'Edit name' }));
     const first = screen.getByLabelText(/^First name/);
@@ -783,7 +803,7 @@ describe('ProfilePage — name form', () => {
     try {
       mockUpdateProfileRequest.mockRejectedValueOnce(new Error('network'));
       const user = userEvent.setup();
-      renderPage();
+      renderPage('/profile/account');
       await user.click(await screen.findByRole('button', { name: 'Editar nombre' }));
       await user.click(screen.getByRole('button', { name: 'Guardar' }));
       expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -804,7 +824,7 @@ describe('ProfilePage quiet hours', () => {
 
   it('normalizes seconds-bearing TIME values before they reach the time inputs', async () => {
     currentUser = WITH_SECONDS;
-    renderPage();
+    renderPage('/profile/quietHours');
 
     // `<input type="time">` expects HH:MM — a seconds-bearing value is handled
     // inconsistently across browsers for a control whose step implies minutes.
@@ -814,7 +834,7 @@ describe('ProfilePage quiet hours', () => {
 
   it('sends canonical HH:MM for the UNTOUCHED start when only the end time is edited', async () => {
     currentUser = WITH_SECONDS;
-    renderPage();
+    renderPage('/profile/quietHours');
 
     const end = await screen.findByLabelText(/^End time/);
     fireEvent.change(end, { target: { value: '08:30' } });
@@ -829,7 +849,7 @@ describe('ProfilePage quiet hours', () => {
 
   it('sends canonical HH:MM for the UNTOUCHED end when only the start time is edited', async () => {
     currentUser = WITH_SECONDS;
-    renderPage();
+    renderPage('/profile/quietHours');
 
     const start = await screen.findByLabelText('Start time');
     fireEvent.change(start, { target: { value: '21:15' } });
@@ -844,7 +864,7 @@ describe('ProfilePage quiet hours', () => {
   it('disables quiet hours with an explicit null/null payload', async () => {
     const user = userEvent.setup();
     currentUser = WITH_SECONDS;
-    renderPage();
+    renderPage('/profile/quietHours');
 
     await user.click(await screen.findByRole('switch', { name: /Enable quiet hours/i }));
 
@@ -857,7 +877,7 @@ describe('ProfilePage quiet hours', () => {
 
   it('re-enables quiet hours with the normalized HH:MM defaults', async () => {
     // No quiet hours stored → toggle ON sends the local defaults, not seconds.
-    renderPage();
+    renderPage('/profile/quietHours');
 
     const user = userEvent.setup();
     await user.click(await screen.findByRole('switch', { name: /Enable quiet hours/i }));
@@ -875,14 +895,14 @@ describe('ProfilePage quiet hours', () => {
 
     it('shows no warning for an ordinary overnight window (22:00 -> 07:00)', async () => {
       currentUser = WITH_SECONDS;
-      renderPage();
+      renderPage('/profile/quietHours');
       await screen.findByLabelText('Start time');
       expect(screen.queryByTestId('quiet-hours-almost-all-day-warning')).toBeNull();
     });
 
     it('warns at 22:00 -> 21:59 (23 h 59 m across midnight), in the viewer hour cycle, and still saves', async () => {
       currentUser = WITH_SECONDS;
-      renderPage();
+      renderPage('/profile/quietHours');
       const end = await screen.findByLabelText(/^End time/);
       const region = screen.getByTestId('quiet-hours-almost-all-day-region');
       expect(region).toHaveAttribute('role', 'status');
@@ -904,13 +924,13 @@ describe('ProfilePage quiet hours', () => {
 
     it('warns for a same-day window that leaves < 1 h outside (00:00 -> 23:30)', async () => {
       currentUser = { ...USER, quiet_hours_start: '00:00:00', quiet_hours_end: '23:30:00' };
-      renderPage();
+      renderPage('/profile/quietHours');
       expect(await screen.findByText(WARNING)).toBeInTheDocument();
     });
 
     it('does NOT warn at exactly 1 h outside (22:00 -> 21:00) or at start == end (empty window on the server)', async () => {
       currentUser = WITH_SECONDS;
-      renderPage();
+      renderPage('/profile/quietHours');
       const end = await screen.findByLabelText(/^End time/);
       fireEvent.change(end, { target: { value: '21:00' } });
       expect(screen.queryByText(WARNING)).toBeNull();
@@ -923,7 +943,7 @@ describe('ProfilePage quiet hours', () => {
       await i18n.changeLanguage('es');
       try {
         currentUser = { ...WITH_SECONDS, language: 'es' };
-        renderPage();
+        renderPage('/profile/quietHours');
         const end = await screen.findByLabelText(/^Hora de fin/);
         fireEvent.change(end, { target: { value: '21:59' } });
         expect(await screen.findByTestId('quiet-hours-almost-all-day-warning')).toHaveTextContent(
@@ -948,7 +968,7 @@ describe('ProfilePage — double-delete guard', () => {
     // In flight: no callback fires, so the guard is still held on the second
     // press. (clearAllMocks does not undo an earlier test's implementation.)
     deleteAccount.mockImplementation(() => {});
-    renderPage();
+    renderPage('/profile/account');
 
     await user.click(await screen.findByRole('button', { name: 'Delete my account' }));
     await clickTwice(await screen.findByRole('button', { name: 'Delete account' }));
@@ -969,7 +989,7 @@ describe('ProfilePage — double-delete guard', () => {
   it('fires the delete mutation exactly ONCE when Confirm is pressed again a turn later, mid-request', async () => {
     const user = userEvent.setup();
     deleteAccount.mockImplementation(() => {});
-    renderPage();
+    renderPage('/profile/account');
 
     await user.click(await screen.findByRole('button', { name: 'Delete my account' }));
     const confirm = await screen.findByRole('button', { name: 'Delete account' });
@@ -1007,7 +1027,7 @@ describe('ProfilePage — double-delete guard', () => {
     deleteAccount.mockImplementation((_vars: unknown, opts?: DeleteCallbacks) => {
       pending = opts;
     });
-    renderPage();
+    renderPage('/profile/account');
 
     await user.click(await screen.findByRole('button', { name: 'Delete my account' }));
     await user.click(await screen.findByRole('button', { name: 'Delete account' }));
@@ -1050,7 +1070,7 @@ describe('ProfilePage — temperature unit', () => {
   }
 
   it('offers °F and °C after weight and glucose, and says so in the description', async () => {
-    renderPage();
+    renderPage('/profile/units');
     const group = await temperatureGroup();
     expect(within(group).getAllByRole('radio')).toHaveLength(2);
     expect(within(group).getByRole('radio', { name: 'Fahrenheit (°F)' })).toBeInTheDocument();
@@ -1066,7 +1086,7 @@ describe('ProfilePage — temperature unit', () => {
 
   it('shows the saved unit as selected', async () => {
     UNITS.temperature_unit = '°C';
-    renderPage();
+    renderPage('/profile/units');
     const group = await temperatureGroup();
     await waitFor(() =>
       expect(within(group).getByRole('radio', { name: 'Celsius (°C)' })).toBeChecked()
@@ -1076,7 +1096,7 @@ describe('ProfilePage — temperature unit', () => {
 
   it('with no saved unit (older server) it follows the weight unit', async () => {
     UNITS.weight_unit = 'kg';
-    renderPage();
+    renderPage('/profile/units');
     const group = await temperatureGroup();
     await waitFor(() =>
       expect(within(group).getByRole('radio', { name: 'Celsius (°C)' })).toBeChecked()
@@ -1088,7 +1108,7 @@ describe('ProfilePage — temperature unit', () => {
       opts?.onSuccess?.();
     });
     const user = userEvent.setup();
-    renderPage();
+    renderPage('/profile/units');
     const group = await temperatureGroup();
     await waitFor(() =>
       expect(within(group).getByRole('radio', { name: 'Fahrenheit (°F)' })).toBeChecked()

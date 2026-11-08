@@ -131,6 +131,8 @@ export const router = createBrowserRouter([
           // the `notifications_inbox` flag off.
           { path: '/notifications', element: <NotificationsPage /> },
           { path: '/profile', element: <ProfilePage /> },
+          // One settings page per row of the profile list (lib/settingsSections.ts).
+          { path: '/profile/:section', element: <ProfilePage /> },
           { path: '/upgrade', element: <UpgradePage /> },
           // Onboarding 1.3.1: shown once after a NEW member accepts an invite,
           // then Today. Standalone chrome (no circle sidebar), as the design.

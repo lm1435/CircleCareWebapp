@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import '@/i18n';
 import ProfilePage from '@/pages/ProfilePage';
@@ -135,19 +135,26 @@ vi.mock('@/lib/analytics', () => ({
     languageChanged: (...args: unknown[]) => mockLanguageChanged(...args),
     accountDeleted: (...args: unknown[]) => mockAccountDeleted(...args),
     errorOccurred: vi.fn(),
+    settingsSectionViewed: vi.fn(),
     themePreferenceChanged: vi.fn(),
     registerThemeProperties: vi.fn(),
   },
 }));
 
-function renderPage() {
+// Each settings block is its own page at /profile/:section (design pass 2026-11-08).
+function renderPage(path = '/profile') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const clearSpy = vi.spyOn(queryClient, 'clear');
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{children}</MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/profile" element={children} />
+          <Route path="/profile/:section" element={children} />
+        </Routes>
+      </MemoryRouter>
     </QueryClientProvider>
   );
   render(<ProfilePage />, { wrapper });
@@ -183,7 +190,7 @@ const zoneRow = () => screen.getByTestId('profile-timezone');
 // App.tsx DeviceTimezoneSync, utils/deviceTimezoneSync.ts). The page only shows it.
 describe('ProfilePage time zone row: read-only, set by the device', () => {
   it('shows the label, the city and the helper line', async () => {
-    renderPage();
+    renderPage('/profile/timezone');
     const row = await screen.findByTestId('profile-timezone');
     expect(row).toHaveTextContent('Time zone');
     expect(row).toHaveTextContent('Denver');
@@ -195,7 +202,7 @@ describe('ProfilePage time zone row: read-only, set by the device', () => {
 
   it('is not a control and offers no change flow, even with dependent circles', async () => {
     mockDependent.mockResolvedValue([{ id: 'c1', recipient_name: 'Mom' }]);
-    renderPage();
+    renderPage('/profile/timezone');
     await screen.findByTestId('profile-timezone');
     expect(within(zoneRow()).queryByRole('button')).not.toBeInTheDocument();
     expect(within(zoneRow()).queryByRole('combobox')).not.toBeInTheDocument();
@@ -207,7 +214,7 @@ describe('ProfilePage time zone row: read-only, set by the device', () => {
 
   it('names an off-list stored zone by its city, never the raw id', async () => {
     currentUser = { ...USER, timezone: 'America/Boise' };
-    renderPage();
+    renderPage('/profile/timezone');
     const row = await screen.findByTestId('profile-timezone');
     expect(row).toHaveTextContent('Boise');
     expect(row).not.toHaveTextContent('America/Boise');
@@ -215,21 +222,21 @@ describe('ProfilePage time zone row: read-only, set by the device', () => {
 
   it('falls back to a generic name for an id with no city', async () => {
     currentUser = { ...USER, timezone: 'Etc/GMT+5' };
-    renderPage();
+    renderPage('/profile/timezone');
     expect(await screen.findByTestId('profile-timezone')).toHaveTextContent('Custom time zone');
   });
 });
 
 describe('ProfilePage member colour', () => {
   it('renders the picker with the saved colour checked and the preview in that colour', async () => {
-    renderPage();
+    renderPage('/profile/color');
     const group = await screen.findByRole('radiogroup', { name: 'Choose your color' });
     expect(within(group).getByRole('radio', { name: 'Sage green' })).toBeChecked();
     expect(within(group).getByRole('radio', { name: 'Coral' })).not.toBeChecked();
   });
 
   it('previews the saved colour on the avatar next to the picker', async () => {
-    renderPage();
+    renderPage('/profile/color');
     await screen.findByRole('radiogroup', { name: 'Choose your color' });
     // "Sam Doe" hashes to amber; the member saved moss, so the preview is moss.
     const [from, to] = avatarGradientForKey('moss');
@@ -244,7 +251,7 @@ describe('ProfilePage member colour', () => {
       opts?.onSuccess?.()
     );
     const user = userEvent.setup();
-    renderPage();
+    renderPage('/profile/color');
     await user.click(await screen.findByRole('radio', { name: 'Coral' }));
     expect(updateAvatarColor).toHaveBeenCalledWith('coral', expect.anything());
     expect(screen.getByTestId('avatar-color-saved')).toHaveTextContent('Color updated.');
@@ -253,14 +260,14 @@ describe('ProfilePage member colour', () => {
 
   it('does not re-save the colour that is already selected', async () => {
     const user = userEvent.setup();
-    renderPage();
+    renderPage('/profile/color');
     await user.click(await screen.findByRole('radio', { name: 'Sage green' }));
     expect(updateAvatarColor).not.toHaveBeenCalled();
   });
 
   it('shows no confirmation when the save has not succeeded', async () => {
     const user = userEvent.setup();
-    renderPage();
+    renderPage('/profile/color');
     await user.click(await screen.findByRole('radio', { name: 'Coral' }));
     expect(screen.getByTestId('avatar-color-saved')).toBeEmptyDOMElement();
   });
@@ -280,7 +287,7 @@ describe('ProfilePage saves in flight keep keyboard focus', () => {
   it('digest delivery-day select', async () => {
     currentUser = { ...USER, email_digest_enabled: true, email_digest_day: 1 };
     pending = { digest: true };
-    renderPage();
+    renderPage('/profile/digest');
     const select = await screen.findByLabelText('Delivery day');
     expectBusyButFocusable(select);
     await userEvent.setup().selectOptions(select, '3');
@@ -291,7 +298,7 @@ describe('ProfilePage saves in flight keep keyboard focus', () => {
   it('quiet-hours start and end fields', async () => {
     currentUser = { ...USER, quiet_hours_start: '22:00', quiet_hours_end: '07:00' };
     pending = { quiet: true };
-    renderPage();
+    renderPage('/profile/quietHours');
     for (const name of [/^Start time/, /^End time/]) {
       const field = await screen.findByLabelText(name);
       expectBusyButFocusable(field);
@@ -303,7 +310,7 @@ describe('ProfilePage saves in flight keep keyboard focus', () => {
   it('avatar colour swatches', async () => {
     pending = { color: true };
     const user = userEvent.setup();
-    renderPage();
+    renderPage('/profile/color');
     const coral = await screen.findByRole('radio', { name: 'Coral' });
     expectBusyButFocusable(coral);
     await user.click(coral);

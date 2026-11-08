@@ -304,7 +304,7 @@ export async function gotoActivitySettled(page: Page, circleId: string): Promise
  *      verification) sidesteps it; the toast below is the real confirmation.
  */
 export async function setProfileLanguage(page: Page, lang: 'en' | 'es'): Promise<void> {
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await page.goto('/profile/language', { waitUntil: 'domcontentloaded' });
   const label = lang === 'es' ? 'Español' : 'English';
   const radio = page.getByRole('radio', { name: label, exact: true });
   await expect(radio).toBeVisible({ timeout: 15_000 });

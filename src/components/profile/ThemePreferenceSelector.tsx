@@ -13,7 +13,12 @@ import {
  * hint says so. Renders nothing while the dark-mode build flag is off. Mirrors
  * mobile ProfileScreen's Appearance section.
  */
-export function ThemePreferenceSelector(): ReactElement | null {
+export function ThemePreferenceSelector({
+  hideTitle = false,
+}: {
+  /** On its own settings page the page heading names it, so the section label is dropped. */
+  hideTitle?: boolean;
+} = {}): ReactElement | null {
   const { t } = useTranslation('profile');
   const preference = useThemeStore((s) => s.preference);
   const setPreference = useThemeStore((s) => s.setPreference);
@@ -21,12 +26,14 @@ export function ThemePreferenceSelector(): ReactElement | null {
   if (!isDarkModeEnabled()) return null;
 
   return (
-    <div className="mt-8" data-testid="theme-preference">
-      <Text variant="sectionLabel" as="h2">
-        {t('appearance.title')}
-      </Text>
+    <div className={hideTitle ? undefined : 'mt-8'} data-testid="theme-preference">
+      {hideTitle ? null : (
+        <Text variant="sectionLabel" as="h2">
+          {t('appearance.title')}
+        </Text>
+      )}
       <SegmentedControl
-        className="mt-3"
+        className={hideTitle ? undefined : 'mt-3'}
         label={t('appearance.themeLabel')}
         value={preference}
         options={[

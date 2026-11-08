@@ -1,7 +1,4 @@
 {
-  "sections": {
-    "emailDigest": "Récapitulatif hebdomadaire par courriel"
-  },
   "account": {
     "email": "Courriel"
   },
@@ -20,5 +17,10 @@
   },
   "timezoneAuto": {
     "helper": "Définie par votre appareil. Utilisée pour vos heures de silence et les heures de vos rappels et courriels."
+  },
+  "settingsList": {
+    "rows": {
+      "help": "Aide et soutien"
+    }
   }
 }

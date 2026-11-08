@@ -39,7 +39,7 @@ test('toggle OFF: one withdraw POST, DB stamped, events anonymous after; toggle 
   const withdraws = countRequests(page, 'POST', WITHDRAW_PATH);
   const restoresSent = countRequests(page, 'POST', RESTORE_PATH);
 
-  await page.goto('/profile');
+  await page.goto('/profile/privacy');
   const toggle = consentSwitch(page);
   await expect(toggle).toHaveAttribute('aria-checked', 'true', { timeout: 20_000 });
   const firstIdentify = await posthog.waitForEvent('$identify', { timeoutMs: 20_000 });

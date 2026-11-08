@@ -12,12 +12,15 @@ function esc(s: string): string {
 test('edit & restore first name and a notification toggle', async ({ page }) => {
   await page.goto('/profile', { waitUntil: 'domcontentloaded' });
   // The page heading is the person's name now (compact header); the old
-  // "Profile & settings" title is its eyebrow.
+  // "Settings" is its eyebrow; the rows live on sub-pages.
   const header = page.getByTestId('profile-header');
-  await expect(header.getByText('Profile & settings', { exact: true })).toBeVisible({
+  await expect(header.getByText('Settings', { exact: true })).toBeVisible({
     timeout: 15_000,
   });
   await expect(header.getByRole('heading', { level: 1 })).toBeVisible();
+
+  // The name editor lives on /profile/account.
+  await page.goto('/profile/account', { waitUntil: 'domcontentloaded' });
 
   // ── First name: capture → change → save → reload & assert → restore ──────
   // Open the inline name editor and read the current first name so we can
@@ -52,6 +55,7 @@ test('edit & restore first name and a notification toggle', async ({ page }) => 
   await expect(restoreInput).toBeHidden({ timeout: 20_000 });
 
   // ── Notification toggle: flip → assert → flip back → assert ──────────────
+  await page.goto('/profile/alerts', { waitUntil: 'domcontentloaded' });
   // "Daily update & tips" is a safe notification preference (role="switch").
   const tipsToggle = page.getByRole('switch', { name: 'Daily update & tips' });
   await expect(tipsToggle).toBeVisible({ timeout: 15_000 });

@@ -21,7 +21,12 @@ export const EXPORT_FILENAME = 'circlecare-export.json';
  * prepared, and the label swaps to a progress message; success/error feedback
  * lands in the toast live region (role="status" / role="alert").
  */
-export function DataExportSection(): ReactElement {
+export function DataExportSection({
+  hideTitle = false,
+}: {
+  /** On its own settings page the page heading names it, so the section label is dropped. */
+  hideTitle?: boolean;
+} = {}): ReactElement {
   const { t } = useTranslation('profile');
   const { showToast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
@@ -52,11 +57,13 @@ export function DataExportSection(): ReactElement {
   };
 
   return (
-    <section className="mt-8">
-      <Text variant="sectionLabel" as="h2">
-        {t('dataExport.title')}
-      </Text>
-      <Text variant="caption" className="mt-1">
+    <section className={hideTitle ? undefined : 'mt-8'}>
+      {hideTitle ? null : (
+        <Text variant="sectionLabel" as="h2">
+          {t('dataExport.title')}
+        </Text>
+      )}
+      <Text variant="caption" className={hideTitle ? undefined : 'mt-1'}>
         {t('dataExport.description')}
       </Text>
       <Button

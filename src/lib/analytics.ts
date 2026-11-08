@@ -1,3 +1,4 @@
+import { SETTINGS_PAGES, type SettingsPage } from '@/lib/settingsSections';
 import { env } from './env';
 import { analyticsCollectionAllowed } from './analyticsMode';
 import { withPosthog } from './posthogLoader';
@@ -1822,6 +1823,14 @@ export const Analytics = {
   // --- In-app help center + videos (1.3.0, docs/plans/in-app-help.md) ---
   // Enums only. `slug` is always an article slug from the bundled content.json
   // (a fixed list), never free text; the search query is NEVER sent.
+  /**
+   * A Profile settings page opened (`/profile/:section`, design pass 2026-11-08).
+   * Mobile twin: `settings_section_viewed`. Enum only, from lib/settingsSections.
+   */
+  settingsSectionViewed: (section: SettingsPage) =>
+    capture('settings_section_viewed', {
+      section: pickEnum(section, SETTINGS_PAGES, 'account'),
+    }),
   helpCenterOpened: (source: 'profile' | 'login' | 'signup' | 'home_card' | 'contextual') =>
     capture('help_center_opened', { source }),
   helpArticleViewed: (props: {

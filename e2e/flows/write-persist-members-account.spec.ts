@@ -550,6 +550,8 @@ test('delete the account through the Profile page: auth user gone, public.users 
     await expect(page.getByTestId('profile-header').getByText(acct.email, { exact: true })).toBeVisible({
       timeout: 20_000,
     });
+    // The danger zone lives on the Account sub-page.
+    await page.goto('/profile/account', { waitUntil: 'domcontentloaded' });
 
     await pretendSaved(page, 'delete-account', 'DELETE', ME_RE, {
       success: true,

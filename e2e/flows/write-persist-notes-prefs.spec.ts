@@ -316,9 +316,10 @@ test('profile email digest: an account with no circle is not offered the weekly 
 }) => {
   await signedIn('digest-none', request, context, baseURL);
   await page.goto('/profile', { waitUntil: 'domcontentloaded' });
-  // The page has loaded (the notification switches are there)...
-  await expect(page.getByRole('switch').first()).toBeVisible({ timeout: 20_000 });
-  // ...and it offers neither the switch nor an upgrade row for a feature this person cannot buy.
+  // The page has loaded (the settings rows are there)...
+  await expect(page.getByTestId('settings-row-language')).toBeVisible({ timeout: 20_000 });
+  // ...and it offers no digest row for a feature this person cannot buy.
+  await expect(page.getByTestId('settings-row-digest')).toHaveCount(0);
   await expect(page.getByRole('switch', { name: 'Send me a weekly digest' })).toHaveCount(0);
   await expect(page.getByText('Weekly care summary')).toHaveCount(0);
 });
@@ -347,7 +348,7 @@ test('profile email digest: enable, change the delivery day, disable and re-enab
   const toggle = () => page.getByRole('switch', { name: 'Send me a weekly digest' });
   const daySelect = () => page.locator('#profile-digest-day');
   const open = async () => {
-    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+    await page.goto('/profile/digest', { waitUntil: 'domcontentloaded' });
     await expect(toggle()).toBeVisible({ timeout: 20_000 });
   };
 
@@ -430,7 +431,7 @@ for (const { group, name, keys, confirm } of SWITCHES) {
 
     const sw = () => page.getByRole('switch', { name, exact: true });
     const open = async () => {
-      await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+      await page.goto('/profile/alerts', { waitUntil: 'domcontentloaded' });
       await expect(sw()).toBeVisible({ timeout: 20_000 });
     };
     // Tasks pins event_notes to its stored value; every other preference is untouched.

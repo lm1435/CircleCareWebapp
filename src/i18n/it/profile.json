@@ -1,16 +1,11 @@
 {
-  "heading": "Profilo e impostazioni",
   "header": {
     "premium": "Premium"
   },
   "sections": {
     "account": "Account",
     "language": "Lingua",
-    "notifications": "Notifiche",
-    "quietHours": "Ore di silenzio",
-    "units": "Unità di misura",
-    "emailDigest": "Riepilogo settimanale via email",
-    "privacy": "Privacy"
+    "quietHours": "Ore di silenzio"
   },
   "account": {
     "email": "Email",
@@ -124,7 +119,7 @@
   },
   "delete": {
     "title": "Elimina account",
-    "description": "Elimina definitivamente il tuo account e ogni cerchia di cui sei titolare. Questa azione non può essere annullata. Vuoi prima una copia delle tue informazioni? Usa 'Scarica i miei dati' qui sopra.",
+    "description": "Elimina definitivamente il tuo account e ogni cerchia di cui sei titolare. Questa azione non può essere annullata. Vuoi prima una copia delle tue informazioni? Usa 'Scarica i miei dati' nelle Impostazioni.",
     "cta": "Elimina il mio account",
     "confirmTitle": "Eliminare il tuo account?",
     "confirmBody": "Questa azione elimina definitivamente il tuo account e ogni cerchia di cui sei titolare, inclusi tutti i farmaci, gli appuntamenti, gli incarichi, le note, i parametri vitali, i documenti e le informazioni di emergenza che contengono. Tutte le altre persone di quelle cerchie perdono l'accesso e ricevono una notifica. Le cerchie di cui fai parte ma non sei titolare non vengono eliminate: ne esci e basta. Questa azione non può essere annullata.",
@@ -190,5 +185,28 @@
   "timezoneAuto": {
     "helper": "Impostato dal tuo dispositivo. Usato per le tue ore di silenzio e per gli orari nei promemoria e nelle email.",
     "otherZone": "Fuso orario personalizzato"
+  },
+  "settingsList": {
+    "title": "Impostazioni",
+    "groups": {
+      "you": "Tu",
+      "notifications": "Notifiche",
+      "preferences": "Preferenze",
+      "privacyAccount": "Privacy e account"
+    },
+    "rows": {
+      "alerts": "Avvisi",
+      "units": "Unità",
+      "privacySecurity": "Privacy e sicurezza",
+      "help": "Aiuto e supporto",
+      "myCircles": "Le mie cerchie"
+    },
+    "values": {
+      "free": "Gratuito",
+      "allOn": "Tutti attivi",
+      "someOff": "Alcuni disattivati",
+      "allOff": "Tutti disattivati",
+      "off": "Disattivato"
+    }
   }
 }

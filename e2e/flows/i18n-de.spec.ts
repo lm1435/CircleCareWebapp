@@ -133,7 +133,7 @@ for (const { path, heading } of CIRCLE_PAGES) {
 // on the always-present "join a circle" action instead.
 const TOP_PAGES: { route: string; text: string }[] = [
   { route: '/circles', text: 'Kreis beitreten' },
-  { route: '/profile', text: 'Profil & Einstellungen' },
+  { route: '/profile', text: 'Einstellungen' },
   { route: '/help', text: 'Hilfe & FAQ' },
   { route: '/invites', text: 'Ihre Einladungen' },
 ];
@@ -168,7 +168,7 @@ test('join-circle modal is fully translated', async ({ page }) => {
 test('profile language selector is in German and reflects the active language', async ({
   page,
 }) => {
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await page.goto('/profile/language', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByText('Sprache', { exact: true }).first()).toBeVisible({
     timeout: NAV_TIMEOUT,

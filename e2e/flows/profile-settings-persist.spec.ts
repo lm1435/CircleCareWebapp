@@ -47,7 +47,7 @@ for (const browserZone of [null, 'Pacific/Kiritimati'] as const) {
       // A circle with no recipient account: its dose times follow the owner's zone.
       const circleId = await createCircle(api, uniq('prof-tz'));
       await cookieLogin(context, acct, baseURL);
-      await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+      await page.goto('/profile/timezone', { waitUntil: 'domcontentloaded' });
       const device = browserZone ?? 'America/Denver';
       const city = device.split('/').pop()!.replace(/_/g, ' ');
 
@@ -85,7 +85,7 @@ for (const browserZone of [null, 'Pacific/Kiritimati'] as const) {
       expect(userRow(acct.userId).quiet_hours_start, 'new account: quiet hours off').toBeNull();
       expect(userRow(acct.userId).quiet_hours_end, 'new account: quiet hours off').toBeNull();
       await cookieLogin(context, acct, baseURL);
-      await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+      await page.goto('/profile/quietHours', { waitUntil: 'domcontentloaded' });
       const toggle = page.getByRole('switch', { name: 'Enable quiet hours' });
       await expect(toggle).toBeVisible({ timeout: 20_000 });
       await expect(toggle).not.toBeChecked();
@@ -121,7 +121,7 @@ for (const browserZone of [null, 'Pacific/Kiritimati'] as const) {
     test('units: weight and glucose persist and survive a reload', async ({ page, context, baseURL }) => {
       const acct = await createScopedAccount('prof-un');
       await cookieLogin(context, acct, baseURL);
-      await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+      await page.goto('/profile/units', { waitUntil: 'domcontentloaded' });
       const kg = page.getByRole('radio', { name: 'Kilograms (kg)' });
       await expect(kg).toBeVisible({ timeout: 20_000 });
 
@@ -147,11 +147,11 @@ for (const browserZone of [null, 'Pacific/Kiritimati'] as const) {
       await setProfileLanguage(page, 'es');
       await expect.poll(() => userRow(acct.userId).language).toBe('es');
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await expect(page.getByText('Zona horaria', { exact: true }).first()).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText('Time zone', { exact: true })).toHaveCount(0);
+      await expect(page.getByRole('heading', { level: 1, name: 'Idioma', exact: true })).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByRole('heading', { level: 1, name: 'Language', exact: true })).toHaveCount(0);
       await page.getByRole('radio', { name: 'English', exact: true }).click();
       await expect.poll(() => userRow(acct.userId).language).toBe('en');
-      await expect(page.getByText('Time zone', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByRole('heading', { level: 1, name: 'Language', exact: true })).toBeVisible({ timeout: 15_000 });
     });
 
     test('failure: a 500 on the sync PATCH leaves the stored zone unchanged and the page still renders it', async ({
@@ -163,7 +163,7 @@ for (const browserZone of [null, 'Pacific/Kiritimati'] as const) {
       const acct = await createScopedAccount('prof-fail');
       await cookieLogin(context, acct, baseURL);
       const fault = await failRequest(page, 'PATCH', USER_ME, { status: 500, times: 1 });
-      await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+      await page.goto('/profile/timezone', { waitUntil: 'domcontentloaded' });
       await fault.expectHits(1);
       await expect(page.getByTestId('profile-timezone')).toContainText('Denver', { timeout: 20_000 });
       expect(userRow(acct.userId).timezone).toBe('America/Denver');

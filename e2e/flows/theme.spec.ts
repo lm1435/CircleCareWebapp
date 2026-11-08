@@ -10,7 +10,7 @@ const theme = (page: import('@playwright/test').Page): Promise<string | null> =>
   page.evaluate(() => document.documentElement.getAttribute('data-theme'));
 
 async function openAppearance(page: import('@playwright/test').Page) {
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await page.goto('/profile/appearance', { waitUntil: 'domcontentloaded' });
   const tablist = page.getByRole('tablist', { name: 'Theme' });
   await expect(tablist).toBeVisible({ timeout: 15_000 });
   return tablist;

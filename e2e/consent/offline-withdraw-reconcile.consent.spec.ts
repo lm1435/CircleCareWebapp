@@ -68,7 +68,7 @@ test('offline withdraw survives a reload: no $identify, events anonymous, the qu
   restores.push(setServerConsent(account.userId, 'granted'));
   await presetAnalyticsConsent(page, 'granted', account.userId);
 
-  await page.goto('/profile');
+  await page.goto('/profile/privacy');
   const toggle = consentSwitch(page);
   await expect(toggle).toHaveAttribute('aria-checked', 'true', { timeout: 20_000 });
   expect((await posthog.waitForEvent('$identify', { timeoutMs: 20_000 })).distinctId).toBe(account.userId);
@@ -113,7 +113,7 @@ test('offline withdraw survives sign-out + sign-in: no $identify, events anonymo
   restores.push(setServerConsent(account.userId, 'granted'));
   await presetAnalyticsConsent(page, 'granted', account.userId);
 
-  await page.goto('/profile');
+  await page.goto('/profile/privacy');
   const toggle = consentSwitch(page);
   await expect(toggle).toHaveAttribute('aria-checked', 'true', { timeout: 20_000 });
   expect((await posthog.waitForEvent('$identify', { timeoutMs: 20_000 })).distinctId).toBe(account.userId);
@@ -180,7 +180,7 @@ test('PRE-READ SNAPSHOT: a flush that clears the queue before a stale read retur
   restores.push(setServerConsent(account.userId, 'granted'));
   await presetAnalyticsConsent(page, 'granted', account.userId);
 
-  await page.goto('/profile');
+  await page.goto('/profile/privacy');
   const toggle = consentSwitch(page);
   await expect(toggle).toHaveAttribute('aria-checked', 'true', { timeout: 20_000 });
   expect((await posthog.waitForEvent('$identify', { timeoutMs: 20_000 })).distinctId).toBe(account.userId);
@@ -238,7 +238,7 @@ test('DECISION-TIME CHECK: a toggle made while the reconcile read is in flight i
   restores.push(setServerConsent(account.userId, 'granted'));
   await presetAnalyticsConsent(page, 'granted', account.userId);
 
-  await page.goto('/profile');
+  await page.goto('/profile/privacy');
   await expect(consentSwitch(page)).toHaveAttribute('aria-checked', 'true', { timeout: 20_000 });
   expect((await posthog.waitForEvent('$identify', { timeoutMs: 20_000 })).distinctId).toBe(account.userId);
 

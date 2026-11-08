@@ -62,7 +62,7 @@ test.describe('Data export includes notes', () => {
       expect(careRes.ok(), `create care note failed: ${careRes.status()} ${await careRes.text()}`).toBe(true);
       careNoteId = ((await careRes.json()) as { data: { note: { id: string } } }).data.note.id;
 
-      await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+      await page.goto('/profile/data', { waitUntil: 'domcontentloaded' });
       const [response] = await Promise.all([
         page.waitForResponse(
           (r) => r.url().includes('/api/users/me/export') && r.request().method() === 'GET'

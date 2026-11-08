@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import '@/i18n';
 import ProfilePage from '@/pages/ProfilePage';
@@ -107,18 +107,25 @@ vi.mock('@/lib/analytics', () => ({
     timezoneChanged: vi.fn(),
     accountDeleted: vi.fn(),
     errorOccurred: vi.fn(),
+    settingsSectionViewed: vi.fn(),
     themePreferenceChanged: vi.fn(),
     registerThemeProperties: vi.fn(),
   },
 }));
 
-function renderPage() {
+// Each settings block is its own page at /profile/:section (design pass 2026-11-08).
+function renderPage(path = '/profile/privacy') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{children}</MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/profile" element={children} />
+          <Route path="/profile/:section" element={children} />
+        </Routes>
+      </MemoryRouter>
     </QueryClientProvider>
   );
   render(<ProfilePage />, { wrapper });

@@ -48,6 +48,10 @@ function titleKeyForPath(pathname: string): string | null {
   if (STATIC_TITLES[pathname]) {
     return STATIC_TITLES[pathname];
   }
+  // /profile/:section — one settings page (lib/settingsSections.ts).
+  if (/^\/profile\/[^/]+\/?$/.test(pathname)) {
+    return 'pageTitles.profile';
+  }
   // /circles/:circleId  → overview;  /circles/:circleId/<sub> → sub page
   // The daily update also takes a trailing date segment (/daily-update/2026-10-08).
   const circleMatch =

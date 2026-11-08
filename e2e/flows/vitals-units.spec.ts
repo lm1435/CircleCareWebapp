@@ -84,7 +84,7 @@ test('weight: 160 lb is stored as 72.5748 kg, and the row follows the profile un
   const group = page.getByRole('region', { name: 'Weight' });
   await expect(group.getByText(/^160(\.0)?\s*lb/)).toBeVisible({ timeout: 20_000 });
 
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await page.goto('/profile/units', { waitUntil: 'domcontentloaded' });
   const put = page.waitForResponse((r) => r.request().method() === 'PUT' && r.url().endsWith('/api/users/me/unit-preferences'));
   await page.getByRole('radio', { name: 'Kilograms (kg)' }).click();
   expect((await put).status()).toBe(200);

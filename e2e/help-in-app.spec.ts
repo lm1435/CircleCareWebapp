@@ -203,7 +203,7 @@ test.describe('in-app help (signed in)', () => {
   }) => {
     test.skip(!bySlug('quiet-hours'), 'no quiet-hours article in content.json');
     await page.route(MEDIA_PATH, () => undefined);
-    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+    await page.goto('/profile/quietHours', { waitUntil: 'domcontentloaded' });
     const toggle = page.getByRole('switch', { name: 'Enable quiet hours' });
     const link = page.getByTestId('how-does-this-work-quiet-hours');
     await expect(toggle).toBeVisible();

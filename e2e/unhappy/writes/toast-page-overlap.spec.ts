@@ -297,7 +297,7 @@ test.describe('save failures', () => {
       // (role="alert") inside the form, on screen at the natural scroll, with
       // focus left alone — and that no toast is raised over the page at all.
       test('ProfilePage: the failed name save is reported inline in its form, never as a toast over the page', async ({ page }) => {
-        await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+        await page.goto('/profile/account', { waitUntil: 'domcontentloaded' });
         await pageSettled(page);
         const edit = page.getByRole('button', { name: 'Edit name', exact: true }).first();
         await actInPlace(page, edit, () => edit.click(), PROFILE_FOCUS_NUDGE_PX);

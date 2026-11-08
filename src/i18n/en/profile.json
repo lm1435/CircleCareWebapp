@@ -1,16 +1,11 @@
 {
-  "heading": "Profile & settings",
   "header": {
     "premium": "Premium"
   },
   "sections": {
     "account": "Account",
     "language": "Language",
-    "notifications": "Notifications",
-    "quietHours": "Quiet hours",
-    "units": "Measurement units",
-    "emailDigest": "Weekly email digest",
-    "privacy": "Privacy"
+    "quietHours": "Quiet hours"
   },
   "account": {
     "email": "Email",
@@ -124,7 +119,7 @@
   },
   "delete": {
     "title": "Delete account",
-    "description": "Permanently delete your account and every care circle you own. This cannot be undone. Want a copy of your information first? Use 'Download my data' above.",
+    "description": "Permanently delete your account and every care circle you own. This cannot be undone. Want a copy of your information first? Use 'Download my data' in Settings.",
     "cta": "Delete my account",
     "confirmTitle": "Delete your account?",
     "confirmBody": "This permanently deletes your account and every care circle you own — including all medications, appointments, tasks, notes, vitals, documents and emergency information in them. Everyone else in those circles loses access, and they will be notified. Circles you belong to but do not own are not deleted; you are simply removed from them. This cannot be undone.",
@@ -190,5 +185,28 @@
   "timezoneAuto": {
     "helper": "Set by your device. Used for your quiet hours and the times in your reminders and emails.",
     "otherZone": "Custom time zone"
+  },
+  "settingsList": {
+    "title": "Settings",
+    "groups": {
+      "you": "You",
+      "notifications": "Notifications",
+      "preferences": "Preferences",
+      "privacyAccount": "Privacy & account"
+    },
+    "rows": {
+      "alerts": "Alerts",
+      "units": "Units",
+      "privacySecurity": "Privacy & security",
+      "help": "Help & support",
+      "myCircles": "My circles"
+    },
+    "values": {
+      "free": "Free",
+      "allOn": "All on",
+      "someOff": "Some off",
+      "allOff": "All off",
+      "off": "Off"
+    }
   }
 }

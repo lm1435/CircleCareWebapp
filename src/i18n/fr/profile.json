@@ -1,16 +1,11 @@
 {
-  "heading": "Profil et paramètres",
   "header": {
     "premium": "Premium"
   },
   "sections": {
     "account": "Compte",
     "language": "Langue",
-    "notifications": "Notifications",
-    "quietHours": "Heures de silence",
-    "units": "Unités de mesure",
-    "emailDigest": "Récapitulatif hebdomadaire par e-mail",
-    "privacy": "Confidentialité"
+    "quietHours": "Heures de silence"
   },
   "account": {
     "email": "E-mail",
@@ -124,7 +119,7 @@
   },
   "delete": {
     "title": "Supprimer le compte",
-    "description": "Supprimez définitivement votre compte et tous les cercles de soins dont vous êtes propriétaire. Cette action est irréversible. Vous voulez d’abord une copie de vos informations ? Utilisez « Télécharger mes données » ci-dessus.",
+    "description": "Supprimez définitivement votre compte et tous les cercles de soins dont vous êtes propriétaire. Cette action est irréversible. Vous voulez d’abord une copie de vos informations ? Utilisez « Télécharger mes données » dans les Paramètres.",
     "cta": "Supprimer mon compte",
     "confirmTitle": "Supprimer votre compte ?",
     "confirmBody": "Cette action supprime définitivement votre compte et tous les cercles de soins dont vous êtes propriétaire, y compris tous les médicaments, rendez-vous, tâches, notes, constantes, documents et informations d’urgence qu’ils contiennent. Toutes les autres personnes de ces cercles perdent l’accès et en seront informées. Les cercles dont vous êtes membre sans en être propriétaire ne sont pas supprimés : vous ne faites simplement plus partie de ces cercles. Cette action est irréversible.",
@@ -190,5 +185,28 @@
   "timezoneAuto": {
     "helper": "Définie par votre appareil. Utilisée pour vos heures de silence et les heures de vos rappels et e-mails.",
     "otherZone": "Fuseau horaire personnalisé"
+  },
+  "settingsList": {
+    "title": "Paramètres",
+    "groups": {
+      "you": "Vous",
+      "notifications": "Notifications",
+      "preferences": "Préférences",
+      "privacyAccount": "Confidentialité et compte"
+    },
+    "rows": {
+      "alerts": "Alertes",
+      "units": "Unités",
+      "privacySecurity": "Confidentialité et sécurité",
+      "help": "Aide et assistance",
+      "myCircles": "Mes cercles"
+    },
+    "values": {
+      "free": "Gratuit",
+      "allOn": "Toutes activées",
+      "someOff": "Certaines désactivées",
+      "allOff": "Toutes désactivées",
+      "off": "Désactivé"
+    }
   }
 }

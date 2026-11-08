@@ -147,7 +147,7 @@ test.describe('daily update', () => {
     await expect(card.getByText('Turn off')).toHaveCount(0);
     await expect(card.getByRole('button', { name: 'Hide until tomorrow' })).toBeVisible();
 
-    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+    await page.goto('/profile/alerts', { waitUntil: 'domcontentloaded' });
     const tipsSwitch = page.getByRole('switch', { name: /^Daily update & tips/ });
     await expect(tipsSwitch).toHaveAttribute('aria-checked', 'true', { timeout: NAV_TIMEOUT });
     await tipsSwitch.click();
@@ -160,7 +160,7 @@ test.describe('daily update', () => {
     });
     await expect(page.getByTestId('daily-update-card')).toHaveCount(0);
 
-    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+    await page.goto('/profile/alerts', { waitUntil: 'domcontentloaded' });
     await expect(tipsSwitch).toHaveAttribute('aria-checked', 'false', { timeout: NAV_TIMEOUT });
     await tipsSwitch.click();
     await expect.poll(() => readTipsPref(account.userId)).toBe(true);

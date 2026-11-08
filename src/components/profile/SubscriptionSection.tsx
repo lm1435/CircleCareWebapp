@@ -21,7 +21,12 @@ import { Analytics } from '@/lib/analytics';
  * "Manage subscription" link. When it isn't configured the card degrades to the
  * original in-app upgrade pointer + store badges.
  */
-export function SubscriptionSection(): ReactElement {
+export function SubscriptionSection({
+  hideTitle = false,
+}: {
+  /** On its own settings page the page heading names it, so the section label is dropped. */
+  hideTitle?: boolean;
+} = {}): ReactElement {
   const { t, i18n } = useTranslation(['profile', 'common']);
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -64,11 +69,13 @@ export function SubscriptionSection(): ReactElement {
   };
 
   return (
-    <section className="mt-8">
-      <Text variant="sectionLabel" as="h2">
-        {t('subscription.title')}
-      </Text>
-      <div className="mt-5 flex flex-col gap-5">
+    <section className={hideTitle ? undefined : 'mt-8'}>
+      {hideTitle ? null : (
+        <Text variant="sectionLabel" as="h2">
+          {t('subscription.title')}
+        </Text>
+      )}
+      <div className={`${hideTitle ? '' : 'mt-5 '}flex flex-col gap-5`}>
         {isLoading ? (
           <Skeleton className="h-7 w-44 rounded-full" />
         ) : isPremium ? (

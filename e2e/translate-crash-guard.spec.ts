@@ -56,7 +56,7 @@ async function restoreEnglish(page: Page): Promise<void> {
   await page.evaluate(() => {
     document.documentElement.classList.remove('translated-ltr');
   });
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await page.goto('/profile/language', { waitUntil: 'domcontentloaded' });
   const group = page.getByRole('radiogroup', { name: /^(Language|Idioma)$/ });
   await expect(group).toBeVisible({ timeout: NAV_TIMEOUT });
   const english = group.getByRole('radio', { name: 'English', exact: true });

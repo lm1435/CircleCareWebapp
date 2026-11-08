@@ -1,7 +1,7 @@
 import { screen, render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import ProfilePage from '@/pages/ProfilePage';
 import type { NotificationPreferences, User, UnitPreferences } from '@/api/users';
@@ -97,19 +97,24 @@ vi.mock('@/lib/analytics', () => ({
     timezoneChanged: vi.fn(),
     accountDeleted: vi.fn(),
     errorOccurred: vi.fn(),
+    settingsSectionViewed: vi.fn(),
     themePreferenceChanged: vi.fn(),
     registerThemeProperties: vi.fn(),
   },
 }));
 
-function renderPage() {
+// Each settings block is its own page at /profile/:section (design pass 2026-11-08).
+function renderPage(path = '/profile/alerts') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <ProfilePage />
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/:section" element={<ProfilePage />} />
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>
   );

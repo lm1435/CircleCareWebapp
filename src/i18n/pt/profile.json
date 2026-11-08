@@ -1,16 +1,11 @@
 {
-  "heading": "Perfil e configurações",
   "header": {
     "premium": "Premium"
   },
   "sections": {
     "account": "Conta",
     "language": "Idioma",
-    "notifications": "Notificações",
-    "quietHours": "Horário de silêncio",
-    "units": "Unidades de medida",
-    "emailDigest": "Resumo semanal por e-mail",
-    "privacy": "Privacidade"
+    "quietHours": "Horário de silêncio"
   },
   "account": {
     "email": "E-mail",
@@ -124,7 +119,7 @@
   },
   "delete": {
     "title": "Excluir conta",
-    "description": "Exclua permanentemente a sua conta e todos os círculos de cuidado dos quais é proprietário. Esta ação não pode ser desfeita. Quer uma cópia das suas informações antes? Use 'Baixar meus dados' acima.",
+    "description": "Exclua permanentemente a sua conta e todos os círculos de cuidado dos quais é proprietário. Esta ação não pode ser desfeita. Quer uma cópia das suas informações antes? Use 'Baixar meus dados' em Configurações.",
     "cta": "Excluir minha conta",
     "confirmTitle": "Excluir sua conta?",
     "confirmBody": "Isso exclui permanentemente a sua conta e todos os círculos de cuidado dos quais é proprietário — incluindo todos os medicamentos, consultas, tarefas, notas, sinais vitais, documentos e informações de emergência neles. Todas as outras pessoas desses círculos perdem o acesso e serão notificadas. Os círculos dos quais faz parte, mas que não são seus, não são excluídos; apenas deixa de fazer parte deles. Esta ação não pode ser desfeita.",
@@ -190,5 +185,28 @@
   "timezoneAuto": {
     "helper": "Definido pelo seu dispositivo. Usado para o seu horário de silêncio e para os horários nos seus lembretes e e-mails.",
     "otherZone": "Fuso horário personalizado"
+  },
+  "settingsList": {
+    "title": "Configurações",
+    "groups": {
+      "you": "Você",
+      "notifications": "Notificações",
+      "preferences": "Preferências",
+      "privacyAccount": "Privacidade e conta"
+    },
+    "rows": {
+      "alerts": "Alertas",
+      "units": "Unidades",
+      "privacySecurity": "Privacidade e segurança",
+      "help": "Ajuda e suporte",
+      "myCircles": "Meus círculos"
+    },
+    "values": {
+      "free": "Grátis",
+      "allOn": "Todos ativados",
+      "someOff": "Alguns desativados",
+      "allOff": "Todos desativados",
+      "off": "Desativado"
+    }
   }
 }
