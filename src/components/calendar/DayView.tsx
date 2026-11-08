@@ -139,7 +139,7 @@ export function DayView({
   const isEmpty = dayEvents.length === 0 && asNeeded.length === 0;
 
   return (
-    <section aria-label={t('calendar:dayViewLabel')} data-testid="day-view">
+    <section aria-label={t('calendar:dayViewLabel')} data-testid="day-view" className="tabular-nums">
       <div className="flex items-center gap-2 pb-4">
         <div className="min-w-0 flex-1">
           <h2

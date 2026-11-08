@@ -914,6 +914,11 @@ describe('TasksPage', () => {
     ).toHaveLength(2);
   });
 
+  it('task rows use tabular figures for their due times (audit 2026-11-07 #18)', () => {
+    renderPage();
+    expect(screen.getByText('Pick up groceries').closest('li')).toHaveClass('tabular-nums');
+  });
+
   // One accent (owner 2026-11-07): four identical filled Done buttons repeat the strongest CTA per row.
   // Only the first open row is filled primary; the rest use the moss outline, like Today's Next up.
   it('fills only the FIRST open row\'s Done; every later Done is the outline variant', () => {

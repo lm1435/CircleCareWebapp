@@ -52,6 +52,13 @@ function renderWeek() {
   );
 }
 
+describe('WeekView tabular figures', () => {
+  it('the grid uses tabular figures for its times (audit 2026-11-07 #18)', () => {
+    renderWeek();
+    expect(screen.getByRole('grid')).toHaveClass('tabular-nums');
+  });
+});
+
 describe('WeekView', () => {
   it('today\'s column header is aria-current="date" (WCAG 1.3.1)', () => {
     renderWeek();

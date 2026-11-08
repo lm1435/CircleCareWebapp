@@ -63,6 +63,12 @@ afterEach(() => {
 });
 
 describe('DayView', () => {
+  // Audit 2026-11-07 #18: times align in a column only with tabular figures.
+  it('uses tabular figures for its times', () => {
+    setup();
+    expect(screen.getByTestId('day-view')).toHaveClass('tabular-nums');
+  });
+
   it('sorts all-day first, then by time, then by title', () => {
     const sorted = sortDayEvents([
       ev('c', { title: 'C', scheduled_time: '10:00:00' }),

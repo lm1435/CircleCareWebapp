@@ -449,7 +449,7 @@ export function WeekView({
       padding="none"
       role="grid"
       aria-label={t('calendar:weekViewLabel')}
-      className="overflow-hidden"
+      className="overflow-hidden tabular-nums"
     >
       {/* Single 2D scroller: pans horizontally (day columns, ~2 fit a phone via
           --dc + scroll-snap) AND scrolls vertically through the timed grid. The

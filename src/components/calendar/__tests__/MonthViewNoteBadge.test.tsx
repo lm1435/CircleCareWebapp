@@ -64,6 +64,11 @@ afterAll(async () => {
   await i18n.changeLanguage('en');
 });
 
+it('MonthView uses tabular figures for its times (audit 2026-11-07 #18)', async () => {
+  const panel = await openDay([appt('a')]);
+  expect(panel.closest('.grid')).toHaveClass('tabular-nums');
+});
+
 describe('MonthView day panel: note badge', () => {
   it('prints the count and appends "N notes" to the row name', async () => {
     const panel = await openDay([appt('a')]);

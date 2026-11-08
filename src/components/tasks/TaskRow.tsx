@@ -270,7 +270,7 @@ export function TaskRow({
   }
 
   return (
-    <li className={careCardShell}>
+    <li className={`${careCardShell} tabular-nums`}>
       <div className={careCardTopRow}>
         {/* Status indicator, NOT a control — the Done button is the action, so
             a task is completed the same way a dose is taken.

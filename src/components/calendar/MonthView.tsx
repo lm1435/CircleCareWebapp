@@ -74,7 +74,7 @@ export function MonthView({
     // a `truncate` span is still its longest word) widened the track past the
     // page, clipping the time and the note badge off the right edge at phone
     // width. `minmax(0,1fr)` lets the title truncate instead.
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 tabular-nums lg:grid-cols-[minmax(0,1fr)_18rem]">
       <Card
         variant="outlined"
         padding="none"
