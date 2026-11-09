@@ -237,7 +237,7 @@ describe('UpgradePage — paywall_context', () => {
     expect(screen.queryByRole('button', { name: /Continue with Free plan/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Better care, together.' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Back to profile' }));
+    await user.click(screen.getByRole('button', { name: 'Back to Settings' }));
 
     expect(await screen.findByTestId('profile')).toBeInTheDocument();
     expect(Analytics.paywallDismissed).toHaveBeenCalledWith('invite_cap');
@@ -291,8 +291,8 @@ describe('UpgradePage — declining the onboarding paywall', () => {
     deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
     renderAt({ paywallContext: 'onboarding' });
 
-    // "Back to profile" points at a page a brand-new user has never seen.
-    expect(screen.queryByRole('button', { name: 'Back to profile' })).not.toBeInTheDocument();
+    // "Back to Settings" points at a page a brand-new user has never seen.
+    expect(screen.queryByRole('button', { name: 'Back to Settings' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Not now' }));
 
     expectToday(await screen.findByTestId('today'));
@@ -338,7 +338,7 @@ describe('UpgradePage — declining the onboarding paywall', () => {
     deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
     renderAt({ paywallContext: 'capacity' });
 
-    await user.click(screen.getByRole('button', { name: 'Back to profile' }));
+    await user.click(screen.getByRole('button', { name: 'Back to Settings' }));
 
     expect(await screen.findByTestId('profile')).toBeInTheDocument();
     expect(Analytics.paywallDismissed).toHaveBeenCalledWith('capacity');

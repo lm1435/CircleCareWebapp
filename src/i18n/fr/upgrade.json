@@ -90,8 +90,8 @@
   "unavailable": "Le paiement en ligne n’est pas disponible pour le moment. Vous pouvez aussi passer à Premium dans l’application CircleCare.",
   "storeOnly": {
     "title": "Abonnez-vous dans l’application CircleCare",
-    "bodyMobile": "CircleCare Premium est disponible dans l’application. Téléchargez CircleCare ci-dessous, connectez-vous avec cette même adresse e-mail et démarrez votre abonnement depuis votre profil.",
-    "bodyDesktop": "CircleCare Premium est disponible dans l’application CircleCare sur votre téléphone. Installez-la, connectez-vous avec cette même adresse e-mail et démarrez votre abonnement depuis votre profil.",
+    "bodyMobile": "CircleCare Premium est disponible dans l’application. Téléchargez CircleCare ci-dessous, connectez-vous avec cette même adresse e-mail et démarrez votre abonnement depuis Paramètres.",
+    "bodyDesktop": "CircleCare Premium est disponible dans l’application CircleCare sur votre téléphone. Installez-la, connectez-vous avec cette même adresse e-mail et démarrez votre abonnement depuis Paramètres.",
     "storesLabel": "Télécharger l’application CircleCare",
     "helpPrefix": "Une question, ou pas de smartphone ?",
     "helpCta": "Écrire à notre équipe d’assistance"
@@ -101,7 +101,7 @@
     "body": "Nous avons besoin des informations de votre compte pour ouvrir le paiement. Vérifiez votre connexion et réessayez."
   },
   "error": "Un problème est survenu au démarrage du paiement. Veuillez réessayer.",
-  "back": "Retour au profil",
+  "back": "Retour aux paramètres",
   "alreadyPremium": {
     "title": "Vous êtes déjà Premium",
     "body": "Vous avez un accès complet à toutes les fonctionnalités de CircleCare.",
@@ -113,7 +113,7 @@
     "body": "Votre abonnement est actif. Profitez d’un accès complet à tous vos cercles de soins.",
     "cta": "Continuer"
   },
-  "autoRenewNotice": "Votre abonnement se renouvelle automatiquement au tarif indiqué jusqu’à sa résiliation. Vous pouvez résilier à tout moment depuis votre profil.",
+  "autoRenewNotice": "Votre abonnement se renouvelle automatiquement au tarif indiqué jusqu’à sa résiliation. Vous pouvez résilier à tout moment depuis Paramètres.",
   "termsLink": "Conditions d’utilisation",
   "privacyLink": "Politique de confidentialité",
   "legalPrefix": "En vous abonnant, vous acceptez nos",

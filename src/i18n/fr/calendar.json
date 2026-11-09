@@ -298,7 +298,7 @@
     "dualTimezoneHint": "Votre heure / heure pour {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Votre heure / son heure ({{timezone}})",
     "timeInZone": "Heure à {{zone}}",
-    "quietHoursDoseWarning": "Cette heure tombe pendant les heures de silence : aucun rappel ne sera envoyé. Vous pouvez modifier les heures de silence dans Profil, section Heures de silence.",
+    "quietHoursDoseWarning": "Cette heure tombe pendant les heures de silence : aucun rappel ne sera envoyé. Vous pouvez modifier les heures de silence dans Paramètres, section Heures de silence.",
     "pastTimeInline": "Commence à la prochaine dose. Cette heure est déjà passée aujourd’hui.",
     "conversion": {
       "sameDay_one": "{{recipientTime}} à {{recipientZone}}, c’est {{viewerTime}} pour vous ({{viewerZone}})",

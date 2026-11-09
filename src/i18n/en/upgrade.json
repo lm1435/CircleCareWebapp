@@ -90,8 +90,8 @@
   "unavailable": "Online checkout isn't available right now. You can also upgrade in the CircleCare app.",
   "storeOnly": {
     "title": "Subscribe in the CircleCare app",
-    "bodyMobile": "CircleCare Premium is available in the app. Get CircleCare below, sign in with this same email, and start your subscription from your profile.",
-    "bodyDesktop": "CircleCare Premium is available in the CircleCare app on your phone. Install it, sign in with this same email, and start your subscription from your profile.",
+    "bodyMobile": "CircleCare Premium is available in the app. Get CircleCare below, sign in with this same email, and start your subscription from Settings.",
+    "bodyDesktop": "CircleCare Premium is available in the CircleCare app on your phone. Install it, sign in with this same email, and start your subscription from Settings.",
     "storesLabel": "Get the CircleCare app",
     "helpPrefix": "Questions, or no smartphone?",
     "helpCta": "Email our support team"
@@ -101,7 +101,7 @@
     "body": "We need your account details before we can open checkout. Check your connection and try again."
   },
   "error": "Something went wrong starting checkout. Please try again.",
-  "back": "Back to profile",
+  "back": "Back to Settings",
   "alreadyPremium": {
     "title": "You're already Premium",
     "body": "You have full access to all CircleCare features.",
@@ -113,7 +113,7 @@
     "body": "Your subscription is active. Enjoy full access across your care circles.",
     "cta": "Continue"
   },
-  "autoRenewNotice": "Your subscription renews automatically at the price shown until you cancel. Cancel any time from your profile.",
+  "autoRenewNotice": "Your subscription renews automatically at the price shown until you cancel. Cancel any time from Settings.",
   "termsLink": "Terms of Service",
   "privacyLink": "Privacy Policy",
   "legalPrefix": "By subscribing you agree to our",

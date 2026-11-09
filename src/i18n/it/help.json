@@ -58,15 +58,15 @@
         },
         {
           "question": "Quali notifiche riceverò?",
-          "answer": "Riceverai avvisi in cinque gruppi che puoi attivare o disattivare in Profilo: Farmaci (dosi prese, saltate o non segnate), Incarichi e appuntamenti (quando ti viene assegnato qualcosa e prima della scadenza), Note (quando qualcuno aggiunge una nota), Riepilogo del giorno e consigli e Turni (nuovi turni scoperti, promemoria e modifiche ai tuoi turni). Se sei la persona assistita ricevi anche i promemoria delle tue dosi, sempre attivi."
+          "answer": "Riceverai avvisi in cinque gruppi che puoi attivare o disattivare in Impostazioni, alla voce Avvisi: Farmaci (dosi prese, saltate o non segnate), Incarichi e appuntamenti (quando ti viene assegnato qualcosa e prima della scadenza), Note (quando qualcuno aggiunge una nota), Riepilogo del giorno e consigli e Turni (nuovi turni scoperti, promemoria e modifiche ai tuoi turni). Se sei la persona assistita ricevi anche i promemoria delle tue dosi, sempre attivi."
         },
         {
           "question": "Cosa sono le ore di silenzio?",
-          "answer": "Le ore di silenzio mettono in pausa le notifiche negli orari che scegli (ad esempio di notte, dalle 22 alle 7). Vai su Profilo, poi Ore di silenzio, per configurarle."
+          "answer": "Le ore di silenzio mettono in pausa le notifiche negli orari che scegli (ad esempio di notte, dalle 22 alle 7). Vai su Impostazioni, poi Ore di silenzio, per configurarle."
         },
         {
           "question": "Posso disattivare alcune notifiche?",
-          "answer": "Sì. Vai su Profilo, poi Notifiche. Ognuno dei cinque interruttori attiva o disattiva un intero gruppo per il tuo account, in tutte le cerchie di cui fai parte. Se disattivi Farmaci, non ricevi più avvisi quando una dose non viene segnata."
+          "answer": "Sì. Vai su Impostazioni, poi Avvisi. Ognuno dei cinque interruttori attiva o disattiva un intero gruppo per il tuo account, in tutte le cerchie di cui fai parte. Se disattivi Farmaci, non ricevi più avvisi quando una dose non viene segnata."
         }
       ]
     },
@@ -83,11 +83,11 @@
         },
         {
           "question": "Come ripristino i miei acquisti?",
-          "answer": "Nell'app mobile di CircleCare, vai su Profilo > Account > Ripristina acquisti. Serve se reinstalli l'app o cambi telefono. Se ti sei abbonato qui sul web, l'abbonamento segue automaticamente il tuo account."
+          "answer": "Nell'app mobile di CircleCare, vai su Impostazioni > Account > Ripristina acquisti. Serve se reinstalli l'app o cambi telefono. Se ti sei abbonato qui sul web, l'abbonamento segue automaticamente il tuo account."
         },
         {
           "question": "Come disdico l'abbonamento?",
-          "answer": "Apri il tuo Profilo e scegli Gestisci abbonamento: se ti sei abbonato su questo sito, ti porta direttamente al portale di fatturazione, dove puoi disdire in un paio di clic. Se ti sei abbonato nell'app mobile, disdici dal telefono: Impostazioni > Abbonamenti su iPhone, oppure Play Store > Pagamenti e abbonamenti su Android. In entrambi i casi mantieni Premium fino alla fine del periodo già pagato e non devi mai contattare l'assistenza per disdire."
+          "answer": "Apri Impostazioni, poi Abbonamento, e scegli Gestisci abbonamento: se ti sei abbonato su questo sito, ti porta direttamente al portale di fatturazione, dove puoi disdire in un paio di clic. Se ti sei abbonato nell'app mobile, disdici dal telefono: Impostazioni > Abbonamenti su iPhone, oppure Play Store > Pagamenti e abbonamenti su Android. In entrambi i casi mantieni Premium fino alla fine del periodo già pagato e non devi mai contattare l'assistenza per disdire."
         }
       ]
     }

@@ -58,15 +58,15 @@
         },
         {
           "question": "¿Qué notificaciones voy a recibir?",
-          "answer": "Recibirás avisos en cinco grupos que puedes activar o desactivar en Perfil: Medicamentos (dosis tomadas, omitidas o sin marcar), Tareas y citas (cuando te asignan algo y antes de que llegue la hora), Notas (cuando alguien agrega una nota), Resumen del día y consejos y Turnos (turnos abiertos nuevos, recordatorios y cambios en tus turnos). Si eres el receptor de cuidado, también recibes tus propios recordatorios de dosis, que siempre están activos."
+          "answer": "Recibirás avisos en cinco grupos que puedes activar o desactivar en Configuración, en Alertas: Medicamentos (dosis tomadas, omitidas o sin marcar), Tareas y citas (cuando te asignan algo y antes de que llegue la hora), Notas (cuando alguien agrega una nota), Resumen del día y consejos y Turnos (turnos abiertos nuevos, recordatorios y cambios en tus turnos). Si eres el receptor de cuidado, también recibes tus propios recordatorios de dosis, que siempre están activos."
         },
         {
           "question": "¿Qué son las horas de silencio?",
-          "answer": "Las horas de silencio pausan las notificaciones durante las horas que configures (por ejemplo, de 10 PM a 7 AM). Ve a Perfil, luego Horas de silencio, para configurar tus horas de silencio."
+          "answer": "Las horas de silencio pausan las notificaciones durante las horas que configures (por ejemplo, de 10 PM a 7 AM). Ve a Configuración, luego Horas de silencio, para configurar tus horas de silencio."
         },
         {
           "question": "¿Puedo desactivar ciertas notificaciones?",
-          "answer": "Sí. Ve a Perfil y luego a Notificaciones. Cada uno de los cinco interruptores activa o desactiva un grupo completo para tu cuenta, en todos tus círculos. Si desactivas Medicamentos, no te avisaremos cuando una dosis quede sin marcar."
+          "answer": "Sí. Ve a Configuración y luego a Alertas. Cada uno de los cinco interruptores activa o desactiva un grupo completo para tu cuenta, en todos tus círculos. Si desactivas Medicamentos, no te avisaremos cuando una dosis quede sin marcar."
         }
       ]
     },
@@ -83,11 +83,11 @@
         },
         {
           "question": "¿Cómo restauro mis compras?",
-          "answer": "En la app móvil de CircleCare, ve a Perfil > Cuenta > Restaurar compras. Es útil si reinstalas la app o cambias de teléfono. Si te suscribiste aquí en la web, tu suscripción se aplica automáticamente a tu cuenta."
+          "answer": "En la app móvil de CircleCare, ve a Configuración > Cuenta > Restaurar compras. Es útil si reinstalas la app o cambias de teléfono. Si te suscribiste aquí en la web, tu suscripción se aplica automáticamente a tu cuenta."
         },
         {
           "question": "¿Cómo cancelo mi suscripción?",
-          "answer": "Abre tu Perfil y elige Administrar suscripción: si te suscribiste en este sitio web, eso te lleva directamente a tu portal de facturación, donde puedes cancelar en un par de clics. Si te suscribiste en la app móvil, cancela desde tu teléfono: Configuración > Suscripciones en iPhone, o Play Store > Pagos y suscripciones en Android. En ambos casos conservas Premium hasta el final del período que ya pagaste, y nunca necesitas contactar a soporte para cancelar."
+          "answer": "Abre Configuración, luego Suscripción, y elige Administrar suscripción: si te suscribiste en este sitio web, eso te lleva directamente a tu portal de facturación, donde puedes cancelar en un par de clics. Si te suscribiste en la app móvil, cancela desde tu teléfono: Configuración > Suscripciones en iPhone, o Play Store > Pagos y suscripciones en Android. En ambos casos conservas Premium hasta el final del período que ya pagaste, y nunca necesitas contactar a soporte para cancelar."
         }
       ]
     }

@@ -313,7 +313,7 @@ export default function UpgradePage(): ReactElement {
     });
   };
 
-  /** Onboarding relabels every "leave" control: "Back to profile" points at a
+  /** Onboarding relabels every "leave" control: "Back to Settings" points at a
    *  page a brand-new user has never seen, and the real destination is the
    *  circle they just created. */
   const declineLabel = isOnboarding ? t('onboarding.notNow') : t('back');

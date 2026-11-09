@@ -31,7 +31,7 @@ test.setTimeout(120_000);
 
 const TZ = process.env.PW_E2E_TZ || 'America/Denver';
 const NOTE =
-  'This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Profile, under Quiet hours.';
+  'This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Settings, under Quiet hours.';
 
 async function openForm(browser: Browser, baseURL: string | undefined, acc: ScopedAccount, circleId: string) {
   const origin = new URL(baseURL ?? 'http://localhost:5173').origin;

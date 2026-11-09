@@ -52,15 +52,15 @@
         },
         {
           "question": "Que notificações vou receber?",
-          "answer": "Receberá alertas em cinco grupos que pode ativar ou desativar em Perfil: Medicamentos (doses tomadas, saltadas ou não marcadas), Tarefas e consultas (quando algo lhe é atribuído e antes do prazo), Notas (quando alguém adiciona uma nota), Resumo do dia e dicas e Turnos (novos turnos por preencher, lembretes e alterações nos seus turnos). Se for a pessoa cuidada, também recebe os seus próprios lembretes de dose, que ficam sempre ativados."
+          "answer": "Receberá alertas em cinco grupos que pode ativar ou desativar em Definições, em Alertas: Medicamentos (doses tomadas, saltadas ou não marcadas), Tarefas e consultas (quando algo lhe é atribuído e antes do prazo), Notas (quando alguém adiciona uma nota), Resumo do dia e dicas e Turnos (novos turnos por preencher, lembretes e alterações nos seus turnos). Se for a pessoa cuidada, também recebe os seus próprios lembretes de dose, que ficam sempre ativados."
         },
         {
           "question": "O que são horários de silêncio?",
-          "answer": "Os horários de silêncio pausam as notificações nos períodos que definir (por exemplo, durante a noite, das 22h às 7h). Vá a Perfil e depois Horário de silêncio para configurar os seus horários de silêncio."
+          "answer": "Os horários de silêncio pausam as notificações nos períodos que definir (por exemplo, durante a noite, das 22h às 7h). Vá a Definições e depois Horário de silêncio para configurar os seus horários de silêncio."
         },
         {
           "question": "Posso desativar certas notificações?",
-          "answer": "Sim. Vá a Perfil e depois a Notificações. Cada um dos cinco interruptores ativa ou desativa um grupo inteiro na sua conta, em todos os círculos de que faz parte. Desativar Medicamentos significa que não será avisado quando uma dose não for marcada."
+          "answer": "Sim. Vá a Definições e depois a Alertas. Cada um dos cinco interruptores ativa ou desativa um grupo inteiro na sua conta, em todos os círculos de que faz parte. Desativar Medicamentos significa que não será avisado quando uma dose não for marcada."
         }
       ]
     },
@@ -77,11 +77,11 @@
         },
         {
           "question": "Como restauro as minhas compras?",
-          "answer": "Na app móvel CircleCare, vá a Perfil > Conta > Restaurar compras. Isto é útil se reinstalar a app ou mudar de telemóvel. Se subscreveu aqui na web, a sua subscrição acompanha a sua conta automaticamente."
+          "answer": "Na app móvel CircleCare, vá a Definições > Conta > Restaurar compras. Isto é útil se reinstalar a app ou mudar de telemóvel. Se subscreveu aqui na web, a sua subscrição acompanha a sua conta automaticamente."
         },
         {
           "question": "Como cancelo a minha subscrição?",
-          "answer": "Abra o seu Perfil e escolha Gerir subscrição. Se subscreveu neste site, isso leva-o diretamente ao seu portal de faturação, onde pode cancelar com poucos cliques. Se subscreveu na app móvel, cancele a partir do telemóvel: Definições > Subscrições no iPhone, ou Play Store > Pagamentos e subscrições no Android. Em qualquer dos casos, mantém o Premium até ao fim do período já pago e nunca precisa de contactar o suporte para cancelar."
+          "answer": "Abra Definições, depois Subscrição, e escolha Gerir subscrição. Se subscreveu neste site, isso leva-o diretamente ao seu portal de faturação, onde pode cancelar com poucos cliques. Se subscreveu na app móvel, cancele a partir do telemóvel: Definições > Subscrições no iPhone, ou Play Store > Pagamentos e subscrições no Android. Em qualquer dos casos, mantém o Premium até ao fim do período já pago e nunca precisa de contactar o suporte para cancelar."
         }
       ]
     }

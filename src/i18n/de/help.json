@@ -58,15 +58,15 @@
         },
         {
           "question": "Welche Benachrichtigungen erhalte ich?",
-          "answer": "Sie erhalten Hinweise in fünf Gruppen, die Sie im Profil ein- oder ausschalten können: Medikamente (eingenommene, ausgelassene oder nicht eingetragene Dosen), Aufgaben & Termine (wenn Ihnen etwas zugewiesen wird und bevor etwas fällig ist), Notizen (wenn jemand eine Notiz hinzufügt), Tagesübersicht und Tipps sowie Schichten (neue offene Schichten, Erinnerungen und Änderungen an Ihren Schichten). Sind Sie die umsorgte Person, erhalten Sie außerdem Ihre eigenen Dosis-Erinnerungen, die immer eingeschaltet sind."
+          "answer": "Sie erhalten Hinweise in fünf Gruppen, die Sie in den Einstellungen unter Hinweise ein- oder ausschalten können: Medikamente (eingenommene, ausgelassene oder nicht eingetragene Dosen), Aufgaben & Termine (wenn Ihnen etwas zugewiesen wird und bevor etwas fällig ist), Notizen (wenn jemand eine Notiz hinzufügt), Tagesübersicht und Tipps sowie Schichten (neue offene Schichten, Erinnerungen und Änderungen an Ihren Schichten). Sind Sie die umsorgte Person, erhalten Sie außerdem Ihre eigenen Dosis-Erinnerungen, die immer eingeschaltet sind."
         },
         {
           "question": "Was sind Ruhezeiten?",
-          "answer": "Während der Ruhezeiten, die Sie festlegen (zum Beispiel nachts von 22 bis 7 Uhr), werden Benachrichtigungen pausiert. Ihre Ruhezeiten richten Sie unter Profil im Bereich Ruhezeiten ein."
+          "answer": "Während der Ruhezeiten, die Sie festlegen (zum Beispiel nachts von 22 bis 7 Uhr), werden Benachrichtigungen pausiert. Ihre Ruhezeiten richten Sie unter Einstellungen im Bereich Ruhezeiten ein."
         },
         {
           "question": "Kann ich bestimmte Benachrichtigungen ausschalten?",
-          "answer": "Ja. Öffnen Sie Profil, dann Benachrichtigungen. Jeder der fünf Schalter schaltet eine ganze Gruppe für Ihr Konto ein oder aus, in jedem Kreis, dem Sie angehören. Wenn Sie Medikamente ausschalten, werden Sie nicht benachrichtigt, wenn eine Dosis nicht eingetragen wurde."
+          "answer": "Ja. Öffnen Sie Einstellungen, dann Hinweise. Jeder der fünf Schalter schaltet eine ganze Gruppe für Ihr Konto ein oder aus, in jedem Kreis, dem Sie angehören. Wenn Sie Medikamente ausschalten, werden Sie nicht benachrichtigt, wenn eine Dosis nicht eingetragen wurde."
         }
       ]
     },
@@ -83,11 +83,11 @@
         },
         {
           "question": "Wie stelle ich meine Käufe wieder her?",
-          "answer": "Gehen Sie in der mobilen CircleCare-App zu Profil > Konto > Käufe wiederherstellen. Das ist nützlich, wenn Sie die App neu installieren oder das Smartphone wechseln. Wenn Sie hier im Web abonniert haben, folgt Ihr Abo automatisch Ihrem Konto."
+          "answer": "Gehen Sie in der mobilen CircleCare-App zu Einstellungen > Konto > Käufe wiederherstellen. Das ist nützlich, wenn Sie die App neu installieren oder das Smartphone wechseln. Wenn Sie hier im Web abonniert haben, folgt Ihr Abo automatisch Ihrem Konto."
         },
         {
           "question": "Wie kündige ich mein Abo?",
-          "answer": "Öffnen Sie Ihr Profil und wählen Sie „Abo verwalten“ – wenn Sie auf dieser Website abonniert haben, gelangen Sie direkt zu Ihrem Abrechnungsportal, wo Sie mit wenigen Klicks kündigen können. Wenn Sie in der mobilen App abonniert haben, kündigen Sie über Ihr Smartphone: Einstellungen > Abonnements auf dem iPhone oder Play Store > Zahlungen & Abos auf Android. In beiden Fällen behalten Sie Premium bis zum Ende des bereits bezahlten Zeitraums, und Sie müssen sich zum Kündigen nie an den Support wenden."
+          "answer": "Öffnen Sie Einstellungen, dann Abo, und wählen Sie „Abo verwalten“ – wenn Sie auf dieser Website abonniert haben, gelangen Sie direkt zu Ihrem Abrechnungsportal, wo Sie mit wenigen Klicks kündigen können. Wenn Sie in der mobilen App abonniert haben, kündigen Sie über Ihr Smartphone: Einstellungen > Abonnements auf dem iPhone oder Play Store > Zahlungen & Abos auf Android. In beiden Fällen behalten Sie Premium bis zum Ende des bereits bezahlten Zeitraums, und Sie müssen sich zum Kündigen nie an den Support wenden."
         }
       ]
     }

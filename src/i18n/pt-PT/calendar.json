@@ -58,7 +58,7 @@
     },
     "dualTimezoneHint": "O seu horário / horário de {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "O seu horário / horário da pessoa ({{timezone}})",
-    "quietHoursDoseWarning": "Este horário está dentro do horário de silêncio, então nenhum lembrete será enviado nele. Pode alterar o horário de silêncio em Perfil, na secção Horário de silêncio.",
+    "quietHoursDoseWarning": "Este horário está dentro do horário de silêncio, então nenhum lembrete será enviado nele. Pode alterar o horário de silêncio em Definições, na secção Horário de silêncio.",
     "pastTimeInline": "Começa na próxima dose. Esta hora já passou hoje.",
     "timezoneUnresolvedNotice": "A carregar o fuso horário deste círculo. A gravação está em pausa para que as datas não sejam guardadas no fuso errado.",
     "drugSearch": {

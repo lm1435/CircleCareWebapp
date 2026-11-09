@@ -109,7 +109,7 @@ test.describe('earned upsell (web)', () => {
       .toBe(1);
     expect(upsellRow(owner.userId).upsell_last_shown_at).not.toBeNull();
 
-    await page.getByRole('button', { name: /Back to profile/i }).click();
+    await page.getByRole('button', { name: /Back to Settings/i }).click();
     await page.waitForURL(/\/profile$/);
     await expect
       .poll(() => upsellRow(owner.userId).upsell_dismissed_reasons ?? [], { timeout: 10_000 })

@@ -1,7 +1,7 @@
 {
   "storeOnly": {
-    "bodyMobile": "CircleCare Premium est disponible dans l’application. Téléchargez CircleCare ci-dessous, connectez-vous avec cette même adresse courriel et démarrez votre abonnement depuis votre profil.",
-    "bodyDesktop": "CircleCare Premium est disponible dans l’application CircleCare sur votre téléphone. Installez-la, connectez-vous avec cette même adresse courriel et démarrez votre abonnement depuis votre profil."
+    "bodyMobile": "CircleCare Premium est disponible dans l’application. Téléchargez CircleCare ci-dessous, connectez-vous avec cette même adresse courriel et démarrez votre abonnement depuis Paramètres.",
+    "bodyDesktop": "CircleCare Premium est disponible dans l’application CircleCare sur votre téléphone. Installez-la, connectez-vous avec cette même adresse courriel et démarrez votre abonnement depuis Paramètres."
   },
   "benefits": {
     "shifts": {

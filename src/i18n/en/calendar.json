@@ -298,7 +298,7 @@
     "dualTimezoneHint": "Your time / {{name}}'s time ({{timezone}})",
     "dualTimezoneHintGeneric": "Your time / their time ({{timezone}})",
     "timeInZone": "Time in {{zone}}",
-    "quietHoursDoseWarning": "This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Profile, under Quiet hours.",
+    "quietHoursDoseWarning": "This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Settings, under Quiet hours.",
     "pastTimeInline": "Starts with the next dose. This time has already passed today.",
     "conversion": {
       "sameDay_one": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} for you ({{viewerZone}})",

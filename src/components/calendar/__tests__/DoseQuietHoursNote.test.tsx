@@ -65,9 +65,9 @@ const OTHER_RESPONSIBLE = [
 ];
 
 const EN_COPY =
-  'This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Profile, under Quiet hours.';
+  'This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Settings, under Quiet hours.';
 const ES_COPY =
-  'Esta hora cae dentro de tus horas de silencio, así que no se enviará ningún recordatorio. Puedes cambiar las horas de silencio en Perfil, en la sección Horas de silencio.';
+  'Esta hora cae dentro de tus horas de silencio, así que no se enviará ningún recordatorio. Puedes cambiar las horas de silencio en Configuración, en la sección Horas de silencio.';
 
 const quietUser = (over: Record<string, unknown> = {}) => ({
   id: 'me',

@@ -90,8 +90,8 @@
   "unavailable": "Il pagamento online non è disponibile al momento. Puoi anche passare a Premium nell'app CircleCare.",
   "storeOnly": {
     "title": "Abbonati nell'app CircleCare",
-    "bodyMobile": "CircleCare Premium è disponibile nell'app. Scarica CircleCare qui sotto, accedi con questa stessa email e avvia l'abbonamento dal tuo profilo.",
-    "bodyDesktop": "CircleCare Premium è disponibile nell'app CircleCare sul tuo telefono. Installala, accedi con questa stessa email e avvia l'abbonamento dal tuo profilo.",
+    "bodyMobile": "CircleCare Premium è disponibile nell'app. Scarica CircleCare qui sotto, accedi con questa stessa email e avvia l'abbonamento da Impostazioni.",
+    "bodyDesktop": "CircleCare Premium è disponibile nell'app CircleCare sul tuo telefono. Installala, accedi con questa stessa email e avvia l'abbonamento da Impostazioni.",
     "storesLabel": "Scarica l'app CircleCare",
     "helpPrefix": "Hai domande o non hai uno smartphone?",
     "helpCta": "Scrivi al nostro supporto"
@@ -101,7 +101,7 @@
     "body": "Ci servono i dati del tuo account prima di aprire il pagamento. Controlla la connessione e riprova."
   },
   "error": "Qualcosa è andato storto nell'avvio del pagamento. Riprova.",
-  "back": "Torna al profilo",
+  "back": "Torna alle impostazioni",
   "alreadyPremium": {
     "title": "Hai già Premium",
     "body": "Hai accesso completo a tutte le funzioni di CircleCare.",
@@ -113,7 +113,7 @@
     "body": "Il tuo abbonamento è attivo. Goditi l'accesso completo a tutte le tue cerchie di cura.",
     "cta": "Continua"
   },
-  "autoRenewNotice": "Il tuo abbonamento si rinnova automaticamente al prezzo indicato finché non lo annulli. Puoi annullarlo in qualsiasi momento dal tuo profilo.",
+  "autoRenewNotice": "Il tuo abbonamento si rinnova automaticamente al prezzo indicato finché non lo annulli. Puoi annullarlo in qualsiasi momento da Impostazioni.",
   "termsLink": "Termini di servizio",
   "privacyLink": "Informativa sulla privacy",
   "legalPrefix": "Abbonandoti accetti i nostri",

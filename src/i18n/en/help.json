@@ -58,15 +58,15 @@
         },
         {
           "question": "What notifications will I receive?",
-          "answer": "You'll receive alerts in five groups you can turn on or off in Profile: Medications (doses taken, skipped or not marked), Tasks & appointments (when something's assigned to you and before it's due), Notes (when someone adds a note), Daily update & tips and Shifts (new open shifts, shift reminders and changes to your shifts). If you're the care recipient you also get your own dose reminders, which are always on."
+          "answer": "You'll receive alerts in five groups you can turn on or off in Settings, under Alerts: Medications (doses taken, skipped or not marked), Tasks & appointments (when something's assigned to you and before it's due), Notes (when someone adds a note), Daily update & tips and Shifts (new open shifts, shift reminders and changes to your shifts). If you're the care recipient you also get your own dose reminders, which are always on."
         },
         {
           "question": "What are quiet hours?",
-          "answer": "Quiet hours pause notifications during times you set (like overnight from 10 PM to 7 AM). Go to Profile, then Quiet hours, to set up your quiet hours."
+          "answer": "Quiet hours pause notifications during times you set (like overnight from 10 PM to 7 AM). Go to Settings, then Quiet hours, to set up your quiet hours."
         },
         {
           "question": "Can I turn off certain notifications?",
-          "answer": "Yes. Go to Profile, then Notifications. Each of the five switches turns a whole group on or off for your account, in every circle you belong to. Turning off Medications means you won't be told when a dose isn't marked."
+          "answer": "Yes. Go to Settings, then Alerts. Each of the five switches turns a whole group on or off for your account, in every circle you belong to. Turning off Medications means you won't be told when a dose isn't marked."
         }
       ]
     },
@@ -83,11 +83,11 @@
         },
         {
           "question": "How do I restore my purchases?",
-          "answer": "In the CircleCare mobile app, go to Profile > Account > Restore purchases. This is useful if you reinstall the app or switch phones. If you subscribed here on the web, your subscription follows your account automatically."
+          "answer": "In the CircleCare mobile app, go to Settings > Account > Restore purchases. This is useful if you reinstall the app or switch phones. If you subscribed here on the web, your subscription follows your account automatically."
         },
         {
           "question": "How do I cancel my subscription?",
-          "answer": "Open your Profile and choose Manage subscription — if you subscribed on this website, that takes you straight to your billing portal, where you can cancel in a couple of clicks. If you subscribed in the mobile app, cancel from your phone: Settings > Subscriptions on iPhone, or Play Store > Payments & subscriptions on Android. Either way you keep Premium until the end of the period you already paid for, and you never need to contact support to cancel."
+          "answer": "Open Settings, then Subscription, and choose Manage subscription — if you subscribed on this website, that takes you straight to your billing portal, where you can cancel in a couple of clicks. If you subscribed in the mobile app, cancel from your phone: Settings > Subscriptions on iPhone, or Play Store > Payments & subscriptions on Android. Either way you keep Premium until the end of the period you already paid for, and you never need to contact support to cancel."
         }
       ]
     }

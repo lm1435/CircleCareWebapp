@@ -667,7 +667,7 @@ describe('UpgradePage — country gate', () => {
   it('still lets a blocked user leave the page', () => {
     setAccountZone(blockedZone);
     renderPage();
-    expect(screen.getByRole('button', { name: 'Back to profile' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back to Settings' })).toBeInTheDocument();
   });
 
   // A premium subscriber abroad must still reach the management link — the
@@ -744,7 +744,7 @@ describe('UpgradePage — country gate', () => {
   it('still lets a user leave the page when the account read fails', () => {
     setAccountUnresolved();
     renderPage();
-    expect(screen.getByRole('button', { name: 'Back to profile' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back to Settings' })).toBeInTheDocument();
   });
 });
 

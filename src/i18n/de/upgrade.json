@@ -90,8 +90,8 @@
   "unavailable": "Die Online-Bezahlung ist derzeit nicht verfügbar. Sie können auch in der CircleCare-App upgraden.",
   "storeOnly": {
     "title": "In der CircleCare-App abonnieren",
-    "bodyMobile": "CircleCare Premium ist in der App erhältlich. Laden Sie CircleCare unten herunter, melden Sie sich mit derselben E-Mail-Adresse an und starten Sie Ihr Abonnement über Ihr Profil.",
-    "bodyDesktop": "CircleCare Premium ist in der CircleCare-App auf Ihrem Telefon erhältlich. Installieren Sie sie, melden Sie sich mit derselben E-Mail-Adresse an und starten Sie Ihr Abonnement über Ihr Profil.",
+    "bodyMobile": "CircleCare Premium ist in der App erhältlich. Laden Sie CircleCare unten herunter, melden Sie sich mit derselben E-Mail-Adresse an und starten Sie Ihr Abonnement über die Einstellungen.",
+    "bodyDesktop": "CircleCare Premium ist in der CircleCare-App auf Ihrem Telefon erhältlich. Installieren Sie sie, melden Sie sich mit derselben E-Mail-Adresse an und starten Sie Ihr Abonnement über die Einstellungen.",
     "storesLabel": "CircleCare-App laden",
     "helpPrefix": "Fragen oder kein Smartphone?",
     "helpCta": "Schreiben Sie unserem Support-Team"
@@ -101,7 +101,7 @@
     "body": "Wir benötigen Ihre Kontodaten, bevor wir die Bezahlung öffnen können. Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut."
   },
   "error": "Beim Starten der Bezahlung ist etwas schiefgelaufen. Bitte versuchen Sie es erneut.",
-  "back": "Zurück zum Profil",
+  "back": "Zurück zu den Einstellungen",
   "alreadyPremium": {
     "title": "Sie haben bereits Premium",
     "body": "Sie haben vollen Zugriff auf alle Funktionen von CircleCare.",
@@ -113,7 +113,7 @@
     "body": "Ihr Abonnement ist aktiv. Genießen Sie vollen Zugriff auf alle Ihre Pflegekreise.",
     "cta": "Weiter"
   },
-  "autoRenewNotice": "Ihr Abonnement verlängert sich automatisch zum angezeigten Preis, bis Sie kündigen. Sie können jederzeit über Ihr Profil kündigen.",
+  "autoRenewNotice": "Ihr Abonnement verlängert sich automatisch zum angezeigten Preis, bis Sie kündigen. Sie können jederzeit über die Einstellungen kündigen.",
   "termsLink": "Nutzungsbedingungen",
   "privacyLink": "Datenschutzerklärung",
   "legalPrefix": "Mit dem Abschluss des Abonnements akzeptieren Sie unsere",
