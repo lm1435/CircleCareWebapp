@@ -125,11 +125,8 @@ export function AdherenceHero({ circleId }: AdherenceHeroProps): ReactElement | 
               {/* One row, three mutually exclusive shapes. `stable` says so in words
                   rather than showing a flat arrow nobody can read as "unchanged". */}
               {!trendAvailable ? null : improving || declining ? (
-                <p
-                  className={`m-0 flex items-center gap-1 text-sm font-medium tabular-nums ${
-                    improving ? 'text-moss' : 'text-terracotta'
-                  }`}
-                >
+                // Owner 2026-11-09: neutral (text-ink-3, same as "taken") for up AND down.
+                <p className="m-0 flex items-center gap-1 text-sm font-medium tabular-nums text-ink-3">
                   {/* The SOLID glyphs, matching mobile's `trending-up`/`trending-down`
                       (MedicationHistoryScreen.tsx) — `components/ui/iconNames.ts`
                       dropped the `-outline` spellings, which mobile never used. */}

@@ -154,7 +154,7 @@ describe('AdherenceHero', () => {
     expect(screen.queryByText('Adherence · 30 days')).toBeNull();
   });
 
-  it('names an improving trend in moss with the up arrow', () => {
+  it('names an improving trend in neutral ink-3 (not moss) with the up arrow', () => {
     mockUseAdherenceReport.mockReturnValue({
       ...report({ trend: 'improving', trend_change: 7 }),
       isPending: false,
@@ -162,14 +162,15 @@ describe('AdherenceHero', () => {
     renderHero();
 
     const trend = screen.getByText('+7% vs last month');
-    expect(trend.className).toContain('text-moss');
+    expect(trend.className).toContain('text-ink-3');
+    expect(trend.className).not.toContain('text-moss');
   });
 
   // The sign is EXPLICIT on a decline. Mobile passes `sign: change > 0 ? '+' :
   // ''`, so a 7-point drop rendered as "7% vs last month" — the same words a
   // 7-point rise would get, in a different colour. Colour alone is not a
   // signal (WCAG 2.1 AA, SC 1.4.1) and here it was not even a correct one.
-  it('names a declining trend in terracotta, with the sign in the text', () => {
+  it('names a declining trend in neutral ink-3 (not terracotta), with the sign in the text', () => {
     mockUseAdherenceReport.mockReturnValue({
       ...report({ trend: 'declining', trend_change: -7 }),
       isPending: false,
@@ -177,7 +178,8 @@ describe('AdherenceHero', () => {
     renderHero();
 
     const trend = screen.getByText('-7% vs last month');
-    expect(trend.className).toContain('text-terracotta');
+    expect(trend.className).toContain('text-ink-3');
+    expect(trend.className).not.toContain('text-terracotta');
   });
 
   // THE BACKEND CALLS ANYTHING INSIDE ±5 POINTS 'stable' while still sending
@@ -193,7 +195,8 @@ describe('AdherenceHero', () => {
     renderHero();
 
     const trend = screen.getByText('-5% vs last month');
-    expect(trend.className).toContain('text-terracotta');
+    expect(trend.className).toContain('text-ink-3');
+    expect(trend.className).not.toContain('text-terracotta');
     expect(screen.queryByText('Same as last month')).toBeNull();
   });
 
@@ -205,7 +208,8 @@ describe('AdherenceHero', () => {
     renderHero();
 
     const trend = screen.getByText('+5% vs last month');
-    expect(trend.className).toContain('text-moss');
+    expect(trend.className).toContain('text-ink-3');
+    expect(trend.className).not.toContain('text-moss');
   });
 
   it('says so in words when nothing changed', () => {
