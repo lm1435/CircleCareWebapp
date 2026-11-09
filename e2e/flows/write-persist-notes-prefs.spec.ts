@@ -470,7 +470,7 @@ for (const { group, name, keys, confirm } of SWITCHES) {
 // Circle settings: date of birth
 // ---------------------------------------------------------------------------
 
-test('circle settings date of birth: set and change are stored in care_circles.recipient_dob and survive a reload; a clear is blocked and changes nothing', async ({
+test('circle settings date of birth: set and change are stored in care_circles.recipient_dob and survive a reload; a clear is saved as NULL', async ({
   page,
   request,
   context,
@@ -514,15 +514,13 @@ test('circle settings date of birth: set and change are stored in care_circles.r
   await open();
   await expect(field()).toHaveValue('1949-11-02');
 
-  // --- clear: unsupported by the contract (recipient_dob is optional, not nullable) ---
-  const patches = countRequests(page, 'PATCH', CIRCLE_PATH);
+  // --- clear: allowed (sends recipient_dob: null; stored as NULL) ---
   await field().fill('');
-  await expect(page.getByText("Clearing the date of birth isn't supported yet", { exact: false })).toBeVisible();
-  await expect(save()).toBeDisabled();
-  await page.locator('#recipient_name').press('Enter');
-  await patches.expectCount(0);
-  patches.dispose();
-  expect(dobRow().dob, 'the stored date of birth survives the blocked clear').toBe('1949-11-02');
+  await write(page, 'dob-clear', 'PATCH', CIRCLE_PATH, { status: 200, body: { success: true, data: { circle: {} } } }, () =>
+    save().click()
+  );
+  await expect.poll(() => dobRow().dob, { timeout: 10_000, message: 'care_circles.recipient_dob after clearing it' }).toBeNull();
+  expect(dobRow().name, 'the name is untouched by the clear').toBe(startName);
   await open();
-  await expect(field()).toHaveValue('1949-11-02');
+  await expect(field()).toHaveValue('');
 });
