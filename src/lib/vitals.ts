@@ -184,9 +184,12 @@ export const VITAL_DISPLAY_RANGES = {
     'mg/dL': { min: 20, max: 600 },
     'mmol/L': { min: 1.1, max: 33.3 },
   },
+  // Never above the server's 500 kg bound (1102.3 lb): this allowed 1500 lb /
+  // 680 kg, which passed the form and failed the save (sweep 2026-11-08).
+  // Pinned against the backend contract in __tests__/contract/clientLimits.test.ts.
   weight: {
-    lbs: { min: 1, max: 1500 },
-    kg: { min: 0.5, max: 680 },
+    lbs: { min: 1, max: 1100 },
+    kg: { min: 0.5, max: 500 },
   },
   temperature: {
     '°F': { min: 86, max: 113 },

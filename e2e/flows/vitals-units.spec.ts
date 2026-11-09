@@ -147,6 +147,41 @@ test('PK15 heart rate: "1,200" is read as 1.2 and refused by the range check; no
   expect(rowFor(circleId, note)).toHaveLength(0);
 });
 
+// Sweep 2026-11-08: the form allowed up to 1500 lb / 680 kg while the server refuses
+// anything over 500 kg (1102.3 lb), so 1200 lb passed the form and failed the save.
+// The form now stops at 1100 lb / 500 kg: over it is refused inline, AT it saves.
+async function addWeight(page: Page, circleId: string, value: string, note: string) {
+  await page.goto(`/circles/${circleId}/vitals`, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Add reading' }).first().click();
+  const dialog = page.getByRole('dialog', { name: 'Add reading' });
+  await expect(dialog).toBeVisible({ timeout: 20_000 });
+  await dialog.locator('#vital_type').selectOption('weight');
+  await dialog.locator('#value1').fill(value);
+  await dialog.locator('#notes').fill(note);
+  await dialog.getByRole('button', { name: 'Save reading', exact: true }).click();
+  return dialog;
+}
+
+test('weight over the server maximum (1200 lb) is refused by the form; nothing is stored', async ({ page, request, context, baseURL }) => {
+  const { circleId } = await login(request, context, baseURL);
+  const note = uniqueLabel('VU');
+  const dialog = await addWeight(page, circleId, '1200', note);
+  await expect(dialog.locator('#value1')).toHaveAttribute('aria-invalid', 'true');
+  await expect(dialog).toBeVisible();
+  expect(rowFor(circleId, note)).toHaveLength(0);
+});
+
+test('weight at the form maximum (1100 lb) is accepted by the server and stored under 500 kg', async ({ page, request, context, baseURL }) => {
+  const { circleId } = await login(request, context, baseURL);
+  const note = uniqueLabel('VU');
+  const dialog = await addWeight(page, circleId, '1100', note);
+  await expect(dialog).toBeHidden({ timeout: 20_000 });
+  const [row] = rowFor(circleId, note);
+  expect(row.unit).toBe('kg');
+  expect(row.value1).toBeLessThanOrEqual(500);
+  expect(Math.abs(row.value1 - 1100 * 0.45359237)).toBeLessThan(1e-3);
+});
+
 for (const zone of ['Pacific/Kiritimati', 'America/Los_Angeles'] as const) {
   test.describe(`viewer zone ${zone}`, () => {
     test.use({ timezoneId: zone });
