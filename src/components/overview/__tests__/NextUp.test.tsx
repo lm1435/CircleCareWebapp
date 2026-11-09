@@ -142,10 +142,10 @@ describe('NextUp', () => {
     expect(title).not.toHaveClass('text-lg');
   });
 
-  // Owner 2026-11-08: action buttons use the standard sm radius (rounded-md = 12), not a nested one.
-  it('the Taken button uses the standard sm radius (rounded-md), no rounded-sm! override', () => {
+  // Owner 2026-11-08: action buttons use the standard sm radius (rounded-lg = 16 since TestFlight 1.4.1 (5)), not a nested one.
+  it('the Taken button uses the standard sm radius (rounded-lg), no rounded-sm! override', () => {
     renderNextUp({ items: [dose('1')] });
-    expect(screen.getByTestId('next-up-row').querySelector('[data-next-up-taken]')).toHaveClass('rounded-md');
+    expect(screen.getByTestId('next-up-row').querySelector('[data-next-up-taken]')).toHaveClass('rounded-lg');
     expect(screen.getByTestId('next-up-row').querySelector('[data-next-up-taken]')).not.toHaveClass('rounded-sm!');
   });
 

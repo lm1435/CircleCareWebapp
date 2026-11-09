@@ -88,8 +88,8 @@ describe('ShiftCard', () => {
     await user.click(body);
     expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: 's1' }));
     const take = screen.getByRole('button', { name: 'Take Night' });
-    // Outline, never filled: Add shift is the list's one filled button. Button sm = the standard rounded-md.
-    expect(take).toHaveClass('border-primary-outline', 'rounded-md');
+    // Outline, never filled: Add shift is the list's one filled button. Button sm = the standard rounded-lg (16).
+    expect(take).toHaveClass('border-primary-outline', 'rounded-lg');
     expect(take.className).not.toContain('bg-primary-fill');
     await user.click(take);
     expect(onTake).toHaveBeenCalledWith(expect.objectContaining({ id: 's1' }));
@@ -217,7 +217,17 @@ describe('ShiftCard task count on the status line (docs/plans/shift-tasks.md)', 
     });
     expect(screen.getByTestId('shift-card-task-count')).toHaveTextContent('· 1 of 3 done');
     // The avatar's initial is aria-hidden; the visible line reads "Ana · 1 of 3 done".
-    expect(screen.getByTestId('shift-card-status')).toHaveTextContent(/^AAna· 1 of 3 done$/);
+    expect(screen.getByTestId('shift-card-status').textContent).toBe('AAna · 1 of 3 done');
+  });
+
+  // Owner TestFlight 1.4.1 (5): "Open   · 0 of 2 done" — the row's flex gap sat before the dot and one
+  // space after it. ONE space either side: no gap on the row, the avatar keeps its own 6px margin.
+  it('the " · " separator is a single space either side (no flex gap before it)', () => {
+    renderCard(onShift, { events: [task('linked-a', { shift: link })] });
+    const status = screen.getByTestId('shift-card-status');
+    expect(status.className).not.toMatch(/(^|\s)gap-/);
+    expect(screen.getByTestId('shift-card-task-count').textContent).toBe(' · 0 of 1 done');
+    expect(screen.getByTestId('shift-card-task-count').className).not.toMatch(/(^|\s)(ml|ms|pl|ps)-/);
   });
 
   it('one task: "0 of 1 done"', () => {

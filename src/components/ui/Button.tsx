@@ -45,7 +45,8 @@ const VARIANT = {
 } as const;
 
 const SIZE = {
-  sm: 'min-h-[44px] px-4 py-2 rounded-md text-sm',
+  // sm r16, not r12 (owner TestFlight 1.4.1 (5)): at 44px tall r12 read square next to the r20 lg and cards.
+  sm: 'min-h-[44px] px-4 py-2 rounded-lg text-sm',
   md: 'min-h-[44px] px-6 py-4 rounded-lg text-md',
   lg: 'min-h-[52px] px-8 py-5 rounded-xl text-md',
 } as const;
@@ -121,7 +122,7 @@ type InnerProps = ButtonOwnProps & {
 const SPINNER_PX: Record<ButtonSize, number> = { sm: 16, md: 18, lg: 20 };
 
 /**
- * The one button primitive (spec §4.5). Mobile-parity shapes (r12/16/20), a
+ * The one button primitive (spec §4.5). Mobile-parity shapes (r16/16/20), a
  * 44px minimum touch target at every size, and `type="button"` by default so
  * a button inside a form never submits by accident.
  *

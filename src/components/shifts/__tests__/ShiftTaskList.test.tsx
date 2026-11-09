@@ -207,12 +207,12 @@ describe('shift detail list: one accent', () => {
     for (const b of buttons) expect(b).toHaveAttribute('data-variant', 'outline');
   });
 
-  it('Done / Taken use the standard sm radius (rounded-md, 12px like mobile), never a nested override', () => {
+  it('Done / Taken use the standard sm radius (rounded-lg, 16px like mobile), never a nested override', () => {
     renderList();
     const buttons = [...screen.getAllByTestId('shift-task-done'), ...screen.queryAllByTestId('shift-task-taken')];
     for (const b of buttons) {
-      expect(b).toHaveClass('rounded-md');
-      expect(b.className).not.toMatch(/rounded-sm/);
+      expect(b).toHaveClass('rounded-lg');
+      expect(b.className).not.toMatch(/rounded-sm|rounded-md/);
     }
   });
 

@@ -107,7 +107,9 @@ export function ShiftCard({
           {range}
           {parts.nextDay ? ` (${t('nextDay')})` : ''}
         </span>
-        <span className="flex min-w-0 items-center gap-1.5 text-xs text-ink-2" data-testid="shift-card-status">
+        {/* No row gap: the count carries its own " · ", so a gap put a wide space before the dot and one after
+            it ("Open   · 0 of 2 done", owner TestFlight 1.4.1 (5)). The avatar keeps its 6px off the name. */}
+        <span className="flex min-w-0 items-center text-xs text-ink-2" data-testid="shift-card-status">
           {open ? (
             <span
               data-testid="shift-open-word"
@@ -117,15 +119,15 @@ export function ShiftCard({
             </span>
           ) : (
             <>
-              <Avatar name={assignee?.name || shift.title} size="xs" className="h-5! w-5!" />
+              <Avatar name={assignee?.name || shift.title} size="xs" className="mr-1.5 h-5! w-5!" />
               <span className="min-w-0 truncate" data-testid="shift-card-assignee">
                 {who}
               </span>
             </>
           )}
           {progress && (
-            <span className="shrink-0 tabular-nums" data-testid="shift-card-task-count">
-              · {progress}
+            <span className="shrink-0 whitespace-pre tabular-nums" data-testid="shift-card-task-count">
+              {` · ${progress}`}
             </span>
           )}
         </span>

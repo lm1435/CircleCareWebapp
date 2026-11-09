@@ -127,14 +127,16 @@ describe('Button', () => {
 
 
   describe('sizes', () => {
-    it('sm keeps the 44px touch target (the old 36px web sm is gone)', () => {
+    it('sm keeps the 44px touch target (the old 36px web sm is gone) and is r16 like md', () => {
       const { container } = render(<Button size="sm">S</Button>);
       const cls = btn(container).className;
       expect(cls).toContain('min-h-[44px]');
       expect(cls).not.toContain('min-h-[36px]');
       expect(cls).toContain('px-4');
       expect(cls).toContain('py-2');
-      expect(cls).toContain('rounded-md');
+      // r16 (owner TestFlight 1.4.1 (5)): at 44px tall r12 read square next to the r20 lg + cards.
+      expect(cls).toContain('rounded-lg');
+      expect(cls).not.toContain('rounded-md');
       expect(cls).toContain('text-sm');
     });
 
