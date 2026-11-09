@@ -224,6 +224,20 @@ describe('new medication: refills + prescription details', () => {
     await waitFor(() => expect(alertDays).toHaveFocus());
   });
 
+  it('alert days 0 is refused inline with the same message (1 to 90, like mobile)', async () => {
+    const user = userEvent.setup();
+    renderNew();
+    await nameAndTime(user);
+    await openMore(user);
+    await user.click(screen.getByRole('checkbox', { name: /Track refills/ }));
+    const alertDays = screen.getByLabelText(/Alert days before empty/);
+    await user.clear(alertDays);
+    await user.type(alertDays, '0');
+    await save(user);
+    expect(await screen.findByText('Enter a number from 1 to 90.')).toBeInTheDocument();
+    expect(mutateCreate).not.toHaveBeenCalled();
+  });
+
   it('counts take digits only (mobile number pad)', async () => {
     const user = userEvent.setup();
     renderNew();
@@ -359,6 +373,24 @@ describe('edit medication', () => {
     expect(screen.queryByAltText('Photo of the medication')).toBeNull();
     await save(user);
     await waitFor(() => expect(deletePhoto).toHaveBeenCalledWith(CIRCLE_ID, 'med-1'));
+  });
+
+  it('emptying a stored prescription field sends null for it (clears it); the others are echoed', async () => {
+    getDetails.mockResolvedValue({ details: STORED, photoUrl: null });
+    const user = userEvent.setup();
+    renderEdit();
+    const pharmacy = await screen.findByLabelText('Pharmacy');
+    await user.clear(pharmacy);
+    await user.clear(screen.getByLabelText('Rx number'));
+    await save(user);
+    await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+    const body = mutateUpdate.mock.calls[0][0].data;
+    expect(body).toMatchObject({
+      prescriber_name: 'Dr. Lee',
+      pharmacy_name: null,
+      pharmacy_phone: '555-0100',
+      rx_number: null,
+    });
   });
 
   it('a replaced photo uploads to the edited row', async () => {

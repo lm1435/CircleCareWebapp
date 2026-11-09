@@ -402,10 +402,11 @@ export interface CreateEventRequest {
   alert_days_before?: number; // Days before to alert
 
   // OCR scanning fields (extracted from prescription label)
-  prescriber_name?: string;
-  pharmacy_name?: string;
-  pharmacy_phone?: string;
-  rx_number?: string;
+  // null clears on an edit (backend nullable since 2026-11-08).
+  prescriber_name?: string | null;
+  pharmacy_name?: string | null;
+  pharmacy_phone?: string | null;
+  rx_number?: string | null;
   scan_data?: { raw_text: string; scanned_at: string; source: 'medication_bottle' };
 
   // Scheduling — naive local values in the care recipient's timezone
@@ -913,10 +914,11 @@ export const eventFormSchema = z.object({
   reminder_15m: z.boolean().optional(),
 
   // OCR scanning fields
-  prescriber_name: z.string().max(100).optional(),
-  pharmacy_name: z.string().max(100).optional(),
-  pharmacy_phone: z.string().max(20).optional(),
-  rx_number: z.string().max(30).optional(),
+  // Nullable like the backend's: an edit sends null to clear an emptied field.
+  prescriber_name: z.string().max(100).nullable().optional(),
+  pharmacy_name: z.string().max(100).nullable().optional(),
+  pharmacy_phone: z.string().max(20).nullable().optional(),
+  rx_number: z.string().max(30).nullable().optional(),
   scan_data: z
     .object({
       raw_text: z.string().max(5000),

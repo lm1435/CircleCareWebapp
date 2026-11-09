@@ -50,7 +50,11 @@ export interface MedicationDetailsHydration {
   pillsPerDoseWasDerived: boolean;
   /** This dose shares a bottle owned by another dose row (`refill_group_id` set). */
   refillsManagedElsewhere: boolean;
+  /** Which prescription fields HAD a stored value: only those are cleared (null) when emptied. */
+  storedPrescription?: Partial<Record<PrescriptionKey, boolean>>;
 }
+
+type PrescriptionKey = 'prescriber_name' | 'pharmacy_name' | 'pharmacy_phone' | 'rx_number';
 
 /** The columns the edit form hydrates from (the single-event GET; the events list omits most of them). */
 export interface MedicationDetailsSource {
@@ -257,16 +261,27 @@ export function medicationDetailsPayload(state: MedicationDetailsState, ctx: Med
         if (refreshed !== undefined) out.pills_per_day = refreshed;
       }
 
+      // Sent as typed (0 included) so the schema's 1-90 check refuses it inline, as mobile does;
+      // an empty box sends no key.
       const alertDays = parseInt(state.alertDaysBefore, 10);
-      if (alertDays > 0) out.alert_days_before = alertDays;
+      if (Number.isFinite(alertDays)) out.alert_days_before = alertDays;
     }
   }
 
-  // Prescription details: sent when filled (mobile parity — an emptied field keeps the stored value).
-  if (state.prescriberName.trim()) out.prescriber_name = state.prescriberName.trim();
-  if (state.pharmacyName.trim()) out.pharmacy_name = state.pharmacyName.trim();
-  if (state.pharmacyPhone.trim()) out.pharmacy_phone = state.pharmacyPhone.trim();
-  if (state.rxNumber.trim()) out.rx_number = state.rxNumber.trim();
+  // Prescription details: a filled field is sent trimmed. On an EDIT, a field the person emptied that HAD a
+  // stored value is sent as null, which clears it (backend nullable since 2026-11-08; mobile the same); one
+  // that was already empty is not sent, so an untouched save's body is unchanged.
+  const prescription: [PrescriptionKey, string][] = [
+    ['prescriber_name', state.prescriberName],
+    ['pharmacy_name', state.pharmacyName],
+    ['pharmacy_phone', state.pharmacyPhone],
+    ['rx_number', state.rxNumber],
+  ];
+  for (const [key, field] of prescription) {
+    const value = field.trim();
+    if (value) out[key] = value;
+    else if (ctx.isEditing && hydration?.storedPrescription?.[key]) out[key] = null;
+  }
   return out;
 }
 
@@ -308,6 +323,12 @@ export function medicationDetailsFromEvent(event: MedicationDetailsSource): {
         typeof event.pills_per_day === 'number' &&
         event.pills_per_day > 0,
       refillsManagedElsewhere: !!event.refill_group_id,
+      storedPrescription: {
+        prescriber_name: !!event.prescriber_name?.trim(),
+        pharmacy_name: !!event.pharmacy_name?.trim(),
+        pharmacy_phone: !!event.pharmacy_phone?.trim(),
+        rx_number: !!event.rx_number?.trim(),
+      },
     },
   };
 }

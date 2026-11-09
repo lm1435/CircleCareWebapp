@@ -116,6 +116,38 @@ describe('medicationDetailsPayload — edit', () => {
     });
   });
 
+  it('an emptied prescription field that HAD a value is sent as null (clears it); one already empty is not sent', () => {
+    const out = medicationDetailsPayload({ ...stored.state, prescriberName: '  ' }, EDIT);
+    expect(out.prescriber_name).toBeNull();
+    for (const key of ['pharmacy_name', 'pharmacy_phone', 'rx_number']) expect(out).not.toHaveProperty(key);
+  });
+
+  it('each of the four clears on its own; the others keep their echoed value', () => {
+    const full = medicationDetailsFromEvent({
+      prescriber_name: 'Dr. Lee', pharmacy_name: 'CVS', pharmacy_phone: '555', rx_number: 'RX',
+    });
+    const ctx = { ...EDIT, hydration: full.hydration };
+    const filled = { prescriber_name: 'Dr. Lee', pharmacy_name: 'CVS', pharmacy_phone: '555', rx_number: 'RX' };
+    for (const [field, key] of [
+      ['prescriberName', 'prescriber_name'], ['pharmacyName', 'pharmacy_name'],
+      ['pharmacyPhone', 'pharmacy_phone'], ['rxNumber', 'rx_number'],
+    ] as const) {
+      const out = medicationDetailsPayload({ ...full.state, [field]: '' }, ctx);
+      expect(out).toMatchObject({ ...filled, [key]: null });
+    }
+  });
+
+  it('a create never sends null for an empty prescription field', () => {
+    expect(medicationDetailsPayload(state({ prescriberName: '' }), CREATE)).not.toHaveProperty('prescriber_name');
+  });
+
+  it('alert days 0 is sent as typed so the 1-90 check refuses it (mobile parity); empty sends no key', () => {
+    expect(medicationDetailsPayload({ ...stored.state, alertDaysBefore: '0' }, EDIT).alert_days_before).toBe(0);
+    expect(medicationDetailsPayload({ ...stored.state, alertDaysBefore: '' }, EDIT)).not.toHaveProperty(
+      'alert_days_before'
+    );
+  });
+
   it('a re-count restarts the live count', () => {
     const out = medicationDetailsPayload({ ...stored.state, quantityInBottle: '90' }, EDIT);
     expect(out.quantity_in_bottle).toBe(90);
