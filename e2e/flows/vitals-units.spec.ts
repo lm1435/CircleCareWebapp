@@ -182,6 +182,27 @@ test('weight at the form maximum (1100 lb) is accepted by the server and stored 
   expect(Math.abs(row.value1 - 1100 * 0.45359237)).toBeLessThan(1e-3);
 });
 
+// The MINIMUM too (sweep 2026-11-08): the pound form took 1.0-1.1 lb, under the server's 0.5 kg (1.102 lb)
+// floor, so the form said yes and the save failed. The form floor is now 1.2 lb: 1.1 is refused inline, 1.2 saves.
+test('weight under the server minimum (1.1 lb) is refused by the form; nothing is stored', async ({ page, request, context, baseURL }) => {
+  const { circleId } = await login(request, context, baseURL);
+  const note = uniqueLabel('VU');
+  const dialog = await addWeight(page, circleId, '1.1', note);
+  await expect(dialog.locator('#value1')).toHaveAttribute('aria-invalid', 'true');
+  await expect(dialog).toBeVisible();
+  expect(rowFor(circleId, note)).toHaveLength(0);
+});
+
+test('weight at the form minimum (1.2 lb) is accepted by the server and stored at or over 0.5 kg', async ({ page, request, context, baseURL }) => {
+  const { circleId } = await login(request, context, baseURL);
+  const note = uniqueLabel('VU');
+  const dialog = await addWeight(page, circleId, '1.2', note);
+  await expect(dialog).toBeHidden({ timeout: 20_000 });
+  const [row] = rowFor(circleId, note);
+  expect(row.unit).toBe('kg');
+  expect(row.value1).toBeGreaterThanOrEqual(0.5);
+});
+
 for (const zone of ['Pacific/Kiritimati', 'America/Los_Angeles'] as const) {
   test.describe(`viewer zone ${zone}`, () => {
     test.use({ timezoneId: zone });

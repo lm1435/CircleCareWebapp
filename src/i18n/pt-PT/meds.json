@@ -93,7 +93,9 @@
       "logged": "Dose registada",
       "failed": "Não foi possível registar a dose. Tente novamente.",
       "discontinued": "Este medicamento está suspenso. Reative-o para registar uma dose.",
-      "permissionDenied": "Tem acesso apenas de visualização, por isso não pode registar doses."
+      "permissionDenied": "Tem acesso apenas de visualização, por isso não pode registar doses.",
+      "tooOld": "Só é possível registar doses das últimas 48 horas. Escolha uma hora mais recente.",
+      "inFuture": "Essa hora está no futuro. Confirme a hora e o relógio deste dispositivo e tente novamente."
     },
     "history": {
       "subtitle": "Todas as doses registadas de {{name}}, da mais recente para a mais antiga.",

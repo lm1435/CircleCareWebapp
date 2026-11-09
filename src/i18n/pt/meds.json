@@ -282,7 +282,9 @@
       "permissionDenied": "Você tem acesso somente de visualização, então não pode registrar doses.",
       "removed": "Dose removida",
       "removeFailed": "Não foi possível remover a dose. Tente novamente.",
-      "alreadyRemoved": "Esta dose já foi removida."
+      "alreadyRemoved": "Esta dose já foi removida.",
+      "tooOld": "Só é possível registrar doses das últimas 48 horas. Escolha um horário mais recente.",
+      "inFuture": "Esse horário está no futuro. Confira o horário e o relógio deste dispositivo e tente novamente."
     },
     "history": {
       "title": "Histórico de doses",

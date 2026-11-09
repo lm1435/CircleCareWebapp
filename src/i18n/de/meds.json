@@ -282,7 +282,9 @@
       "permissionDenied": "Sie haben nur Lesezugriff und können keine Dosen eintragen.",
       "removed": "Dosis entfernt",
       "removeFailed": "Die Dosis konnte nicht entfernt werden. Bitte versuchen Sie es erneut.",
-      "alreadyRemoved": "Diese Dosis wurde bereits entfernt."
+      "alreadyRemoved": "Diese Dosis wurde bereits entfernt.",
+      "tooOld": "Dosen können nur für die letzten 48 Stunden eingetragen werden. Wählen Sie eine spätere Uhrzeit.",
+      "inFuture": "Diese Uhrzeit liegt in der Zukunft. Prüfen Sie die Uhrzeit und die Uhr dieses Geräts und versuchen Sie es erneut."
     },
     "history": {
       "title": "Dosisverlauf",

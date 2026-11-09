@@ -132,7 +132,7 @@ import {
   getWeekdayName,
   nextDateOnWeekdays,
 } from './dateMath';
-import { formatWeekdayList } from './recurrenceLabel';
+import { formatRecurrenceLabel, formatWeekdayList } from './recurrenceLabel';
 
 // Task 1.4 — create/edit form modal for all three event types.
 //
@@ -333,6 +333,8 @@ const FOCUS_ORDER = [
   'recurrence_end_date',
 ];
 const RECURRENCE_DAYS_LOCK_ID = 'recurrence_days-lock';
+/** The Repeat select's value for a stored rule no option names (never saved). */
+const UNSHOWN_RULE_VALUE = '__stored_rule__';
 const RECURRENCE_DAYS_NOTE_ID = 'recurrence_days-tznote';
 
 /**
@@ -794,6 +796,12 @@ function AddEventForm({
   const [recurrenceDays, setRecurrenceDays] = useState<number[]>(initialRecurrenceState.days);
   /** Has the user touched the Repeat controls? Then the root resync keeps off. */
   const recurrenceTouched = useRef(false);
+  /** The same fact as state, for what the form SHOWS (a ref change does not re-render). */
+  const [recurrenceTouchedShown, setRecurrenceTouchedShown] = useState(false);
+  const touchRecurrence = (): void => {
+    recurrenceTouched.current = true;
+    setRecurrenceTouchedShown(true);
+  };
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(hydrated.recurrenceEndDateStr);
 
   // The six reminder switches hydrate from the event itself — the list response
@@ -1328,6 +1336,24 @@ function AddEventForm({
     [t, isMedication, isEditing]
   );
 
+  // A STORED rule no Repeat option names (an imported `custom:14`, every 14
+  // days) parses to 'none', which used to LIGHT "Once" (and read "Never" in the
+  // full layout's select) on a series that repeats. While the control is
+  // untouched it shows no choice and names the rule instead (mobile parity:
+  // AddEventScreen's `how-often-summary`). Display only: the save's
+  // `keepUnshownRule` guard below still leaves the rule alone.
+  const unshownRuleLabel = useMemo(() => {
+    if (!isEditing || event?.as_needed === true || recurrenceTouchedShown) return null;
+    if (recurrence !== 'none') return null;
+    const rule = scheduleSource?.recurrence_rule ?? null;
+    if (!rule || parseRecurrence(rule, scheduleSource?.recurrence_days).choice !== 'none') return null;
+    return formatRecurrenceLabel(
+      { recurrence_rule: rule, recurrence_days: scheduleSource?.recurrence_days ?? null },
+      t,
+      i18n.language
+    );
+  }, [isEditing, event?.as_needed, recurrenceTouchedShown, recurrence, scheduleSource, t, i18n.language]);
+
   // ── Days of the week ─────────────────────────────────────────────────────
   //
   // Every date below is a NAIVE 'YYYY-MM-DD' in the CARE RECIPIENT's frame —
@@ -1490,7 +1516,7 @@ function AddEventForm({
 
   /** Choosing a Repeat option — "Days of the week" pre-selects if nothing is. */
   function chooseRecurrence(next: RecurrenceChoice): void {
-    recurrenceTouched.current = true;
+    touchRecurrence();
     setRecurrence(next);
     if (next === 'as_needed') setExtraTimes([]);
     clearError('recurrence_rule', RECURRENCE_DAYS_ID);
@@ -2269,11 +2295,18 @@ function AddEventForm({
           <Select
             id="recurrence_rule"
             label={t('addEvent.fields.repeat')}
-            options={recurrenceOptions}
-            value={recurrence}
+            options={
+              unshownRuleLabel
+                ? [{ value: UNSHOWN_RULE_VALUE, label: unshownRuleLabel }, ...recurrenceOptions]
+                : recurrenceOptions
+            }
+            value={unshownRuleLabel ? UNSHOWN_RULE_VALUE : recurrence}
             error={errors.recurrence_rule}
             hint={isAsNeeded ? t('addEvent.recurrence.asNeededHint') : undefined}
-            onChange={(e) => chooseRecurrence(e.target.value as RecurrenceChoice)}
+            onChange={(e) => {
+              if (e.target.value === UNSHOWN_RULE_VALUE) return;
+              chooseRecurrence(e.target.value as RecurrenceChoice);
+            }}
           />
         )}
     </>
@@ -2323,7 +2356,7 @@ function AddEventForm({
               noteId={RECURRENCE_DAYS_NOTE_ID}
               language={language}
               onChange={(days) => {
-                recurrenceTouched.current = true;
+                touchRecurrence();
                 setRecurrenceDays(days);
                 clearError(RECURRENCE_DAYS_ID);
               }}
@@ -2850,8 +2883,9 @@ function AddEventForm({
     custom: Array<{ value: string; label: string }>,
     locked: boolean
   ): ReactElement {
-    const mainValue = main.some((o) => o.value === recurrence) ? recurrence : null;
-    const customSelected = custom.some((o) => o.value === recurrence);
+    // A stored rule no tile names lights nothing (it is named under the grid).
+    const mainValue = !unshownRuleLabel && main.some((o) => o.value === recurrence) ? recurrence : null;
+    const customSelected = !unshownRuleLabel && custom.some((o) => o.value === recurrence);
     const customShown = !locked && (taskCustomOpen || customSelected);
     const pick = (next: string | null): void => {
       if (!next) return;
@@ -2909,6 +2943,11 @@ function AddEventForm({
               />
             </div>
           </Card>
+        )}
+        {unshownRuleLabel && (
+          <Text variant="caption" data-testid="how-often-summary">
+            {unshownRuleLabel}
+          </Text>
         )}
         {daysBlock}
         {cycleBlock}
@@ -3496,7 +3535,7 @@ function AddEventForm({
               { value: 'daily', label: t('addEvent.simple.everyDay') },
               { value: 'weekly', label: t('addEvent.simple.everyWeek') },
             ]}
-            value={taskCustomSelected ? null : taskHowOftenValue}
+            value={taskCustomSelected || unshownRuleLabel ? null : taskHowOftenValue}
             onChange={(next) => {
               pickTaskRepeat(next);
               if (next) setTaskCustomOpen(false);
@@ -3537,9 +3576,9 @@ function AddEventForm({
           </Card>
         )}
         {/* A rule nothing names (a legacy custom:N) lights nothing and is named here. */}
-        {taskHowOftenValue === null && !taskCustomSelected && (
+        {(unshownRuleLabel || (taskHowOftenValue === null && !taskCustomSelected)) && (
           <Text variant="caption" data-testid="how-often-summary">
-            {recurrenceOptions.find((o) => o.value === recurrence)?.label}
+            {unshownRuleLabel ?? recurrenceOptions.find((o) => o.value === recurrence)?.label}
           </Text>
         )}
         {daysBlock}
@@ -3895,7 +3934,7 @@ function AddEventForm({
                 ? MED_SCHEDULE_PRESETS.find((candidate) => candidate.id === next)
                 : undefined;
               datesTouched.current = true;
-              recurrenceTouched.current = true;
+              touchRecurrence();
               if (preset) {
                 setTimeStr(preset.time);
                 setRecurrence(preset.recurrence);

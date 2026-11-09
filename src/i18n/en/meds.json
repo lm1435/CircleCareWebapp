@@ -282,7 +282,9 @@
       "permissionDenied": "You have view-only access, so you can't log doses.",
       "removed": "Dose removed",
       "removeFailed": "Couldn't remove the dose. Please try again.",
-      "alreadyRemoved": "This dose was already removed."
+      "alreadyRemoved": "This dose was already removed.",
+      "tooOld": "Doses can only be logged for the last 48 hours. Choose a later time.",
+      "inFuture": "That time is in the future. Check the time and this device's clock, then try again."
     },
     "history": {
       "title": "Dose history",

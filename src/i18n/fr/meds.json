@@ -282,7 +282,9 @@
       "permissionDenied": "Vous avez un accès en lecture seule : vous ne pouvez pas enregistrer de doses.",
       "removed": "Dose supprimée",
       "removeFailed": "Impossible de supprimer la dose. Réessayez.",
-      "alreadyRemoved": "Cette dose a déjà été supprimée."
+      "alreadyRemoved": "Cette dose a déjà été supprimée.",
+      "tooOld": "Les doses ne peuvent être enregistrées que pour les 48 dernières heures. Choisissez une heure plus récente.",
+      "inFuture": "Cette heure est dans le futur. Vérifiez l’heure et l’horloge de cet appareil, puis réessayez."
     },
     "history": {
       "title": "Historique des doses",

@@ -543,6 +543,28 @@ describe('giving a dose', () => {
     expect(await screen.findByRole('button', { name: 'Gave a dose of Ibuprofen' })).toBeInTheDocument();
   });
 
+  // Sweep 2026-11-08: the server's two "Given time" refusals used to fall to the
+  // generic "Couldn't log the dose. Please try again." — a retry that can never
+  // work. They name the problem instead (mobile's useAsNeededDose says the same).
+  it.each([
+    ['GIVEN_AT_TOO_OLD', 'Doses can only be logged for the last 48 hours. Choose a later time.'],
+    [
+      'GIVEN_AT_IN_FUTURE',
+      "That time is in the future. Check the time and this device's clock, then try again.",
+    ],
+  ])('a %s refusal names the problem, not "try again"', async (code, message) => {
+    mockApi();
+    post.mockRejectedValue({ success: false, error: { code, message: 'x' } });
+    renderHome();
+    const user = userEvent.setup();
+    await openAndLog(user);
+    await runOutWindow();
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(screen.queryByText(/Couldn't log the dose/)).toBeNull();
+    // A definitive refusal: sent once, never retried.
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+
   it('an AMBIGUOUS failure (network/5xx) is retried ONCE with the SAME client_request_id', async () => {
     mockApi();
     post

@@ -282,7 +282,9 @@
       "permissionDenied": "Hai accesso in sola lettura, quindi non puoi registrare dosi.",
       "removed": "Dose rimossa",
       "removeFailed": "Impossibile rimuovere la dose. Riprova.",
-      "alreadyRemoved": "Questa dose è già stata rimossa."
+      "alreadyRemoved": "Questa dose è già stata rimossa.",
+      "tooOld": "Le dosi si possono registrare solo per le ultime 48 ore. Scegli un orario più recente.",
+      "inFuture": "Quell’orario è nel futuro. Controlla l’orario e l’orologio di questo dispositivo, poi riprova."
     },
     "history": {
       "title": "Cronologia delle dosi",

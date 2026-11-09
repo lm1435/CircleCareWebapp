@@ -3,6 +3,8 @@ import { useCallback, useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConfirmDialog, useToast } from '@/components/ui';
 import {
+  isAsNeededFutureError,
+  isAsNeededTooOldError,
   type AsNeededSummary,
   type RecentlyLoggedConflict,
 } from '@/api/medicationAsNeeded';
@@ -153,14 +155,16 @@ export function useAsNeededGive({
       Analytics.asNeededDoseLogFailed({ reason: logFailureReason(error) });
       // The mutation hook already toasted a permission rejection.
       if (isPermissionDeniedError(error)) return;
-      showToast(
-        t(
-          isMedicationDiscontinuedError(error)
-            ? 'asNeeded.toast.discontinued'
-            : 'asNeeded.toast.failed'
-        ),
-        'error'
-      );
+      // The two "Given time" refusals name the problem: "try again" would fail
+      // again (mobile's useAsNeededDose maps the same codes to the same copy).
+      const message = isMedicationDiscontinuedError(error)
+        ? t('asNeeded.toast.discontinued')
+        : isAsNeededTooOldError(error)
+          ? t('asNeeded.toast.tooOld')
+          : isAsNeededFutureError(error)
+            ? t('asNeeded.toast.inFuture')
+            : t('asNeeded.toast.failed');
+      showToast(message, 'error');
     },
   });
 

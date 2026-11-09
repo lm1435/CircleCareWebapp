@@ -271,6 +271,46 @@ test('give a dose: Undo sends NOTHING; the second try writes ONE row with a clie
   }
 });
 
+// Sweep 2026-11-08: the server's two "Given time" refusals used to read "Couldn't log the dose. Please try
+// again." — a retry that can never work. The dialog bounds the time up front, so the only way a real client hits
+// them is a device clock out of step with the server; the request is rewritten in flight to exactly that, and
+// the REAL backend answers the refusal.
+for (const [code, shiftMs, message] of [
+  ['GIVEN_AT_TOO_OLD', -49 * 3600_000, 'Doses can only be logged for the last 48 hours. Choose a later time.'],
+  ['GIVEN_AT_IN_FUTURE', 2 * 3600_000, "That time is in the future. Check the time and this device's clock, then try again."],
+] as const) {
+  test(`a ${code} refusal from the server names the problem (no row, button back)`, async ({ browser, request, baseURL }) => {
+    const s = await scene(request);
+    const name = `Naproxen ${uniq('x').slice(-6)}`;
+    const medId = await createPrn(s.ownerSession, s.circleId, name);
+    const ctx = await newCtx(browser, baseURL, s.owner);
+    try {
+      const page = await ctx.newPage();
+      const answers: Array<{ status: number; code?: string }> = [];
+      await page.route(/\/api\/circles\/[^/]+\/medications\/[^/]+\/as-needed-doses$/, async (route) => {
+        if (route.request().method() !== 'POST') return route.continue();
+        const body = JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>;
+        body.given_at = new Date(Date.now() + shiftMs).toISOString();
+        const res = await route.fetch({ postData: JSON.stringify(body) });
+        const json = (await res.json()) as { error?: { code?: string } };
+        answers.push({ status: res.status(), code: json.error?.code });
+        await route.fulfill({ response: res, json });
+      });
+      await gotoMeds(page, s.circleId);
+      const card = cardOf(page, name);
+      await card.getByRole('button', { name: `Gave a dose of ${name}` }).click();
+      await page.getByRole('dialog', { name: `Log a dose of ${name}?` }).getByRole('button', { name: 'Log dose' }).click();
+      await expect(page.getByText(message)).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText(/Couldn't log the dose/)).toHaveCount(0);
+      expect(answers).toEqual([{ status: 400, code }]);
+      await expect(card.getByRole('button', { name: `Gave a dose of ${name}` })).toBeVisible();
+      expect(doseRows(medId)).toHaveLength(0);
+    } finally {
+      await ctx.close();
+    }
+  });
+}
+
 test('two people: the second member\'s stale card gets 409 -> "Marco just logged a dose. Log another?" -> acknowledged retry; view-only sees no button', async ({
   browser,
   request,

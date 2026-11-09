@@ -187,8 +187,10 @@ export const VITAL_DISPLAY_RANGES = {
   // Never above the server's 500 kg bound (1102.3 lb): this allowed 1500 lb /
   // 680 kg, which passed the form and failed the save (sweep 2026-11-08).
   // Pinned against the backend contract in __tests__/contract/clientLimits.test.ts.
+  // The pound floor is the 0.5 kg floor in pounds rounded UP (1.102 -> 1.2): it
+  // was 1, so 1.0-1.1 lb passed here and the save failed (contract pins MIN too).
   weight: {
-    lbs: { min: 1, max: 1100 },
+    lbs: { min: 1.2, max: 1100 },
     kg: { min: 0.5, max: 500 },
   },
   temperature: {

@@ -282,7 +282,9 @@
       "permissionDenied": "Tienes acceso de solo lectura, así que no puedes registrar dosis.",
       "removed": "Dosis quitada",
       "removeFailed": "No se pudo quitar la dosis. Inténtalo de nuevo.",
-      "alreadyRemoved": "Esta dosis ya se había quitado."
+      "alreadyRemoved": "Esta dosis ya se había quitado.",
+      "tooOld": "Solo se pueden registrar dosis de las últimas 48 horas. Elige una hora más reciente.",
+      "inFuture": "Esa hora todavía no llega. Revisa la hora y el reloj de este dispositivo, y vuelve a intentarlo."
     },
     "history": {
       "title": "Historial de dosis",

@@ -25,12 +25,7 @@ import * as ts from 'typescript';
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const API_DIR = path.join(ROOT, 'src', 'api');
 
-const ALLOWED: Record<string, string> = {
-  'src/api/medicationAsNeeded.ts::isAsNeededFutureError':
-    'unused predicate: the log dialog bounds the Given time up front (mobile has no twin either); a skewed-clock 400 falls to the generic save error. PROPOSED: wire or delete',
-  'src/api/medicationAsNeeded.ts::isAsNeededTooOldError':
-    'unused predicate, same as isAsNeededFutureError (48h window enforced in the picker). PROPOSED: wire or delete',
-};
+const ALLOWED: Record<string, string> = {};
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

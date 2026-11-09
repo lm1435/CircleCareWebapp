@@ -35,14 +35,29 @@ describe('client limits contract (web)', () => {
     expect(VITAL_DISPLAY_RANGES.weight[unit].max).toBeLessThanOrEqual(contract.vitals.weight[unit].max);
   });
 
-  it('weight in kg never goes below the server minimum', () => {
-    expect(VITAL_DISPLAY_RANGES.weight.kg.min).toBeGreaterThanOrEqual(contract.vitals.weight.kg.min);
+  // MIN as well as MAX, in BOTH units (sweep 2026-11-08: the pound form took
+  // 1.0-1.1 lb, under the server's 0.5 kg = 1.102 lb floor, and only kg was pinned).
+  it.each(['kg', 'lbs'] as const)('weight in %s never goes below the server minimum', (unit) => {
+    expect(VITAL_DISPLAY_RANGES.weight[unit].min).toBeGreaterThanOrEqual(contract.vitals.weight[unit].min);
   });
 
   it.each([
     ['kg', contract.vitals.weight.kg.max + 1],
     ['lbs', Math.ceil(contract.vitals.weight.lbs.max) + 1],
   ] as const)('the form refuses %s just over the server maximum', (unit, value1) => {
+    const parsed = vitalFormSchema.safeParse({
+      vital_type: 'weight',
+      unit,
+      value1,
+      recorded_at: new Date().toISOString(),
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it.each([
+    ['kg', Math.round((contract.vitals.weight.kg.min - 0.1) * 10) / 10],
+    ['lbs', Math.round((contract.vitals.weight.lbs.min - 0.1) * 10) / 10],
+  ] as const)('the form refuses %s just under the server minimum (%s)', (unit, value1) => {
     const parsed = vitalFormSchema.safeParse({
       vital_type: 'weight',
       unit,
