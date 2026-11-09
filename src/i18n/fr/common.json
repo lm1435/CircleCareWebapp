@@ -2,7 +2,6 @@
   "appName": "CircleCare",
   "otpDigit": "Chiffre {{index}} sur {{length}}",
   "otpCharacter": "Caractère {{index}} sur {{length}}",
-  "dobClearUnsupported": "La suppression de la date de naissance n’est pas encore possible. Rétablissez-la ou choisissez une autre date.",
   "loading": "Chargement…",
   "error": "Erreur",
   "retry": "Réessayer",

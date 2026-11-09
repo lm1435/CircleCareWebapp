@@ -114,7 +114,8 @@ export const updateCircleSchema = z
       .min(1, { message: 'nameRequired' })
       .max(100, { message: 'nameTooLong' })
       .optional(),
-    recipient_dob: recipientDobSchema.optional(),
+    // `null` clears a stored date of birth (backend nullable since 2026-11-08).
+    recipient_dob: recipientDobSchema.nullable().optional(),
     recipient_conditions: z.array(z.string()).optional(),
   })
   .strict();

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { submitFormTwice } from '@/test/doubleSubmit';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -151,7 +151,18 @@ describe('EditCirclePage', () => {
     await waitFor(() => expect(updateMutate).toHaveBeenCalled());
     const payload = updateMutate.mock.calls[0][0];
     expect(payload.recipient_name).toBe('Rosa Meza');
-    expect(payload.recipient_dob).toBe('1948-05-02');
+    // An UNCHANGED date of birth is left out (utils/editPatch): the stored one stays.
+    expect(payload).not.toHaveProperty('recipient_dob');
+  });
+
+  it('saves a NEW date of birth', async () => {
+    const user = userEvent.setup();
+    mockCircleResult(makeCircle());
+    renderPage();
+    fireEvent.change(screen.getByLabelText('Date of birth'), { target: { value: '1950-12-31' } });
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(updateMutate).toHaveBeenCalled());
+    expect(updateMutate.mock.calls[0][0]).toMatchObject({ recipient_dob: '1950-12-31' });
   });
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -220,37 +231,46 @@ describe('EditCirclePage', () => {
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
   });
 
-  it('keeps Save disabled and shows an inline hint when clearing DOB is the only change (unsupported by the backend)', async () => {
+  // CLEARING A DATE OF BIRTH (sweep 2026-11-08). It used to be refused here with an inline
+  // "isn't supported yet" hint, because the backend answered `recipient_dob: null` with a 400. The
+  // backend accepts null now, and mobile's clear X sends it: same behaviour on both (parity).
+  it('clearing the DOB is a change: Save enables and sends recipient_dob: null', async () => {
     const user = userEvent.setup();
     mockCircleResult(makeCircle());
     renderPage();
 
     const save = screen.getByRole('button', { name: 'Save changes' });
     await user.clear(screen.getByLabelText('Date of birth'));
-    // A bare clear can't actually be sent (updateCircleSchema's recipient_dob
-    // is optional, not nullable — handleSubmit omits it when empty), so
-    // treating this as "dirty" would enable a Save that silently no-ops.
-    expect(save).toBeDisabled();
-    expect(
-      screen.getByText("Clearing the date of birth isn't supported yet. Restore it or pick a different date.")
-    ).toBeInTheDocument();
+    expect(save).toBeEnabled();
+    expect(screen.queryByText(/isn't supported yet/)).not.toBeInTheDocument();
+    await user.click(save);
+
+    await waitFor(() => expect(updateMutate).toHaveBeenCalled());
+    expect(updateMutate.mock.calls[0][0]).toHaveProperty('recipient_dob', null);
   });
 
-  it('keeps Save disabled and the hint visible when clearing DOB even while editing the name', async () => {
+  it('clearing the DOB while editing the name sends both', async () => {
     const user = userEvent.setup();
     mockCircleResult(makeCircle());
     renderPage();
 
-    const save = screen.getByRole('button', { name: 'Save changes' });
     await user.clear(screen.getByLabelText('Date of birth'));
-    // Editing the name alongside the DOB clear must NOT enable Save — the
-    // payload would still omit recipient_dob and the toast would misleadingly
-    // say "Saved" while the field renders blank.
     await user.type(screen.getByLabelText(/Care recipient name/), ' Jr.');
-    expect(save).toBeDisabled();
-    expect(
-      screen.getByText("Clearing the date of birth isn't supported yet. Restore it or pick a different date.")
-    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(updateMutate).toHaveBeenCalled());
+    expect(updateMutate.mock.calls[0][0]).toMatchObject({ recipient_dob: null });
+    expect(updateMutate.mock.calls[0][0].recipient_name).toMatch(/Jr\.$/);
+  });
+
+  it('a circle with NO date of birth never sends null', async () => {
+    const user = userEvent.setup();
+    mockCircleResult(makeCircle({ recipient_dob: null }));
+    renderPage();
+    await user.type(screen.getByLabelText(/Care recipient name/), ' Jr.');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(updateMutate).toHaveBeenCalled());
+    expect(updateMutate.mock.calls[0][0]).not.toHaveProperty('recipient_dob');
   });
 
   it('navigates back when Cancel is clicked', async () => {

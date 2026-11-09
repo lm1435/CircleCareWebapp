@@ -102,7 +102,10 @@ const SAME_ZONE_EXPECTED: Record<string, unknown> = {
   '22:30|2 hrs': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"22:30","duration_minutes":120,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
   '23:45|null': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"23:45","duration_minutes":30,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
   '23:59|30 min': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"23:59","duration_minutes":30,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
-  'appt|22:30|2 hrs': {"eventId":"appt-1","data":{"event_type":"appointment","title":"Cardiology","scheduled_date":"2027-02-15","scheduled_time":"22:30","duration_minutes":120,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"provider_id":null}},
+  'appt|22:30|2 hrs': {"eventId":"appt-1","data":{"event_type":"appointment","title":"Cardiology","scheduled_date":"2027-02-15","scheduled_time":"22:30","duration_minutes":120,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"recurrence_rule":null,"recurrence_end_date":null,"assigned_to":null,"provider_id":null}},
+  // ^ An EDIT of a one-off now carries `recurrence_rule: null, recurrence_end_date: null` (mobile's
+  //   `recurrenceForSave(…, { clearing: isEditing })`, sweep 2026-11-08): "Once" must be able to END a
+  //   series, and on a row that never repeated the null is a no-op server-side.
 };
 
 const DEN = 'America/Denver';

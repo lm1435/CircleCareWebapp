@@ -374,11 +374,14 @@ export async function getCircleDetail(circleId: string): Promise<CircleDetail> {
 export interface CreateEventRequest {
   event_type: EventType;
   title: string;
-  description?: string;
+  // `null` clears on an EDIT (backend nullable on PATCH since 2026-11-08); a
+  // create never sends null. Built with utils/editPatch.
+  description?: string | null;
 
   // Medication-specific
   medication_name?: string;
-  medication_dosage?: string;
+  /** `null` clears on an edit (utils/editPatch). */
+  medication_dosage?: string | null;
 
   // Medication enhancements (optional - backwards compatible)
   medication_photo_url?: string; // Storage path for medication photo
@@ -411,9 +414,15 @@ export interface CreateEventRequest {
 
   // Scheduling — naive local values in the care recipient's timezone
   scheduled_date: string; // YYYY-MM-DD
-  scheduled_time?: string; // HH:MM or HH:MM:SS
-  duration_minutes?: number;
-  location?: string;
+  /**
+   * HH:MM or HH:MM:SS. `null` = "Any time" on an EDIT of a timed TASK or
+   * APPOINTMENT (the backend refuses it on a scheduled medication and a shift).
+   */
+  scheduled_time?: string | null;
+  /** `null` clears the end on an edit. */
+  duration_minutes?: number | null;
+  /** `null` clears on an edit. */
+  location?: string | null;
   /** Shifts only: 60 | 120 | 240 | 1440 minutes before the start, null = off. */
   reminder_lead_minutes?: number | null;
 
@@ -443,8 +452,10 @@ export interface CreateEventRequest {
    */
   provider_id?: string | null;
 
-  // Recurrence
-  recurrence_rule?: string;
+  // Recurrence. `null` on an EDIT clears it ("Repeat: Once/Never" ends the
+  // series; the server clears the days and end date with it and prunes the
+  // children). Absent leaves it alone. See utils/recurrenceForSave.
+  recurrence_rule?: string | null;
   /**
    * 0=Sun..6=Sat, only meaningful with `recurrence_rule: 'weekly'`. `null` is an
    * explicit "no specific days" — on PATCH it CLEARS a stored set (a days series
@@ -452,7 +463,8 @@ export interface CreateEventRequest {
    * is rejected by the backend.
    */
   recurrence_days?: number[] | null;
-  recurrence_end_date?: string;
+  /** `null` on an EDIT clears the end date (the series runs on). */
+  recurrence_end_date?: string | null;
 
   // Related event (e.g., follow-up linked to original)
   related_event_id?: string | null;
@@ -848,11 +860,13 @@ const recurrenceRuleSchema = z
 export const eventFormSchema = z.object({
   event_type: z.enum(['medication', 'appointment', 'task', 'shift']),
   title: z.string().min(1, { message: 'titleRequired' }).max(150, { message: 'titleTooLong' }),
-  description: z.string().max(850, { message: 'descriptionTooLong' }).optional(),
+  // Clearable fields are `.nullable()`: an EDIT sends null to clear an emptied
+  // field (backend PATCH accepts it). A create never sends null (utils/editPatch).
+  description: z.string().max(850, { message: 'descriptionTooLong' }).nullable().optional(),
 
   // Medication-specific
   medication_name: z.string().max(150, { message: 'medicationNameTooLong' }).optional(),
-  medication_dosage: z.string().max(100, { message: 'dosageTooLong' }).optional(),
+  medication_dosage: z.string().max(100, { message: 'dosageTooLong' }).nullable().optional(),
 
   // Medication enhancements
   medication_photo_url: z.string().max(2048).optional(),
@@ -875,16 +889,16 @@ export const eventFormSchema = z.object({
 
   // Scheduling — naive local values in the care recipient's timezone
   scheduled_date: z.string().max(10),
-  scheduled_time: z.string().max(8).optional(),
-  duration_minutes: z.number().optional(),
-  location: z.string().max(250, { message: 'locationTooLong' }).optional(),
+  scheduled_time: z.string().max(8).nullable().optional(),
+  duration_minutes: z.number().nullable().optional(),
+  location: z.string().max(250, { message: 'locationTooLong' }).nullable().optional(),
 
   // Recurrence
-  recurrence_rule: recurrenceRuleSchema.optional(),
+  recurrence_rule: recurrenceRuleSchema.nullable().optional(),
   // Mirrors backend `eventSchema.recurrence_days`: 0..6, 1..7 entries, `null`
   // = explicit "no specific days" (clears on PATCH).
   recurrence_days: z.array(z.number().int().min(0).max(6)).min(1).max(7).nullable().optional(),
-  recurrence_end_date: z.string().max(10).optional(),
+  recurrence_end_date: z.string().max(10).nullable().optional(),
 
   // As-needed (PRN) medication — mirrors the backend's eventSchema.
   as_needed: z.boolean().optional(),

@@ -2894,9 +2894,12 @@ describe('AddEventModal — editing a recurring TASK series from any occurrence'
       expect(eventId).toBe('root-1');
       expect(eventId).not.toBe(occurrence.id);
       expect(data.title).toBe('Water the garden');
-      // Untouched fields are the ROOT's, round-tripped unchanged.
-      expect(data.description).toBe('Both balconies');
-      expect(data.location).toBe('Home');
+      // Untouched TEXT is left out (utils/editPatch, sweep 2026-11-08), so the ROOT keeps its own
+      // 'Both balconies' / 'Home' — and the occurrence's snapshot is never sent. The schedule
+      // fields are the ROOT's, round-tripped unchanged.
+      // (The key may be present as `undefined` on the object; JSON drops it, so nothing is sent.)
+      expect(data.description).toBeUndefined();
+      expect(data.location).toBeUndefined();
       expect(data.scheduled_date).toBe('2026-06-15');
       expect(data.scheduled_time).toBe('09:00');
       expect(data.recurrence_rule).toBe('daily');
@@ -2918,7 +2921,10 @@ describe('AddEventModal — editing a recurring TASK series from any occurrence'
       expect(eventId).toBe('root-1');
       expect(data.title).toBe('Water the plants');
       expect(data.title).not.toBe('Old title');
-      expect(data.description).toBe('Both balconies');
+      // Untouched text is left out, so the root keeps 'Both balconies' (never the occurrence's).
+      // (The key may be present as `undefined` on the object; JSON drops it, so nothing is sent.)
+      expect(data.description).toBeUndefined();
+      expect(data.location).toBeUndefined();
       expect(data.scheduled_time).toBe('09:00');
     });
   });

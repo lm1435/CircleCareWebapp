@@ -6,6 +6,7 @@ import { useCircle } from '@/hooks/useCircle';
 import { useUpdateCircle, useDeleteCircle } from '@/hooks/useCircleAdmin';
 import { useAuthStore } from '@/store/authStore';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
+import { editPatch } from '@/utils/editPatch';
 import { PageMasthead } from '@/components/layout/PageMasthead';
 import {
   Avatar,
@@ -167,32 +168,21 @@ export default function EditCirclePage(): ReactElement {
   }
 
   // Save stays disabled until something actually changed — compare the
-  // trimmed working values against the seeded circle values.
-  //
-  // Clearing a previously-set DOB is deliberately NOT "dirty": the backend's
-  // updateCircleSchema has recipient_dob as `.optional()`, not `.nullable()`,
-  // so there is no way to SEND a clear — handleSubmit below already omits
-  // recipient_dob from the payload when the field is empty, which means a
-  // Save from a bare clear would silently no-op (still show a "saved" toast)
-  // without touching the stored DOB. `dobCleared` is checked ON ITS OWN
-  // (not folded into `dobChanged`) and gates Save independently of the name
-  // field — otherwise clearing the DOB *and* editing the name would still
-  // enable Save, submit a payload that omits recipient_dob, and show a
-  // misleading "Saved" toast while the field renders blank. Clearing DOB is
-  // unsupported until the backend adds nullability; an inline hint on the
-  // field explains why instead of silently ignoring the clear.
+  // trimmed working values against the seeded circle values. Clearing a stored
+  // DOB IS a change: it saves as `recipient_dob: null` (backend nullable since
+  // 2026-11-08; before, the clear could not be sent and the page refused it).
   const seededDob = circle.recipient_dob?.slice(0, 10) ?? '';
-  const dobCleared = dobValue.trim() === '' && seededDob !== '';
-  const dobChanged = dobValue.trim() !== '' && dobValue.trim() !== seededDob;
-  const isDirty = !dobCleared && (nameValue.trim() !== circle.recipient_name.trim() || dobChanged);
+  const dobPatch = editPatch(seededDob, dobValue, { isEditing: true });
+  const isDirty = nameValue.trim() !== circle.recipient_name.trim() || dobPatch !== undefined;
 
   const handleSubmit = (event: FormEvent): void => {
     event.preventDefault();
     form.submit(
       {
         recipient_name: nameValue.trim(),
-        // Omit optional keys when empty so they don't fail the format regex.
-        ...(dobValue ? { recipient_dob: dobValue } : {}),
+        // utils/editPatch: a new date is sent, a cleared one is `null`, an
+        // unchanged one is left out (an empty string would fail the format check).
+        ...(dobPatch !== undefined ? { recipient_dob: dobPatch } : {}),
       },
       (data) => {
         // THE SYNCHRONOUS DOUBLE-SUBMIT GUARD. This form had none: `useZodForm`
@@ -280,7 +270,7 @@ export default function EditCirclePage(): ReactElement {
             id="recipient_dob"
             label={t('edit.recipientDob')}
             value={dobValue}
-            error={dobCleared ? t('common:dobClearUnsupported') : messageFor(form.errors.recipient_dob)}
+            error={messageFor(form.errors.recipient_dob)}
             hint={t('edit.recipientDobHint')}
             onChange={(e) => {
               setRecipientDob(e.target.value);

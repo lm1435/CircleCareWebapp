@@ -2,7 +2,6 @@
   "appName": "CircleCare",
   "otpDigit": "Ziffer {{index}} von {{length}}",
   "otpCharacter": "Zeichen {{index}} von {{length}}",
-  "dobClearUnsupported": "Das Geburtsdatum kann noch nicht gelöscht werden. Stellen Sie es wieder her oder wählen Sie ein anderes Datum.",
   "loading": "Wird geladen …",
   "error": "Fehler",
   "retry": "Erneut versuchen",

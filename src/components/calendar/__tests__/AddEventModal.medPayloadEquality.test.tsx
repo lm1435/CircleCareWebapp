@@ -410,3 +410,66 @@ if (CAPTURE) {
     });
   });
 }
+
+// ── CLEARABLE ON EDIT (sweep 2026-11-08): deliberate changes to the fixture above ─────────────────
+// "edit-daily-to-once" used to record the BUGGY old body (no `recurrence_rule` key, so the series kept
+// going); it is now `recurrence_rule: null`. Otherwise only two mechanical changes, audited key by key
+// when the fixture was rewritten: on an edit an UNCHANGED dosage / instructions is left out
+// (utils/editPatch), and the recurrence keys follow mobile's `recurrenceForSave(…, { clearing: isEditing })`.
+if (!CAPTURE) {
+  describe('medication edit: an emptied field is cleared with null (explicit, not just fixture equality)', () => {
+    const run = async (c: EditCase) => ((await runEdit(c, 'new')) as { data: Record<string, unknown> }).data;
+    const named = (name: string) => EDIT_CASES.find((x) => x.name === name) as EditCase;
+
+    it('"Once" on a daily medication ends the series', async () => {
+      const data = await run(named('edit-daily-to-once'));
+      expect(data).toHaveProperty('recurrence_rule', null);
+      expect(data).toHaveProperty('recurrence_end_date', null);
+    });
+
+    it('a cleared dosage is null; an untouched one is left out', async () => {
+      const cleared = await run({
+        name: 'edit-dose-cleared',
+        event: named('edit-untouched-daily').event,
+        act: async (_d, u) => {
+          await dose(u, ' ');
+        },
+      });
+      expect(cleared).toHaveProperty('medication_dosage', null);
+      expect(await run(named('edit-untouched-daily'))).not.toHaveProperty('medication_dosage');
+    });
+
+    it('cleared instructions are null; untouched ones are left out', async () => {
+      const cleared = await run({
+        name: 'edit-instructions-cleared',
+        event: named('edit-untouched-dailyEnd').event,
+        act: async (_d, u) => {
+          await instructions(u, ' ');
+        },
+      });
+      expect(cleared).toHaveProperty('description', null);
+      expect(await run(named('edit-untouched-dailyEnd'))).not.toHaveProperty('description');
+    });
+
+    it('a medication never sends a null time (it always has one)', async () => {
+      for (const c of EDIT_CASES) {
+        const data = (OLD_FIXTURE()[c.name] as { data: Record<string, unknown> }).data;
+        expect([c.name, data.scheduled_time === null]).toEqual([c.name, false]);
+      }
+    });
+
+    it('a CREATE never sends null for a clearable field', () => {
+      for (const c of CREATE_CASES) {
+        const bodies = ([] as Record<string, unknown>[]).concat(OLD_FIXTURE()[c.name] as Record<string, unknown>);
+        for (const body of bodies) {
+          for (const key of ['description', 'location', 'medication_dosage', 'scheduled_time', 'duration_minutes', 'recurrence_rule', 'recurrence_end_date']) {
+            expect([c.name, key, body[key] === null]).toEqual([c.name, key, false]);
+          }
+        }
+      }
+    });
+  });
+}
+function OLD_FIXTURE(): Record<string, unknown> {
+  return JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));
+}

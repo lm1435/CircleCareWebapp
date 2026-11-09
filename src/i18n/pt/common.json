@@ -2,7 +2,6 @@
   "appName": "CircleCare",
   "otpDigit": "Dígito {{index}} de {{length}}",
   "otpCharacter": "Caractere {{index}} de {{length}}",
-  "dobClearUnsupported": "Ainda não é possível limpar a data de nascimento. Restaure-a ou escolha outra data.",
   "loading": "Carregando...",
   "error": "Erro",
   "retry": "Tentar novamente",

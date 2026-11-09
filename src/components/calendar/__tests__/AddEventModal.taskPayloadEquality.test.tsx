@@ -512,3 +512,48 @@ if (CAPTURE) {
     });
   });
 }
+
+// ── CLEARABLE ON EDIT (sweep 2026-11-08): deliberate changes to the fixture above ─────────────────
+// The fixture used to record the BUGGY old bodies for these cases: "Once" on a series, "Any time" on a
+// timed task and emptied details all OMITTED the key, so the server kept the old value. They now send
+// `null` (the backend accepts it on PATCH). The rest of the fixture changed in two mechanical ways only,
+// both checked here and audited key by key when the fixture was rewritten: on an edit, an UNCHANGED
+// description is left out (utils/editPatch), and the recurrence keys follow mobile's
+// `recurrenceForSave(…, { clearing: isEditing })` (null when the edit has no rule / no end date).
+if (!CAPTURE) {
+  describe('task edit: an emptied field is cleared with null (explicit, not just fixture equality)', () => {
+    const run = async (name: string) =>
+      ((await runEdit(EDIT_CASES.find((x) => x.name === name) as EditCase, 'new')) as {
+        data: Record<string, unknown>;
+      }).data;
+
+    it('"Once" on a repeating task ends the series: recurrence_rule and its end date are null', async () => {
+      const data = await run('edit-repeat-once');
+      expect(data).toHaveProperty('recurrence_rule', null);
+      expect(data).toHaveProperty('recurrence_end_date', null);
+    });
+
+    it('"Any time" on a timed task clears the time AND the end (null, null)', async () => {
+      const data = await run('edit-clear-time');
+      expect(data).toHaveProperty('scheduled_time', null);
+      expect(data).toHaveProperty('duration_minutes', null);
+    });
+
+    it('emptied details are null; untouched details are left out (the stored text stays)', async () => {
+      expect(await run('edit-details-cleared')).toHaveProperty('description', null);
+      expect(await run('edit-untouched-timed')).not.toHaveProperty('description');
+    });
+
+    it('a CREATE never sends null for a clearable field', () => {
+      const fixture = JSON.parse(fs.readFileSync(FIXTURE, 'utf8')) as Record<string, unknown>;
+      for (const c of CREATE_CASES) {
+        const bodies = ([] as Record<string, unknown>[]).concat(fixture[c.name] as Record<string, unknown>);
+        for (const body of bodies) {
+          for (const key of ['description', 'location', 'medication_dosage', 'scheduled_time', 'duration_minutes', 'recurrence_rule', 'recurrence_end_date']) {
+            expect([c.name, key, body[key] === null]).toEqual([c.name, key, false]);
+          }
+        }
+      }
+    });
+  });
+}

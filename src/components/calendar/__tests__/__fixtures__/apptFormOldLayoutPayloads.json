@@ -459,6 +459,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -475,6 +477,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -492,6 +496,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -501,17 +507,17 @@
     "data": {
       "event_type": "appointment",
       "title": "Cardiology",
-      "description": "Fasting",
       "scheduled_date": "2027-02-15",
       "scheduled_time": "10:00",
       "duration_minutes": 90,
-      "location": "Clinic",
       "notifications_enabled": true,
       "reminder_at_due": true,
       "reminder_24h": false,
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": "bbbbbbbb-2222-4222-8222-222222222222",
       "provider_id": null
     }
@@ -524,13 +530,14 @@
       "scheduled_date": "2027-02-15",
       "scheduled_time": "10:00",
       "duration_minutes": 30,
-      "location": "1200 Heart Center Dr, Suite 300",
       "notifications_enabled": true,
       "reminder_at_due": true,
       "reminder_24h": false,
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": "11111111-1111-4111-8111-111111111111"
     }
@@ -570,6 +577,7 @@
       "reminder_30m": false,
       "reminder_15m": false,
       "recurrence_rule": "weekly",
+      "recurrence_end_date": null,
       "recurrence_days": [
         1,
         4
@@ -593,6 +601,7 @@
       "reminder_30m": false,
       "reminder_15m": false,
       "recurrence_rule": "monthly",
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -612,6 +621,7 @@
       "reminder_30m": false,
       "reminder_15m": false,
       "recurrence_rule": "cycle:3:4",
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -630,6 +640,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": "aaaaaaaa-1111-4111-8111-111111111111",
       "provider_id": null
     }
@@ -648,6 +660,8 @@
       "reminder_1h": false,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": "cccccccc-3333-4333-8333-333333333333",
       "provider_id": null
     }
@@ -666,6 +680,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -684,6 +700,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -702,6 +720,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -711,15 +731,17 @@
     "data": {
       "event_type": "appointment",
       "title": "Cardiology",
-      "description": "Fasting",
       "scheduled_date": "2027-02-15",
-      "location": "Clinic",
+      "scheduled_time": null,
+      "duration_minutes": null,
       "notifications_enabled": true,
       "reminder_at_due": true,
       "reminder_24h": false,
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": "bbbbbbbb-2222-4222-8222-222222222222",
       "provider_id": null
     }
@@ -737,6 +759,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -754,6 +778,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -772,6 +798,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -781,17 +809,17 @@
     "data": {
       "event_type": "appointment",
       "title": "Cardiology",
-      "description": "Fasting",
       "scheduled_date": "2027-02-15",
       "scheduled_time": "10:00",
       "duration_minutes": 240,
-      "location": "Clinic",
       "notifications_enabled": true,
       "reminder_at_due": true,
       "reminder_24h": false,
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": "bbbbbbbb-2222-4222-8222-222222222222",
       "provider_id": null
     }
@@ -811,6 +839,7 @@
       "reminder_30m": false,
       "reminder_15m": false,
       "recurrence_rule": "weekly",
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -829,6 +858,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -848,6 +879,7 @@
       "reminder_30m": false,
       "reminder_15m": false,
       "recurrence_rule": "weekly",
+      "recurrence_end_date": null,
       "recurrence_days": [
         1,
         4,
@@ -872,6 +904,7 @@
       "reminder_30m": false,
       "reminder_15m": false,
       "recurrence_rule": "daily",
+      "recurrence_end_date": null,
       "recurrence_days": null,
       "assigned_to": null,
       "provider_id": null
@@ -892,6 +925,7 @@
       "reminder_30m": false,
       "reminder_15m": false,
       "recurrence_rule": "yearly",
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -911,6 +945,7 @@
       "reminder_30m": false,
       "reminder_15m": false,
       "recurrence_rule": "cycle:2:5",
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -940,17 +975,17 @@
     "data": {
       "event_type": "appointment",
       "title": "Cardiology",
-      "description": "Fasting",
       "scheduled_date": "2027-02-15",
       "scheduled_time": "10:00",
       "duration_minutes": 90,
-      "location": "Clinic",
       "notifications_enabled": true,
       "reminder_at_due": true,
       "reminder_24h": false,
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": "aaaaaaaa-1111-4111-8111-111111111111",
       "provider_id": null
     }
@@ -969,6 +1004,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -987,6 +1024,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": "cccccccc-3333-4333-8333-333333333333",
       "provider_id": null
     }
@@ -999,13 +1038,14 @@
       "scheduled_date": "2027-02-15",
       "scheduled_time": "10:00",
       "duration_minutes": 30,
-      "location": "1200 Heart Center Dr, Suite 300",
       "notifications_enabled": true,
       "reminder_at_due": true,
       "reminder_24h": false,
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": "22222222-2222-4222-8222-222222222222"
     }
@@ -1018,13 +1058,14 @@
       "scheduled_date": "2027-02-15",
       "scheduled_time": "10:00",
       "duration_minutes": 30,
-      "location": "1200 Heart Center Dr, Suite 300",
       "notifications_enabled": true,
       "reminder_at_due": true,
       "reminder_24h": false,
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": null
     }
@@ -1044,6 +1085,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": null,
       "provider_id": "11111111-1111-4111-8111-111111111111"
     }
@@ -1053,7 +1096,6 @@
     "data": {
       "event_type": "appointment",
       "title": "Cardiology",
-      "description": "Fasting",
       "scheduled_date": "2027-02-15",
       "scheduled_time": "10:00",
       "duration_minutes": 90,
@@ -1064,6 +1106,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": "bbbbbbbb-2222-4222-8222-222222222222",
       "provider_id": null
     }
@@ -1073,16 +1117,18 @@
     "data": {
       "event_type": "appointment",
       "title": "Cardiology",
+      "description": null,
       "scheduled_date": "2027-02-15",
       "scheduled_time": "10:00",
       "duration_minutes": 90,
-      "location": "Clinic",
       "notifications_enabled": true,
       "reminder_at_due": true,
       "reminder_24h": false,
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": "bbbbbbbb-2222-4222-8222-222222222222",
       "provider_id": null
     }
@@ -1101,6 +1147,8 @@
       "reminder_1h": true,
       "reminder_30m": false,
       "reminder_15m": false,
+      "recurrence_rule": null,
+      "recurrence_end_date": null,
       "assigned_to": "cccccccc-3333-4333-8333-333333333333",
       "provider_id": null
     }

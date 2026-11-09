@@ -797,6 +797,28 @@ describe('ProfilePage — name form', () => {
     });
   });
 
+  // CLEARABLE ON EDIT (sweep 2026-11-08): the last name was sent as `trim() || undefined`, so an
+  // emptied one was LEFT OUT and the old last name came back. It is sent trimmed now, '' included
+  // (the backend stores ''; profileCircleClear.integration pins it). Mobile already sent ''.
+  it('an emptied LAST name is sent as "" so it clears; the first name is unaffected', async () => {
+    mockUpdateProfileRequest.mockResolvedValueOnce(USER);
+    const user = await openNameForm();
+    await user.clear(screen.getByLabelText(/^Last name/));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(mockUpdateProfileRequest).toHaveBeenCalledTimes(1));
+    expect(mockUpdateProfileRequest).toHaveBeenLastCalledWith({ first_name: 'Samantha', last_name: '' });
+  });
+
+  it('the last name is sent trimmed', async () => {
+    mockUpdateProfileRequest.mockResolvedValueOnce(USER);
+    const user = await openNameForm();
+    await user.clear(screen.getByLabelText(/^Last name/));
+    await user.type(screen.getByLabelText(/^Last name/), '  Smith  ');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(mockUpdateProfileRequest).toHaveBeenCalledTimes(1));
+    expect(mockUpdateProfileRequest).toHaveBeenLastCalledWith({ first_name: 'Samantha', last_name: 'Smith' });
+  });
+
   it('renders the inline name error in Spanish', async () => {
     const i18n = (await import('@/i18n')).default;
     await i18n.changeLanguage('es');

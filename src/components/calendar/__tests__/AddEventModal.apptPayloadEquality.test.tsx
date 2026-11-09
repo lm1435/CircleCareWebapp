@@ -493,3 +493,66 @@ if (CAPTURE) {
     });
   });
 }
+
+// ── CLEARABLE ON EDIT (sweep 2026-11-08): deliberate changes to the fixture above ─────────────────
+// The fixture used to record the BUGGY old bodies for "Once" on a series, "Any time" on a timed
+// appointment and emptied notes (the key was OMITTED, so the server kept the old value). They now send
+// `null`. Otherwise only two mechanical changes, audited key by key when the fixture was rewritten: on
+// an edit an UNCHANGED description / location is left out (utils/editPatch), and the recurrence keys
+// follow mobile's `recurrenceForSave(…, { clearing: isEditing })`.
+if (!CAPTURE) {
+  describe('appointment edit: an emptied field is cleared with null (explicit, not just fixture equality)', () => {
+    const run = async (c: EditCase) => ((await runEdit(c, 'new')) as { data: Record<string, unknown> }).data;
+    const named = (name: string) => EDIT_CASES.find((x) => x.name === name) as EditCase;
+
+    it('"Once" on a weekly appointment ends the series', async () => {
+      const data = await run(named('edit-repeat-once'));
+      expect(data).toHaveProperty('recurrence_rule', null);
+      expect(data).toHaveProperty('recurrence_end_date', null);
+    });
+
+    it('"Any time" on a timed appointment clears the time and the end', async () => {
+      const data = await run(named('edit-clear-time'));
+      expect(data).toHaveProperty('scheduled_time', null);
+      expect(data).toHaveProperty('duration_minutes', null);
+    });
+
+    it('emptied notes are null; untouched notes and place are left out', async () => {
+      expect(await run(named('edit-notes-cleared'))).toHaveProperty('description', null);
+      const untouched = await run(named('edit-untouched-long'));
+      expect(untouched).not.toHaveProperty('description');
+      expect(untouched).not.toHaveProperty('location');
+    });
+
+    it('an emptied place is null', async () => {
+      const data = await run({
+        name: 'edit-location-cleared',
+        event: named('edit-untouched-long').event,
+        act: (d) => d.location(' '),
+      } as EditCase);
+      expect(data).toHaveProperty('location', null);
+      expect(data).not.toHaveProperty('description');
+    });
+
+    it('a stored rule the Repeat control cannot show (an imported custom:14) is NOT ended by an untouched save', async () => {
+      const data = await run({
+        name: 'edit-untouched-custom14',
+        event: appt({ id: 'appt-c14', recurrence_rule: 'custom:14' }),
+      } as EditCase);
+      expect(data.recurrence_rule).toBeUndefined();
+      expect(data.recurrence_end_date).toBeUndefined();
+    });
+
+    it('a CREATE never sends null for a clearable field', () => {
+      const fixture = JSON.parse(fs.readFileSync(FIXTURE, 'utf8')) as Record<string, unknown>;
+      for (const c of CREATE_CASES) {
+        const bodies = ([] as Record<string, unknown>[]).concat(fixture[c.name] as Record<string, unknown>);
+        for (const body of bodies) {
+          for (const key of ['description', 'location', 'medication_dosage', 'scheduled_time', 'duration_minutes', 'recurrence_rule', 'recurrence_end_date']) {
+            expect([c.name, key, body[key] === null]).toEqual([c.name, key, false]);
+          }
+        }
+      }
+    });
+  });
+}

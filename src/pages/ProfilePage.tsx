@@ -335,8 +335,12 @@ export default function ProfilePage(): ReactElement {
     // A retry replaces the previous failure; a new alert mounts (and is
     // announced again) if this attempt fails too.
     setNameError(null);
+    // The LAST name is sent trimmed, '' included: an emptied last name clears it
+    // (it was `|| undefined`, i.e. no key, so the old one came back). The first
+    // name is required server-side (min 1), so an empty one is still left out.
+    const first = firstName.trim();
     saveName.mutate(
-      { first_name: firstName.trim() || undefined, last_name: lastName.trim() || undefined },
+      { ...(first ? { first_name: first } : {}), last_name: lastName.trim() },
       {
         onSuccess: () => {
           showToast(t('account.nameSuccess'), 'success');

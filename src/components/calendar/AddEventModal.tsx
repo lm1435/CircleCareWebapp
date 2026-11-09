@@ -24,6 +24,8 @@ import {
   type MedicationDetailsState,
 } from '@/utils/medicationDetailsForm';
 import { siblingDosePayload } from '@/utils/firstRunMedication';
+import { clearOnEdit, editPatch } from '@/utils/editPatch';
+import { recurrenceForSave } from '@/utils/recurrenceForSave';
 import {
   deleteEvent as deleteEventRequest,
   updateEvent as updateEventRequest,
@@ -1622,6 +1624,10 @@ function AddEventForm({
       // Midnight-crossing spans count as mobile counts them (see spanMinutes).
       durationMinutes = spanMinutes(timeStr, endTimeStr) ?? undefined;
     }
+    // THE STORED VALUES an emptied field is measured against (utils/editPatch):
+    // content from `event` (the series root's content, see `withSeriesContent`),
+    // the clock and length from the root the schedule hydrated from.
+    const patchOpts = { isEditing };
 
     let recurrence_rule: string | undefined;
     // `undefined` = key omitted (the stored value stays); `null` = explicit
@@ -1653,14 +1659,37 @@ function AddEventForm({
       recurrence_days = null;
     }
 
+    // A STORED rule the Repeat control cannot show (an imported `custom:14`
+    // reads as "Once") must never be cleared by a save that did not touch the
+    // Repeat control — that would end a series the user left alone (mobile hit
+    // exactly this: recurrenceLabelParity.test.ts). Its keys are left out.
+    const storedRule = isEditing ? (scheduleSource?.recurrence_rule ?? null) : null;
+    const keepUnshownRule =
+      !!storedRule &&
+      recurrence === 'none' &&
+      !recurrenceTouched.current &&
+      parseRecurrence(storedRule, scheduleSource?.recurrence_days).choice === 'none';
+
     const data: CreateEventRequest = {
       event_type: eventType,
       title: trimmedTitle,
-      description: description.trim() || undefined,
+      // CLEARABLE ON EDIT (sweep 2026-11-08): an emptied field is `null`, an
+      // unchanged one is left out, a create never sends null. See utils/editPatch.
+      description: editPatch(event?.description, description, patchOpts),
       scheduled_date,
-      scheduled_time,
-      duration_minutes: durationMinutes,
-      location: location.trim() || undefined,
+      // "Any time" on an edit of a timed task / appointment is `null`, and so is
+      // its end (`duration_minutes`). A set time and length always TRAVEL (they
+      // are derived together: the time with its date from one instant, the
+      // length from the start/end pair), so they use `clearOnEdit`, not the
+      // differ-only `editPatch`. A medication always has a time (refused above)
+      // and no length, so it never clears either.
+      scheduled_time: isMedication
+        ? scheduled_time
+        : clearOnEdit(scheduleSource?.scheduled_time, scheduled_time, patchOpts),
+      duration_minutes: isMedication
+        ? undefined
+        : clearOnEdit(scheduleSource?.duration_minutes, durationMinutes, patchOpts),
+      location: editPatch(event?.location, location, patchOpts),
       notifications_enabled: notificationsEnabled,
       // ALL FIVE, VERBATIM, ALWAYS. Neither the master toggle nor a missing
       // scheduled time rewrites them any more: the cron filters both
@@ -1679,10 +1708,15 @@ function AddEventForm({
         notificationsEnabled,
         remindersApply(eventType, timeStr)
       ),
-      recurrence_rule,
-      // From `eventDatesForApi`, never from the raw field: it must share the
-      // start date's frame.
-      recurrence_end_date: apiDates.recurrenceEndDate,
+      // "Once" on an edit is `recurrence_rule: null` (the series ends; the
+      // server clears its days and end date and prunes the children), and a
+      // cleared end date on an edit is `recurrence_end_date: null`. Omitting
+      // them, as before, left the series running. Mobile's rule, ported
+      // (utils/recurrenceForSave). The end date comes from `eventDatesForApi`,
+      // never the raw field: it must share the start date's frame.
+      ...(keepUnshownRule
+        ? {}
+        : recurrenceForSave(recurrence_rule, apiDates.recurrenceEndDate, { clearing: isEditing })),
     };
     if (recurrence_days !== undefined) data.recurrence_days = recurrence_days;
 
@@ -1715,7 +1749,7 @@ function AddEventForm({
 
     if (isMedication) {
       data.medication_name = trimmedTitle;
-      data.medication_dosage = dosage.trim() || undefined;
+      data.medication_dosage = editPatch(event?.medication_dosage, dosage, patchOpts);
       // Only a PICKED drug carries its concept id (mobile: `if (selectedDrug?.rxcui)`).
       if (selectedDrug?.rxcui) data.rxcui = selectedDrug.rxcui;
       // Refill tracking + prescription details: mobile's keys and rules (utils/medicationDetailsForm).
