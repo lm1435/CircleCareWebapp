@@ -121,3 +121,44 @@ describe('ShiftsMonthView', () => {
     expect(screen.getByRole('list', { name: 'Shifts key' })).toHaveTextContent('Not covered');
   });
 });
+
+/**
+ * Owner decision 2026-11-08 (WCAG 1.4.1): the open moss ring and the not-covered grey ring were
+ * indistinguishable in dark mode, so the three marks differ by SHAPE: open = hollow moss ring,
+ * covered = filled moss dot, not covered = a short muted horizontal DASH (no ring), in the grid
+ * and in the legend. jsdom has no layout, so the shape is read from the size/border utilities.
+ * Mirrors mobile's "ShiftsMonthDots marks differ by shape".
+ */
+describe('ShiftsMonthView marks differ by shape', () => {
+  const classes = (el: Element | null) => (el?.getAttribute('class') ?? '').split(/\s+/);
+  const expectDash = (el: Element | null) => {
+    const c = classes(el);
+    expect(c).toEqual(expect.arrayContaining(['w-2.5', 'h-0.5', 'bg-ink-3']));
+    expect(c.some((x) => x.startsWith('border'))).toBe(false);
+  };
+  const expectRing = (el: Element | null) => {
+    const c = classes(el);
+    expect(c).toEqual(expect.arrayContaining(['rounded-full', 'bg-transparent', 'border-moss']));
+    expect(c.some((x) => x.startsWith('border-['))).toBe(true);
+  };
+
+  it('the not-covered grid mark is a dash; the open mark stays a ring; the legend matches', () => {
+    render(
+      <ShiftsMonthView
+        gridDays={getMonthGridDays('2026-11-02')}
+        monthStart={startOfMonth('2026-11-02')}
+        shifts={ALL}
+        timezone={TZ}
+        todayStr="2026-11-02"
+        onDayOpen={vi.fn()}
+      />
+    );
+    expectDash(document.querySelector('button[data-date="2026-11-01"] [data-dot="notCovered"]'));
+    expectRing(document.querySelector('button[data-date="2026-11-02"] [data-dot="open"]'));
+    const legend = screen.getByRole('list', { name: 'Shifts key' });
+    expectDash(legend.querySelector('[data-dot="notCovered"]'));
+    expectRing(legend.querySelector('[data-dot="open"]'));
+    const covered = legend.querySelector('[data-dot="covered"]');
+    expect(classes(covered)).toEqual(expect.arrayContaining(['rounded-full', 'bg-moss']));
+  });
+});

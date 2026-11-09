@@ -19,16 +19,19 @@ export interface ShiftsMonthViewProps {
 
 const WEEKDAY_INDEXES = [0, 1, 2, 3, 4, 5, 6];
 const NONE: CalendarEvent[] = [];
+// Not covered is a DASH, not a third ring: in dark mode a grey ring read the same as the moss one,
+// so the marks differ by shape (WCAG 1.4.1). ink-3 vs cream/bg/bg-2: light 5.78/5.50/5.04:1,
+// dark 5.97/6.50/5.44:1 (1.4.11 needs 3:1).
 const DOT_CLASS = {
-  open: 'border-[1.5px] border-moss bg-transparent',
-  notCovered: 'border-[1.5px] border-ink-3 bg-transparent',
-  covered: 'bg-moss',
+  open: 'h-2 w-2 rounded-full border-[1.5px] border-moss bg-transparent',
+  notCovered: 'my-[3px] h-0.5 w-2.5 rounded-full bg-ink-3',
+  covered: 'h-2 w-2 rounded-full bg-moss',
 } as const;
 
 /**
  * Month: shifts are NOT drawn as blocks. A cell carries a hollow moss ring when the
- * day has an open shift (not yet ended), a hollow grey ring when its only unfilled
- * shifts have ended ("Not covered") and a filled MOSS dot when it is fully covered. The dots are
+ * day has an open shift (not yet ended), a short grey DASH when its only unfilled
+ * shifts have ended ("Not covered"; a shape, not just a colour) and a filled MOSS dot when it is fully covered. The dots are
  * decorative: the cell's accessible name says "3 shifts, 1 open" and a text
  * legend sits under the grid, so colour is never the only cue.
  */
@@ -110,7 +113,7 @@ export function ShiftsMonthView({
                       <span
                         aria-hidden="true"
                         data-dot={state}
-                        className={`h-2 w-2 rounded-full ${DOT_CLASS[state]}`}
+                        className={DOT_CLASS[state]}
                       />
                     )}
                   </button>
@@ -142,14 +145,14 @@ export function ShiftsLegend(): ReactElement {
         {t('legend.open')}
       </li>
       <li className="flex items-center gap-1.5 text-xs text-ink-3">
-        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-moss" />
+        <span aria-hidden="true" data-dot="covered" className="h-2.5 w-2.5 rounded-full bg-moss" />
         {t('legend.covered')}
       </li>
       <li className="flex items-center gap-1.5 text-xs text-ink-3">
         <span
           aria-hidden="true"
           data-dot="notCovered"
-          className="h-2.5 w-2.5 rounded-full border-[1.5px] border-ink-3 bg-transparent"
+          className="my-1 h-0.5 w-2.5 rounded-full bg-ink-3"
         />
         {t('notCovered')}
       </li>
