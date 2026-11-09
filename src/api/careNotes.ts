@@ -70,6 +70,12 @@ export interface GetCareNotesResponse {
   today: string;
   /** Resolved care-recipient IANA timezone (fallback chain applied). */
   timezone: string;
+  /**
+   * ADDITIVE (backend 2026-11-09): the circle's earliest note_date the viewer can read; `null` = no
+   * notes. ABSENT from an older backend (or when that read failed): "Show older notes" then keeps its
+   * old paging exactly.
+   */
+  oldest_note_date?: string | null;
 }
 
 export interface CareNoteInput {

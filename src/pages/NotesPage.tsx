@@ -39,6 +39,9 @@ import {
   daysBetween,
   olderPagesNeeded,
   shiftDateBack,
+  loadedNotesFloor,
+  olderNotesExist,
+  olderSeekPages,
 } from '@/lib/noteDate';
 import { useCircle } from '@/hooks/useCircle';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
@@ -158,6 +161,11 @@ export default function NotesPage(): ReactElement {
   const [olderPages, setOlderPages] = useState(0);
   // Set by a "Show older notes" press that widened the base window (see handleLoadOlder).
   const [olderPendingFrom, setOlderPendingFrom] = useState<string | null>(null);
+  // oldest_note_date known (additive backend field, 2026-11-09): the floor loaded BEFORE the press,
+  // held while the press steps back to the next older note; and whether the person has asked for
+  // older notes (only then "No older notes" is said).
+  const [olderSeekFloor, setOlderSeekFloor] = useState<string | null>(null);
+  const [olderAsked, setOlderAsked] = useState(false);
 
   const createMutation = useCreateCareNote();
   const updateMutation = useUpdateCareNote();
@@ -525,9 +533,62 @@ export default function NotesPage(): ReactElement {
     // loadNextOlderPage reads the current olderPages; re-running on it is harmless (pending is cleared).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [olderPendingFrom, baseWindowFull, notesQuery.isLoading, notesQuery.isPlaceholderData, baseNotes]);
-  const olderBusy = olderPendingFrom !== null || older.isFetching;
 
-  const olderControl: ReactElement | null = !today ? null : older.reachedEnd ? (
+  // WITH oldest_note_date the control hides once nothing older exists, and a press keeps stepping
+  // (the base window to its full 92 days, then batches of older pages) until the NEXT older note is
+  // on the page, so a gap longer than one page never strands a note. Field ABSENT (a backend that
+  // predates it) = the paging above, exactly (mobile parity: NotesTab).
+  const oldestNoteDate = notesQuery.data?.oldest_note_date;
+  const loadedFloor = today && currentFrom ? loadedNotesFloor(today, currentFrom, olderPages) : undefined;
+  const hasOlderNotes = loadedFloor ? olderNotesExist(oldestNoteDate, loadedFloor) : undefined;
+  function seekOlderStep(): void {
+    if (!today || !baseFloor || typeof oldestNoteDate !== 'string') return;
+    if (!baseWindowFull) {
+      setFromDate(baseFloor);
+      return;
+    }
+    const nextPage = olderPages + olderSeekPages(today, olderPages, oldestNoteDate);
+    setOlderPages(nextPage);
+    Analytics.careNotesOlderLoaded({ page: nextPage });
+  }
+  const olderSettled = !notesQuery.isLoading && !notesQuery.isPlaceholderData && !older.isFetching;
+  useEffect(() => {
+    if (olderSeekFloor === null || !olderSettled) return;
+    const reached = notes.some((n) => n.note_date < olderSeekFloor);
+    if (reached || hasOlderNotes !== true) {
+      setOlderSeekFloor(null);
+      return;
+    }
+    seekOlderStep();
+    // seekOlderStep reads the current window; re-running on its inputs is what steps again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [olderSeekFloor, olderSettled, notes, hasOlderNotes, olderPages, baseWindowFull]);
+  function handleShowOlder(): void {
+    if (hasOlderNotes === undefined) {
+      handleLoadOlder();
+      return;
+    }
+    if (!loadedFloor || olderSeekFloor !== null || olderPendingFrom !== null || !hasOlderNotes) return;
+    setOlderAsked(true);
+    setOlderSeekFloor(loadedFloor);
+    seekOlderStep();
+  }
+
+  const olderBusy = olderPendingFrom !== null || olderSeekFloor !== null || older.isFetching;
+  // Field known: offered only while older notes exist (or a press is still stepping); "No older
+  // notes" only once the person asked, otherwise nothing. Field absent: as before.
+  const olderFooter: 'button' | 'end' | 'none' =
+    hasOlderNotes === undefined
+      ? older.reachedEnd
+        ? 'end'
+        : 'button'
+      : hasOlderNotes || olderSeekFloor !== null
+        ? 'button'
+        : olderAsked
+          ? 'end'
+          : 'none';
+
+  const olderControl: ReactElement | null = !today || olderFooter === 'none' ? null : olderFooter === 'end' ? (
     <p className="m-0 text-center text-sm text-ink-3" data-testid="notes-no-older">
       {t('notes:noOlder')}
     </p>
@@ -535,7 +596,7 @@ export default function NotesPage(): ReactElement {
     <div className="flex justify-center">
       <Button
         variant="ghost"
-        onClick={handleLoadOlder}
+        onClick={handleShowOlder}
         loading={olderBusy}
         disabled={notesQuery.isFetching || olderBusy}
         data-testid="notes-show-older"

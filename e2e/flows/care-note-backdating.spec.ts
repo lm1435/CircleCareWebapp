@@ -120,4 +120,57 @@ test.describe('care note backdating', () => {
       await session.delete(`/api/circles/${circleId}/care-notes/${id}`);
     }
   });
+  // Owner decision 2026-11-09: the backend's additive `oldest_note_date`. One press reaches the NEXT
+  // older note even across a gap longer than one 92-day page, and once the oldest note is on the page
+  // the control is gone ("No older notes" is said, because the person asked).
+  test('Show older notes crosses a gap of 300 days in one press, then hides (oldest_note_date)', async ({
+    page,
+    request,
+    circleId,
+    account,
+  }) => {
+    test.slow();
+    const session = await apiSession(request, account);
+    const probe = await session.get(`/api/circles/${circleId}/care-notes`);
+    expect(probe.status()).toBe(200);
+    const probeData = ((await probe.json()) as { data: { today: string; oldest_note_date?: string | null } }).data;
+    test.skip(!('oldest_note_date' in probeData), 'backend predates oldest_note_date (fallback pinned above)');
+    const today = probeData.today;
+    const prevOldest = probeData.oldest_note_date ?? null;
+    const ours = addDaysISO(prevOldest ?? today, -300);
+    const body = `${PREFIX}GAP_${uniqueSuffix()}`;
+    const bodyRe = new RegExp(escapeRegExp(body));
+    const id = await createNoteVia(session, circleId, body, ours);
+
+    try {
+      await page.goto(`/circles/${circleId}/notes`, { waitUntil: 'domcontentloaded' });
+      await expect(page.getByTestId('note-composer-expand')).toBeVisible({ timeout: 20_000 });
+      const showOlder = page.getByTestId('notes-show-older');
+      const noOlder = page.getByTestId('notes-no-older');
+      const oursText = page.locator(`#notes-day-${ours}`).getByText(bodyRe);
+      const prevGroup = prevOldest ? page.locator(`#notes-day-${prevOldest}`) : null;
+      await expect(showOlder).toBeVisible({ timeout: 20_000 });
+
+      let prevVisibleBeforeFinalPress = prevGroup === null;
+      for (let i = 0; i < 40 && (await oursText.count()) === 0; i++) {
+        await expect(showOlder).toBeEnabled({ timeout: 20_000 });
+        prevVisibleBeforeFinalPress = prevGroup === null ? true : (await prevGroup.count()) > 0;
+        await showOlder.click();
+        // Settled: either the control is idle again or it is gone (the end).
+        await expect
+          .poll(async () => (await noOlder.count()) > 0 || (await showOlder.isEnabled().catch(() => false)), {
+            timeout: 30_000,
+          })
+          .toBe(true);
+      }
+      await expect(oursText).toBeVisible({ timeout: 20_000 });
+      // The press that showed our note started from the previous oldest note: the 300-day gap
+      // (over three empty 92-day pages) was crossed in ONE press.
+      expect(prevVisibleBeforeFinalPress).toBe(true);
+      await expect(showOlder).toHaveCount(0);
+      await expect(noOlder).toHaveText('No older notes');
+    } finally {
+      await session.delete(`/api/circles/${circleId}/care-notes/${id}`);
+    }
+  });
 });

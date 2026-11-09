@@ -4,6 +4,10 @@ import {
   olderPageRange,
   olderPagesNeeded,
   shiftDateBack,
+  loadedNotesFloor,
+  olderNotesExist,
+  olderSeekPages,
+  OLDER_SEEK_BATCH,
 } from '../noteDate';
 
 describe('noteDate helpers (naive YYYY-MM-DD, machine-TZ independent)', () => {
@@ -27,5 +31,28 @@ describe('noteDate helpers (naive YYYY-MM-DD, machine-TZ independent)', () => {
 
   it('olderPagesNeeded: 0 inside the base page, then one per 92 days', () => {
     expect([0, 91, 92, 183, 184].map(olderPagesNeeded)).toEqual([0, 0, 1, 1, 2]);
+  });
+});
+
+describe('oldest_note_date helpers (additive backend field, 2026-11-09)', () => {
+  it('loadedNotesFloor: the base from, or the deepest older page\'s from', () => {
+    expect(loadedNotesFloor('2026-08-08', '2026-07-26', 0)).toBe('2026-07-26');
+    expect(loadedNotesFloor('2026-08-08', '2026-05-09', 1)).toBe(olderPageRange('2026-08-08', 1).from);
+    expect(loadedNotesFloor('2026-08-08', '2026-05-09', 3)).toBe(olderPageRange('2026-08-08', 3).from);
+  });
+  it('olderNotesExist: undefined when the field is absent, false for null, strict < floor otherwise', () => {
+    expect(olderNotesExist(undefined, '2026-07-26')).toBeUndefined();
+    expect(olderNotesExist(null, '2026-07-26')).toBe(false);
+    expect(olderNotesExist('2026-07-26', '2026-07-26')).toBe(false);
+    expect(olderNotesExist('2026-07-25', '2026-07-26')).toBe(true);
+  });
+  it('olderSeekPages: enough to cover the oldest, batched, at least one', () => {
+    // 400 days back from 2026-08-08 needs 4 older pages
+    expect(olderSeekPages('2026-08-08', 0, '2025-07-04')).toBe(4);
+    // two years back needs 8: two batches of 4
+    expect(olderSeekPages('2026-08-08', 0, '2024-06-01')).toBe(OLDER_SEEK_BATCH);
+    expect(olderSeekPages('2026-08-08', 4, '2024-06-01')).toBe(4);
+    expect(olderSeekPages('2026-08-08', 0, '2026-03-11')).toBe(1);
+    expect(olderSeekPages('2026-08-08', 5, '2026-03-11')).toBe(1);
   });
 });

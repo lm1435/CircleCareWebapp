@@ -1259,3 +1259,150 @@ describe('NotesPage — one add pattern', () => {
     expect(screen.queryByRole('button', { name: 'Add a note' })).not.toBeInTheDocument();
   });
 });
+
+// Owner decision 2026-11-09 (mobile parity: NotesTab): with the server's additive `oldest_note_date`,
+// "Show older notes" hides when nothing older exists, and one press reaches the next older note even
+// across a gap longer than one 92-day page. Field ABSENT (backend not yet deployed) = the old paging.
+describe('NotesPage — Show older notes with the server\'s oldest_note_date', () => {
+  let all: CareNote[] = [];
+  let withOldest = true;
+  const baseCache = new Map<string, unknown>();
+  const olderCache = new Map<string, unknown>();
+  const DEFAULT_FROM = shiftIso(TODAY, -13);
+  const oldestOf = () => (all.length === 0 ? null : all.map((n) => n.note_date).sort()[0]);
+
+  beforeEach(() => {
+    baseCache.clear();
+    olderCache.clear();
+    withOldest = true;
+    mockUseCareNotes.mockImplementation((_c: string, params?: { from?: string }) => {
+      const floor = params?.from ?? DEFAULT_FROM;
+      if (!baseCache.has(floor)) {
+        const r = notesResult(all.filter((n) => n.note_date >= floor));
+        baseCache.set(floor, {
+          ...r,
+          data: { ...r.data, ...(withOldest ? { oldest_note_date: oldestOf() } : {}) },
+        });
+      }
+      return baseCache.get(floor);
+    });
+    mockUseOlder.mockImplementation((_c: string, today: string | undefined, pages: number) => {
+      const key = `${today}:${pages}`;
+      if (!olderCache.has(key)) {
+        const perPage = Array.from({ length: today ? pages : 0 }, (_, i) => {
+          const r = olderPageRange(today!, i + 1);
+          return all.filter((n) => n.note_date >= r.from && n.note_date <= r.to);
+        });
+        olderCache.set(key, {
+          notes: perPage.flat(),
+          isFetching: false,
+          isError: false,
+          reachedEnd: perPage.length > 0 && perPage[perPage.length - 1].length === 0,
+        });
+      }
+      return olderCache.get(key);
+    });
+  });
+
+  const lastOlderPages = () => mockUseOlder.mock.calls.at(-1)![2] as number;
+
+  it('nothing older than the loaded window: no "Show older notes" and no "No older notes" (calm: nothing)', () => {
+    all = [makeNote({ id: 'recent', note_date: shiftIso(TODAY, -5), body: 'Five days ago' })];
+    renderPage();
+    expect(screen.getByText('Five days ago')).toBeInTheDocument();
+    expect(screen.queryByTestId('notes-show-older')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('notes-no-older')).not.toBeInTheDocument();
+    expect(mockCareNotesOlderLoaded).not.toHaveBeenCalled();
+  });
+
+  it('a circle with no notes at all (oldest null): no "Show older notes" on the empty state', () => {
+    all = [];
+    renderPage();
+    expect(screen.queryByTestId('notes-show-older')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('notes-no-older')).not.toBeInTheDocument();
+  });
+
+  it('a gap of 400 days (> one 92-day page): ONE press shows the next older note', async () => {
+    const user = userEvent.setup();
+    all = [
+      makeNote({ id: 'recent', note_date: shiftIso(TODAY, -5), body: 'Five days ago' }),
+      makeNote({ id: 'old', note_date: shiftIso(TODAY, -400), body: 'Over a year ago' }),
+    ];
+    renderPage();
+    expect(screen.queryByText('Over a year ago')).not.toBeInTheDocument();
+    await user.click(screen.getByTestId('notes-show-older'));
+    expect(screen.getByText('Over a year ago')).toBeInTheDocument();
+    expect(screen.queryByTestId('notes-show-older')).not.toBeInTheDocument();
+    expect(screen.getByTestId('notes-no-older')).toHaveTextContent('No older notes');
+    expect(mockCareNotesOlderLoaded).toHaveBeenLastCalledWith({ page: lastOlderPages() });
+    expect(lastOlderPages()).toBeGreaterThanOrEqual(4);
+  });
+
+  it('a gap of two years: still ONE press (batched page steps)', async () => {
+    const user = userEvent.setup();
+    all = [
+      makeNote({ id: 'recent', note_date: shiftIso(TODAY, -5), body: 'Five days ago' }),
+      makeNote({ id: 'ancient', note_date: shiftIso(TODAY, -740), body: 'Two years ago' }),
+    ];
+    renderPage();
+    await user.click(screen.getByTestId('notes-show-older'));
+    expect(screen.getByText('Two years ago')).toBeInTheDocument();
+    for (const [arg] of mockCareNotesOlderLoaded.mock.calls) {
+      expect(Object.keys(arg as object)).toEqual(['page']);
+    }
+  });
+
+  it('stops at the NEXT older note, not the oldest: a later press jumps the following gap', async () => {
+    const user = userEvent.setup();
+    all = [
+      makeNote({ id: 'recent', note_date: shiftIso(TODAY, -5), body: 'Five days ago' }),
+      makeNote({ id: 'mid', note_date: shiftIso(TODAY, -170), body: 'Autumn' }),
+      makeNote({ id: 'ancient', note_date: shiftIso(TODAY, -740), body: 'Two years ago' }),
+    ];
+    renderPage();
+    await user.click(screen.getByTestId('notes-show-older'));
+    expect(screen.getByText('Autumn')).toBeInTheDocument();
+    expect(screen.queryByText('Two years ago')).not.toBeInTheDocument();
+    await user.click(screen.getByTestId('notes-show-older'));
+    expect(screen.getByText('Two years ago')).toBeInTheDocument();
+  });
+
+  it('an older note inside the 92-day base window: one press widens and shows it; no older page', async () => {
+    const user = userEvent.setup();
+    all = [
+      makeNote({ id: 'recent', note_date: shiftIso(TODAY, -5), body: 'Five days ago' }),
+      makeNote({ id: 'sixty', note_date: shiftIso(TODAY, -60), body: 'Sixty days ago' }),
+    ];
+    renderPage();
+    await user.click(screen.getByTestId('notes-show-older'));
+    expect(screen.getByText('Sixty days ago')).toBeInTheDocument();
+    expect(mockCareNotesOlderLoaded).not.toHaveBeenCalled();
+    expect(screen.getByTestId('notes-no-older')).toBeInTheDocument();
+  });
+
+  it('FIELD ABSENT (older backend): the old paging exactly (offered; one press -> page 1 -> "No older notes")', async () => {
+    const user = userEvent.setup();
+    withOldest = false;
+    all = [makeNote({ id: 'recent', note_date: shiftIso(TODAY, -5), body: 'Five days ago' })];
+    renderPage();
+    expect(screen.getByTestId('notes-show-older')).toBeInTheDocument();
+    await user.click(screen.getByTestId('notes-show-older'));
+    expect(screen.getByTestId('notes-no-older')).toBeInTheDocument();
+    expect(mockCareNotesOlderLoaded).toHaveBeenCalledTimes(1);
+    expect(mockCareNotesOlderLoaded).toHaveBeenLastCalledWith({ page: 1 });
+  });
+
+  it('FIELD ABSENT with a 400-day gap: the old behaviour (an empty page ends in "No older notes")', async () => {
+    const user = userEvent.setup();
+    withOldest = false;
+    all = [
+      makeNote({ id: 'recent', note_date: shiftIso(TODAY, -5), body: 'Five days ago' }),
+      makeNote({ id: 'old', note_date: shiftIso(TODAY, -400), body: 'Over a year ago' }),
+    ];
+    renderPage();
+    await user.click(screen.getByTestId('notes-show-older'));
+    expect(screen.queryByText('Over a year ago')).not.toBeInTheDocument();
+    expect(screen.getByTestId('notes-no-older')).toBeInTheDocument();
+    expect(mockCareNotesOlderLoaded).toHaveBeenCalledTimes(1);
+  });
+});
