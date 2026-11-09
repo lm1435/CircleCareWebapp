@@ -88,3 +88,25 @@ describe('the upgrade page back link names the Settings page', () => {
     expect(back.toLowerCase()).toContain(title.toLowerCase());
   });
 });
+
+// The help articles (exported from CircleCareWeb into src/help/content.json) sent people to
+// "Profile" for quiet hours, alerts, export, units and the subscription until 2026-11-09. The
+// only "Profile" left is the web account menu's own entry, named right after "your name at the
+// top right" (common:nav.profile above).
+describe('help articles point at Settings, never at Profile', () => {
+  const WEB_MENU_ENTRY =
+    /(your name at the top right|tu nombre arriba a la derecha)([^.]{0,40}?)["“](Profile|Perfil)["”]/g;
+  const helpStrings = (o: unknown, p = ''): Array<[string, string]> => {
+    if (typeof o === 'string') return [[p, o]];
+    if (Array.isArray(o)) return o.flatMap((v, i) => helpStrings(v, `${p}[${i}]`));
+    if (o && typeof o === 'object') return Object.entries(o).flatMap(([k, v]) => helpStrings(v, `${p}.${k}`));
+    return [];
+  };
+  it('content.json', () => {
+    const json = JSON.parse(fs.readFileSync(path.join(__dirname, '../../help/content.json'), 'utf8'));
+    const offenders = helpStrings(json)
+      .filter(([, s]) => PROFILE_WORD.test(s.replace(WEB_MENU_ENTRY, '$1$2')))
+      .map(([p]) => p);
+    expect(offenders).toEqual([]);
+  });
+});
