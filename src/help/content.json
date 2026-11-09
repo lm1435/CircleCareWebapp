@@ -271,7 +271,7 @@
           "For set weekdays, tap Some days under How often?. Tap the days you need under Repeat on (the start day is already selected), then tap Done.",
           "For every other day, tap More details, then Repeat, and choose Every 2 days.",
           "For on and off patterns, choose Cycle under Repeat and set the Days on and Days off (they start at 7 and 7).",
-          "Add an End date (optional) if the medication stops on a known date, then tap Add medication."
+          "Add an End date if the medication stops on a known date, then tap Add medication."
         ],
         "body": "## Repeat options\n\n**How often?** shows the three most common choices: **Every day**, **Some days** and **When needed** (for medications with no set times, see [As-needed medications](/help/as-needed-medications/)).\n\nThe full **Repeat** list, under **More details**, offers: **Never**, **Daily**, **Every 2 days**, **Weekly**, **Monthly**, **Yearly**, **Cycle** and **Days of the week**. When you add a new medication, it also offers **As needed**.\n\nOn the web, the same choices are called **Every other day** and **Cycle (days on / off)**.\n\n## Good to know\n\n- **Days of the week** follows the care recipient's time zone.\n- **Several doses a day** are set under When? with **+ Another dose**, not under Repeat.\n- **Leave the end date blank** to keep the medication going until you stop it.\n- **A schedule that started on a day can't drop that day later.** To remove it, stop the medication and add it again with the new days.\n- There is no \"every 3 days\" or other custom interval yet. **Cycle** covers most on-and-off patterns.\n\n## Not for meals or routines\n\nMeals, walks and other routines work better as a repeating task. See [Reminders for meals and daily routines](/help/routine-reminders/).",
         "related": [
@@ -534,12 +534,12 @@
           "Tap Add shift.",
           "Under What's the shift called?, type a name, such as Night.",
           "Under When?, set the date, then tap Starts and Ends to set the times.",
-          "Under How often?, choose Once, Every day, Every week or Some days.",
+          "Under How often?, choose Once, Every day or Every week. Tap Custom… for Every other day, Days on / off (a rotation, such as 7 days on, 7 days off), Some days, Monthly or Yearly.",
           "Under Who's with (the care recipient's name)?, choose Leave open or Me (the circle owner or a manager can pick anyone). Open shifts can be taken by anyone in the circle.",
           "Optional: tap More details to set the Reminder for whoever is on it (1 hour before unless you change it) and when a repeat ends.",
-          "Tap Save shift. You can then tap Add the next shift to start where this one ends."
+          "Tap Save shift. For a one-off shift you can then tap Add the next shift to start where this one ends. For a repeating shift you can tap Add a task, or Add another shift."
         ],
-        "body": "## Taking and dropping shifts\n\n- An **Open** shift has a **Take** button. For a repeating shift, choose **Just this one** or **This and every future one**.\n- To give a shift back, open it and tap **Drop shift**. It becomes open again and everyone else in the circle is told.\n- The circle owner or a manager can **Assign** a shift to someone, and can drop someone else's shift.\n- There is no swap button. To swap, one person drops the shift and the other takes it.\n\n## Notifications\n\nOn phones:\n\n- When a new open shift is added, everyone else in the circle is told.\n- When someone takes a shift, everyone else in the circle is told who is covering.\n- When a shift is assigned to you, you are told.\n- When someone drops a shift, everyone else in the circle is told.\n- The circle owner and managers hear about shifts still open a day before they start.\n\nTurn these on or off in Profile, Notifications, **Shifts**. The web app shows shifts but doesn't send notifications.\n\n## Good to know\n\n- **Premium only.** On a free circle, the owner sees a preview with **See Premium**.\n- **If Premium ends**, shifts stay visible but become read-only until it is renewed.\n- Shifts can run past midnight and last from 15 minutes to 24 hours.\n- Times are in the care recipient's time zone.",
+        "body": "## Taking and dropping shifts\n\n- An **Open** shift has a **Take** button. For a repeating shift, choose **Just this one** or **This and every future one**.\n- To give a shift back, open it and tap **Drop shift**. It becomes open again and everyone else in the circle is told.\n- The circle owner or a manager can **Assign** a shift to someone, and can drop someone else's shift.\n- There is no swap button. To swap, one person drops the shift and the other takes it.\n\n## Rotations and changes\n\n- A **Days on / off** shift shows where it is in the rotation when you open it, for example **Day 1 of 7 · back on Sun, Nov 22**.\n- To change a repeating shift, open it and tap **Edit**, then choose **This shift**, **This and future shifts** or **All upcoming shifts**. Shifts that already happened stay as they were.\n\n## Notifications\n\nOn phones:\n\n- When a new open shift is added, everyone else in the circle is told.\n- When someone takes a shift, everyone else in the circle is told who is covering.\n- When a shift is assigned to you, you are told.\n- When someone drops a shift, everyone else in the circle is told.\n- The circle owner and managers hear about shifts still open a day before they start.\n\nTurn these on or off in Settings, Alerts, **Shifts**. The web app shows shifts but doesn't send notifications.\n\n## Good to know\n\n- **Premium only.** On a free circle, the owner sees a preview with **See Premium**.\n- **If Premium ends**, shifts stay visible but become read-only until it is renewed.\n- Shifts can run past midnight and last from 15 minutes to 24 hours.\n- Times are in the care recipient's time zone.",
         "related": [
           "tasks",
           "free-and-premium",
@@ -601,7 +601,7 @@
         "summary": "Open Care, then Notes, write how the day went or pick a mood, and tap Post. Everyone in the circle sees the note with your name on it.",
         "steps": [
           "Open your circle and tap “Care” at the bottom, then the “Notes” tab at the top.",
-          "Type in the box that says “How was the day?”.",
+          "Tap “Add a note”, then type in the box that says “How was the day?”.",
           "Optionally pick a mood (“Great day”, “Good day”, “Okay” or “Tough day”) and one or more categories: “Meal”, “Medication”, “Visit” or “Incident”.",
           "Tap “Post”.",
           "To change or remove your note later, tap the pencil icon (“Edit note”) or the trash icon (“Delete note”) on it."
@@ -845,7 +845,7 @@
         "summary": "Write a daily note, set its Date to the day it happened, and pick the Incident category. The note is filed under that day, even if it was weeks or years ago.",
         "steps": [
           "Open “Care”, then “Notes”.",
-          "Write what happened in the box that says “How was the day?”.",
+          "Tap “Add a note”, then write what happened in the box that says “How was the day?”.",
           "Tap the “Date” row under the text (it says “Today”), pick the day it happened, then tap “Confirm”. Future dates can't be picked.",
           "Pick the “Incident” category.",
           "Tap “Post”. The note appears under its own day."
@@ -1300,7 +1300,7 @@
           "Para días fijos de la semana, toca Algunos días en ¿Con qué frecuencia?. Toca los días que necesitas en Repetir los (el día de inicio ya viene marcado) y luego Listo.",
           "Para un día sí y otro no, toca Más detalles, luego Repetir, y elige Cada 2 días.",
           "Para periodos de toma y descanso, elige Ciclo en Repetir y ajusta los Días activos y los Días de descanso (empiezan en 7 y 7).",
-          "Agrega una Fecha de fin (opcional) si el medicamento termina en una fecha conocida y toca Agregar medicamento."
+          "Agrega una Fecha de fin si el medicamento termina en una fecha conocida y toca Agregar medicamento."
         ],
         "body": "## Opciones de repetición\n\n**¿Con qué frecuencia?** muestra las tres opciones más comunes: **Todos los días**, **Algunos días** y **Cuando se necesite** (para medicamentos sin horario fijo, consulta [Medicamentos según se necesite](/help/as-needed-medications/)).\n\nLa lista completa de **Repetir**, en **Más detalles**, ofrece: **Nunca**, **Diario**, **Cada 2 días**, **Semanal**, **Mensual**, **Anual**, **Ciclo** y **Días de la semana**. Al agregar un medicamento nuevo también aparece **Según se necesite**.\n\nEn la web, el ciclo aparece como **Ciclo (días activos / descanso)**.\n\n## Lo que conviene saber\n\n- **Días de la semana** sigue la zona horaria de la persona que recibe el cuidado.\n- **Varias dosis al día** se configuran en ¿Cuándo? con **+ Otra dosis**, no en Repetir.\n- **Deja la fecha de fin en blanco** para que el medicamento siga hasta que lo suspendas.\n- **No puedes quitar el día en que empezó un horario.** Para cambiarlo, suspende el medicamento y agrégalo de nuevo con los días nuevos.\n- Todavía no hay \"cada 3 días\" ni otros intervalos personalizados. **Ciclo** cubre la mayoría de los patrones de toma y descanso.\n\n## No es para comidas ni rutinas\n\nLas comidas, caminatas y otras rutinas funcionan mejor como una tarea que se repite. Consulta [Recordatorios para comidas y rutinas diarias](/help/routine-reminders/).",
         "related": [
@@ -1563,12 +1563,12 @@
           "Toca Agregar turno.",
           "En ¿Cómo se llama el turno?, escribe un nombre, como Noche.",
           "En ¿Cuándo?, pon la fecha y toca Empieza y Termina para elegir las horas.",
-          "En ¿Con qué frecuencia?, elige Una vez, Todos los días, Cada semana o Algunos días.",
+          "En ¿Con qué frecuencia?, elige Una vez, Todos los días o Cada semana. Toca Personalizado… para Cada 2 días, Días con / sin turno (una rotación, como 7 días con turno y 7 libres), Algunos días, Mensual o Anual.",
           "En ¿Quién está con (el nombre de la persona que cuidas)?, elige Dejar abierto o Yo (el dueño del círculo o un gestor puede elegir a cualquiera). Cualquiera en el círculo puede tomar un turno abierto.",
           "Opcional: toca Más detalles para configurar el Recordatorio para quien tenga el turno (1 hora antes si no lo cambias) y cuándo termina la repetición.",
-          "Toca Guardar turno. Luego puedes tocar Agregar el siguiente turno para empezar donde termina este."
+          "Toca Guardar turno. Si el turno es de una sola vez, puedes tocar Agregar el siguiente turno para empezar donde termina este. Si se repite, puedes tocar Agregar una tarea o Agregar otro turno."
         ],
-        "body": "## Tomar y soltar turnos\n\n- Un turno **Abierto** tiene el botón **Tomar**. Si el turno se repite, elige **Solo este** o **Este y todos los siguientes**.\n- Para devolver un turno, ábrelo y toca **Soltar turno**. Queda abierto otra vez y se avisa a los demás en el círculo.\n- El dueño del círculo o un gestor puede **Asignar** un turno a alguien y soltar el turno de otra persona.\n- No hay botón para intercambiar. Para intercambiar, una persona suelta el turno y la otra lo toma.\n\n## Notificaciones\n\nEn el celular:\n\n- Cuando se agrega un turno abierto, se avisa a los demás en el círculo.\n- Cuando alguien toma un turno, se avisa a los demás del círculo de quién lo cubre.\n- Cuando te asignan un turno, te avisan a ti.\n- Cuando alguien suelta un turno, se avisa a los demás en el círculo.\n- El dueño del círculo y los gestores reciben aviso de los turnos que siguen abiertos un día antes de empezar.\n\nActívalas o desactívalas en Perfil, Notificaciones, **Turnos**. La app web muestra los turnos, pero no envía notificaciones.\n\n## Lo que conviene saber\n\n- **Solo con Premium.** En un círculo gratuito, el dueño ve una vista previa con **Ver Premium**.\n- **Si termina el Premium**, los turnos se siguen viendo, pero quedan de solo lectura hasta que se renueve.\n- Un turno puede pasar de la medianoche y durar de 15 minutos a 24 horas.\n- Las horas son las de la zona horaria de la persona que recibe el cuidado.",
+        "body": "## Tomar y soltar turnos\n\n- Un turno **Abierto** tiene el botón **Tomar**. Si el turno se repite, elige **Solo este** o **Este y todos los siguientes**.\n- Para devolver un turno, ábrelo y toca **Soltar turno**. Queda abierto otra vez y se avisa a los demás en el círculo.\n- El dueño del círculo o un gestor puede **Asignar** un turno a alguien y soltar el turno de otra persona.\n- No hay botón para intercambiar. Para intercambiar, una persona suelta el turno y la otra lo toma.\n\n## Rotaciones y cambios\n\n- Un turno de **Días con / sin turno** muestra en qué día de la rotación va cuando lo abres, por ejemplo **Día 1 de 7 · vuelve el dom 22 de nov**.\n- Para cambiar un turno que se repite, ábrelo y toca **Editar**, luego elige **Este turno**, **Este y los siguientes** o **Todos los próximos turnos**. Los turnos que ya pasaron se quedan como estaban.\n\n## Notificaciones\n\nEn el celular:\n\n- Cuando se agrega un turno abierto, se avisa a los demás en el círculo.\n- Cuando alguien toma un turno, se avisa a los demás del círculo de quién lo cubre.\n- Cuando te asignan un turno, te avisan a ti.\n- Cuando alguien suelta un turno, se avisa a los demás en el círculo.\n- El dueño del círculo y los gestores reciben aviso de los turnos que siguen abiertos un día antes de empezar.\n\nActívalas o desactívalas en Configuración, Alertas, **Turnos**. La app web muestra los turnos, pero no envía notificaciones.\n\n## Lo que conviene saber\n\n- **Solo con Premium.** En un círculo gratuito, el dueño ve una vista previa con **Ver Premium**.\n- **Si termina el Premium**, los turnos se siguen viendo, pero quedan de solo lectura hasta que se renueve.\n- Un turno puede pasar de la medianoche y durar de 15 minutos a 24 horas.\n- Las horas son las de la zona horaria de la persona que recibe el cuidado.",
         "related": [
           "tasks",
           "free-and-premium",
@@ -1630,7 +1630,7 @@
         "summary": "Abre Cuidado y luego Notas, escribe cómo estuvo el día o elige un estado de ánimo, y toca Publicar. Todo el círculo ve la nota con tu nombre.",
         "steps": [
           "Abre tu círculo y toca “Cuidado” abajo; luego la pestaña “Notas” arriba.",
-          "Escribe en el cuadro que dice “¿Cómo estuvo el día?”.",
+          "Toca “Agregar una nota” y escribe en el cuadro que dice “¿Cómo estuvo el día?”.",
           "Si quieres, elige un ánimo (“Excelente día”, “Buen día”, “Regular” o “Día difícil”) y una o más categorías: “Comida”, “Medicamento”, “Visita” o “Incidente”.",
           "Toca “Publicar”.",
           "Para cambiar o borrar tu nota después, toca el ícono de lápiz (“Editar nota”) o el de basura (“Eliminar nota”)."
@@ -1874,7 +1874,7 @@
         "summary": "Escribe una nota del día, cambia su Fecha al día en que pasó y elige la categoría Incidente. La nota queda en ese día, aunque haya sido hace semanas o años.",
         "steps": [
           "Abre “Cuidado” y luego “Notas”.",
-          "Escribe lo que pasó en el cuadro que dice “¿Cómo estuvo el día?”.",
+          "Toca “Agregar una nota” y escribe lo que pasó en el cuadro que dice “¿Cómo estuvo el día?”.",
           "Toca la fila “Fecha” debajo del texto (dice “Hoy”), elige el día en que pasó y toca “Confirmar”. No se pueden elegir fechas futuras.",
           "Elige la categoría “Incidente”.",
           "Toca “Publicar”. La nota aparece en su propio día."
