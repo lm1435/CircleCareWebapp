@@ -555,3 +555,28 @@ describe('lapsed Premium: a free circle that still has shifts (readonly)', () =>
     expect(modeTabs()).not.toBeInTheDocument();
   });
 });
+
+// One add pattern (owner 2026-11-08): the Shifts header "+" is "Add shift" in Day, Week AND Month and
+// reports source 'header' on shift_created (the in-page button under the list stays 'shifts_view').
+describe('Shifts header "+"', () => {
+  async function openShifts(user: ReturnType<typeof userEvent.setup>) {
+    const tabs = await screen.findByRole('tablist', { name: 'Calendar mode' });
+    await user.click(within(tabs).getByRole('tab', { name: /^Shifts/ }));
+  }
+
+  it('is "Add shift" on Month too', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await openShifts(user);
+    await user.click(screen.getByRole('tab', { name: 'Month' }));
+    expect(screen.getAllByRole('button', { name: 'Add shift' }).length).toBe(2);
+  });
+
+  it('opens the form tagged header (the in-page button keeps shifts_view)', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const src = readFileSync(resolve(__dirname, '../CalendarPage.tsx'), 'utf8');
+    expect(src).toMatch(/shiftsMode\s*\?\s*shiftDialogs\.openCreate\('header', anchor \?\? undefined\)\s*:\s*openAddEvent\('header'\)/);
+    expect(src).toMatch(/onAdd=\{shiftsCanWrite \? \(\) => shiftDialogs\.openCreate\('shifts_view', anchor\)/);
+  });
+});

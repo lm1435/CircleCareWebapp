@@ -312,7 +312,7 @@ test('create a note end-to-end via the global create menu', async ({ page, circl
   await expect(page).toHaveURL(new RegExp(`/circles/${circleId}/notes$`), { timeout: 15_000 });
 
   // --- The composer is live: post a note ---
-  const composer = page.getByLabel(/^Add a note/);
+  const composer = page.getByRole('textbox', { name: /^Add a note/ });
   await expect(composer).toBeVisible({ timeout: 20_000 });
   await composer.fill(body);
   const postBtn = page.getByRole('button', { name: 'Post', exact: true });

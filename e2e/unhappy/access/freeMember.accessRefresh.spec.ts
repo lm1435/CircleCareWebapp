@@ -61,7 +61,8 @@ test('calendar: event create refused 403 VIEW_ONLY → detail refetched, Add eve
     await expect(page.getByRole('button', { name: /, (Appointment|Task|Medication),/ }).first()).toBeVisible({
       timeout: 20_000,
     });
-    const add = page.getByRole('button', { name: 'Add event', exact: true });
+    // `.first()`: the masthead's; the outline "Add event" under the week shares the name (2026-11-08).
+    const add = page.getByRole('button', { name: 'Add event', exact: true }).first();
     await expect(add).toBeVisible();
     await expect(sidebarNew(page)).toBeEnabled();
 

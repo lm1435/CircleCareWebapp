@@ -311,8 +311,8 @@ export async function refuseZoneSync(target: Page | BrowserContext): Promise<voi
  * textarea.
  */
 export async function openNoteComposer(page: Page): Promise<Locator> {
-  const field = page.getByLabel(/^Add a note/);
-  const trigger = page.getByRole('button', { name: 'Add a note', exact: true });
+  const field = page.getByRole('textbox', { name: /^Add a note/ });
+  const trigger = page.getByTestId('note-composer-expand');
   await expect(trigger.or(field)).toBeVisible({ timeout: 20_000 });
   if (await trigger.isVisible()) await trigger.click();
   await expect(field).toBeVisible({ timeout: 10_000 });

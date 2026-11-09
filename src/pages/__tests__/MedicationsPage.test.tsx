@@ -95,8 +95,8 @@ vi.mock('@/components/ui', async (importOriginal) => {
 
 // Stub the write modals — assert open/close via sentinels, not the real forms.
 vi.mock('@/components/calendar/AddEventModal', () => ({
-  AddEventModal: ({ event }: { event?: CalendarEvent | null }) => (
-    <div role="dialog" aria-label="add-event-modal">
+  AddEventModal: ({ event, entry }: { event?: CalendarEvent | null; entry?: string }) => (
+    <div role="dialog" aria-label="add-event-modal" data-entry={entry}>
       {event ? `editing-${event.id}` : 'creating'}
     </div>
   ),
@@ -1969,5 +1969,49 @@ describe('MedicationsPage — roster after a time edit shows the SERIES time', (
     expect(morning).toHaveTextContent('8:15 AM');
     expect(morning).not.toHaveTextContent('8:00 AM');
     expect(screen.getByRole('region', { name: 'Evening' })).toHaveTextContent('8:00 PM');
+  });
+});
+
+// ONE ADD PATTERN (owner 2026-11-08, mobile parity): the header action ("Add medication",
+// entry 'header') on Medications AND History; an OUTLINE "Add medication" at the BOTTOM of the
+// roster when it has medications (entry 'list_button'); History lists doses, so no in-page add.
+describe('MedicationsPage — one add pattern', () => {
+  it('the header action is named and tagged header, on both tabs', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getAllByRole('button', { name: 'Add medication' })[0]);
+    expect(screen.getByRole('dialog', { name: 'add-event-modal' })).toHaveAttribute('data-entry', 'header');
+  });
+
+  it('History keeps the header action and has no in-page add', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(pageTab('History'));
+    expect(screen.getAllByRole('button', { name: 'Add medication' }).length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('meds-add-medication-bottom')).not.toBeInTheDocument();
+  });
+
+  it('roster with medications: an outline "Add medication" after the last card, tagged list_button', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const bottom = screen.getByTestId('meds-add-medication-bottom');
+    expect(bottom).toHaveAccessibleName('Add medication');
+    expect(bottom.className).toContain('border-primary-outline');
+    const last = screen.getByText('Lisinopril');
+    expect(last.compareDocumentPosition(bottom) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.click(bottom);
+    expect(screen.getByRole('dialog', { name: 'add-event-modal' })).toHaveAttribute('data-entry', 'list_button');
+  });
+
+  it('empty roster: no bottom button (the empty state is the action)', () => {
+    mockUseMedicationRoster.mockReturnValue(rosterResult([]));
+    renderPage();
+    expect(screen.queryByTestId('meds-add-medication-bottom')).not.toBeInTheDocument();
+  });
+
+  it('a view-only member: none', () => {
+    mockUseCircle.mockReturnValue({ canEdit: false, timezone: 'America/New_York' });
+    renderPage();
+    expect(screen.queryByTestId('meds-add-medication-bottom')).not.toBeInTheDocument();
   });
 });

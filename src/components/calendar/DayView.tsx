@@ -36,8 +36,12 @@ export interface DayViewProps {
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
-  /** Present only for editors: the empty state then shows the Add CTA. */
-  onAdd?: () => void;
+  /**
+   * Present only for editors: the empty day's filled Add CTA, and an OUTLINE "Add event" after
+   * a day that has items (owner 2026-11-08: the user's content first, the add after it).
+   * `entry` says which (analytics: entry_form_opened.entry).
+   */
+  onAdd?: (entry: 'empty_state' | 'list_button') => void;
   /**
    * SEAM for the Schedule | Shifts mode (care shifts). When provided it
    * replaces the schedule list + empty state below the hero; the hero
@@ -269,6 +273,21 @@ export function DayView({
             </ul>
           )}
 
+          {onAdd && dayEvents.length > 0 && (
+            <div className="pt-5">
+              <Button
+                variant="outline"
+                fullWidth
+                leftIcon={<Icon name="add-outline" size="row" />}
+                data-testid="calendar-day-add-event"
+                offlineKind="change"
+                onClick={() => onAdd('list_button')}
+              >
+                {t('calendar:addEvent.addEvent')}
+              </Button>
+            </div>
+          )}
+
           {isEmpty && (
             <Card variant="outlined" padding="lg">
               <EmptyState
@@ -278,7 +297,7 @@ export function DayView({
                 description={onAdd ? t('calendar:empty.hint') : t('calendar:empty.hintReadOnly')}
               >
                 {onAdd && (
-                  <Button onClick={onAdd} offlineKind="change">
+                  <Button onClick={() => onAdd('empty_state')} offlineKind="change">
                     {t('calendar:addEvent.addEvent')}
                   </Button>
                 )}

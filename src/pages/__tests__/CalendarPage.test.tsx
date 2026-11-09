@@ -754,14 +754,17 @@ describe('CalendarPage', () => {
 
   // The masthead's right action renders TWICE (spec §5.4: the round chrome
   // control below xl, a labelled button at xl) — both must open the same
-  // AddEventModal, and neither renders at all for a read-only member.
+  // AddEventModal, and neither renders at all for a read-only member. (The
+  // in-page outline "Add event" under the week carries a testid.)
   it("masthead right action opens AddEventModal, and is absent when the viewer can't edit", async () => {
     const user = userEvent.setup();
     mockGetMembersCircleDetail.mockResolvedValue({ ...MEMBERS_DETAIL, can_edit: true });
     renderEditablePage();
     await screen.findByRole('grid', { name: 'Week view calendar' });
 
-    const addButtons = screen.getAllByRole('button', { name: 'Add event' });
+    const addButtons = screen
+      .getAllByRole('button', { name: 'Add event' })
+      .filter((b) => !b.hasAttribute('data-testid'));
     expect(addButtons).toHaveLength(2);
     await user.click(addButtons[0]);
     expect(await screen.findByRole('dialog', { name: 'New event' })).toBeInTheDocument();
@@ -1079,5 +1082,61 @@ describe('CalendarPage — note deep link (Task 26)', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.queryByTestId('removed-state')).not.toBeInTheDocument();
+  });
+});
+
+// ONE ADD PATTERN (owner 2026-11-08, mobile parity): an OUTLINE "Add event" AFTER the Day list /
+// the Week grid (the same "New event" form as the header); Month has none (header only);
+// read-only: none.
+describe('CalendarPage — in-page "Add event"', () => {
+  beforeEach(() => {
+    mockGetMembersCircleDetail.mockResolvedValue({ ...MEMBERS_DETAIL, can_edit: true });
+  });
+
+  it('Week: outline, after the grid, opens the New event form', async () => {
+    const user = userEvent.setup();
+    renderEditablePage();
+    const grid = await screen.findByRole('grid', { name: 'Week view calendar' });
+    const add = await screen.findByTestId('calendar-week-add-event');
+    expect(add).toHaveAccessibleName('Add event');
+    expect(add.className).toContain('border-primary-outline');
+    expect(grid.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.click(add);
+    expect(await screen.findByRole('dialog', { name: 'New event' })).toBeInTheDocument();
+  });
+
+  it('Day with events: outline, after the last event, opens the New event form', async () => {
+    const user = userEvent.setup();
+    renderEditablePage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+    await user.click(screen.getByRole('tab', { name: 'Day' }));
+    const add = await screen.findByTestId('calendar-day-add-event');
+    expect(add.className).toContain('border-primary-outline');
+    const rows = within(screen.getByTestId('day-view')).getAllByTestId('day-event');
+    expect(rows[rows.length - 1].compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.click(add);
+    expect(await screen.findByRole('dialog', { name: 'New event' })).toBeInTheDocument();
+  });
+
+  it('Month: no in-page add (with events, and on an empty month)', async () => {
+    const user = userEvent.setup();
+    renderEditablePage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+    await user.click(screen.getByRole('tab', { name: 'Month' }));
+    await screen.findByRole('grid', { name: 'Month view calendar' });
+    expect(screen.queryByTestId('calendar-week-add-event')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('calendar-day-add-event')).not.toBeInTheDocument();
+    mockGetEvents.mockResolvedValue([]);
+    await user.click(screen.getByRole('button', { name: 'Next month' }));
+    expect(await screen.findByText('No events this month')).toBeInTheDocument();
+    // Only the masthead's two renderings remain.
+    expect(screen.getAllByRole('button', { name: 'Add event' })).toHaveLength(2);
+  });
+
+  it('a read-only member: none', async () => {
+    mockGetMembersCircleDetail.mockResolvedValue({ ...MEMBERS_DETAIL, can_edit: false });
+    renderPage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+    expect(screen.queryByTestId('calendar-week-add-event')).not.toBeInTheDocument();
   });
 });

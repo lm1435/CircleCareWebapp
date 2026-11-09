@@ -57,7 +57,7 @@ test.describe('care note backdating', () => {
 
       // Backdate and post.
       await dateInput.fill(past);
-      await page.getByLabel(/^Add a note/).fill(body); // the composer is open: opened above
+      await page.getByRole('textbox', { name: /^Add a note/ }).fill(body); // the composer is open: opened above
       const posted = page.waitForResponse(
         (r) => r.request().method() === 'POST' && new URL(r.url()).pathname === `/api/circles/${circleId}/care-notes`
       );
@@ -95,7 +95,7 @@ test.describe('care note backdating', () => {
 
     try {
       await page.goto(`/circles/${circleId}/notes`, { waitUntil: 'domcontentloaded' });
-      await expect(page.getByRole('button', { name: 'Add a note', exact: true })).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByTestId('note-composer-expand')).toBeVisible({ timeout: 20_000 });
       await expect(page.getByText(bodyRe)).toHaveCount(0);
 
       const showOlder = page.getByTestId('notes-show-older');

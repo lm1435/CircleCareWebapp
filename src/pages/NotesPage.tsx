@@ -179,6 +179,22 @@ export default function NotesPage(): ReactElement {
     () => (location.state as { composeNote?: boolean } | null)?.composeNote === true
   );
   const addNoteRef = useRef<HTMLButtonElement>(null);
+  const composerWrapRef = useRef<HTMLDivElement>(null);
+  // Bring the composer into view on every open (header action or the button under the notes);
+  // a second header press while it is open scrolls back to it.
+  const [composerScrollTick, setComposerScrollTick] = useState(0);
+  const openComposer = (): void => {
+    setComposerOpen(true);
+    setComposerScrollTick((n) => n + 1);
+  };
+  useEffect(() => {
+    if (composerScrollTick === 0) return;
+    // Reduced motion honoured (WCAG 2.3.3).
+    composerWrapRef.current?.scrollIntoView?.({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      block: 'center',
+    });
+  }, [composerScrollTick]);
   const wasComposerShownRef = useRef(false);
   // PK9: the post clears the composer optimistically, so a session that dies
   // MID-post would otherwise find it empty. Holds the submitted draft until the
@@ -529,6 +545,49 @@ export default function NotesPage(): ReactElement {
     </div>
   );
 
+  // ── "Add a note" + the composer it opens ──────────────────────────────────
+  // AFTER the loaded notes, just above "Show older notes" / "No older notes" (owner 2026-11-08,
+  // mobile parity: the top of the page is the user's notes). OUTLINE with notes on the page, the
+  // FILLED primary only as the empty page's one action. One editing surface at a time: hidden
+  // while an inline edit is active (mirrors mobile), and for anyone who may not write.
+  const composerBlock: ReactElement | null =
+    canEdit && editingNoteId === null && today ? (
+      <div ref={composerWrapRef} className="scroll-mt-4" data-testid="notes-composer-slot">
+        {composerShown ? (
+          <Sheet padding="sm">
+            <NoteComposer
+              idPrefix="care-note"
+              draft={draft}
+              onChange={setDraft}
+              onSubmit={handlePost}
+              submitLabel={t('notes:composer.post')}
+              submitting={createMutation.isPending}
+              error={postError}
+              today={today}
+              autoFocus={composerOpen}
+              onCancel={() => {
+                setDraft(EMPTY_NOTE_DRAFT);
+                setPostError(null);
+                setComposerOpen(false);
+              }}
+            />
+          </Sheet>
+        ) : (
+          <Button
+            ref={addNoteRef}
+            variant={notes.length > 0 ? 'outline' : 'primary'}
+            fullWidth
+            leftIcon={<Icon name="add-outline" size="row" />}
+            aria-expanded={false}
+            data-testid="note-composer-expand"
+            onClick={openComposer}
+          >
+            {t('notes:composer.label')}
+          </Button>
+        )}
+      </div>
+    ) : null;
+
   // ── Body ───────────────────────────────────────────────────────────────────
   let body: ReactElement;
   if (notesQuery.isLoading) {
@@ -568,6 +627,7 @@ export default function NotesPage(): ReactElement {
           description={t('notes:empty.hint')}
           actions={<HowDoesThisWork slug="daily-care-notes" />}
         />
+        {composerBlock}
         {olderControl}
       </div>
     );
@@ -604,6 +664,7 @@ export default function NotesPage(): ReactElement {
             </ul>
           </section>
         ))}
+        {composerBlock}
         {olderControl}
       </div>
     );
@@ -613,7 +674,18 @@ export default function NotesPage(): ReactElement {
 
   return (
     <section className="mx-auto w-full max-w-5xl pb-8">
-      <PageMasthead section={t('common:nav.notes')} tone="dusk" title={t('notes:title')} subtitle={
+      <PageMasthead
+        section={t('common:nav.notes')}
+        tone="dusk"
+        title={t('notes:title')}
+        // "Add a note" (owner 2026-11-08: every Care page's header adds its item): opens the
+        // composer at the end of the notes and scrolls it into view.
+        rightAction={
+          canEdit && editingNoteId === null && today
+            ? { name: 'add-outline', label: t('notes:composer.label'), onClick: openComposer }
+            : undefined
+        }
+        subtitle={
           notesQuery.isLoading || notesQuery.isError
             ? HOLD
             : notesSummary(t, notes, {
@@ -636,44 +708,6 @@ export default function NotesPage(): ReactElement {
       ) : null}
 
       {!!circle && !canEdit && <ViewOnlyBanner className="mx-5 mt-4" />}
-
-      {/* One editing surface at a time: the create composer hides while an
-          inline edit is active (mirrors mobile). */}
-      {canEdit && editingNoteId === null && (
-        <div className="px-5 pb-4 pt-4">
-          {composerShown ? (
-            <Sheet padding="sm">
-              <NoteComposer
-                idPrefix="care-note"
-                draft={draft}
-                onChange={setDraft}
-                onSubmit={handlePost}
-                submitLabel={t('notes:composer.post')}
-                submitting={createMutation.isPending}
-                error={postError}
-                today={today}
-                autoFocus={composerOpen}
-                onCancel={() => {
-                  setDraft(EMPTY_NOTE_DRAFT);
-                  setPostError(null);
-                  setComposerOpen(false);
-                }}
-              />
-            </Sheet>
-          ) : (
-            <Button
-              ref={addNoteRef}
-              variant="outline"
-              size="sm"
-              leftIcon={<Icon name="add-outline" size="row" />}
-              aria-expanded={false}
-              onClick={() => setComposerOpen(true)}
-            >
-              {t('notes:composer.label')}
-            </Button>
-          )}
-        </div>
-      )}
 
       {/* Reuses the already-loaded `notes`/`today` — no second request (UI
           States: "renders once the list data is there — same query"). Shown

@@ -150,8 +150,11 @@ function renderCollapsed(initialPath: string | { pathname: string; state?: unkno
 /** Render and open the composer, for the many tests that exercise an OPEN composer. */
 function renderPage(initialPath = `/circles/${CIRCLE_ID}/notes`) {
   const utils = renderCollapsed(initialPath);
-  const trigger = screen.queryByRole('button', { name: 'Add a note' });
+  const trigger = screen.queryByTestId('note-composer-expand');
   if (trigger) fireEvent.click(trigger);
+  // Opening scrolls the composer into view (owner 2026-11-08); the scroll-count tests below are
+  // about the day / deep-link scrolls, so start them from zero.
+  vi.mocked(Element.prototype.scrollIntoView).mockClear();
   return utils;
 }
 
@@ -190,7 +193,7 @@ beforeEach(() => {
 describe('NotesPage — collapsed composer', () => {
   it('starts as a single "Add a note" button: no textarea, date, mood or categories', () => {
     renderCollapsed();
-    const trigger = screen.getByRole('button', { name: 'Add a note' });
+    const trigger = screen.getByTestId('note-composer-expand');
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('radiogroup', { name: 'Mood' })).not.toBeInTheDocument();
@@ -201,54 +204,54 @@ describe('NotesPage — collapsed composer', () => {
   it('expands in place and moves focus into the textarea', async () => {
     const user = userEvent.setup();
     renderCollapsed();
-    await user.click(screen.getByRole('button', { name: 'Add a note' }));
-    expect(screen.getByLabelText(/^Add a note/)).toHaveFocus();
+    await user.click(screen.getByTestId('note-composer-expand'));
+    expect(screen.getByRole('textbox', { name: /^Add a note/ })).toHaveFocus();
     expect(screen.getByRole('radiogroup', { name: 'Mood' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Add a note' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('note-composer-expand')).not.toBeInTheDocument();
   });
 
   it('Cancel collapses it again and returns focus to the button', async () => {
     const user = userEvent.setup();
     renderCollapsed();
-    await user.click(screen.getByRole('button', { name: 'Add a note' }));
-    await user.type(screen.getByLabelText(/^Add a note/), 'half a thought');
+    await user.click(screen.getByTestId('note-composer-expand'));
+    await user.type(screen.getByRole('textbox', { name: /^Add a note/ }), 'half a thought');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add a note' })).toHaveFocus();
+    expect(screen.getByTestId('note-composer-expand')).toHaveFocus();
   });
 
   it('collapses after a successful post and returns focus to the button', async () => {
     mockCreate.mockImplementation((_v, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
     const user = userEvent.setup();
     renderCollapsed();
-    await user.click(screen.getByRole('button', { name: 'Add a note' }));
-    await user.type(screen.getByLabelText(/^Add a note/), 'Ate lunch');
+    await user.click(screen.getByTestId('note-composer-expand'));
+    await user.type(screen.getByRole('textbox', { name: /^Add a note/ }), 'Ate lunch');
     await user.click(screen.getByRole('button', { name: 'Post' }));
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add a note' })).toHaveFocus();
+    expect(screen.getByTestId('note-composer-expand')).toHaveFocus();
   });
 
   it('a failed post keeps the composer open with the text (nothing is lost)', async () => {
     mockCreate.mockImplementation((_v, opts?: { onError?: (e: unknown) => void }) => opts?.onError?.(new Error('x')));
     const user = userEvent.setup();
     renderCollapsed();
-    await user.click(screen.getByRole('button', { name: 'Add a note' }));
-    await user.type(screen.getByLabelText(/^Add a note/), 'Rough evening');
+    await user.click(screen.getByTestId('note-composer-expand'));
+    await user.type(screen.getByRole('textbox', { name: /^Add a note/ }), 'Rough evening');
     await user.click(screen.getByRole('button', { name: 'Post' }));
-    expect(screen.getByLabelText(/^Add a note/)).toHaveValue('Rough evening');
+    expect(screen.getByRole('textbox', { name: /^Add a note/ })).toHaveValue('Rough evening');
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 
   it('arrives OPEN from the New menu (navigation state composeNote), with the textarea focused', () => {
     renderCollapsed({ pathname: `/circles/${CIRCLE_ID}/notes`, state: { composeNote: true } });
-    expect(screen.getByLabelText(/^Add a note/)).toHaveFocus();
-    expect(screen.queryByRole('button', { name: 'Add a note' })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /^Add a note/ })).toHaveFocus();
+    expect(screen.queryByTestId('note-composer-expand')).not.toBeInTheDocument();
   });
 
   it('view-only members get neither the button nor the composer', () => {
     circleState = { circle: { owner_id: 'owner-1' }, canEdit: false };
     renderCollapsed();
-    expect(screen.queryByRole('button', { name: 'Add a note' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('note-composer-expand')).not.toBeInTheDocument();
   });
 });
 
@@ -276,7 +279,7 @@ describe('NotesPage — composer gate', () => {
     expect(post).toBeDisabled();
 
     // Body alone enables.
-    const field = screen.getByLabelText(/^Add a note/);
+    const field = screen.getByRole('textbox', { name: /^Add a note/ });
     await user.type(field, 'Walked in the garden');
     expect(post).toBeEnabled();
 
@@ -357,7 +360,7 @@ describe('NotesPage — posting', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.type(screen.getByLabelText(/^Add a note/), '  Ate all of lunch  ');
+    await user.type(screen.getByRole('textbox', { name: /^Add a note/ }), '  Ate all of lunch  ');
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Mood' })).getByRole('radio', {
         name: 'Good day',
@@ -389,8 +392,8 @@ describe('NotesPage — posting', () => {
 
     // Composer cleared optimistically and folded back into the "Add a note" button.
     expect(screen.queryByRole('button', { name: 'Post' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Add a note' }));
-    expect(screen.getByLabelText(/^Add a note/)).toHaveValue('');
+    await user.click(screen.getByTestId('note-composer-expand'));
+    expect(screen.getByRole('textbox', { name: /^Add a note/ })).toHaveValue('');
     expect(screen.getByRole('button', { name: 'Post' })).toBeDisabled();
   });
 
@@ -401,7 +404,7 @@ describe('NotesPage — posting', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.type(screen.getByLabelText(/^Add a note/), 'Rough evening');
+    await user.type(screen.getByRole('textbox', { name: /^Add a note/ }), 'Rough evening');
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Mood' })).getByRole('radio', {
         name: 'Tough day',
@@ -410,7 +413,7 @@ describe('NotesPage — posting', () => {
     await user.click(screen.getByRole('button', { name: 'Post' }));
 
     // Input restored — nothing lost.
-    expect(screen.getByLabelText(/^Add a note/)).toHaveValue('Rough evening');
+    expect(screen.getByRole('textbox', { name: /^Add a note/ })).toHaveValue('Rough evening');
     expect(
       within(screen.getByRole('radiogroup', { name: 'Mood' })).getByRole('radio', {
         name: 'Tough day',
@@ -419,7 +422,7 @@ describe('NotesPage — posting', () => {
 
     // Inside the composer's own form, as role="alert" — and NOT a toast, which
     // at 360x640 covers the textarea the user retries from.
-    const form = screen.getByLabelText(/^Add a note/).closest('form') as HTMLFormElement;
+    const form = screen.getByRole('textbox', { name: /^Add a note/ }).closest('form') as HTMLFormElement;
     expect(within(form).getByRole('alert')).toHaveTextContent(
       "Couldn't post your note. Your note is still here — try again."
     );
@@ -581,7 +584,7 @@ describe('NotesPage — ?date= deep link', () => {
         makeNote({ id: 'n-old', note_date: WITHIN_WINDOW_DATE, body: 'Within-window note' }),
       ])
     );
-    renderPage(`/circles/${CIRCLE_ID}/notes?date=${WITHIN_WINDOW_DATE}`);
+    renderCollapsed(`/circles/${CIRCLE_ID}/notes?date=${WITHIN_WINDOW_DATE}`);
 
     await act(async () => {});
 
@@ -610,7 +613,7 @@ describe('NotesPage — ?date= deep link', () => {
       }
       return notesResult([makeNote({ id: 'n-today', note_date: TODAY, body: 'Today note' })]);
     });
-    renderPage(`/circles/${CIRCLE_ID}/notes?date=${OUTSIDE_WINDOW_DATE}`);
+    renderCollapsed(`/circles/${CIRCLE_ID}/notes?date=${OUTSIDE_WINDOW_DATE}`);
 
     // First render: default window, no `from` widened yet.
     expect(mockUseCareNotes).toHaveBeenNthCalledWith(1, CIRCLE_ID, undefined);
@@ -739,7 +742,7 @@ describe('NotesPage — empty state', () => {
     ).toBeInTheDocument();
 
     // Composer remains the call to action.
-    expect(screen.getByLabelText(/^Add a note/)).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /^Add a note/ })).toBeInTheDocument();
 
     // Calm: only the composer's two labeled chip rows exist — no starter
     // chips or extra CTA groups in the empty state. Mood is a `radiogroup`
@@ -755,7 +758,7 @@ describe('NotesPage — view-only', () => {
     circleState = { circle: { owner_id: 'owner-1' }, canEdit: false };
     renderPage();
 
-    expect(screen.queryByLabelText(/^Add a note/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /^Add a note/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Post' })).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent(
       'View-only — you can see everything, but changes are off.'
@@ -901,7 +904,7 @@ describe('NotesPage — own-note affordances', () => {
 // ────────────────────────────────────────────────────────────────────────────
 describe('NotesPage — double submit', () => {
   function composerForm(): HTMLFormElement {
-    const form = screen.getByLabelText(/^Add a note/).closest('form');
+    const form = screen.getByRole('textbox', { name: /^Add a note/ }).closest('form');
     if (!(form instanceof HTMLFormElement)) throw new Error('composer form not found');
     return form;
   }
@@ -913,7 +916,7 @@ describe('NotesPage — double submit', () => {
     mockCreate.mockImplementation(() => {});
     renderPage();
 
-    await user.type(screen.getByLabelText(/^Add a note/), 'Ate all of lunch');
+    await user.type(screen.getByRole('textbox', { name: /^Add a note/ }), 'Ate all of lunch');
     await submitFormTwice(composerForm());
 
     expect(mockCreate).toHaveBeenCalledTimes(1);
@@ -928,7 +931,7 @@ describe('NotesPage — double submit', () => {
     });
     renderPage();
 
-    await user.type(screen.getByLabelText(/^Add a note/), 'Ate all of lunch');
+    await user.type(screen.getByRole('textbox', { name: /^Add a note/ }), 'Ate all of lunch');
     await submitFormTwice(composerForm());
     expect(mockCreate).toHaveBeenCalledTimes(1);
 
@@ -966,7 +969,7 @@ describe('NotesPage — backdating (Date row)', () => {
   it('sends NO note_date when posting for today', async () => {
     const user = userEvent.setup();
     renderPage();
-    await user.type(screen.getByLabelText(/^Add a note/), 'Quiet');
+    await user.type(screen.getByRole('textbox', { name: /^Add a note/ }), 'Quiet');
     await user.click(screen.getByRole('button', { name: 'Post' }));
     expect(mockCreate.mock.calls[0][0].input).toEqual({ body: 'Quiet' });
   });
@@ -978,7 +981,7 @@ describe('NotesPage — backdating (Date row)', () => {
     expect(dateInput()).toHaveValue('2026-03-01');
     await user.click(screen.getByRole('button', { name: 'Reset to today' }));
     expect(dateInput()).toHaveValue(TODAY);
-    await user.type(screen.getByLabelText(/^Add a note/), 'x');
+    await user.type(screen.getByRole('textbox', { name: /^Add a note/ }), 'x');
     await user.click(screen.getByRole('button', { name: 'Post' }));
     expect(mockCreate.mock.calls[0][0].input).not.toHaveProperty('note_date');
   });
@@ -1001,7 +1004,7 @@ describe('NotesPage — backdating (Date row)', () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await user.type(screen.getByLabelText(/^Add a note/), 'Private fall details');
+    await user.type(screen.getByRole('textbox', { name: /^Add a note/ }), 'Private fall details');
     fireEvent.change(dateInput(), { target: { value: target } });
     await user.click(screen.getByRole('button', { name: 'Post' }));
     await act(async () => {});
@@ -1203,5 +1206,56 @@ describe('NotesPage — Show older notes: one press always produces a visible re
     expect(control).toHaveAttribute('aria-busy', 'true');
     expect(screen.queryByTestId('notes-no-older')).not.toBeInTheDocument();
     expect(mockCareNotesOlderLoaded).not.toHaveBeenCalled();
+  });
+});
+
+// ONE ADD PATTERN (owner 2026-11-08, mobile parity): the header action "Add a note" opens the
+// composer and scrolls it into view; "Add a note" moved from the top to the END of the loaded
+// notes, just above "Show older notes" / "No older notes": OUTLINE with notes, FILLED when empty.
+describe('NotesPage — one add pattern', () => {
+  it('the header action is "Add a note": it opens the composer and scrolls it into view', async () => {
+    const user = userEvent.setup();
+    renderCollapsed();
+    vi.mocked(Element.prototype.scrollIntoView).mockClear();
+    // The masthead draws it twice (round below xl, labelled at xl); either one.
+    const header = screen.getAllByRole('button', { name: 'Add a note' }).filter(
+      (b) => b.getAttribute('data-testid') !== 'note-composer-expand'
+    );
+    expect(header.length).toBeGreaterThan(0);
+    await user.click(header[0]);
+    expect(screen.getByRole('textbox', { name: /^Add a note/ })).toBeInTheDocument();
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+  });
+
+  it('with notes: the in-page button is OUTLINE, after the notes and just above "Show older notes"', () => {
+    renderCollapsed();
+    const add = screen.getByTestId('note-composer-expand');
+    expect(add.className).toContain('border-primary-outline');
+    const note = screen.getByText(makeNote().body as string);
+    expect(note.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const older = screen.getByTestId('notes-show-older');
+    expect(add.compareDocumentPosition(older) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('the composer opens in that same place, below the notes', async () => {
+    const user = userEvent.setup();
+    renderCollapsed();
+    await user.click(screen.getByTestId('note-composer-expand'));
+    const field = screen.getByRole('textbox', { name: /^Add a note/ });
+    const note = screen.getByText(makeNote().body as string);
+    expect(note.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('no notes: the FILLED primary, the empty page’s single action', () => {
+    mockUseCareNotes.mockReturnValue(notesResult([]));
+    renderCollapsed();
+    const add = screen.getByTestId('note-composer-expand');
+    expect(add.className).toContain('bg-primary-fill');
+  });
+
+  it('a view-only member: no header action and no button', () => {
+    circleState = { circle: { owner_id: 'owner-1' }, canEdit: false };
+    renderCollapsed();
+    expect(screen.queryByRole('button', { name: 'Add a note' })).not.toBeInTheDocument();
   });
 });

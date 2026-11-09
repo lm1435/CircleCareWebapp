@@ -153,5 +153,5 @@ test('a note from the pill navigates to the Notes composer', async ({ page, circ
   await page.getByRole('menuitem', { name: 'Note', exact: true }).click();
 
   await expect(page).toHaveURL(new RegExp(`/circles/${circleId}/notes$`), { timeout: 20_000 });
-  await expect(page.getByLabel(/^Add a note/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('textbox', { name: /^Add a note/ })).toBeVisible({ timeout: 20_000 });
 });

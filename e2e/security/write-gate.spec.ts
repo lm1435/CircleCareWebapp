@@ -665,13 +665,13 @@ const SURFACES: Surface[] = [
       return page.getByRole('button', { name: 'Post', exact: true });
     },
     async kept({ page, label }) {
-      await expect(page.getByLabel(/^Add a note/)).toHaveValue(label);
+      await expect(page.getByRole('textbox', { name: /^Add a note/ })).toHaveValue(label);
     },
     rows: ({ o, label }) => `select 1 from care_notes where circle_id = ${c(o.circleId)} and body = ${sqlStr(label)}`,
     before: 0,
     after: 1,
     async succeeded({ page }) {
-      await expect(page.getByLabel(/^Add a note/)).toHaveCount(0, { timeout: 20_000 }); // folded back into its button after the post
+      await expect(page.getByRole('textbox', { name: /^Add a note/ })).toHaveCount(0, { timeout: 20_000 }); // folded back into its button after the post
     },
   },
   {
@@ -964,7 +964,7 @@ test('4. rotation: with sha256 and sha256_next both present, a backend with EITH
     try {
       await page.getByRole('button', { name: 'Post', exact: true }).click();
       await expect.poll(() => via.answered[0], { timeout: 20_000 }).toBe(201);
-      await expect(page.getByLabel(/^Add a note/)).toHaveCount(0, { timeout: 20_000 }); // folded back into its button after the post
+      await expect(page.getByRole('textbox', { name: /^Add a note/ })).toHaveCount(0, { timeout: 20_000 }); // folded back into its button after the post
       expect(noteCount(o, label)).toBe(1);
     } finally {
       await via.dispose();

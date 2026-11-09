@@ -9,6 +9,7 @@ import {
   Card,
   ConfirmDialog,
   EmptyState,
+  Icon,
   MoreMenu,
   SectionHeader,
   SegmentedControl,
@@ -777,7 +778,7 @@ export default function MedicationsPage(): ReactElement {
 
   const [showAdd, setShowAdd] = useState(false);
   // Where the add form was opened from, for the form-funnel analytics.
-  const [addEntry, setAddEntry] = useState<'empty_state' | 'other'>('other');
+  const [addEntry, setAddEntry] = useState<'empty_state' | 'header' | 'list_button'>('header');
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<CalendarEvent | null>(null);
   const [detailGroup, setDetailGroup] = useState<MedGroup | null>(null);
@@ -1223,6 +1224,27 @@ export default function MedicationsPage(): ReactElement {
             </ul>
           </section>
         )}
+
+        {/* "Add medication" AFTER the user's medications (owner 2026-11-08, mobile parity), OUTLINE:
+            the roster leads, the header action is the other way in. The empty roster keeps its
+            filled CTA; History lists doses, so it has the header action only. */}
+        {canEdit && (
+          <div>
+            <Button
+              variant="outline"
+              fullWidth
+              leftIcon={<Icon name="add-outline" size="row" />}
+              data-testid="meds-add-medication-bottom"
+              offlineKind="change"
+              onClick={() => {
+                setAddEntry('list_button');
+                setShowAdd(true);
+              }}
+            >
+              {t('meds:page.add')}
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
@@ -1240,7 +1262,7 @@ export default function MedicationsPage(): ReactElement {
                 name: 'add-outline',
                 label: t('meds:page.add'),
                 onClick: () => {
-                  setAddEntry('other');
+                  setAddEntry('header');
                   setShowAdd(true);
                 },
                 offlineKind: 'change',

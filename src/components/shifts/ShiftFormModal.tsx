@@ -103,7 +103,7 @@ export interface ShiftFormPrefill {
   reminder?: number | null;
 }
 
-export type ShiftFormSource = 'add_menu' | 'shifts_view' | 'empty_state' | 'add_next';
+export type ShiftFormSource = 'add_menu' | 'shifts_view' | 'empty_state' | 'add_next' | 'header';
 
 export interface ShiftFormModalProps {
   circleId: string;

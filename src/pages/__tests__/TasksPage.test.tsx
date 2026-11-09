@@ -319,8 +319,8 @@ describe('TasksPage', () => {
     const dialog = screen.getByRole('dialog', { name: 'add-event-modal' });
     expect(dialog).toHaveTextContent('create-mode');
     expect(dialog).toHaveTextContent('no-initial-title');
-    // entry_form_opened.entry: the masthead control is "other"...
-    expect(dialog).toHaveAttribute('data-entry', 'other');
+    // entry_form_opened.entry: the masthead control is "header" (owner 2026-11-08)...
+    expect(dialog).toHaveAttribute('data-entry', 'header');
   });
 
   it('the empty state\'s own Add task button opens the form with entry="empty_state"', async () => {
@@ -985,5 +985,52 @@ describe('TasksPage', () => {
     const description = document.getElementById(describedById!);
     expect(description).not.toBeNull();
     expect(description).toHaveTextContent('Rose Meza');
+  });
+});
+
+// ONE ADD PATTERN (owner 2026-11-08, mobile parity): the header "+" ("Add task", entry 'header')
+// on every status; an OUTLINE "Add task" at the BOTTOM of the Open list when it has tasks
+// (entry 'list_button'); the empty Open list keeps its single filled CTA; Completed: header only.
+describe('TasksPage — one add pattern', () => {
+  it('the header action opens the form tagged header', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getAllByRole('button', { name: 'Add task' })[0]);
+    expect(screen.getByRole('dialog', { name: 'add-event-modal' })).toHaveAttribute('data-entry', 'header');
+  });
+
+  it('Open with tasks: an outline "Add task" after the last task, tagged list_button', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const bottom = screen.getByTestId('tasks-add-task-bottom');
+    expect(bottom).toHaveAccessibleName('Add task');
+    expect(bottom.className).toContain('border-primary-outline');
+    expect(bottom.className).not.toContain('bg-primary-fill');
+    // After the list in document order.
+    const lastRow = screen.getByText('Call pharmacy');
+    expect(lastRow.compareDocumentPosition(bottom) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.click(bottom);
+    expect(screen.getByRole('dialog', { name: 'add-event-modal' })).toHaveAttribute('data-entry', 'list_button');
+  });
+
+  it('empty Open list: no bottom button (the empty state is the action)', () => {
+    mockUseTasks.mockReturnValue(tasksResult([]));
+    renderPage();
+    expect(screen.queryByTestId('tasks-add-task-bottom')).not.toBeInTheDocument();
+  });
+
+  it('Completed: no in-page button', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole('button', { name: /Status: Open/ }));
+    await user.click(screen.getByRole('menuitem', { name: 'Completed' }));
+    expect(screen.queryByTestId('tasks-add-task-bottom')).not.toBeInTheDocument();
+  });
+
+  it('a view-only member: neither', () => {
+    mockUseCircle.mockReturnValue(circleResult({ canEdit: false, circle: { care_recipient_timezone: TZ, can_edit: false } }));
+    renderPage();
+    expect(screen.queryByTestId('tasks-add-task-bottom')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add task' })).not.toBeInTheDocument();
   });
 });

@@ -495,10 +495,10 @@ export const SURFACES: Surface[] = [
       await gotoCirclePage(page, d.circleId, 'notes');
       await expect(page.getByText(need(d.careNoteBody, 'a care note')).first()).toBeVisible({ timeout: 20_000 });
       // The composer starts collapsed into an "Add a note" button (owner 2026-11-07); open it when offered.
-      const trigger = page.getByRole('button', { name: 'Add a note', exact: true });
+      const trigger = page.getByTestId('note-composer-expand');
       if ((await trigger.count()) > 0) await trigger.click();
       return [
-        { label: 'note composer', locator: page.getByLabel(/^Add a note/) },
+        { label: 'note composer', locator: page.getByRole('textbox', { name: /^Add a note/ }) },
         { label: 'Post', locator: page.getByRole('button', { name: 'Post', exact: true }), offered: 'visible' },
         { label: 'note row actions', locator: page.getByRole('button', { name: /^Actions for note by / }) },
       ];

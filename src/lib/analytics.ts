@@ -479,7 +479,8 @@ const SHIFT_RECURRENCES = [
 const SHIFT_CYCLE_BUCKETS = ['1-3', '4-7', '8-14', '15+'] as const;
 const SHIFT_RESCHEDULE_CHANGED = ['date', 'repeat', 'both'] as const;
 const SHIFT_REMINDERS = ['off', '1h', '2h', '4h', '1d'] as const;
-const SHIFT_SOURCES = ['add_menu', 'shifts_view', 'empty_state', 'add_next'] as const;
+// 'header' = the Shifts header "+"; 'shifts_view' = the in-page "+ Add shift" under the list.
+const SHIFT_SOURCES = ['add_menu', 'shifts_view', 'empty_state', 'add_next', 'header'] as const;
 const SHIFT_SCOPES = ['occurrence', 'future'] as const;
 const SHIFT_DROP_ROLES = ['self', 'manager', 'owner'] as const;
 const SHIFT_ASSIGN_ROLES = ['owner', 'manager'] as const;
@@ -526,6 +527,9 @@ export type EntryFormOrigin =
   | 'voice'
   // Onboarding 1.3.1: the setup wizard's "Add {{name}}'s first med" opens the same form.
   | 'first_run'
+  // One add pattern (owner 2026-11-08): a Care page's header "+" vs the outline "Add ..." under its list.
+  | 'header'
+  | 'list_button'
   | 'other';
 export type EntryFormStep = 'what' | 'when' | 'how_often' | 'who';
 export type TimeChipId = 'morning' | 'midday' | 'evening' | 'bedtime' | 'other';

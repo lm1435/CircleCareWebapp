@@ -43,6 +43,7 @@ export function ShiftsWeekView({
 }: ShiftsWeekViewProps): ReactElement {
   const { t } = useTranslation('shifts');
   const byDay = groupShiftsByDay(shifts);
+  const hasShifts = days.some((day) => (byDay.get(day) ?? NONE).length > 0);
   const hintId = useId();
   return (
     <div data-testid="shifts-week-view" className="flex flex-col gap-5">
@@ -107,7 +108,10 @@ export function ShiftsWeekView({
       })}
       {onAdd && (
         <div>
+          {/* OUTLINE once the week holds a shift (owner 2026-11-08); filled while it is the empty
+              week's one action. */}
           <Button
+            variant={hasShifts ? 'outline' : 'primary'}
             offlineKind="change"
             data-testid="shifts-week-add"
             leftIcon={<Icon name="add-outline" size="row" />}

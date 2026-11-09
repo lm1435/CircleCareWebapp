@@ -222,7 +222,7 @@ test('PK9 privacy: a VOLUNTARY sign-out purges any saved draft; re-login restore
   expect(saved).toHaveLength(1);
   await loginViaForm(page, acct);
   await openNotes(page, circleId);
-  await expect(page.getByLabel(/^Add a note/)).toHaveValue(draft, { timeout: 5_000 });
+  await expect(page.getByRole('textbox', { name: /^Add a note/ })).toHaveValue(draft, { timeout: 5_000 });
 
   // Put the entry back (as if the form had not consumed it), then sign out on purpose.
   await page.evaluate((entries) => {
@@ -248,7 +248,7 @@ test('PK9 privacy: a VOLUNTARY sign-out purges any saved draft; re-login restore
   expect(await DRAFT_ENTRIES(page)).toHaveLength(0);
   await loginViaForm(page, acct);
   await openNotes(page, circleId);
-  await expect(page.getByLabel(/^Add a note/)).toHaveCount(0); // folded back into its button
+  await expect(page.getByRole('textbox', { name: /^Add a note/ })).toHaveCount(0); // folded back into its button
   await expect(page.getByText('We restored your unsaved draft.')).toHaveCount(0);
 });
 

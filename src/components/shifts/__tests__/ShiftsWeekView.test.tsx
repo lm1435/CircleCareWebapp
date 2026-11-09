@@ -69,9 +69,30 @@ describe('ShiftsWeekView day header', () => {
     expect(adds).toHaveLength(1);
     expect(adds[0]).not.toHaveTextContent('+');
     expect(adds[0].querySelector('svg')).not.toBeNull();
-    // One accent (owner 2026-11-07): "Add shift" is THE primary action of the Shifts view, a filled moss button.
-    expect(adds[0].className.split(/\s+/)).toContain('bg-primary-fill');
+    // One add pattern (owner 2026-11-08): with shifts in the week the add is OUTLINE (the list leads,
+    // the header "+" is the other way in); filled only while it is the empty week's one action (below).
+    expect(adds[0].className.split(/\s+/)).toContain('border-primary-outline');
+    expect(adds[0].className.split(/\s+/)).not.toContain('bg-primary-fill');
     await user.click(adds[0]);
     expect(onAdd).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ShiftsWeekView "Add shift" weight', () => {
+  it('a week with no shifts: the filled primary (its one action)', () => {
+    render(
+      <ShiftsWeekView
+        days={DAYS}
+        shifts={[]}
+        timezone="America/Chicago"
+        todayStr="2026-10-19"
+        members={[]}
+        viewerId="u9"
+        onOpen={vi.fn()}
+        onDayOpen={vi.fn()}
+        onAdd={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('shifts-week-add').className.split(/\s+/)).toContain('bg-primary-fill');
   });
 });

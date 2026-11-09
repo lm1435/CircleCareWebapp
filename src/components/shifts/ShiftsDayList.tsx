@@ -66,9 +66,17 @@ export function ShiftsDayList({
           </EmptyState>
         </Card>
       )}
+      {/* After the day's shifts, OUTLINE (owner 2026-11-08): the list leads, the header "+" is the
+          other way in. The empty day keeps its filled CTA above. */}
       {day.length > 0 && onAdd && (
         <div>
-          <Button onClick={onAdd} offlineKind="change">
+          <Button
+            variant="outline"
+            onClick={onAdd}
+            offlineKind="change"
+            data-testid="shifts-add-shift"
+            leftIcon={<Icon name="add-outline" size="row" />}
+          >
             {t('addShift')}
           </Button>
         </div>

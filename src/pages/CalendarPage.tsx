@@ -195,8 +195,8 @@ export default function CalendarPage(): ReactElement {
   // modals outlive the detail modal they were launched from.
   const [showCreate, setShowCreate] = useState(false);
   // Which control opened the create form (analytics: entry_form_opened.entry).
-  const [createEntry, setCreateEntry] = useState<'empty_state' | 'other'>('other');
-  const openCreate = (entry: 'empty_state' | 'other'): void => {
+  const [createEntry, setCreateEntry] = useState<'empty_state' | 'header' | 'list_button'>('header');
+  const openCreate = (entry: 'empty_state' | 'header' | 'list_button'): void => {
     setCreateEntry(entry);
     setShowCreate(true);
   };
@@ -237,6 +237,12 @@ export default function CalendarPage(): ReactElement {
   const shiftsReadable = shiftsEntry === 'available' || shiftsEntry === 'readonly';
   const shiftsMode = mode === 'shifts' && shiftsReadable;
   const shiftDialogs = useShiftsDialogs(circleId);
+  // One add pattern (owner 2026-11-08): Schedule's header "+" and its in-page "Add event" open the
+  // same create flow. On web that stays the FULL "New event" form (type picker included): it is the
+  // web's only door to the full layout (the New menu opens the simple forms), so routing it through
+  // the menu is held for the owner's call. Web has no device-calendar import either.
+  const openAddEvent = (entry: 'empty_state' | 'header' | 'list_button' = 'header'): void =>
+    openCreate(entry);
 
   // PHI-safe: only circle_id + the view enum. Fires on open and on view change.
   useEffect(() => {
@@ -562,8 +568,8 @@ export default function CalendarPage(): ReactElement {
                 label: shiftsMode ? t('shifts:addShift') : t('calendar:addEvent.addEvent'),
                 onClick: () =>
                   shiftsMode
-                    ? shiftDialogs.openCreate('shifts_view', anchor ?? undefined)
-                    : openCreate('other'),
+                    ? shiftDialogs.openCreate('header', anchor ?? undefined)
+                    : openAddEvent('header'),
                 offlineKind: 'change',
               }
             : undefined
@@ -744,7 +750,8 @@ export default function CalendarPage(): ReactElement {
                 title={view === 'week' ? t('calendar:noEventsWeek') : t('calendar:noEventsMonth')}
                 description={canEdit ? t('calendar:empty.hint') : t('calendar:empty.hintReadOnly')}
               >
-                {canEdit && (
+                {/* Week only: Month has no in-page add (owner 2026-11-08), the header "+" is its add. */}
+                {canEdit && view === 'week' && (
                   <Button
                     onClick={() => {
                       setCreateEntry('empty_state');
@@ -842,9 +849,10 @@ export default function CalendarPage(): ReactElement {
                 onPrev={handlePrev}
                 onNext={handleNext}
                 onToday={handleToday}
-                onAdd={canEdit ? () => openCreate('other') : undefined}
+                onAdd={canEdit ? openAddEvent : undefined}
               />
             ) : view === 'week' ? (
+              <>
               <WeekView
                 days={getWeekDays(range.start)}
                 eventsByDay={eventsByDay}
@@ -855,6 +863,23 @@ export default function CalendarPage(): ReactElement {
                 onAsNeededOpen={setDoseHistoryFor}
                 onDayOpen={handleOpenDay}
               />
+              {/* "Add event" AFTER the week (owner 2026-11-08), OUTLINE: the timeline is the
+                  user's content; the header "+" is the other way in. Same flow as the header. */}
+              {canEdit && (
+                <div className="pt-5">
+                  <Button
+                    variant="outline"
+                    fullWidth
+                    leftIcon={<Icon name="add-outline" size="row" />}
+                    data-testid="calendar-week-add-event"
+                    offlineKind="change"
+                    onClick={() => openAddEvent('list_button')}
+                  >
+                    {t('calendar:addEvent.addEvent')}
+                  </Button>
+                </div>
+              )}
+              </>
             ) : (
               <MonthView
                 gridDays={getMonthGridDays(anchor as string)}

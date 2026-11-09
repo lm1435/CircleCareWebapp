@@ -128,10 +128,10 @@ const SURFACES: Surface[] = [
       return page.getByRole('button', { name: 'Post', exact: true });
     },
     async inputKept({ page, label }) {
-      await expect(page.getByLabel(/^Add a note/)).toHaveValue(label);
+      await expect(page.getByRole('textbox', { name: /^Add a note/ })).toHaveValue(label);
     },
     async succeeded({ page, label }) {
-      await expect(page.getByLabel(/^Add a note/)).toHaveCount(0, { timeout: 20_000 }); // folded back into its button after the post
+      await expect(page.getByRole('textbox', { name: /^Add a note/ })).toHaveCount(0, { timeout: 20_000 }); // folded back into its button after the post
       await expect(page.locator('li').filter({ hasText: label }).first()).toBeVisible({ timeout: 20_000 });
     },
     rows: (ctx) => `select 1 from care_notes where circle_id = ${c(ctx)} and body = ${sqlStr(ctx.label)}`,

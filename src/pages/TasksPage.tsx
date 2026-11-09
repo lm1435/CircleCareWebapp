@@ -68,7 +68,7 @@ export default function TasksPage(): ReactElement {
   const [sort, setSort] = useState<TaskSort>('due_date');
   const [showCreate, setShowCreate] = useState(false);
   // Which control opened the create form (analytics: entry_form_opened.entry).
-  const [createEntry, setCreateEntry] = useState<'empty_state' | 'other'>('other');
+  const [createEntry, setCreateEntry] = useState<'empty_state' | 'header' | 'list_button'>('header');
   const [editingTask, setEditingTask] = useState<CalendarEvent | null>(null);
   // A COMPLETED task opens the detail instead. Its Edit (recurring tasks only;
   // a completed one-off is locked) hands off to `editingTask` below.
@@ -180,6 +180,7 @@ export default function TasksPage(): ReactElement {
     // Only the first open row's Done is the filled primary; the rest are outline.
     const firstOpenId = tasks.find((x) => !x.completed_at && !pendingIds.has(x.id))?.id;
     body = (
+      <>
       <ul className={`${careCardListGap} m-0 list-none p-0 px-5`}>
         {tasks.map((task) => (
           <TaskRow
@@ -199,6 +200,26 @@ export default function TasksPage(): ReactElement {
           />
         ))}
       </ul>
+      {/* "Add task" AFTER the user's tasks (owner 2026-11-08, mobile parity), OUTLINE: the list
+          leads, the header action is the other way in. Open only; Completed has the header. */}
+      {canEdit && status === 'open' && (
+        <div className="px-5 pt-4">
+          <Button
+            variant="outline"
+            fullWidth
+            leftIcon={<Icon name="add-outline" size="row" />}
+            data-testid="tasks-add-task-bottom"
+            offlineKind="change"
+            onClick={() => {
+              setCreateEntry('list_button');
+              setShowCreate(true);
+            }}
+          >
+            {t('addTask')}
+          </Button>
+        </div>
+      )}
+      </>
     );
   }
 
@@ -217,7 +238,7 @@ export default function TasksPage(): ReactElement {
                 name: 'add-outline',
                 label: t('addTask'),
                 onClick: () => {
-                  setCreateEntry('other');
+                  setCreateEntry('header');
                   setShowCreate(true);
                 },
                 offlineKind: 'change',
