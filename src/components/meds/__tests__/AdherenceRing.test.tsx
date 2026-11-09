@@ -1,14 +1,14 @@
 // The one hand-drawn SVG allowed outside components/ui (spec §6.4), so the
 // geometry has no component to lean on — it is asserted here instead.
 //
-// r = 39 (84px box less the 6px stroke, halved), so the circumference is
-// 2π·39 = 245.044…; a half-filled ring is that split evenly between dash and
-// gap. Getting the radius or the box wrong is invisible in a screenshot (the
-// arc still draws) and wrong in exactly the way that matters: the arc would no
-// longer be the number.
+// Trimmed 2026-11-08 (owner: "feels heavy"): a 44px box with a 4px stroke, so
+// r = 20 and the circumference is 2π·20 = 125.663…; a half-filled ring is that
+// split evenly between dash and gap. Getting the radius or the box wrong is
+// invisible in a screenshot (the arc still draws) and wrong in exactly the way
+// that matters: the arc would no longer be the number.
 
 import { render, screen } from '@testing-library/react';
-import { AdherenceRing, CIRCUMFERENCE, RADIUS } from '../AdherenceRing';
+import { AdherenceRing, CHART_SIZE, CIRCUMFERENCE, RADIUS, STROKE_WIDTH } from '../AdherenceRing';
 
 function dashArray(): number[] {
   const progress = screen.getByTestId('adherence-ring-progress');
@@ -16,20 +16,22 @@ function dashArray(): number[] {
 }
 
 function renderRing(rate: number) {
-  return render(<AdherenceRing rate={rate} periodLabel="30d" summary="82% over 30 days" />);
+  return render(<AdherenceRing rate={rate} />);
 }
 
 describe('AdherenceRing', () => {
-  it('derives its circumference from r=39', () => {
-    expect(RADIUS).toBe(39);
-    expect(CIRCUMFERENCE).toBeCloseTo(245.044, 3);
+  it('is a small 44px dial with a 4px stroke (r=20)', () => {
+    expect(CHART_SIZE).toBe(44);
+    expect(STROKE_WIDTH).toBe(4);
+    expect(RADIUS).toBe(20);
+    expect(CIRCUMFERENCE).toBeCloseTo(125.664, 3);
   });
 
   it('splits the stroke evenly at 50%', () => {
     renderRing(0.5);
     const [dash, gap] = dashArray();
-    expect(dash).toBeCloseTo(122.52, 2);
-    expect(gap).toBeCloseTo(122.52, 2);
+    expect(dash).toBeCloseTo(62.83, 2);
+    expect(gap).toBeCloseTo(62.83, 2);
   });
 
   it('draws nothing at 0 and a closed ring at 1', () => {
@@ -58,19 +60,22 @@ describe('AdherenceRing', () => {
     renderRing(0.25);
     expect(screen.getByTestId('adherence-ring-progress')).toHaveAttribute(
       'transform',
-      'rotate(-90 42 42)'
+      'rotate(-90 22 22)'
     );
   });
 
-  // The drawing says nothing to a screen reader — a bag of <circle> elements
-  // is not a number — so the value reaches assistive tech as one sentence, and
-  // the visible "30d" is a period label rather than the value.
-  it('is hidden from assistive tech and carries an sr-only summary instead', () => {
-    const { container } = renderRing(0.82);
+  it('paints progress in MOSS on the neutral hairline track', () => {
+    renderRing(0.5);
+    expect(screen.getByTestId('adherence-ring-progress')).toHaveAttribute('stroke', 'var(--color-moss)');
+    expect(screen.getByTestId('adherence-ring-track')).toHaveAttribute('stroke', 'var(--color-line-2)');
+  });
 
-    expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
-    const summary = screen.getByText('82% over 30 days');
-    expect(summary.className).toContain('sr-only');
-    expect(screen.getByText('30d')).toBeInTheDocument();
+  // Decorative: the card's visible "57% taken" is the value, and its sr-only
+  // sentence is what assistive tech reads. Nothing drawn inside the ring.
+  it('is wholly hidden from assistive tech and has no text inside', () => {
+    const { container } = renderRing(0.82);
+    expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true');
+    expect(container.textContent).toBe('');
+    expect(screen.queryByText('30d')).toBeNull();
   });
 });

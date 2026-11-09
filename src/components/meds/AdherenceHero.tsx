@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, Eyebrow, Icon, Skeleton } from '@/components/ui';
+import { Card, Eyebrow, Icon, Skeleton } from '@/components/ui';
 import { useAdherenceReport } from '@/hooks/useMedConfirmation';
 import { useAdherenceExport } from '@/hooks/useAdherenceExport';
 import { useCircle } from '@/hooks/useCircle';
@@ -10,11 +10,13 @@ import { AdherenceExportDialog } from './AdherenceExportDialog';
 
 /**
  * The History tab's hero (spec §6.4; mobile `renderAdherenceHero`): the 30-day
- * adherence percentage, its trend against the previous month, and the radial
- * dial — `Card elevated`, padding 22/24.
+ * adherence percentage, its trend against the previous month, and a small
+ * decorative radial dial — `Card elevated`, standard padding. Trimmed
+ * 2026-11-08 (owner: "feels heavy"): "Last 30 days" neutral label, "57% taken",
+ * moss ring, Export as a text link in the label row.
  *
- * "EXPORT REPORT" (plan docs/plans/pdf-export-parity.md, decision 9): mobile's
- * `ghost` button, in the `mt-4` slot this card reserved for it. It opens
+ * "EXPORT" (plan docs/plans/pdf-export-parity.md, decision 9): mobile's text
+ * link in the card's label row (accessible name "Export report"). It opens
  * `AdherenceExportDialog` (period chooser) and the export itself runs through
  * `useAdherenceExport`, which fetches the CHOSEN period at call time — the
  * 30-day report this hero shows is only one of six. The export is read-only,
@@ -59,14 +61,13 @@ export function AdherenceHero({ circleId }: AdherenceHeroProps): ReactElement | 
 
   if (query.isPending) {
     return (
-      <Card className="flex items-center justify-between px-6 py-[22px]" aria-busy="true">
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="sr-only">{t('adherence.loading')}</span>
-          <Skeleton className="h-3 w-32" />
-          <Skeleton className="h-8 w-24" />
-          <Skeleton className="h-4 w-40" />
+      <Card className="flex flex-col gap-2" aria-busy="true">
+        <span className="sr-only">{t('adherence.loading')}</span>
+        <Skeleton className="h-3 w-24" />
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-11 w-11 rounded-full" />
+          <Skeleton className="h-6 w-28" />
         </div>
-        <Skeleton className="h-[84px] w-[84px] rounded-full" />
       </Card>
     );
   }
@@ -102,52 +103,66 @@ export function AdherenceHero({ circleId }: AdherenceHeroProps): ReactElement | 
 
   return (
     <>
-      <Card className="flex items-center justify-between gap-4 px-6 py-[22px]">
-        <div className="flex min-w-0 flex-col gap-1">
-          <Eyebrow color="clay">{t('adherence.eyebrow')}</Eyebrow>
-          <span className="text-xl font-semibold leading-[52px] text-ink">{rate}%</span>
+      {/* Trimmed 2026-11-08 (owner: "feels heavy"; mobile renderAdherenceHero):
+          neutral "Last 30 days" label with Export as a text link in the same
+          row, a small decorative moss ring, the number one size down with
+          "taken" beside it. Screen readers get ONE sentence, then the trend,
+          then Export. */}
+      <Card className="flex items-start justify-between gap-3" data-testid="history-adherence-card">
+        <div className="flex min-w-0 flex-1 flex-col gap-2" data-testid="history-adherence-summary">
+          <p className="sr-only">
+            {t('adherence.summary', { period: t('export.period30'), pct: rate })}
+          </p>
+          <Eyebrow aria-hidden="true">{t('export.period30')}</Eyebrow>
+          <div className="flex items-center gap-3">
+            <AdherenceRing rate={rate / 100} />
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <p className="m-0 flex flex-wrap items-baseline gap-x-1.5" aria-hidden="true">
+                <span className="text-lg font-semibold tabular-nums leading-tight text-ink">{rate}%</span>
+                <span className="text-sm text-ink-3">{t('adherence.taken')}</span>
+              </p>
 
-          {/* One row, three mutually exclusive shapes. `stable` says so in words
-              rather than showing a flat arrow nobody can read as "unchanged". */}
-          {!trendAvailable ? null : improving || declining ? (
-            <p
-              className={`m-0 flex items-center gap-1 text-sm font-medium ${
-                improving ? 'text-moss' : 'text-terracotta'
-              }`}
-            >
-              {/* The SOLID glyphs, matching mobile's `trending-up`/`trending-down`
-                  (MedicationHistoryScreen.tsx) — `components/ui/iconNames.ts`
-                  dropped the `-outline` spellings, which mobile never used. */}
-              <Icon name={improving ? 'trending-up' : 'trending-down'} size="inline" />
-              {t('adherence.vsLastMonth', {
-                sign: improving ? '+' : '-',
-                pct: Math.abs(change),
-              })}
-            </p>
-          ) : (
-            <p className="m-0 flex items-center gap-1 text-sm font-medium text-ink-2">
-              {t('adherence.sameAsLastMonth')}
-            </p>
-          )}
-
-          <div className="mt-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleExportPress}
-              disabled={isExporting}
-              leftIcon={<Icon name="download-outline" size="inline" />}
-            >
-              {t('export.button')}
-            </Button>
+              {/* One row, three mutually exclusive shapes. `stable` says so in words
+                  rather than showing a flat arrow nobody can read as "unchanged". */}
+              {!trendAvailable ? null : improving || declining ? (
+                <p
+                  className={`m-0 flex items-center gap-1 text-sm font-medium tabular-nums ${
+                    improving ? 'text-moss' : 'text-terracotta'
+                  }`}
+                >
+                  {/* The SOLID glyphs, matching mobile's `trending-up`/`trending-down`
+                      (MedicationHistoryScreen.tsx) — `components/ui/iconNames.ts`
+                      dropped the `-outline` spellings, which mobile never used. */}
+                  <Icon name={improving ? 'trending-up' : 'trending-down'} size="inline" />
+                  {t('adherence.vsLastMonth', {
+                    sign: improving ? '+' : '-',
+                    pct: Math.abs(change),
+                  })}
+                </p>
+              ) : (
+                <p className="m-0 flex items-center gap-1 text-sm font-medium text-ink-2">
+                  {t('adherence.sameAsLastMonth')}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
-        <AdherenceRing
-          rate={rate / 100}
-          periodLabel={t('adherence.ringLabel')}
-          summary={t('adherence.ringSummary', { rate })}
-        />
+        {/* A text link in the label row. 44px target; the negative top margin
+            centres the box on the 12px label line so it does not make the card
+            taller. The accessible name stays "Export report" (it contains the
+            visible "Export", WCAG 2.5.3). */}
+        <button
+          type="button"
+          onClick={handleExportPress}
+          disabled={isExporting}
+          aria-label={t('export.button')}
+          data-testid="history-export-button"
+          className="-mt-3.5 -mr-2 inline-flex min-h-[44px] min-w-[44px] shrink-0 cursor-pointer items-center justify-end border-0 bg-transparent px-2 text-sm font-semibold text-moss-deep underline-offset-2 hover:underline disabled:cursor-default disabled:opacity-50"
+        >
+          {t('export.link')}
+          <span aria-hidden="true"> ›</span>
+        </button>
       </Card>
 
       <AdherenceExportDialog

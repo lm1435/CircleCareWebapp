@@ -151,7 +151,7 @@ describe('AdherenceHero', () => {
 
     expect(mockUseAdherenceReport).toHaveBeenCalledWith('circle-1', '30d');
     expect(screen.getByText('82%')).toBeInTheDocument();
-    expect(screen.getByText('Adherence · 30 days')).toBeInTheDocument();
+    expect(screen.queryByText('Adherence · 30 days')).toBeNull();
   });
 
   it('names an improving trend in moss with the up arrow', () => {
@@ -553,5 +553,71 @@ describe('AdherenceHero — export is a circle-level Premium feature', () => {
       )
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull();
+  });
+});
+
+// Trimmed 2026-11-08 (owner: "feels heavy" / "give it ozempic"; mobile parity
+// with MedicationHistoryScreen's renderAdherenceHero).
+describe('AdherenceHero — trimmed card', () => {
+  beforeEach(() => {
+    mockUseAdherenceReport.mockReturnValue({
+      ...report({ adherence_rate: 57, trend_change: 0 }),
+      isPending: false,
+    });
+  });
+
+  it('labels the card "Last 30 days" in the neutral eyebrow (not clay)', () => {
+    renderHero();
+    const card = screen.getByTestId('history-adherence-card');
+    const label = within(card).getByText('Last 30 days');
+    expect(label.className).not.toMatch(/clay/);
+    expect(within(card).queryByText(/Adherence · 30 days/)).toBeNull();
+  });
+
+  it('shows "57%" one size down (text-lg) with "taken" beside it, and no "30d"', () => {
+    renderHero();
+    const card = screen.getByTestId('history-adherence-card');
+    const pct = within(card).getByText('57%');
+    expect(pct.className).toContain('text-lg');
+    expect(pct.className).not.toContain('text-xl');
+    expect(within(card).getByText('taken')).toBeInTheDocument();
+    expect(within(card).queryByText('30d')).toBeNull();
+  });
+
+  it('reads as one sentence for screen readers: "Last 30 days, 57% taken"', () => {
+    renderHero();
+    const sentence = screen.getByText('Last 30 days, 57% taken');
+    expect(sentence.className).toContain('sr-only');
+    // The visual pieces are hidden so they are not read twice.
+    expect(screen.getByText('57%').closest('[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  it('draws the ring in moss, hidden from assistive tech', () => {
+    renderHero();
+    const progress = screen.getByTestId('adherence-ring-progress');
+    expect(progress).toHaveAttribute('stroke', 'var(--color-moss)');
+    expect(progress.closest('[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  it('puts Export in the label row as a text link with a chevron, no icon, 44px target', () => {
+    renderHero();
+    const card = screen.getByTestId('history-adherence-card');
+    const button = screen.getByRole('button', { name: 'Export report' });
+    expect(button).toHaveAttribute('data-testid', 'history-export-button');
+    // The card's own row: Export is a direct child of the card, after the summary.
+    expect(button.parentElement).toBe(card);
+    const summary = screen.getByTestId('history-adherence-summary');
+    expect(summary.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(button).toHaveTextContent(/^Export ›$/);
+    expect(button.querySelector('svg')).toBeNull();
+    expect(button.className).toContain('min-h-[44px]');
+    expect(button.className).toContain('min-w-[44px]');
+  });
+
+  it('uses the standard card padding and no min-height', () => {
+    renderHero();
+    const card = screen.getByTestId('history-adherence-card');
+    expect(card.className).toContain('p-5');
+    expect(card.className).not.toMatch(/min-h-|py-\[22px\]/);
   });
 });

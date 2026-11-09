@@ -148,12 +148,11 @@
     "showingMedication": "Showing: {{name}}"
   },
   "adherence": {
-    "eyebrow": "Adherence · 30 days",
     "loading": "Loading adherence…",
     "vsLastMonth": "{{sign}}{{pct}}% vs last month",
     "sameAsLastMonth": "Same as last month",
-    "ringLabel": "30d",
-    "ringSummary": "{{rate}}% of scheduled doses confirmed over the last 30 days"
+    "taken": "taken",
+    "summary": "{{period}}, {{pct}}% taken"
   },
   "allDone": "All medications answered for today",
   "export": {
@@ -226,7 +225,8 @@
     "asNeededGiven_one": "{{name}}: {{count}} dose given",
     "asNeededGiven_other": "{{name}}: {{count}} doses given",
     "asNeededGivenBy": "Given by",
-    "asNeededNote": "Note"
+    "asNeededNote": "Note",
+    "link": "Export"
   },
   "asNeeded": {
     "section": {

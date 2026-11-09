@@ -58,7 +58,9 @@
     "showingMedication": "A mostrar: {{name}}"
   },
   "adherence": {
-    "loading": "A carregar adesão…"
+    "loading": "A carregar adesão…",
+    "taken": "tomado",
+    "summary": "{{period}}, {{pct}}% tomado"
   },
   "export": {
     "generating": "A gerar PDF...",
@@ -66,7 +68,8 @@
     "dailyBreakdown": "Detalhe diário",
     "timeBreakdown": "Detalhe por hora do dia",
     "daysBelowFull": "Dias com dose saltada ou não marcada",
-    "notMarkedLegend": "Não marcado: ninguém confirmou esta dose na app. Pode ou não ter sido tomada."
+    "notMarkedLegend": "Não marcado: ninguém confirmou esta dose na app. Pode ou não ter sido tomada.",
+    "link": "Exportar"
   },
   "asNeeded": {
     "section": {

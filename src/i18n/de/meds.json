@@ -148,12 +148,11 @@
     "showingMedication": "Anzeige: {{name}}"
   },
   "adherence": {
-    "eyebrow": "Einnahmetreue · 30 Tage",
     "loading": "Einnahmetreue wird geladen …",
     "vsLastMonth": "{{sign}}{{pct}} % gegenüber dem Vormonat",
     "sameAsLastMonth": "Wie im Vormonat",
-    "ringLabel": "30 T.",
-    "ringSummary": "{{rate}} % der geplanten Dosen in den letzten 30 Tagen bestätigt"
+    "taken": "eingenommen",
+    "summary": "{{period}}, {{pct}} % eingenommen"
   },
   "allDone": "Alle Medikamente für heute beantwortet",
   "export": {
@@ -226,7 +225,8 @@
     "asNeededGiven_one": "{{name}}: {{count}} Dosis gegeben",
     "asNeededGiven_other": "{{name}}: {{count}} Dosen gegeben",
     "asNeededGivenBy": "Gegeben von",
-    "asNeededNote": "Notiz"
+    "asNeededNote": "Notiz",
+    "link": "Exportieren"
   },
   "asNeeded": {
     "section": {
