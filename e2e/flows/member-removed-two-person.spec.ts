@@ -253,9 +253,9 @@ test('member is on another page when removed, then clicks back into the circle: 
     const navigations: string[] = [];
     memberPage.on('load', () => navigations.push(memberPage.url()));
 
-    // Leave the circle's pages for the profile (client-side): the circle's queries unmount but stay cached.
+    // Leave the circle's pages for Settings (/profile, client-side): the circle's queries unmount but stay cached.
     await memberPage.getByRole('button', { name: 'Account' }).click();
-    await memberPage.getByRole('menuitem', { name: 'Profile' }).click();
+    await memberPage.getByRole('menuitem', { name: 'Settings', exact: true }).click();
     await expect(memberPage).toHaveURL(/\/profile$/);
     await expect(memberPage.getByText(s.phi.note)).toHaveCount(0);
 

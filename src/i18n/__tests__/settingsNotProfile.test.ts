@@ -7,8 +7,9 @@
  * help answers, the sign-up analytics detail and the upgrade page.
  *
  * Ban: no string in any locale names the profile page, except the keys where
- * "Profile" is the header account-menu entry itself (`common:nav.profile`) or
- * the person's own profile (the "You" group, the trial line).
+ * "Profile" is the person's own profile (the "You" group, the trial line).
+ * Since 2026-11-09 the header account-menu entry (`common:nav.profile`) reads
+ * Settings too: it opens /profile, whose page title is Settings.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -24,7 +25,6 @@ const PROFILE_WORD = /(^|[^\p{L}])(profile|perfil|profil|profilo)/iu;
 
 /** `namespace:key` where the word is the profile itself, not a pointer to Settings. */
 const GENUINE_PROFILE = new Set([
-  'common:nav.profile', // header account-menu entry (its own label decision)
   'profile:settingsList.groups.you', // pt-PT "O seu perfil"
 ]);
 
@@ -89,13 +89,24 @@ describe('the upgrade page back link names the Settings page', () => {
   });
 });
 
+// The account-menu entry opens /profile, whose page title is Settings, so it says Settings in
+// every locale (owner decision 2026-11-09). A regional locale (pt-PT) must not fall back to its
+// parent's word ("Configurações").
+describe('the account-menu entry that opens /profile names the Settings page', () => {
+  it.each(LOCALES)('%s', (locale) => {
+    const parent = locale.split('-')[0];
+    const entry: string = read(locale, 'common').nav?.profile ?? read(parent, 'common').nav.profile;
+    const title: string =
+      read(locale, 'profile').settingsList?.title ?? read(parent, 'profile').settingsList.title;
+    expect(entry).toBe(title);
+  });
+});
+
 // The help articles (exported from CircleCareWeb into src/help/content.json) sent people to
-// "Profile" for quiet hours, alerts, export, units and the subscription until 2026-11-09. The
-// only "Profile" left is the web account menu's own entry, named right after "your name at the
-// top right" (common:nav.profile above).
+// "Profile" for quiet hours, alerts, export, units and the subscription until 2026-11-09, and
+// named the web account menu's "Profile" entry until that entry became "Settings" the same day.
+// No help string says Profile now.
 describe('help articles point at Settings, never at Profile', () => {
-  const WEB_MENU_ENTRY =
-    /(your name at the top right|tu nombre arriba a la derecha)([^.]{0,40}?)["“](Profile|Perfil)["”]/g;
   const helpStrings = (o: unknown, p = ''): Array<[string, string]> => {
     if (typeof o === 'string') return [[p, o]];
     if (Array.isArray(o)) return o.flatMap((v, i) => helpStrings(v, `${p}[${i}]`));
@@ -105,7 +116,7 @@ describe('help articles point at Settings, never at Profile', () => {
   it('content.json', () => {
     const json = JSON.parse(fs.readFileSync(path.join(__dirname, '../../help/content.json'), 'utf8'));
     const offenders = helpStrings(json)
-      .filter(([, s]) => PROFILE_WORD.test(s.replace(WEB_MENU_ENTRY, '$1$2')))
+      .filter(([, s]) => PROFILE_WORD.test(s))
       .map(([p]) => p);
     expect(offenders).toEqual([]);
   });

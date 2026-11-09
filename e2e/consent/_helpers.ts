@@ -425,8 +425,8 @@ export function consentSwitch(page: Page) {
   return page.getByRole('switch', { name: CONSENT_SWITCH_NAME });
 }
 
-/** Header account menu → a menu item (en common.json nav.profile / nav.help / header.logout). */
-export async function openAccountMenuItem(page: Page, name: 'Profile' | 'Help & FAQ' | 'Sign out'): Promise<void> {
+/** Header account menu → a menu item (en common.json nav.profile = "Settings" / nav.help / header.logout). */
+export async function openAccountMenuItem(page: Page, name: 'Settings' | 'Help & FAQ' | 'Sign out'): Promise<void> {
   // Retried as a unit: right after an SPA navigation the header re-renders and
   // an open menu's item can detach mid-click. Opens the menu only when the
   // item is not already showing, and the retry ends on the first click that lands.

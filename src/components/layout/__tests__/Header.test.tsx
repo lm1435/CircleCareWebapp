@@ -328,13 +328,15 @@ describe('Header', () => {
       expect(trigger).toHaveTextContent('ana@example.com');
     });
 
-    it('offers Profile, Help and the sign-out item', async () => {
+    // The entry opens /profile, whose page title is Settings (owner decision 2026-11-09).
+    it('offers Settings, Help and the sign-out item', async () => {
       const user = userEvent.setup();
       renderHeader();
 
       await user.click(screen.getByRole('button', { name: 'Account' }));
       const menu = screen.getByRole('menu', { name: 'Account' });
-      expect(within(menu).getByRole('menuitem', { name: 'Profile' })).toBeInTheDocument();
+      expect(within(menu).getByRole('menuitem', { name: 'Settings' })).toBeInTheDocument();
+      expect(within(menu).queryByRole('menuitem', { name: 'Profile' })).not.toBeInTheDocument();
       expect(within(menu).getByRole('menuitem', { name: 'Help & FAQ' })).toBeInTheDocument();
       expect(within(menu).getByRole('menuitem', { name: LOGOUT })).toBeInTheDocument();
     });

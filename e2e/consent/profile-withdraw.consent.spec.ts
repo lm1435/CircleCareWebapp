@@ -65,7 +65,7 @@ test('toggle OFF: one withdraw POST, DB stamped, events anonymous after; toggle 
   await restoresSent.expectCount(0);
 
   // ── ON ──
-  await openAccountMenuItem(page, 'Profile');
+  await openAccountMenuItem(page, 'Settings');
   await expect(toggle).toHaveAttribute('aria-checked', 'false', { timeout: 20_000 });
   const onAt = nowSec();
   await toggle.click();

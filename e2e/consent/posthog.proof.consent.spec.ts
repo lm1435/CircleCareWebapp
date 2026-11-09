@@ -104,7 +104,7 @@ for (const state of ['granted', 'declined'] as const) {
         await page.waitForTimeout(3_500); // let any running batch go out normally first
         const target = new URL(page.url()).pathname === '/help' ? '/profile' : '/help';
         const before = posthog.beaconEvents.length;
-        await openAccountMenuItem(page, target === '/help' ? 'Help & FAQ' : 'Profile');
+        await openAccountMenuItem(page, target === '/help' ? 'Help & FAQ' : 'Settings');
         await expect(page).toHaveURL(new RegExp(`${target}$`));
         await page.waitForTimeout(300);
         await page.reload();

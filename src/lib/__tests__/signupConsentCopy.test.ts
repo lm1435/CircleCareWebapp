@@ -206,10 +206,10 @@ describe('signup analytics consent copy', () => {
   });
 
   it.each([
-    ['en', EN, /Profile/],
-    ['es', ES, /Perfil/],
+    ['en', EN, /Settings/],
+    ['es', ES, /Configuración/],
   ])('%s tells people where to change their mind', (_lang, copy, needle) => {
-    // The Profile > Privacy toggle is the withdrawal route, and it must be
+    // The Settings > Privacy & security toggle is the withdrawal route, and it must be
     // named — a consent you cannot find your way back out of is not one.
     expect(needle.test(copy.detail)).toBe(true);
   });

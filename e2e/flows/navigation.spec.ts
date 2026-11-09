@@ -66,9 +66,9 @@ test('header menus navigate', async ({ page, circleId }) => {
   await page.goto(`${base}/calendar`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('grid')).toBeVisible({ timeout: NAV_TIMEOUT });
 
-  // --- Account menu → Profile ---
+  // --- Account menu → Settings (/profile) ---
   await page.getByRole('button', { name: 'Account' }).click();
-  await page.getByRole('menuitem', { name: 'Profile' }).click();
+  await page.getByRole('menuitem', { name: 'Settings', exact: true }).click();
   await expect(page).toHaveURL(/\/profile(?:[/?#]|$)/, { timeout: NAV_TIMEOUT });
   await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({
     timeout: NAV_TIMEOUT,

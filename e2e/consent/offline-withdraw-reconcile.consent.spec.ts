@@ -157,7 +157,7 @@ test('offline withdraw survives sign-out + sign-in: no $identify, events anonymo
   await expect.poll(() => withdrawsOk.count, { timeout: 10_000 }).toBe(1);
   await expect.poll(async () => (await readLocalConsent(page)).pending, { timeout: 10_000 }).toBeNull();
 
-  await openAccountMenuItem(page, 'Profile');
+  await openAccountMenuItem(page, 'Settings');
   await expect(consentSwitch(page)).toHaveAttribute('aria-checked', 'false', { timeout: 20_000 });
   await expectNoEventSince(posthog, '$identify', signInAt, 1_000);
   expect(withdrawsOk.count, 'exactly one successful withdraw POST').toBe(1);
@@ -222,7 +222,7 @@ test('PRE-READ SNAPSHOT: a flush that clears the queue before a stale read retur
   expectAnonymousEvents(eventsSince(posthog, signInAt), identity, 'after the stale read');
   expect((await readLocalConsent(page)).enabled, 'the local withdrawal stands').toBe('false');
 
-  await openAccountMenuItem(page, 'Profile');
+  await openAccountMenuItem(page, 'Settings');
   await expect(consentSwitch(page)).toHaveAttribute('aria-checked', 'false', { timeout: 20_000 });
   await expectNoEventSince(posthog, '$identify', signInAt, 1_000);
 });
@@ -257,7 +257,7 @@ test('DECISION-TIME CHECK: a toggle made while the reconcile read is in flight i
 
   // ── While it is in flight: Profile → analytics OFF, withdraw aborted → queued ──
   const fault = await failRequest(page, 'POST', WITHDRAW_PATH, { abort: true, times: 1 });
-  await openAccountMenuItem(page, 'Profile');
+  await openAccountMenuItem(page, 'Settings');
   const toggle = consentSwitch(page);
   await expect(toggle).toHaveAttribute('aria-checked', 'true', { timeout: 20_000 });
   await toggle.click();

@@ -474,7 +474,7 @@ multiple series per card, so UI-click deletion races card re-grouping/remounts.
 | `circle` | Edit circle name + restore; create-modal validation + cancel (**never creates/deletes a circle**). |
 | `ai` | Open assistant, send a message, verify it posts (graceful on slow AI). |
 | `auth` | Sign out (with its confirm dialog) → /login — the logout endpoint is NOT stubbed any more, so the real revoke runs; bad-credentials error. |
-| `navigation` | Click-through every sidebar nav link + header circle-switcher / account menu (Profile, Help, All circles); asserts URL + render + no error fallback. |
+| `navigation` | Click-through every sidebar nav link + header circle-switcher / account menu (Settings, Help, All circles); asserts URL + render + no error fallback. |
 | `calendar-controls` | Week/month toggle + prev / next / today navigation. |
 | `tasks-controls` | Status filter + sort options. |
 | `vitals-controls` | Type filter + date-range filter. |
