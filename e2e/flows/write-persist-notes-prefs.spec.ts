@@ -1,6 +1,6 @@
 import type { Page, Route } from '@playwright/test';
 import { test, expect } from '../fixtures';
-import { countRequests, dbCount, dbQuery, pathMatcher, sqlStr, type ApiSession, type PathPattern } from '../unhappy';
+import { dbCount, dbQuery, pathMatcher, sqlStr, type ApiSession, type PathPattern } from '../unhappy';
 import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq, type ScopedAccount } from '../unhappy/auth-invites/_helpers';
 import { circleTimezone, createAppointment, dateInTz, uniqueSuffix } from '../notesFirstClassShared';
 import { openCalendarEvent } from '../unhappy/writes/_helpers';
