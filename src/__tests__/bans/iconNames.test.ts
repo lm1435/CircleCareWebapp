@@ -13,9 +13,10 @@ const MOBILE_SRC = join(WEBAPP_ROOT, '..', 'mobile', 'src');
  * "adding a name here requires a mobile precedent").
  */
 const WEB_ONLY_ICONS: Partial<Record<(typeof ICON_NAMES)[number], string>> = {
-  // Empty since the Emergency Info "Print" action became "Share"
-  // (docs/plans/pdf-export-parity.md, B3) — `share-outline` has mobile
-  // precedent, so no web-only glyph remains.
+  // The Emergency Info "Print" action became "Share" (docs/plans/pdf-export-parity.md,
+  // B3) — `share-outline` has mobile precedent.
+  'settings-outline':
+    'Circle settings entry in the web Sidebar / Header switcher / SettingsRows; mobile has no nav item for it (reached from the circle screen), and its last gear (medication "Manage" group) left in mobile e06dee30',
 };
 
 function walkMobileSrc(dir: string, out: string[] = []): string[] {
