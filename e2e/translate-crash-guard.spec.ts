@@ -49,6 +49,20 @@ async function simulateTranslate(
 }
 
 /**
+ * Chrome keeps `lang` on the translate target for the life of the page, but the app's own
+ * `languageChanged` listener (App.tsx applyLang) rewrites `lang` to the UI language when
+ * i18n/profile language settles, which can land just AFTER the shell is visible. A one-shot
+ * simulation then loses the race (class stays, lang flips back to "en", no banner). Re-apply
+ * until `check` holds, as the real browser would.
+ */
+async function simulateTranslateUntil(page: Page, check: () => Promise<void>): Promise<void> {
+  await expect(async () => {
+    await simulateTranslate(page, false);
+    await check();
+  }).toPass({ timeout: NAV_TIMEOUT, intervals: [250, 500, 1000] });
+}
+
+/**
  * The signed-in account is shared per worker: put its language back to English
  * through the Profile picker (data routes are Bearer-only, so a raw cookie PATCH 401s).
  */
@@ -145,10 +159,8 @@ test.describe('browser translate guard', () => {
     try {
       await page.goto(`/circles/${circleId}/tasks`, { waitUntil: 'domcontentloaded' });
       await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible({ timeout: NAV_TIMEOUT });
-      await simulateTranslate(page, false);
-
       const banner = page.getByTestId('translate-banner');
-      await expect(banner).toBeVisible({ timeout: NAV_TIMEOUT });
+      await simulateTranslateUntil(page, () => expect(banner).toBeVisible({ timeout: 2_000 }));
       await expect(banner).toContainText('CircleCare está disponible en Español');
       await expect(banner.getByRole('button', { name: 'Cambiar a Español' })).toBeVisible();
       await expect(banner.getByRole('button', { name: 'Ahora no' })).toBeVisible();
@@ -169,19 +181,21 @@ test.describe('browser translate guard', () => {
     test.setTimeout(60_000);
     await page.goto(`/circles/${circleId}/tasks`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible({ timeout: NAV_TIMEOUT });
-    await simulateTranslate(page, false);
-
     const banner = page.getByTestId('translate-banner');
-    await expect(banner).toBeVisible({ timeout: NAV_TIMEOUT });
+    await simulateTranslateUntil(page, () => expect(banner).toBeVisible({ timeout: 2_000 }));
     await banner.getByRole('button', { name: 'Ahora no' }).click();
     await expect(banner).toHaveCount(0);
     expect(await page.evaluate((k) => window.localStorage.getItem(k), DISMISS_KEY)).not.toBeNull();
 
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible({ timeout: NAV_TIMEOUT });
-    await simulateTranslate(page, false);
-    // Give the detection hook (MutationObserver + language bundle load) time to act.
-    await page.waitForTimeout(1500);
+    // Give the detection hook (MutationObserver + language bundle load) time to act, and make
+    // the proof falsifiable: the translate signal (lang=es) must still hold when we assert the
+    // banner is gone, otherwise "absent" would only mean the simulation lost the lang race.
+    await simulateTranslateUntil(page, async () => {
+      await page.waitForTimeout(1500);
+      expect(await page.evaluate(() => document.documentElement.lang)).toBe('es');
+    });
     await expect(banner).toHaveCount(0);
   });
 });
