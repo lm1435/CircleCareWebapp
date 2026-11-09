@@ -1,10 +1,11 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { AddMenu, type AddMenuType } from './AddMenu';
 import { FloatingNavBar } from './FloatingNavBar';
+import { AddMenuContext, type AddMenuEntry, type OpenAddMenuOptions } from './AddMenuContext';
 import { TranslateLanguageBanner } from '@/components/TranslateLanguageBanner';
 import { StoreReviewBanner } from '@/components/StoreReviewBanner';
 import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBanner';
@@ -45,6 +46,9 @@ export function AppLayout(): ReactElement {
   const { circleId } = useParams<{ circleId: string }>();
   const [aiOpen, setAiOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  // Which page control opened the bottom New menu (AddMenuContext), held for THAT opening only:
+  // the nav's own NEW clears it, so its forms stay `add_menu`.
+  const menuEntryRef = useRef<AddMenuEntry | undefined>(undefined);
   // THE "+ NEW" FLOW BELONGS TO THE CIRCLE IT WAS OPENED IN. This layout is
   // not keyed by circle (only the page <Outlet> is, by pathname), so browser
   // back/forward to another circle while AddEventModal was open kept the typed
@@ -52,10 +56,14 @@ export function AppLayout(): ReactElement {
   // the circle it was opened for, and a circle change closes it (effect below)
   // so returning to that circle does not pop it back open. Mobile twin:
   // mobile/src/navigation/useCloseOnCircleSwitch.ts.
-  const [createFor, setCreateFor] = useState<{ kind: AddMenuType; circleId: string } | null>(
-    null,
-  );
+  // `entry`: the page control that opened the menu (AddMenuContext), for the form's analytics.
+  const [createFor, setCreateFor] = useState<{
+    kind: AddMenuType;
+    circleId: string;
+    entry?: AddMenuEntry;
+  } | null>(null);
   const createKind = createFor && createFor.circleId === circleId ? createFor.kind : null;
+  const createEntry = createFor?.entry;
   const location = useLocation();
   // Scroll reset on page change lives in ScrollReset, rendered once in the
   // router's root layout so routes outside AppLayout (help, standalone pages)
@@ -161,6 +169,7 @@ export function AppLayout(): ReactElement {
     setCreateFor(null);
     setAddOpen(false);
     setShiftTeaserFor(null);
+    menuEntryRef.current = undefined;
   }, [circleId]);
 
   // One handler behind both entry points. A frozen circle's OWNER is the one
@@ -179,7 +188,7 @@ export function AppLayout(): ReactElement {
     setAiOpen(true);
   };
 
-  const openCreate = (kind: AddMenuType): void => {
+  const openCreate = (kind: AddMenuType, entry?: AddMenuEntry): void => {
     // Notes have no create modal — the composer lives at the top of the Notes
     // page (mirrors mobile's New-menu note entry).
     if (kind === 'note') {
@@ -202,8 +211,21 @@ export function AppLayout(): ReactElement {
       promptUpgrade();
       return;
     }
-    if (circleId) setCreateFor({ kind, circleId });
+    if (circleId) setCreateFor({ kind, circleId, entry });
   };
+
+  // Pages open the SAME New menu (Calendar's header "+", its "Add event" and empty-state CTAs,
+  // owner 2026-11-08; mobile twin: CircleTabNavigator's openAddMenu). The callers' buttons carry
+  // the offline guard; a viewer who cannot create gets no menu.
+  const openAddMenu = useCallback(
+    (options?: OpenAddMenuOptions): void => {
+      if (!canEdit) return;
+      menuEntryRef.current = options?.entry;
+      setAddOpen(true);
+    },
+    [canEdit]
+  );
+  const addMenuContextValue = useMemo(() => ({ openAddMenu }), [openAddMenu]);
 
   // R4-5 onboarding funnel: users can deep-link straight into a circle without
   // ever visiting /circles, so observe the circle list here too. Header's
@@ -294,7 +316,13 @@ export function AppLayout(): ReactElement {
               {/* Removed from / deleted circle: one state for EVERY circle page
                   (mobile twin: CircleDetailScreen's access-removed branch). Only
                   FORBIDDEN / NOT_FOUND; 5xx keeps each page's own retry card. */}
-              {accessLost ? <CircleAccessLost reason={accessLost} /> : <Outlet />}
+              {accessLost ? (
+                <CircleAccessLost reason={accessLost} />
+              ) : (
+                <AddMenuContext.Provider value={addMenuContextValue}>
+                  <Outlet />
+                </AddMenuContext.Provider>
+              )}
             </div>
           </ErrorBoundary>
         </main>
@@ -306,7 +334,10 @@ export function AppLayout(): ReactElement {
             circleId={circleId}
             canCreate={canEdit}
             addOpen={addOpen}
-            onToggleAdd={() => setAddOpen((open) => !open)}
+            onToggleAdd={() => {
+              menuEntryRef.current = undefined;
+              setAddOpen((open) => !open);
+            }}
             assistantOpen={aiOpen}
             onOpenAssistant={openAssistant}
             assistantAccess={aiNav}
@@ -320,10 +351,15 @@ export function AppLayout(): ReactElement {
             anchor="bottom"
             open={addOpen}
             canCreate={canEdit}
-            onClose={() => setAddOpen(false)}
-            onSelect={(kind) => {
+            onClose={() => {
               setAddOpen(false);
-              openCreate(kind);
+              menuEntryRef.current = undefined;
+            }}
+            onSelect={(kind) => {
+              const entry = menuEntryRef.current;
+              menuEntryRef.current = undefined;
+              setAddOpen(false);
+              openCreate(kind, entry);
             }}
           />
         </>
@@ -350,7 +386,12 @@ export function AppLayout(): ReactElement {
       )}
 
       {circleId && createKind === 'shift' && (
-        <ShiftComposer circleId={circleId} source="add_menu" onClose={() => setCreateFor(null)} />
+        <ShiftComposer
+          circleId={circleId}
+          // The shift form's sources have header / empty_state but no list_button.
+          source={createEntry === 'header' || createEntry === 'empty_state' ? createEntry : 'add_menu'}
+          onClose={() => setCreateFor(null)}
+        />
       )}
 
       {circleId && shiftTeaserFor === circleId && (
@@ -361,7 +402,7 @@ export function AppLayout(): ReactElement {
         <AddEventModal
           circleId={circleId}
           initialType={createKind}
-          entry="add_menu"
+          entry={createEntry ?? 'add_menu'}
           onClose={() => setCreateFor(null)}
           onSaved={() => setCreateFor(null)}
         />

@@ -1,7 +1,14 @@
 import { request as apiRequest, type Locator, type Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import type { IsolatedAccount } from '../isolation';
-import { checkA11y, pinRecipientZoneToBrowser, weekChipCount, clickWeekChip } from '../helpers';
+import {
+  checkA11y,
+  pinRecipientZoneToBrowser,
+  weekChipCount,
+  clickWeekChip,
+  openCalendarNew,
+  fillSimpleTime,
+} from '../helpers';
 import { gotoCalendarSettled } from '../notesFirstClassShared';
 
 // Medication lifecycle flows (Medications page — /circles/:id/meds).
@@ -97,10 +104,10 @@ function daysAgoISO(days: number): string {
 /**
  * Submit the CREATE event form. A medication whose time already passed TODAY
  * (circle timezone) shows an inline "Starts with the next dose" note under the
- * time field - there is NO prompt to answer, so Create saves straight away.
+ * time field - there is NO prompt to answer, so "Add medication" saves straight away.
  */
 async function submitEventForm(page: Page, dialog: Locator): Promise<void> {
-  await dialog.getByRole('button', { name: 'Create' }).click();
+  await dialog.getByRole('button', { name: 'Add medication' }).click();
   await expect(page.getByRole('dialog', { name: /^(Time already passed|Starts with the next dose)$/ })).toHaveCount(0);
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 }
@@ -122,16 +129,13 @@ async function createDailyMed(
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
 
-  await page.getByRole('button', { name: 'Add event' }).first().click();
-  const dialog = page.getByRole('dialog', { name: 'New event' });
-  await expect(dialog).toBeVisible();
-
-  await dialog.locator('#event_type').selectOption('medication');
+  // The header "+" opens the New menu (owner 2026-11-08): the simple medication form.
+  const dialog = await openCalendarNew(page, 'medication');
   await dialog.locator('#medication_name').fill(name);
   await dialog.locator('#medication_dosage').fill(dosage);
   await dialog.locator('#scheduled_date').fill(startDate);
-  await dialog.locator('#scheduled_time').fill(time);
-  await dialog.locator('#recurrence_rule').selectOption('daily');
+  await fillSimpleTime(dialog, time);
+  await dialog.getByRole('radio', { name: 'Every day' }).click();
   await submitEventForm(page, dialog);
 }
 
@@ -244,14 +248,11 @@ test.describe('past time on create', () => {
     await pinRecipientZoneToBrowser(page, account, circleId);
     await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
-    await page.getByRole('button', { name: 'Add event' }).first().click();
-    const dialog = page.getByRole('dialog', { name: 'New event' });
-    await expect(dialog).toBeVisible();
+    const dialog = await openCalendarNew(page, 'medication');
 
-    await dialog.locator('#event_type').selectOption('medication');
     await dialog.locator('#medication_name').fill(uniqueMedName('pastnote'));
     await dialog.locator('#scheduled_date').fill(todayISO());
-    await dialog.locator('#scheduled_time').fill('00:00');
+    await fillSimpleTime(dialog, '00:00');
     const note = dialog.getByTestId('dose-past-time-note');
     await expect(note).toHaveText('Starts with the next dose. This time has already passed today.');
     await expect(dialog.getByRole('status').filter({ has: page.getByTestId('dose-past-time-note') })).toHaveCount(1);

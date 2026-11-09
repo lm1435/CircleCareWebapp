@@ -1,7 +1,14 @@
 import type { APIRequestContext, Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import type { IsolatedAccount } from '../isolation';
-import { checkA11y, expandAllDayOverflow, pinRecipientZoneToBrowser, refuseZoneSync } from '../helpers';
+import {
+  checkA11y,
+  expandAllDayOverflow,
+  fillSimpleTime,
+  openCalendarNew,
+  pinRecipientZoneToBrowser,
+  refuseZoneSync,
+} from '../helpers';
 import { apiSession, countRequests, errorCodeOf } from '../unhappy';
 import { sqlExec, sqlStr } from '../db';
 import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from '../unhappy/auth-invites/_helpers';
@@ -252,21 +259,17 @@ test('EN: Mon/Wed/Fri medication and Tue/Thu task land only on those days and re
   // --- Medication: start on a Monday, Days of the week → Mon (pre-selected) + Wed + Fri ---
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
-  await page.getByRole('button', { name: 'Add event' }).first().click();
-  const medDialog = page.getByRole('dialog', { name: 'New event' });
-  await expect(medDialog).toBeVisible();
-  await medDialog.locator('#event_type').selectOption('medication');
+  // The header "+" opens the New menu (owner 2026-11-08): the simple medication form, whose "How often?"
+  // Custom… holds the rarer repeats as tiles ("Days on / off", "Some days").
+  const medDialog = await openCalendarNew(page, 'medication');
   await medDialog.locator('#medication_name').fill(med);
   await medDialog.locator('#medication_dosage').fill('5 mg');
   await medDialog.locator('#scheduled_date').fill(monday);
-  await medDialog.locator('#scheduled_time').fill('12:00');
-  // The option sits after Cycle and just before "As needed" (the PRN option, medication-only, is LAST).
-  const options = await medDialog.locator('#recurrence_rule option').allTextContents();
-  expect(options[options.length - 1]).toBe('As needed');
-  // The Repeat select speaks the tile words (owner 2026-11-08): "Some days", "Days on / off".
-  expect(options[options.length - 2]).toBe('Some days');
-  expect(options[options.length - 3]).toBe('Days on / off');
-  await medDialog.locator('#recurrence_rule').selectOption('days_of_week');
+  await fillSimpleTime(medDialog, '12:00');
+  await medDialog.getByTestId('repeat-custom').click();
+  const custom = medDialog.getByTestId('repeat-custom-panel');
+  await expect(custom.getByRole('radio', { name: 'Days on / off', exact: true })).toBeVisible();
+  await custom.getByRole('radio', { name: 'Some days', exact: true }).click();
 
   const medGroup = chipGroup(medDialog);
   await expect(medGroup).toBeVisible();
@@ -284,7 +287,7 @@ test('EN: Mon/Wed/Fri medication and Tue/Thu task land only on those days and re
   // Start weekday is selected → no "First time" move, no lock (create).
   await expect(medDialog.getByText(/^First time:/)).toHaveCount(0);
   await expect(medDialog.getByText(/^Started on/)).toHaveCount(0);
-  await submitAndClose(page, medDialog, 'Create');
+  await submitAndClose(page, medDialog, 'Add medication');
 
   // --- Task: start on the Monday, pick Tue + Thu and drop Monday → "First time" = Tuesday ---
   await page.goto(`/circles/${circleId}/tasks`, { waitUntil: 'domcontentloaded' });
@@ -416,19 +419,21 @@ test.describe('Spanish', () => {
 
     await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
-    await page.getByRole('button', { name: 'Agregar evento' }).first().click();
-    const dialog = page.getByRole('dialog', { name: 'Nuevo evento' });
+    // The header "+" opens the New menu ("Nuevo", owner 2026-11-08): "Med." opens the simple form.
+    await page.getByRole('button', { name: 'Agregar evento', exact: true }).first().click();
+    await page.getByRole('menu', { name: 'Nuevo' }).getByRole('menuitem', { name: /^(Med\.|Medicamento)$/ }).click();
+    const dialog = page.getByRole('dialog', { name: 'Nuevo medicamento' });
     await expect(dialog).toBeVisible();
-    await dialog.locator('#event_type').selectOption('medication');
     await dialog.locator('#medication_name').fill(med);
     await dialog.locator('#medication_dosage').fill('5 mg');
     await dialog.locator('#scheduled_date').fill(monday);
-    await dialog.locator('#scheduled_time').fill('12:00');
-    const options = await dialog.locator('#recurrence_rule option').allTextContents();
-    // "As needed" (the PRN option) is last; the days option sits just before it, speaking the tile word
-    // ("Algunos días", 8e8a5d4).
-    expect(options[options.length - 2]).toBe('Algunos días');
-    await dialog.locator('#recurrence_rule').selectOption('days_of_week');
+    await fillSimpleTime(dialog, '12:00');
+    await dialog.getByTestId('repeat-custom').click();
+    // The days tile speaks the tile word ("Algunos días", 8e8a5d4).
+    await dialog
+      .getByTestId('repeat-custom-panel')
+      .getByRole('radio', { name: 'Algunos días', exact: true })
+      .click();
 
     const group = chipGroup(dialog, 'Repetir los');
     await expect(group).toBeVisible();
@@ -438,7 +443,7 @@ test.describe('Spanish', () => {
     await group.getByRole('checkbox', { name: 'miércoles' }).click();
     await group.getByRole('checkbox', { name: 'viernes' }).click();
     await expect(dialog.getByText('lun, mié, vie', { exact: true })).toBeVisible();
-    await submitAndClose(page, dialog, 'Crear');
+    await submitAndClose(page, dialog, 'Agregar medicamento');
 
     await expect
       .poll(async () => (await rootsNamed(request, account, circleId, med))[0]?.recurrence_days ?? null, {

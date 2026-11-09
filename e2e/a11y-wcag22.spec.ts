@@ -129,6 +129,8 @@ interface Opener {
   kind: 'dialog' | 'menu';
   /** Viewport width (default 1280). 390 reaches the floating-nav chrome. */
   width?: number;
+  /** A menu's own name when it is not the trigger's (Calendar's "Add event" opens the "New" menu). */
+  menuName?: RegExp;
 }
 
 const OPENERS: Opener[] = [
@@ -136,7 +138,8 @@ const OPENERS: Opener[] = [
   { route: '/circles', name: /^Join a circle$/, kind: 'dialog' },
   { route: 'C', name: /^Account$/, kind: 'menu' },
   { route: 'C', name: /^Switch circle/, kind: 'menu' },
-  { route: 'C/calendar', name: /^Add event$/, kind: 'dialog' },
+  // The Calendar header "+" opens the New menu (owner 2026-11-08, mobile parity).
+  { route: 'C/calendar', name: /^Add event$/, kind: 'menu', menuName: /^New$/ },
   { route: 'C/meds', name: /^Add medication$/, kind: 'dialog' },
   { route: 'C/meds', name: /^View details for /, kind: 'dialog' },
   { route: 'C/meds', name: /^More actions for /, kind: 'menu' },
@@ -202,7 +205,7 @@ test.describe('dialogs and menus (keyboard)', () => {
         const menu = page.getByRole('menu').last();
         await expect(menu).toBeVisible();
         // Named by the control that opened it (not a generic "More actions").
-        await expect(menu).toHaveAccessibleName(opener.name);
+        await expect(menu).toHaveAccessibleName(opener.menuName ?? opener.name);
         await expect(page.getByRole('menuitem').first()).toBeFocused();
         await checkA11y(page, `${route} [${opener.name.source} open]`, testInfo, {
           ...WCAG22,

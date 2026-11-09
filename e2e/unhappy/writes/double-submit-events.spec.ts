@@ -1,4 +1,5 @@
 import { gotoCalendarSettled } from '../../notesFirstClassShared';
+import { fillSimpleTime, openCalendarNew, SIMPLE_SAVE, type CalendarNewKind } from '../../helpers';
 import type { Locator, Page } from '@playwright/test';
 import { test, expect, uniqueLabel } from '../../fixtures';
 import { apiSession, countRequests, dbCount, holdRequest, sqlStr } from '../../unhappy';
@@ -25,12 +26,10 @@ test.use({ persona: 'premiumOwner' });
 
 const EVENTS = '/api/circles/:id/events';
 
-async function openNewEvent(page: Page, circleId: string): Promise<Locator> {
+/** The header "+" opens the New menu (owner 2026-11-08): `kind`'s simple form. */
+async function openNewEvent(page: Page, circleId: string, kind: CalendarNewKind): Promise<Locator> {
   await gotoCalendarSettled(page, circleId);
-  await page.getByRole('button', { name: 'Add event' }).first().click();
-  const dialog = page.getByRole('dialog', { name: 'New event' });
-  await expect(dialog).toBeVisible();
-  return dialog;
+  return openCalendarNew(page, kind);
 }
 
 const eventRows = (circleId: string, title: string) =>
@@ -40,14 +39,13 @@ const eventRows = (circleId: string, title: string) =>
 test('create appointment: double submit while the POST is pending writes one event', async ({ page, circleId }) => {
   const title = uniqueLabel('DS appt');
   try {
-    const dialog = await openNewEvent(page, circleId);
-    await dialog.locator('#event_type').selectOption('appointment');
+    const dialog = await openNewEvent(page, circleId, 'appointment');
     await dialog.locator('#title').fill(title);
     await dialog.locator('#scheduled_date').fill(localDate(3));
     await doubleSubmitWhileHeld(page, {
       method: 'POST',
       path: EVENTS,
-      submit: dialog.getByRole('button', { name: 'Create', exact: true }),
+      submit: dialog.getByRole('button', { name: SIMPLE_SAVE.appointment, exact: true }),
       form: page.locator('#add-event-form'),
     });
     await expect(dialog).toBeHidden({ timeout: 20_000 });
@@ -60,18 +58,17 @@ test('create appointment: double submit while the POST is pending writes one eve
 test('create medication: double submit while the POST is pending writes one series', async ({ page, circleId }) => {
   const name = uniqueLabel('DS med');
   try {
-    const dialog = await openNewEvent(page, circleId);
-    await dialog.locator('#event_type').selectOption('medication');
+    const dialog = await openNewEvent(page, circleId, 'medication');
     await dialog.locator('#medication_name').fill(name);
     await dialog.locator('#medication_dosage').fill('5 mg');
     // Three days out: never "today" in any recipient zone, so the past-time
     // notice cannot interpose.
     await dialog.locator('#scheduled_date').fill(localDate(3));
-    await dialog.locator('#scheduled_time').fill('09:00');
+    await fillSimpleTime(dialog, '09:00');
     await doubleSubmitWhileHeld(page, {
       method: 'POST',
       path: EVENTS,
-      submit: dialog.getByRole('button', { name: 'Create', exact: true }),
+      submit: dialog.getByRole('button', { name: SIMPLE_SAVE.medication, exact: true }),
       form: page.locator('#add-event-form'),
     });
     await expect(dialog).toBeHidden({ timeout: 20_000 });
@@ -84,14 +81,13 @@ test('create medication: double submit while the POST is pending writes one seri
 test('create task: double submit while the POST is pending writes one task', async ({ page, circleId }) => {
   const title = uniqueLabel('DS task');
   try {
-    const dialog = await openNewEvent(page, circleId);
-    await dialog.locator('#event_type').selectOption('task');
+    const dialog = await openNewEvent(page, circleId, 'task');
     await dialog.locator('#title').fill(title);
     await dialog.locator('#scheduled_date').fill(localDate(3));
     await doubleSubmitWhileHeld(page, {
       method: 'POST',
       path: EVENTS,
-      submit: dialog.getByRole('button', { name: 'Create', exact: true }),
+      submit: dialog.getByRole('button', { name: SIMPLE_SAVE.task, exact: true }),
       form: page.locator('#add-event-form'),
     });
     await expect(dialog).toBeHidden({ timeout: 20_000 });
@@ -109,8 +105,7 @@ test('create task: Enter pressed twice in the title field while the POST is pend
   const hold = await holdRequest(page, 'POST', EVENTS);
   const sent = countRequests(page, 'POST', EVENTS);
   try {
-    const dialog = await openNewEvent(page, circleId);
-    await dialog.locator('#event_type').selectOption('task');
+    const dialog = await openNewEvent(page, circleId, 'task');
     await dialog.locator('#scheduled_date').fill(localDate(3));
     const titleField = dialog.locator('#title');
     await titleField.fill(title);

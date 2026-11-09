@@ -7,6 +7,7 @@ import {
   setSeatViewOnly,
   sidebarNew,
 } from './_helpers';
+import { openCalendarNew } from '../../helpers';
 
 // ===========================================================================
 // ACCESS REFRESH — a write refused mid-session makes the client re-read its
@@ -66,17 +67,15 @@ test('calendar: event create refused 403 VIEW_ONLY → detail refetched, Add eve
     await expect(add).toBeVisible();
     await expect(sidebarNew(page)).toBeEnabled();
 
-    await add.click();
-    const dialog = page.getByRole('dialog');
-    await expect(dialog).toBeVisible();
-    await dialog.locator('#event_type').selectOption('task');
+    // The header "+" opens the New menu (owner 2026-11-08): the simple task form.
+    const dialog = await openCalendarNew(page, 'task');
     await dialog.locator('#title').fill(title);
     await dialog.locator('#scheduled_date').fill(todayISO());
 
     const fault = await failRequest(page, 'POST', '/api/circles/:id/events', API_ERRORS.viewOnly);
     await downgradeSeatWhenRequested(page, 'POST', '/api/circles/:id/events', h);
     const detail = countRequests(page, 'GET', '/api/circles/:id');
-    await dialog.getByRole('button', { name: 'Create', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Add task', exact: true }).click();
 
     await fault.expectHits(1);
     await expect(page.getByText("You don't have permission to make changes in this circle.")).toBeVisible();

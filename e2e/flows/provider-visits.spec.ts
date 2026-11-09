@@ -1,6 +1,6 @@
 import type { APIRequestContext, BrowserContext, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
-import { checkA11y } from '../helpers';
+import { checkA11y, openCalendarNew } from '../helpers';
 import {
   addDaysISO,
   circleTimezone,
@@ -125,11 +125,11 @@ test.describe('Visits & notes: the main journey', () => {
     // --- 1. Link an appointment to a doctor in the ADD form. ----------------
     const linkedTitle = `E2E Linked ${sfx}`;
     await page.goto(`/circles/${s.circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: 'Add event' }).first().click();
-    const form = page.getByRole('dialog');
-    await expect(form).toBeVisible({ timeout: 20_000 });
-    await form.locator('#event_type').selectOption('appointment');
+    // The header "+" opens the New menu (owner 2026-11-08): the simple appointment form, whose Doctor and
+    // Location rows sit under "More details".
+    const form = await openCalendarNew(page, 'appointment', { timeout: 20_000 });
     await form.locator('#title').fill(linkedTitle);
+    await form.locator('#more-details').click();
 
     // The Doctor row: None first, then the active doctors (never a removed one).
     const doctorSelect = form.locator('#provider_id');
@@ -149,7 +149,7 @@ test.describe('Visits & notes: the main journey', () => {
     const created = page.waitForResponse(
       (r) => r.request().method() === 'POST' && new URL(r.url()).pathname === `/api/circles/${s.circleId}/events`
     );
-    await form.getByRole('button', { name: 'Create' }).click();
+    await form.getByRole('button', { name: 'Add appointment' }).click();
     const createdRes = await created;
     expect(createdRes.status()).toBe(201);
     expect(createdRes.request().postDataJSON()).toMatchObject({ event_type: 'appointment', provider_id: patel.id });
@@ -549,9 +549,13 @@ test.describe('Visits & notes: Spanish', () => {
     await checkA11y(page, 'doctor-visits-es', testInfo);
 
     await page.goto(`/circles/${s.circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: /Agregar evento/ }).first().click();
-    const form = page.getByRole('dialog');
-    await form.locator('#event_type').selectOption('appointment');
+    // The header "+" opens the New menu ("Nuevo", owner 2026-11-08): "Cita" -> the simple form, Doctor under
+    // "Más detalles".
+    await page.getByRole('button', { name: 'Agregar evento', exact: true }).first().click();
+    await page.getByRole('menu', { name: 'Nuevo' }).getByRole('menuitem', { name: /^Cita$/ }).click();
+    const form = page.getByRole('dialog', { name: 'Nueva cita' });
+    await expect(form).toBeVisible();
+    await form.locator('#more-details').click();
     await expect(form.getByLabel('Doctor')).toBeVisible();
     await expect(form.getByRole('button', { name: 'Agregar un doctor' })).toBeVisible();
     await expect(form.locator('#provider_id option').first()).toHaveText('Ninguno');
@@ -609,9 +613,8 @@ test.describe('Visits & notes: dark mode', () => {
     await checkA11y(page, 'doctor-visits-dark-page', testInfo);
 
     await page.goto(`/circles/${s.circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: 'Add event' }).first().click();
-    const form = page.getByRole('dialog');
-    await form.locator('#event_type').selectOption('appointment');
+    const form = await openCalendarNew(page, 'appointment', { timeout: 20_000 });
+    await form.locator('#more-details').click();
     await form.locator('#provider_id').selectOption({ label: `${doc.name} · Cardiology${doc.is_primary ? ' · Primary' : ''}` });
     await expect(form.getByText(`Filled in from ${doc.name}'s address`)).toBeVisible();
     await checkA11y(page, 'doctor-visits-dark-form', testInfo);

@@ -9,6 +9,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { ToastProvider } from '@/components/ui/Toast';
 import { useAuthStore } from '@/store/authStore';
 import { useCircle } from '@/hooks/useCircle';
+import { useAddMenu, type AddMenuEntry } from '@/components/layout/AddMenuContext';
 
 // AppLayout's create wiring: picking an AddMenu option mounts the right modal
 // (or navigates), from BOTH triggers — the sidebar's New button at xl and the
@@ -377,5 +378,111 @@ describe('AppLayout AddMenu: Shift (care shifts)', () => {
       'Note',
       'Shift',
     ]);
+  });
+});
+
+// A page's own add controls (Calendar's header "+", its "Add event" and empty-state CTAs, owner
+// 2026-11-08) open THIS menu through the context, and the form it opens carries the page's entry.
+function PageAddButtons() {
+  const { openAddMenu } = useAddMenu();
+  const entries: AddMenuEntry[] = ['header', 'list_button', 'empty_state'];
+  return (
+    <div>
+      {entries.map((entry) => (
+        <button key={entry} type="button" onClick={() => openAddMenu({ entry })}>
+          {`page-add-${entry}`}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+describe('AppLayout AddMenu: opened from a page (AddMenuContext)', () => {
+  beforeEach(() => {
+    useAuthStore.setState({
+      user: { id: 'u1', email: 'pat@example.com', first_name: 'Pat', last_name: 'Lee' },
+      isAuthenticated: true,
+    });
+  });
+  afterEach(() => {
+    useAuthStore.setState(initialAuthState, true);
+    vi.mocked(useCircle).mockReturnValue({
+      circle: { id: 'c1', owner_id: 'u1', is_self_care: false },
+      canEdit: true,
+    } as unknown as ReturnType<typeof useCircle>);
+  });
+
+  function renderWithPage(): void {
+    render(
+      <MemoryRouter initialEntries={['/circles/c1/calendar']}>
+        <ToastProvider>
+          <Routes>
+            <Route path="/circles/:circleId" element={<AppLayout />}>
+              <Route path="calendar" element={<PageAddButtons />} />
+              <Route path="notes" element={<div data-testid="notes-page-stub">Notes page stub</div>} />
+            </Route>
+          </Routes>
+        </ToastProvider>
+      </MemoryRouter>
+    );
+  }
+
+  it.each<AddMenuEntry>(['header', 'list_button', 'empty_state'])(
+    "opens the New menu; the simple form it opens carries entry '%s'",
+    async (entry) => {
+      const user = userEvent.setup();
+      renderWithPage();
+      expect(screen.queryByRole('menu', { name: 'New' })).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: `page-add-${entry}` }));
+      expect(screen.getByRole('menu', { name: 'New' })).toBeInTheDocument();
+      await user.click(screen.getByRole('menuitem', { name: 'Appt' }));
+      const modal = screen.getByTestId('add-event-modal');
+      expect(modal).toHaveAttribute('data-initial-type', 'appointment');
+      expect(modal).toHaveAttribute('data-entry', entry);
+      expect(screen.queryByRole('menu', { name: 'New' })).not.toBeInTheDocument();
+    }
+  );
+
+  it('Note from the page-opened menu goes to the Notes composer', async () => {
+    const user = userEvent.setup();
+    renderWithPage();
+    await user.click(screen.getByRole('button', { name: 'page-add-header' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Note' }));
+    expect(screen.queryByTestId('add-event-modal')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('notes-page-stub')).toBeInTheDocument();
+  });
+
+  it("premium Shift from the header's menu opens the composer with source 'header'", async () => {
+    vi.mocked(useCircle).mockReturnValue({
+      circle: { id: 'c1', owner_id: 'u1', is_self_care: false },
+      canEdit: true,
+      isPremiumCircle: true,
+    } as unknown as ReturnType<typeof useCircle>);
+    const user = userEvent.setup();
+    renderWithPage();
+    await user.click(screen.getByRole('button', { name: 'page-add-header' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Shift' }));
+    expect(screen.getByTestId('shift-composer')).toHaveAttribute('data-source', 'header');
+  });
+
+  it("the nav's own New after a page opening is 'add_menu' again", async () => {
+    const user = userEvent.setup();
+    renderWithPage();
+    await user.click(screen.getByRole('button', { name: 'page-add-list_button' }));
+    await user.click(screen.getByTestId('add-menu-backdrop'));
+    await user.click(within(screen.getByTestId('floating-nav')).getByRole('button', { name: 'New' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Med' }));
+    expect(screen.getByTestId('add-event-modal')).toHaveAttribute('data-entry', 'add_menu');
+  });
+
+  it('a read-only viewer: the page opening shows no menu', async () => {
+    vi.mocked(useCircle).mockReturnValue({
+      circle: { id: 'c1', owner_id: 'u1', is_self_care: false },
+      canEdit: false,
+    } as unknown as ReturnType<typeof useCircle>);
+    const user = userEvent.setup();
+    renderWithPage();
+    await user.click(screen.getByRole('button', { name: 'page-add-header' }));
+    expect(screen.queryByRole('menu', { name: 'New' })).not.toBeInTheDocument();
   });
 });

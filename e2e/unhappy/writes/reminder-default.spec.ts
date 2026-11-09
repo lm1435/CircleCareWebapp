@@ -3,6 +3,7 @@ import { test, expect, uniqueLabel } from '../../fixtures';
 import { dbQuery, sqlStr } from '../../unhappy';
 import { localDate, purgeEventsTitled } from './_helpers';
 import { gotoCalendarSettled } from '../../notesFirstClassShared';
+import { fillSimpleTime, openCalendarNew } from '../../helpers';
 
 // THE "15 MINUTES BEFORE" DEFAULT IS OFF — checked against the SAVED ROW.
 //
@@ -17,14 +18,13 @@ test.use({ persona: 'premiumOwner' });
 
 async function fillTimedEvent(page: Page, circleId: string, type: 'task' | 'appointment', title: string): Promise<Locator> {
   await gotoCalendarSettled(page, circleId);
-  await page.getByRole('button', { name: 'Add event' }).first().click();
-  const dialog = page.getByRole('dialog', { name: 'New event' });
-  await expect(dialog).toBeVisible();
-  await dialog.locator('#event_type').selectOption(type);
+  // The header "+" opens the New menu (owner 2026-11-08): the type's simple form.
+  const dialog = await openCalendarNew(page, type);
   await dialog.locator('#title').fill(title);
   await dialog.locator('#scheduled_date').fill(localDate(3));
-  // Reminders only render once a time is set.
-  await dialog.locator('#scheduled_time').fill('10:00');
+  // Reminders only render once a time is set; they (and the end time) sit under "More details".
+  await fillSimpleTime(dialog, '10:00');
+  await dialog.locator('#more-details').click();
   await dialog.locator('#endTime').fill('10:30');
   return dialog;
 }
@@ -40,7 +40,7 @@ async function saveAndCapture(page: Page, dialog: Locator, circleId: string): Pr
   const posted = page.waitForRequest(
     (r) => r.method() === 'POST' && new URL(r.url()).pathname === `/api/circles/${circleId}/events`
   );
-  await dialog.getByRole('button', { name: 'Create', exact: true }).click();
+  await dialog.getByRole('button', { name: /^Add (task|appointment)$/ }).click();
   const body = (await posted).postDataJSON() as Record<string, unknown>;
   await expect(dialog).toBeHidden({ timeout: 20_000 });
   return body;

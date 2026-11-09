@@ -20,6 +20,7 @@ import { CalendarSkeleton } from '@/components/calendar/CalendarSkeleton';
 import { EventDetailModal } from '@/components/calendar/EventDetailModal';
 import { EventDetailActions } from '@/components/calendar/EventDetailActions';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
+import { useAddMenu, type AddMenuEntry } from '@/components/layout/AddMenuContext';
 import { DeleteEventDialog } from '@/components/calendar/DeleteEventDialog';
 import { DiscontinueMedDialog } from '@/components/calendar/DiscontinueMedDialog';
 import { ConfirmMedDialog } from '@/components/meds/ConfirmMedDialog';
@@ -193,13 +194,6 @@ export default function CalendarPage(): ReactElement {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   // Write-flow modal state (Task 1.6) — owned by the page so the edit/delete
   // modals outlive the detail modal they were launched from.
-  const [showCreate, setShowCreate] = useState(false);
-  // Which control opened the create form (analytics: entry_form_opened.entry).
-  const [createEntry, setCreateEntry] = useState<'empty_state' | 'header' | 'list_button'>('header');
-  const openCreate = (entry: 'empty_state' | 'header' | 'list_button'): void => {
-    setCreateEntry(entry);
-    setShowCreate(true);
-  };
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<CalendarEvent | null>(null);
   const [discontinuingEvent, setDiscontinuingEvent] = useState<CalendarEvent | null>(null);
@@ -237,12 +231,12 @@ export default function CalendarPage(): ReactElement {
   const shiftsReadable = shiftsEntry === 'available' || shiftsEntry === 'readonly';
   const shiftsMode = mode === 'shifts' && shiftsReadable;
   const shiftDialogs = useShiftsDialogs(circleId);
-  // One add pattern (owner 2026-11-08): Schedule's header "+" and its in-page "Add event" open the
-  // same create flow. On web that stays the FULL "New event" form (type picker included): it is the
-  // web's only door to the full layout (the New menu opens the simple forms), so routing it through
-  // the menu is held for the owner's call. Web has no device-calendar import either.
-  const openAddEvent = (entry: 'empty_state' | 'header' | 'list_button' = 'header'): void =>
-    openCreate(entry);
+  // One add pattern (owner 2026-11-08, mobile parity): Schedule's header "+", its in-page "Add
+  // event" and its empty-state CTAs all open the New menu (AppLayout's, the same one the nav's New
+  // opens), which leads to the simple form of the chosen type. `entry` rides along to that form's
+  // entry_form_opened. Web has no device-calendar import, so the menu has no import row.
+  const { openAddMenu } = useAddMenu();
+  const openAddEvent = (entry: AddMenuEntry = 'header'): void => openAddMenu({ entry });
 
   // PHI-safe: only circle_id + the view enum. Fires on open and on view change.
   useEffect(() => {
@@ -752,13 +746,7 @@ export default function CalendarPage(): ReactElement {
               >
                 {/* Week only: Month has no in-page add (owner 2026-11-08), the header "+" is its add. */}
                 {canEdit && view === 'week' && (
-                  <Button
-                    onClick={() => {
-                      setCreateEntry('empty_state');
-                      setShowCreate(true);
-                    }}
-                    offlineKind="change"
-                  >
+                  <Button onClick={() => openAddEvent('empty_state')} offlineKind="change">
                     {t('calendar:addEvent.addEvent')}
                   </Button>
                 )}
@@ -975,14 +963,6 @@ export default function CalendarPage(): ReactElement {
           timezone={timezone}
           canEdit={canEdit}
           onClose={() => setDoseHistoryFor(null)}
-        />
-      )}
-
-      {showCreate && (
-        <AddEventModal
-          circleId={circleId}
-          entry={createEntry}
-          onClose={() => setShowCreate(false)}
         />
       )}
 

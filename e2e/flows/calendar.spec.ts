@@ -1,5 +1,5 @@
 import { test, expect, uniqueLabel } from '../fixtures';
-import { expandAllDayOverflow } from '../helpers';
+import { expandAllDayOverflow, openCalendarNew } from '../helpers';
 
 // Calendar write flow: create a task event → verify it appears → edit its title
 // → delete it. Uses a run-unique title so parallel/repeat runs never collide and
@@ -21,14 +21,11 @@ test('create, edit, and delete a calendar task', async ({ page, circleId }) => {
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
 
   // --- Create ---
-  await page.getByRole('button', { name: 'Add event' }).first().click();
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toBeVisible();
-
-  await dialog.locator('#event_type').selectOption('task');
+  // The header "+" opens the New menu (owner 2026-11-08); Task opens the simple task form.
+  const dialog = await openCalendarNew(page, 'task');
   await dialog.locator('#title').fill(title);
   await dialog.locator('#scheduled_date').fill(todayISO());
-  await dialog.getByRole('button', { name: 'Create' }).click();
+  await dialog.getByRole('button', { name: 'Add task' }).click();
 
   await expect(dialog).toBeHidden({ timeout: 20_000 });
   // Task chips are all-day; heavy re-run traffic can push ours past the week

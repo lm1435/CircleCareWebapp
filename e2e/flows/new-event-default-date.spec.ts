@@ -1,5 +1,6 @@
 import { test, expect, uniqueLabel } from '../fixtures';
 import { sqlExec, sqlRows, sqlStr } from '../db';
+import { openCalendarNew } from '../helpers';
 
 /**
  * A NEW event defaults its date to the CARE RECIPIENT's "today".
@@ -85,9 +86,8 @@ test('a new event from the CALENDAR "Add event" defaults to the recipient\'s tod
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
 
-  await page.getByRole('button', { name: 'Add event' }).first().click();
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toBeVisible();
+  // The header "+" opens the New menu (owner 2026-11-08): an appointment's simple form.
+  const dialog = await openCalendarNew(page, 'appointment');
 
   const date = dialog.locator('#scheduled_date');
   await expect(date).toHaveValue(RECIPIENT_TODAY);

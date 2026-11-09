@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { openNoteComposer } from '../helpers';
+import { fillSimpleTime, openCalendarNew, openNoteComposer } from '../helpers';
 import { readFileSync } from 'node:fs';
 import type { APIRequestContext, BrowserContext, Locator, Page, Route } from '@playwright/test';
 import { test, expect } from '../fixtures';
@@ -551,16 +551,14 @@ const SURFACES: Surface[] = [
     path: '/api/circles/:id/events',
     async prepare({ page, o, label }) {
       await page.goto(`/circles/${o.circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-      await page.getByRole('button', { name: 'Add event' }).first().click({ timeout: 20_000 });
-      const dialog = page.getByRole('dialog', { name: 'New event' });
-      await expect(dialog).toBeVisible();
-      await dialog.locator('#event_type').selectOption('appointment');
+      // The header "+" opens the New menu (owner 2026-11-08): the simple appointment form.
+      const dialog = await openCalendarNew(page, 'appointment', { timeout: 20_000 });
       await dialog.locator('#title').fill(label);
       await dialog.locator('#scheduled_date').fill(futureDate(o));
-      return dialog.getByRole('button', { name: 'Create', exact: true });
+      return dialog.getByRole('button', { name: 'Add appointment', exact: true });
     },
     async kept({ page, label }) {
-      const dialog = page.getByRole('dialog', { name: 'New event' });
+      const dialog = page.getByRole('dialog', { name: 'New appointment' });
       await expect(dialog).toBeVisible();
       await expect(dialog.locator('#title')).toHaveValue(label);
     },
@@ -568,7 +566,7 @@ const SURFACES: Surface[] = [
     before: 0,
     after: 1,
     async succeeded({ page }) {
-      await expect(page.getByRole('dialog', { name: 'New event' })).toBeHidden({ timeout: 20_000 });
+      await expect(page.getByRole('dialog', { name: 'New appointment' })).toBeHidden({ timeout: 20_000 });
     },
   },
   {
@@ -577,18 +575,16 @@ const SURFACES: Surface[] = [
     path: '/api/circles/:id/events',
     async prepare({ page, o, label }) {
       await page.goto(`/circles/${o.circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-      await page.getByRole('button', { name: 'Add event' }).first().click({ timeout: 20_000 });
-      const dialog = page.getByRole('dialog', { name: 'New event' });
-      await expect(dialog).toBeVisible();
-      await dialog.locator('#event_type').selectOption('medication');
+      // The header "+" opens the New menu (owner 2026-11-08): the simple medication form.
+      const dialog = await openCalendarNew(page, 'medication', { timeout: 20_000 });
       await dialog.locator('#medication_name').fill(label);
       await dialog.locator('#medication_dosage').fill('5 mg');
       await dialog.locator('#scheduled_date').fill(futureDate(o));
-      await dialog.locator('#scheduled_time').fill('09:00');
-      return dialog.getByRole('button', { name: 'Create', exact: true });
+      await fillSimpleTime(dialog, '09:00');
+      return dialog.getByRole('button', { name: 'Add medication', exact: true });
     },
     async kept({ page, label }) {
-      const dialog = page.getByRole('dialog', { name: 'New event' });
+      const dialog = page.getByRole('dialog', { name: 'New medication' });
       await expect(dialog).toBeVisible();
       await expect(dialog.locator('#medication_name')).toHaveValue(label);
     },
@@ -597,7 +593,7 @@ const SURFACES: Surface[] = [
     before: 0,
     after: 1,
     async succeeded({ page }) {
-      await expect(page.getByRole('dialog', { name: 'New event' })).toBeHidden({ timeout: 20_000 });
+      await expect(page.getByRole('dialog', { name: 'New medication' })).toBeHidden({ timeout: 20_000 });
     },
   },
   {

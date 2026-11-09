@@ -373,3 +373,60 @@ export async function weekChipLabels(page: Page, scope: Locator, name: RegExp): 
 export async function weekChipCount(page: Page, scope: Locator, name: RegExp): Promise<number> {
   return (await weekChipLabels(page, scope, name)).length;
 }
+
+export type CalendarNewKind = 'medication' | 'appointment' | 'task';
+const NEW_MENU_ITEM: Record<CalendarNewKind, RegExp> = {
+  // The short label normally, the full word at large text.
+  medication: /^(Med|Medication)$/,
+  appointment: /^(Appt|Appointment)$/,
+  task: /^Task$/,
+};
+const NEW_FORM_TITLE: Record<CalendarNewKind, string> = {
+  medication: 'New medication',
+  appointment: 'New appointment',
+  task: 'New task',
+};
+/** The simple form's save button for each type. */
+export const SIMPLE_SAVE: Record<CalendarNewKind, string> = {
+  medication: 'Add medication',
+  appointment: 'Add appointment',
+  task: 'Add task',
+};
+
+/**
+ * The Calendar's header "+" ("Add event") opens the New menu (owner 2026-11-08, mobile parity), not the
+ * full "New event" form: pick `kind` there and return its SIMPLE form ("New medication" / "New
+ * appointment" / "New task"). `.first()`: the masthead renders the action twice (round control below
+ * xl, labelled button at xl) and the in-page outline "Add event" shares the name; the masthead's come
+ * first in the DOM.
+ */
+export async function openCalendarNew(
+  page: Page,
+  kind: CalendarNewKind,
+  options: { timeout?: number } = {}
+): Promise<Locator> {
+  await page.getByRole('button', { name: 'Add event', exact: true }).first().click({ timeout: options.timeout });
+  const menu = page.getByRole('menu', { name: 'New' });
+  await expect(menu).toBeVisible();
+  await menu.getByRole('menuitem', { name: NEW_MENU_ITEM[kind] }).click();
+  const dialog = page.getByRole('dialog', { name: NEW_FORM_TITLE[kind] });
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+/**
+ * Set a simple form's time: the medication form's "Other time" tile, the appointment / task "Time" tile,
+ * open the `#scheduled_time` field (a no-op once it is open), then fill it.
+ */
+export async function fillSimpleTime(dialog: Locator, time: string): Promise<void> {
+  const field = dialog.locator('#scheduled_time');
+  if (!(await field.isVisible())) {
+    await dialog
+      .getByTestId('time-chip-other')
+      .or(dialog.getByTestId('appt-time-tile'))
+      .or(dialog.getByTestId('task-time-tile'))
+      .first()
+      .click();
+  }
+  await field.fill(time);
+}

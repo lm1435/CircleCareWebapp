@@ -1,6 +1,7 @@
 import { test, expect, uniqueLabel } from '../fixtures';
 import { API_ERRORS, dbCount, failRequest, sqlStr } from '../unhappy';
 import { gotoCirclePage } from '../unhappy/access/_helpers';
+import { openCalendarNew } from '../helpers';
 
 // PK18 — a write refused on a LAPSED (frozen) circle (403 SUBSCRIPTION_REQUIRED from
 // requireCircleEditAccess) says what is TRUE: the owner's subscription ended and the
@@ -61,16 +62,13 @@ test('events: an appointment refused on a lapsed circle gives the OWNER the laps
 }) => {
   const title = uniqueLabel('Lapsed appointment');
   await gotoCirclePage(page, h.circleId, 'calendar');
-  const add = page.getByRole('button', { name: 'Add event' }).first();
-  await expect(add).toBeVisible({ timeout: 20_000 });
-  await add.click();
-  const dialog = page.getByRole('dialog', { name: 'New event' });
-  await expect(dialog).toBeVisible();
-  await dialog.locator('#event_type').selectOption('appointment');
+  await expect(page.getByRole('button', { name: 'Add event' }).first()).toBeVisible({ timeout: 20_000 });
+  // The header "+" opens the New menu (owner 2026-11-08): the simple appointment form.
+  const dialog = await openCalendarNew(page, 'appointment');
   await dialog.locator('#title').fill(title);
 
   const fault = await failRequest(page, 'POST', '/api/circles/:id/events', API_ERRORS.writeSubscriptionRequired);
-  await dialog.getByRole('button', { name: 'Create', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Add appointment', exact: true }).click();
   await fault.expectHits(1);
 
   await expect(page.getByText(OWNER_COPY)).toBeVisible();

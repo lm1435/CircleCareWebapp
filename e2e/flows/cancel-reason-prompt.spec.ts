@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import type { Page, Request, TestInfo } from '@playwright/test';
 import { test, expect } from '../fixtures';
-import { checkA11y } from '../helpers';
+import { checkA11y, openCalendarNew } from '../helpers';
 import { sqlExec, sqlStr } from '../db';
 
 // "Why did you turn off renewal?" — the web CancelReasonPrompt
@@ -738,8 +738,8 @@ test.describe('comparison (visual review only)', () => {
     await stubFeedback(page);
     await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
-    await page.getByRole('button', { name: 'Add event' }).first().click();
-    await expect(page.getByRole('dialog')).toBeVisible();
+    // The header "+" opens the New menu (owner 2026-11-08): compare against the appointment form.
+    await openCalendarNew(page, 'appointment');
     await shoot(page, '08-comparison-add-event-dialog', testInfo);
   });
 });

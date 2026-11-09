@@ -1,5 +1,5 @@
 import { gotoCalendarSettled } from '../../notesFirstClassShared';
-import { openNoteComposer } from '../../helpers';
+import { fillSimpleTime, openCalendarNew, openNoteComposer } from '../../helpers';
 import type { Locator, Page } from '@playwright/test';
 import { test, expect, uniqueLabel } from '../../fixtures';
 import { sqlExec } from '../../db';
@@ -96,21 +96,19 @@ const SURFACES: Surface[] = [
     autoRetries: 3,
     async prepare({ page, circleId, label }) {
       await gotoCalendarSettled(page, circleId);
-      await page.getByRole('button', { name: 'Add event' }).first().click();
-      const dialog = page.getByRole('dialog', { name: 'New event' });
-      await expect(dialog).toBeVisible();
-      await dialog.locator('#event_type').selectOption('appointment');
+      // The header "+" opens the New menu (owner 2026-11-08): the simple appointment form.
+      const dialog = await openCalendarNew(page, 'appointment');
       await dialog.locator('#title').fill(label);
       await dialog.locator('#scheduled_date').fill(localDate(3));
-      return dialog.getByRole('button', { name: 'Create', exact: true });
+      return dialog.getByRole('button', { name: 'Add appointment', exact: true });
     },
     async inputKept({ page, label }) {
-      const dialog = page.getByRole('dialog', { name: 'New event' });
+      const dialog = page.getByRole('dialog', { name: 'New appointment' });
       await expect(dialog).toBeVisible();
       await expect(dialog.locator('#title')).toHaveValue(label);
     },
     async succeeded({ page }) {
-      await expect(page.getByRole('dialog', { name: 'New event' })).toBeHidden({ timeout: 20_000 });
+      await expect(page.getByRole('dialog', { name: 'New appointment' })).toBeHidden({ timeout: 20_000 });
     },
     rows: (ctx) => `select 1 from calendar_events where circle_id = ${c(ctx)} and title = ${sqlStr(ctx.label)}`,
     cleanup: (ctx) => purgeEventsTitled(ctx.circleId, ctx.label),
@@ -291,24 +289,22 @@ const SURFACES: Surface[] = [
     autoRetries: 3,
     async prepare({ page, circleId, label }) {
       await gotoCalendarSettled(page, circleId);
-      await page.getByRole('button', { name: 'Add event' }).first().click();
-      const dialog = page.getByRole('dialog', { name: 'New event' });
-      await expect(dialog).toBeVisible();
-      await dialog.locator('#event_type').selectOption('medication');
+      // The header "+" opens the New menu (owner 2026-11-08): the simple medication form.
+      const dialog = await openCalendarNew(page, 'medication');
       await dialog.locator('#medication_name').fill(label);
       await dialog.locator('#medication_dosage').fill('5 mg');
       // Three days out: never "today" in any recipient zone, so the past-time notice cannot interpose.
       await dialog.locator('#scheduled_date').fill(localDate(3));
-      await dialog.locator('#scheduled_time').fill('09:00');
-      return dialog.getByRole('button', { name: 'Create', exact: true });
+      await fillSimpleTime(dialog, '09:00');
+      return dialog.getByRole('button', { name: 'Add medication', exact: true });
     },
     async inputKept({ page, label }) {
-      const dialog = page.getByRole('dialog', { name: 'New event' });
+      const dialog = page.getByRole('dialog', { name: 'New medication' });
       await expect(dialog).toBeVisible();
       await expect(dialog.locator('#medication_name')).toHaveValue(label);
     },
     async succeeded({ page }) {
-      await expect(page.getByRole('dialog', { name: 'New event' })).toBeHidden({ timeout: 20_000 });
+      await expect(page.getByRole('dialog', { name: 'New medication' })).toBeHidden({ timeout: 20_000 });
     },
     rows: (ctx) =>
       `select 1 from calendar_events where circle_id = ${c(ctx)} and parent_event_id is null and medication_name = ${sqlStr(ctx.label)}`,
@@ -322,21 +318,19 @@ const SURFACES: Surface[] = [
     autoRetries: 3,
     async prepare({ page, circleId, label }) {
       await gotoCalendarSettled(page, circleId);
-      await page.getByRole('button', { name: 'Add event' }).first().click();
-      const dialog = page.getByRole('dialog', { name: 'New event' });
-      await expect(dialog).toBeVisible();
-      await dialog.locator('#event_type').selectOption('task');
+      // The header "+" opens the New menu (owner 2026-11-08): the simple task form.
+      const dialog = await openCalendarNew(page, 'task');
       await dialog.locator('#title').fill(label);
       await dialog.locator('#scheduled_date').fill(localDate(3));
-      return dialog.getByRole('button', { name: 'Create', exact: true });
+      return dialog.getByRole('button', { name: 'Add task', exact: true });
     },
     async inputKept({ page, label }) {
-      const dialog = page.getByRole('dialog', { name: 'New event' });
+      const dialog = page.getByRole('dialog', { name: 'New task' });
       await expect(dialog).toBeVisible();
       await expect(dialog.locator('#title')).toHaveValue(label);
     },
     async succeeded({ page }) {
-      await expect(page.getByRole('dialog', { name: 'New event' })).toBeHidden({ timeout: 20_000 });
+      await expect(page.getByRole('dialog', { name: 'New task' })).toBeHidden({ timeout: 20_000 });
     },
     rows: (ctx) =>
       `select 1 from calendar_events where circle_id = ${c(ctx)} and title = ${sqlStr(ctx.label)} and event_type = 'task'`,

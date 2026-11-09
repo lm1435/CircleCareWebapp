@@ -108,10 +108,13 @@ test.describe('empty states (list endpoints stubbed empty)', () => {
     const addBtn = emptyState.getByRole('button', { name: 'Add event' });
     await expect(addBtn).toHaveCount(1);
     await expect(addBtn).toBeVisible();
+    // The CTA opens the New menu (owner 2026-11-08, mobile parity), not a form; Escape closes it.
     await addBtn.click();
-    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10_000 });
-    await page.getByRole('button', { name: 'Cancel' }).first().click();
-    await expect(page.getByRole('dialog')).toBeHidden({ timeout: 10_000 });
+    const menu = page.getByRole('menu', { name: 'New' });
+    await expect(menu).toBeVisible({ timeout: 10_000 });
+    await expect(menu.getByRole('menuitem')).toHaveText(['Med', 'Appt', 'Task', 'Note', 'Shift']);
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden({ timeout: 10_000 });
 
     await checkA11y(page, path, testInfo);
   });

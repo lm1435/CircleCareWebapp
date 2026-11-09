@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import '@/i18n';
 import CalendarPage from '../CalendarPage';
 import { ToastProvider } from '@/components/ui';
+import { AddMenuContext } from '@/components/layout/AddMenuContext';
 import {
   completeEvent,
   getCircleDetail,
@@ -169,6 +170,10 @@ function LocationProbe() {
 // CalendarPage now calls useToast() unconditionally (Task 26's `?date=`
 // deep-link miss toasts), so every render needs a ToastProvider — not just
 // the write-flow one below.
+// AppLayout's New menu (owner 2026-11-08): every Schedule add opens it through this context.
+const mockOpenAddMenu = vi.fn();
+const ADD_MENU = { openAddMenu: mockOpenAddMenu };
+
 function renderPage(initialPath = '/circles/circle-1/calendar') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -176,12 +181,14 @@ function renderPage(initialPath = '/circles/circle-1/calendar') {
   return render(
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <MemoryRouter initialEntries={[initialPath]}>
-          <LocationProbe />
-          <Routes>
-            <Route path="/circles/:circleId/calendar" element={<CalendarPage />} />
-          </Routes>
-        </MemoryRouter>
+        <AddMenuContext.Provider value={ADD_MENU}>
+          <MemoryRouter initialEntries={[initialPath]}>
+            <LocationProbe />
+            <Routes>
+              <Route path="/circles/:circleId/calendar" element={<CalendarPage />} />
+            </Routes>
+          </MemoryRouter>
+        </AddMenuContext.Provider>
       </ToastProvider>
     </QueryClientProvider>
   );
@@ -753,10 +760,11 @@ describe('CalendarPage', () => {
   });
 
   // The masthead's right action renders TWICE (spec §5.4: the round chrome
-  // control below xl, a labelled button at xl) — both must open the same
-  // AddEventModal, and neither renders at all for a read-only member. (The
-  // in-page outline "Add event" under the week carries a testid.)
-  it("masthead right action opens AddEventModal, and is absent when the viewer can't edit", async () => {
+  // control below xl, a labelled button at xl) — both open the New menu (owner
+  // 2026-11-08, mobile parity), never the full "New event" form, and neither
+  // renders at all for a read-only member. (The in-page outline "Add event"
+  // under the week carries a testid.)
+  it("masthead right action opens the New menu (entry 'header'), never the full form", async () => {
     const user = userEvent.setup();
     mockGetMembersCircleDetail.mockResolvedValue({ ...MEMBERS_DETAIL, can_edit: true });
     renderEditablePage();
@@ -766,8 +774,13 @@ describe('CalendarPage', () => {
       .getAllByRole('button', { name: 'Add event' })
       .filter((b) => !b.hasAttribute('data-testid'));
     expect(addButtons).toHaveLength(2);
+    mockOpenAddMenu.mockClear();
     await user.click(addButtons[0]);
-    expect(await screen.findByRole('dialog', { name: 'New event' })).toBeInTheDocument();
+    await user.click(addButtons[1]);
+    expect(mockOpenAddMenu).toHaveBeenCalledTimes(2);
+    expect(mockOpenAddMenu).toHaveBeenNthCalledWith(1, { entry: 'header' });
+    expect(mockOpenAddMenu).toHaveBeenNthCalledWith(2, { entry: 'header' });
+    expect(screen.queryByRole('dialog', { name: 'New event' })).not.toBeInTheDocument();
   });
 
   it('renders no masthead Add-event action for a read-only member', async () => {
@@ -1086,14 +1099,14 @@ describe('CalendarPage — note deep link (Task 26)', () => {
 });
 
 // ONE ADD PATTERN (owner 2026-11-08, mobile parity): an OUTLINE "Add event" AFTER the Day list /
-// the Week grid (the same "New event" form as the header); Month has none (header only);
-// read-only: none.
+// the Week grid (the same New menu as the header); Month has none (header only); read-only: none.
 describe('CalendarPage — in-page "Add event"', () => {
   beforeEach(() => {
     mockGetMembersCircleDetail.mockResolvedValue({ ...MEMBERS_DETAIL, can_edit: true });
+    mockOpenAddMenu.mockClear();
   });
 
-  it('Week: outline, after the grid, opens the New event form', async () => {
+  it('Week: outline, after the grid, opens the New menu', async () => {
     const user = userEvent.setup();
     renderEditablePage();
     const grid = await screen.findByRole('grid', { name: 'Week view calendar' });
@@ -1102,10 +1115,11 @@ describe('CalendarPage — in-page "Add event"', () => {
     expect(add.className).toContain('border-primary-outline');
     expect(grid.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await user.click(add);
-    expect(await screen.findByRole('dialog', { name: 'New event' })).toBeInTheDocument();
+    expect(mockOpenAddMenu).toHaveBeenCalledWith({ entry: 'list_button' });
+    expect(screen.queryByRole('dialog', { name: 'New event' })).not.toBeInTheDocument();
   });
 
-  it('Day with events: outline, after the last event, opens the New event form', async () => {
+  it('Day with events: outline, after the last event, opens the New menu', async () => {
     const user = userEvent.setup();
     renderEditablePage();
     await screen.findByRole('grid', { name: 'Week view calendar' });
@@ -1115,7 +1129,30 @@ describe('CalendarPage — in-page "Add event"', () => {
     const rows = within(screen.getByTestId('day-view')).getAllByTestId('day-event');
     expect(rows[rows.length - 1].compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await user.click(add);
-    expect(await screen.findByRole('dialog', { name: 'New event' })).toBeInTheDocument();
+    expect(mockOpenAddMenu).toHaveBeenCalledWith({ entry: 'list_button' });
+    expect(screen.queryByRole('dialog', { name: 'New event' })).not.toBeInTheDocument();
+  });
+
+  it("empty Week / empty Day: the empty state's CTA opens the New menu (entry 'empty_state')", async () => {
+    const user = userEvent.setup();
+    mockGetEvents.mockResolvedValue([]);
+    renderEditablePage();
+    expect(await screen.findByText('No events this week')).toBeInTheDocument();
+    const cta = screen
+      .getAllByRole('button', { name: 'Add event' })
+      .filter((b) => !b.closest('header'));
+    expect(cta).toHaveLength(1);
+    await user.click(cta[0]);
+    expect(mockOpenAddMenu).toHaveBeenLastCalledWith({ entry: 'empty_state' });
+
+    await user.click(screen.getByRole('tab', { name: 'Day' }));
+    expect(await screen.findByText('Nothing scheduled for this day')).toBeInTheDocument();
+    mockOpenAddMenu.mockClear();
+    await user.click(
+      within(screen.getByTestId('day-view')).getByRole('button', { name: 'Add event' })
+    );
+    expect(mockOpenAddMenu).toHaveBeenCalledWith({ entry: 'empty_state' });
+    expect(screen.queryByRole('dialog', { name: 'New event' })).not.toBeInTheDocument();
   });
 
   it('Month: no in-page add (with events, and on an empty month)', async () => {

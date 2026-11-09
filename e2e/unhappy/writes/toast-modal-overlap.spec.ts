@@ -45,6 +45,8 @@ interface ModalCase {
   toast: string;
   file: string;
   keys: { trigger: string; dialog: string; save: string };
+  /** The trigger opens the New menu first (common.json key of the menu item to pick). */
+  menuItem?: string;
   /** Fill the open dialog (id-based, language-independent) so the save sends. */
   fill(dialog: Locator): Promise<void>;
   /** The longest real toast this dialog raises on a 402, per language. */
@@ -79,9 +81,14 @@ const MODALS: ModalCase[] = [
     path: '/api/circles/:id/events',
     toast: "Couldn't save your changes. Please try again.",
     file: 'calendar',
-    keys: { trigger: 'addEvent.addEvent', dialog: 'addEvent.newTitle', save: 'addEvent.create' },
+    // The Calendar header "+" opens the New menu (owner 2026-11-08): Appt -> the simple appointment form.
+    keys: {
+      trigger: 'addEvent.addEvent',
+      dialog: 'addEvent.simple.newAppointment',
+      save: 'addEvent.simple.addAppointment',
+    },
+    menuItem: 'addMenu.appointmentShort',
     async fill(dialog) {
-      await dialog.locator('#event_type').selectOption('appointment');
       await dialog.locator('#title').fill(uniqueLabel('TOV'));
       await dialog.locator('#scheduled_date').fill(localDate(3));
     },
@@ -159,6 +166,12 @@ async function openModal(page: Page, circleId: string, modal: ModalCase, lang: L
     .getByRole('button', { name: tr(lang, modal.file, modal.keys.trigger), exact: true })
     .first()
     .click({ timeout: 20_000 });
+  if (modal.menuItem) {
+    await page
+      .getByRole('menu', { name: tr(lang, 'common', 'nav.new') })
+      .getByRole('menuitem', { name: tr(lang, 'common', modal.menuItem), exact: true })
+      .click();
+  }
   const dialog = page.getByRole('dialog', { name: tr(lang, modal.file, modal.keys.dialog), exact: true });
   await expect(dialog).toBeVisible({ timeout: 20_000 });
   await modal.fill(dialog);

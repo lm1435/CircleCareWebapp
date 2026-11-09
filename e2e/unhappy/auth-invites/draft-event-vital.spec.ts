@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../../fixtures';
 import { sqlExec } from '../../db';
+import { openCalendarNew } from '../../helpers';
 import { dbCount, failRequest, sqlStr, type FaultHandle } from '../../unhappy';
 import {
   cookieLogin,
@@ -80,15 +81,15 @@ test('PK9 Add event: a forced sign-out on Create keeps the appointment draft; af
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
   // A fresh circle's empty week shows "No events this week", not the grid.
   await expect(page.getByRole('button', { name: 'Add event' }).first()).toBeVisible({ timeout: 20_000 });
-  await page.getByRole('button', { name: 'Add event' }).first().click();
-  let dialog = page.getByRole('dialog');
-  await expect(dialog).toBeVisible();
-  await dialog.locator('#event_type').selectOption('appointment');
+  // The header "+" opens the New menu (owner 2026-11-08): the simple appointment form (Location under
+  // "More details").
+  let dialog = await openCalendarNew(page, 'appointment');
   await dialog.locator('#title').fill(title);
+  await dialog.locator('#more-details').click();
   await dialog.locator('#location').fill(where);
 
   const faults = await killSessionOn(page, 'POST', '/api/circles/:id/events');
-  await dialog.getByRole('button', { name: 'Create', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Add appointment', exact: true }).click();
   await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
   await faults.dispose();
   expect(await DRAFT_ENTRIES(page)).toHaveLength(1);
@@ -102,18 +103,17 @@ test('PK9 Add event: a forced sign-out on Create keeps the appointment draft; af
   }
   // A fresh circle's empty week shows "No events this week", not the grid.
   await expect(page.getByRole('button', { name: 'Add event' }).first()).toBeVisible({ timeout: 20_000 });
-  await page.getByRole('button', { name: 'Add event' }).first().click();
-  dialog = page.getByRole('dialog');
-  await expect(dialog).toBeVisible();
-  await expect(dialog.locator('#event_type')).toHaveValue('appointment', { timeout: 5_000 });
-  await expect(dialog.locator('#title')).toHaveValue(title);
+  // Reopened the same way: the appointment form (its title is the type) comes back filled.
+  dialog = await openCalendarNew(page, 'appointment');
+  await expect(dialog.locator('#title')).toHaveValue(title, { timeout: 5_000 });
+  if (!(await dialog.locator('#location').isVisible())) await dialog.locator('#more-details').click();
   await expect(dialog.locator('#location')).toHaveValue(where);
   await expect(page.getByText('We restored your unsaved draft.')).toBeVisible();
   expect(await DRAFT_ENTRIES(page)).toHaveLength(0);
   // The restore itself writes nothing...
   expect(eventRows()).toBe(0);
   // ...and the restored draft saves exactly once when the user presses Create.
-  await dialog.getByRole('button', { name: 'Create', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Add appointment', exact: true }).click();
   await expect(dialog).toBeHidden({ timeout: 20_000 });
   await expect.poll(eventRows, { timeout: 15_000 }).toBe(1);
 });
