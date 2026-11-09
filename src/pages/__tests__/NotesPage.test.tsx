@@ -21,7 +21,7 @@ import i18n from '@/i18n';
 import { ToastProvider } from '@/components/ui';
 import NotesPage from '../NotesPage';
 import type { CareNote } from '@/api/careNotes';
-import { daysBetween, olderPagesNeeded } from '@/lib/noteDate';
+import { daysBetween, olderPageRange, olderPagesNeeded } from '@/lib/noteDate';
 import { __resetEmailLinkLandingForTests } from '@/lib/emailLinkLanding';
 
 function shiftIso(date: string, days: number): string {
@@ -1057,18 +1057,19 @@ describe('NotesPage — backdating (Date row)', () => {
 });
 
 describe('NotesPage — Show older notes', () => {
-  it('steps the base window by 14 days until a full 92-day page, then loads older pages with no cap', async () => {
+  it('one press widens the base window straight to a full 92-day page (then older pages, no cap)', async () => {
     const user = userEvent.setup();
     renderPage();
-    // 14 -> 28 -> ... -> 92 days: 6 steps with no analytics (not an older page).
-    for (let i = 0; i < 6; i++) {
-      await user.click(screen.getByTestId('notes-show-older'));
-    }
-    expect(mockCareNotesOlderLoaded).not.toHaveBeenCalled();
+    // The default mock holds only today's note, so the widened window brings nothing new and
+    // the first older page is requested in the same press (one tap, a visible result).
+    await user.click(screen.getByTestId('notes-show-older'));
     const lastFrom = mockUseCareNotes.mock.calls.at(-1)![1] as { from: string };
     expect(lastFrom.from).toBe(shiftIso(TODAY, -91));
+    expect(mockCareNotesOlderLoaded).toHaveBeenCalledTimes(1);
+    expect(mockCareNotesOlderLoaded).toHaveBeenLastCalledWith({ page: 1 });
+    expect(mockUseOlder.mock.calls.at(-1)![2]).toBe(1);
     // Now each press is one 92-day page, indefinitely.
-    for (let page = 1; page <= 5; page++) {
+    for (let page = 2; page <= 6; page++) {
       await user.click(screen.getByTestId('notes-show-older'));
       expect(mockCareNotesOlderLoaded).toHaveBeenLastCalledWith({ page });
       expect(mockUseOlder.mock.calls.at(-1)![2]).toBe(page);
@@ -1102,5 +1103,105 @@ describe('NotesPage — Show older notes', () => {
     mockUseCareNotes.mockReturnValue(notesResult([]));
     renderPage();
     expect(screen.getByTestId('notes-show-older')).toBeInTheDocument();
+  });
+});
+
+// Owner bug (TestFlight 1.4.1 (5), same control on web): a circle whose only note is 5 days old.
+// "Show older notes" widened the base window by 14 days per press; with nothing in that range
+// nothing changed, and "No older notes" only appeared after ~6 presses. One press must now always
+// show a result.
+describe('NotesPage — Show older notes: one press always produces a visible result', () => {
+  // A fake server: the base window holds the notes on/after `from` (server default = the last 14
+  // days), each older page its own 92-day range. Results are cached per window (stable references,
+  // as react-query gives them).
+  let all: CareNote[] = [];
+  const baseCache = new Map<string, unknown>();
+  const olderCache = new Map<string, unknown>();
+  const DEFAULT_FROM = shiftIso(TODAY, -13);
+
+  beforeEach(() => {
+    baseCache.clear();
+    olderCache.clear();
+    mockUseCareNotes.mockImplementation((_c: string, params?: { from?: string }) => {
+      const floor = params?.from ?? DEFAULT_FROM;
+      if (!baseCache.has(floor)) {
+        baseCache.set(floor, notesResult(all.filter((n) => n.note_date >= floor)));
+      }
+      return baseCache.get(floor);
+    });
+    mockUseOlder.mockImplementation((_c: string, today: string | undefined, pages: number) => {
+      const key = `${today}:${pages}`;
+      if (!olderCache.has(key)) {
+        const perPage = Array.from({ length: today ? pages : 0 }, (_, i) => {
+          const r = olderPageRange(today!, i + 1);
+          return all.filter((n) => n.note_date >= r.from && n.note_date <= r.to);
+        });
+        olderCache.set(key, {
+          notes: perPage.flat(),
+          isFetching: false,
+          isError: false,
+          reachedEnd: perPage.length > 0 && perPage[perPage.length - 1].length === 0,
+        });
+      }
+      return olderCache.get(key);
+    });
+  });
+
+  it('the only note is 5 days old: one press says "No older notes" and the control is gone', async () => {
+    const user = userEvent.setup();
+    all = [makeNote({ id: 'recent', note_date: shiftIso(TODAY, -5), body: 'Five days ago' })];
+    renderPage();
+    expect(screen.getByText('Five days ago')).toBeInTheDocument();
+    await user.click(screen.getByTestId('notes-show-older'));
+    expect(screen.getByTestId('notes-no-older')).toHaveTextContent('No older notes');
+    expect(screen.queryByTestId('notes-show-older')).not.toBeInTheDocument();
+    expect(screen.getByText('Five days ago')).toBeInTheDocument();
+    // The automatic step past the base window is a real older-page load: tracked as page 1.
+    expect(mockCareNotesOlderLoaded).toHaveBeenCalledTimes(1);
+    expect(mockCareNotesOlderLoaded).toHaveBeenLastCalledWith({ page: 1 });
+  });
+
+  it('an older note 60 days back: one press shows it', async () => {
+    const user = userEvent.setup();
+    all = [
+      makeNote({ id: 'recent', note_date: shiftIso(TODAY, -5), body: 'Five days ago' }),
+      makeNote({ id: 'sixty', note_date: shiftIso(TODAY, -60), body: 'Sixty days ago' }),
+    ];
+    renderPage();
+    expect(screen.queryByText('Sixty days ago')).not.toBeInTheDocument();
+    await user.click(screen.getByTestId('notes-show-older'));
+    expect(screen.getByText('Sixty days ago')).toBeInTheDocument();
+    // New notes appeared, so no older page was fetched; the control stays for further history.
+    expect(mockCareNotesOlderLoaded).not.toHaveBeenCalled();
+    expect(screen.getByTestId('notes-show-older')).toBeInTheDocument();
+  });
+
+  it('a note 150 days back (past the base window): one press shows it', async () => {
+    const user = userEvent.setup();
+    all = [
+      makeNote({ id: 'recent', note_date: shiftIso(TODAY, -5), body: 'Five days ago' }),
+      makeNote({ id: 'old', note_date: shiftIso(TODAY, -150), body: 'Long ago' }),
+    ];
+    renderPage();
+    await user.click(screen.getByTestId('notes-show-older'));
+    expect(screen.getByText('Long ago')).toBeInTheDocument();
+    expect(mockCareNotesOlderLoaded).toHaveBeenLastCalledWith({ page: 1 });
+  });
+
+  it('shows the busy state (disabled, aria-busy) while the widened window is still loading', async () => {
+    const user = userEvent.setup();
+    all = [makeNote({ id: 'recent', note_date: shiftIso(TODAY, -5), body: 'Five days ago' })];
+    const placeholder = notesResult(all, { isPlaceholderData: true, isFetching: true });
+    const base = notesResult(all);
+    mockUseCareNotes.mockImplementation((_c: string, params?: { from?: string }) =>
+      params?.from ? placeholder : base
+    );
+    renderPage();
+    await user.click(screen.getByTestId('notes-show-older'));
+    const control = screen.getByTestId('notes-show-older');
+    expect(control).toBeDisabled();
+    expect(control).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByTestId('notes-no-older')).not.toBeInTheDocument();
+    expect(mockCareNotesOlderLoaded).not.toHaveBeenCalled();
   });
 });

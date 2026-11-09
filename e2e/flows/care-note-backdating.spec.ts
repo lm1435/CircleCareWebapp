@@ -100,7 +100,14 @@ test.describe('care note backdating', () => {
 
       const showOlder = page.getByTestId('notes-show-older');
       const noOlder = page.getByTestId('notes-no-older');
-      // 14-day steps up to one full page, then whole 92-day pages: never a dead end.
+      // ONE press is always a visible result (owner, 1.4.1 (5)): the base window widens straight
+      // to 92 days and, when that holds nothing older, the first older page (92..183 days back,
+      // where this note lives) loads in the same press. Either way more day groups show.
+      const dayGroups = page.locator('section[id^="notes-day-"]');
+      const groupsBefore = await dayGroups.count();
+      await showOlder.click();
+      await expect.poll(() => dayGroups.count(), { timeout: 20_000 }).toBeGreaterThan(groupsBefore);
+      // Then whole 92-day pages until the end: never a dead end.
       for (let i = 0; i < 20 && !(await noOlder.isVisible()); i++) {
         await showOlder.click();
         await expect(showOlder.or(noOlder)).toBeVisible({ timeout: 20_000 });

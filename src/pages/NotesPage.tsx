@@ -60,12 +60,12 @@ import { blockOfflineWrite } from '@/lib/offlineWrite';
 const SKELETON_ROWS = [0, 1, 2];
 
 /**
- * Server default window (last 14 days). "Show older notes" widens it in 14-day
- * steps up to one full 92-day server page, then loads whole 92-day pages
- * before it, repeatably, with no cap (lib/noteDate.ts, useOlderCareNotes).
+ * Server default window (last 14 days). "Show older notes" widens it straight
+ * to one full 92-day server page (and on to the next older page when that
+ * brought nothing new), then loads whole 92-day pages before it, repeatably,
+ * with no cap (lib/noteDate.ts, useOlderCareNotes).
  */
 const DEFAULT_WINDOW_DAYS = 14;
-const PAGE_WINDOW_DAYS = 14;
 const MAX_WINDOW_DAYS = NOTE_PAGE_DAYS;
 
 /**
@@ -125,7 +125,7 @@ export default function NotesPage(): ReactElement {
   const isCircleOwner = !!circle && !!currentUserId && circle.owner_id === currentUserId;
 
   // Date-window paging: undefined = server default (last 14 days); "Show
-  // earlier notes" walks `from` back in 14-day pages up to the 92-day cap.
+  // older notes" widens `from` straight to the 92-day cap (handleLoadOlder).
   const [fromDate, setFromDate] = useState<string | undefined>(undefined);
   const notesQuery = useCareNotes(circleId, fromDate ? { from: fromDate } : undefined);
 
@@ -156,6 +156,8 @@ export default function NotesPage(): ReactElement {
   }, []);
   // Older history beyond the base 92-day window: whole pages, no cap.
   const [olderPages, setOlderPages] = useState(0);
+  // Set by a "Show older notes" press that widened the base window (see handleLoadOlder).
+  const [olderPendingFrom, setOlderPendingFrom] = useState<string | null>(null);
 
   const createMutation = useCreateCareNote();
   const updateMutation = useUpdateCareNote();
@@ -472,19 +474,42 @@ export default function NotesPage(): ReactElement {
   const baseFloor = today ? shiftDateString(today, -(MAX_WINDOW_DAYS - 1)) : undefined;
   const baseWindowFull = !!currentFrom && !!baseFloor && currentFrom <= baseFloor;
 
-  function handleLoadOlder(): void {
-    if (!currentFrom || !baseFloor) return;
-    if (!baseWindowFull) {
-      // Below one full 92-day page: widen the base window in 14-day steps.
-      const next = shiftDateString(currentFrom, -PAGE_WINDOW_DAYS);
-      setFromDate(next < baseFloor ? baseFloor : next);
-      return;
-    }
-    if (older.isFetching) return;
+  function loadNextOlderPage(): void {
     const nextPage = olderPages + 1;
     setOlderPages(nextPage);
     Analytics.careNotesOlderLoaded({ page: nextPage });
   }
+
+  // ONE PRESS ALWAYS SHOWS A RESULT (owner, TestFlight 1.4.1 (5); mobile parity): a press used to
+  // widen the base window by one 14-day step, so a circle whose only note was 5 days old pressed
+  // ~6 times with no visible change before "No older notes". Now a press below the full page
+  // widens STRAIGHT to the full 92 days; if that brings no note older than what was loaded, the
+  // next 92-day page is fetched automatically, which either shows notes or ends in "No older
+  // notes" (an empty page = reachedEnd). `olderPendingFrom` is the floor loaded BEFORE the press,
+  // held while the widened window is still answering (the control shows busy meanwhile).
+  function handleLoadOlder(): void {
+    if (!currentFrom || !baseFloor || olderPendingFrom !== null) return;
+    if (!baseWindowFull) {
+      setOlderPendingFrom(currentFrom);
+      setFromDate(baseFloor);
+      return;
+    }
+    if (older.isFetching) return;
+    loadNextOlderPage();
+  }
+
+  const baseNotes = notesQuery.data?.notes;
+  useEffect(() => {
+    if (olderPendingFrom === null) return;
+    // Wait for settled data of the WIDENED window (a placeholder is the previous window's).
+    if (!baseWindowFull || notesQuery.isLoading || notesQuery.isPlaceholderData) return;
+    setOlderPendingFrom(null);
+    const widenedShowedMore = (baseNotes ?? []).some((n) => n.note_date < olderPendingFrom);
+    if (!widenedShowedMore) loadNextOlderPage();
+    // loadNextOlderPage reads the current olderPages; re-running on it is harmless (pending is cleared).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [olderPendingFrom, baseWindowFull, notesQuery.isLoading, notesQuery.isPlaceholderData, baseNotes]);
+  const olderBusy = olderPendingFrom !== null || older.isFetching;
 
   const olderControl: ReactElement | null = !today ? null : older.reachedEnd ? (
     <p className="m-0 text-center text-sm text-ink-3" data-testid="notes-no-older">
@@ -495,7 +520,8 @@ export default function NotesPage(): ReactElement {
       <Button
         variant="ghost"
         onClick={handleLoadOlder}
-        disabled={notesQuery.isFetching || older.isFetching}
+        loading={olderBusy}
+        disabled={notesQuery.isFetching || olderBusy}
         data-testid="notes-show-older"
       >
         {t('notes:showOlder')}
