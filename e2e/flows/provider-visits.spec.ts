@@ -418,8 +418,8 @@ test.describe('Visits & notes: the empty state', () => {
     await page.getByRole('button', { name: 'Add an appointment' }).click();
     const form = page.getByRole('dialog', { name: 'New appointment' });
     await expect(form).toBeVisible({ timeout: 20_000 });
-    // The simple form keeps Doctor / Place in collapsed rows; their fields hold the preset.
-    await expect(form.getByRole('button', { name: /^Doctor/ })).toContainText('Added');
+    // The Doctor / Place rows are gone (8e8a5d4): More details opens with the preset in its fields.
+    await expect(form.getByRole('button', { name: 'More details' })).toHaveAttribute('aria-expanded', 'true');
     await expect(form.locator('#provider_id')).toHaveValue(kim.id);
     await expect(form.locator('#location')).toHaveValue('12 Elm St');
     const title = `E2E From empty ${sfx}`;

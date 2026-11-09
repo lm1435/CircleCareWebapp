@@ -425,8 +425,9 @@ test.describe('Spanish', () => {
     await dialog.locator('#scheduled_date').fill(monday);
     await dialog.locator('#scheduled_time').fill('12:00');
     const options = await dialog.locator('#recurrence_rule option').allTextContents();
-    // "As needed" (the PRN option) is last; "Días de la semana" sits just before it.
-    expect(options[options.length - 2]).toBe('Días de la semana');
+    // "As needed" (the PRN option) is last; the days option sits just before it, speaking the tile word
+    // ("Algunos días", 8e8a5d4).
+    expect(options[options.length - 2]).toBe('Algunos días');
     await dialog.locator('#recurrence_rule').selectOption('days_of_week');
 
     const group = chipGroup(dialog, 'Repetir los');
@@ -526,8 +527,8 @@ test('started series: anchor chip locked (+axe); switching back to Weekly stores
   // axe on the open picker, locked chip included.
   await checkA11y(page, '/circles/:id/meds (edit: days picker, locked chip)', testInfo);
 
-  // --- Back to plain Weekly ---
-  await dialog.locator('#recurrence_rule').selectOption('weekly');
+  // --- Back to plain Weekly (the "Every week" tile; the edit has no Repeat select) ---
+  await dialog.getByRole('radiogroup', { name: 'How often?' }).getByRole('radio', { name: 'Every week' }).click();
   await expect(group).toHaveCount(0);
   await submitAndClose(page, dialog, 'Save changes');
 

@@ -408,8 +408,10 @@ test.describe('New medication (simple form)', () => {
     /** Every tile's line (top), height and whether it is inside the row; plus the shared tile style. */
     async function layout() {
       const rowBox = (await row.boundingBox())!;
+      // "+ Another dose" joins the row once a time is chosen (create only, 8e8a5d4): it is appended after
+      // "Other time", so it is left out of the arrangement being compared.
       const tiles = await row
-        .locator('button:visible')
+        .locator('button:visible:not([data-testid="add-another-dose"])')
         .evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON() as DOMRect));
       const style = (loc: import('@playwright/test').Locator) =>
         loc.evaluate((e) => {
@@ -449,6 +451,7 @@ test.describe('New medication (simple form)', () => {
     await dialog.getByRole('radio', { name: /Evening/ }).click();
     await expect(dialog.getByRole('radio', { name: /Evening/ })).toBeChecked();
     expect((await layout()).lines).toEqual(base.lines);
+    await expect(row.getByTestId('add-another-dose')).toBeVisible();
     await other.click();
     await expect(other).toHaveAttribute('aria-expanded', 'true');
     await dialog.locator('#scheduled_time').fill('10:45');
