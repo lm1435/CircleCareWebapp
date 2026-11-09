@@ -125,7 +125,7 @@
         ],
         "video": {
           "file": "invite-family-en.mp4",
-          "durationSec": 60
+          "durationSec": 64
         },
         "poster": "invite-family-en.jpg"
       },
@@ -160,7 +160,7 @@
         ],
         "video": {
           "file": "join-a-circle-en.mp4",
-          "durationSec": 132
+          "durationSec": 129
         },
         "poster": "join-a-circle-en.jpg"
       },
@@ -188,7 +188,7 @@
         ],
         "video": {
           "file": "roles-and-permissions-en.mp4",
-          "durationSec": 66
+          "durationSec": 67
         },
         "poster": "roles-and-permissions-en.jpg"
       },
@@ -257,7 +257,7 @@
         ],
         "video": {
           "file": "add-a-medication-en.mp4",
-          "durationSec": 99
+          "durationSec": 93
         },
         "poster": "add-a-medication-en.jpg"
       },
@@ -291,7 +291,7 @@
         ],
         "video": {
           "file": "medication-schedules-en.mp4",
-          "durationSec": 125
+          "durationSec": 96
         },
         "poster": "medication-schedules-en.jpg"
       },
@@ -324,7 +324,7 @@
         ],
         "video": {
           "file": "confirm-a-dose-en.mp4",
-          "durationSec": 75
+          "durationSec": 71
         },
         "poster": "confirm-a-dose-en.jpg"
       },
@@ -351,7 +351,7 @@
         ],
         "video": {
           "file": "reminders-and-alerts-en.mp4",
-          "durationSec": 113
+          "durationSec": 116
         },
         "poster": "reminders-and-alerts-en.jpg"
       },
@@ -382,7 +382,7 @@
         ],
         "video": {
           "file": "stop-or-delete-a-medication-en.mp4",
-          "durationSec": 78
+          "durationSec": 74
         },
         "poster": "stop-or-delete-a-medication-en.jpg"
       },
@@ -415,7 +415,7 @@
         ],
         "video": {
           "file": "as-needed-medications-en.mp4",
-          "durationSec": 130
+          "durationSec": 128
         },
         "poster": "as-needed-medications-en.jpg"
       },
@@ -449,7 +449,7 @@
         ],
         "video": {
           "file": "routine-reminders-en.mp4",
-          "durationSec": 94
+          "durationSec": 84
         },
         "poster": "routine-reminders-en.jpg"
       },
@@ -484,7 +484,7 @@
         ],
         "video": {
           "file": "appointments-en.mp4",
-          "durationSec": 152
+          "durationSec": 105
         },
         "poster": "appointments-en.jpg"
       },
@@ -520,7 +520,7 @@
         ],
         "video": {
           "file": "tasks-en.mp4",
-          "durationSec": 92
+          "durationSec": 95
         },
         "poster": "tasks-en.jpg"
       },
@@ -559,7 +559,7 @@
         ],
         "video": {
           "file": "care-shifts-en.mp4",
-          "durationSec": 166
+          "durationSec": 151
         },
         "poster": "care-shifts-en.jpg"
       },
@@ -592,7 +592,7 @@
         ],
         "video": {
           "file": "doctor-visits-and-notes-en.mp4",
-          "durationSec": 85
+          "durationSec": 97
         },
         "poster": "doctor-visits-and-notes-en.jpg"
       },
@@ -627,7 +627,7 @@
         ],
         "video": {
           "file": "daily-care-notes-en.mp4",
-          "durationSec": 59
+          "durationSec": 55
         },
         "poster": "daily-care-notes-en.jpg"
       },
@@ -659,7 +659,7 @@
         ],
         "video": {
           "file": "find-older-notes-en.mp4",
-          "durationSec": 83
+          "durationSec": 94
         },
         "poster": "find-older-notes-en.jpg"
       },
@@ -694,7 +694,7 @@
         ],
         "video": {
           "file": "care-info-and-summary-en.mp4",
-          "durationSec": 76
+          "durationSec": 83
         },
         "poster": "care-info-and-summary-en.jpg"
       },
@@ -729,7 +729,7 @@
         ],
         "video": {
           "file": "documents-en.mp4",
-          "durationSec": 57
+          "durationSec": 56
         },
         "poster": "documents-en.jpg"
       },
@@ -764,7 +764,7 @@
         ],
         "video": {
           "file": "vitals-en.mp4",
-          "durationSec": 65
+          "durationSec": 66
         },
         "poster": "vitals-en.jpg"
       },
@@ -799,7 +799,7 @@
         ],
         "video": {
           "file": "export-your-data-en.mp4",
-          "durationSec": 44
+          "durationSec": 42
         },
         "poster": "export-your-data-en.jpg"
       },
@@ -871,7 +871,7 @@
         ],
         "video": {
           "file": "log-a-past-incident-en.mp4",
-          "durationSec": 60
+          "durationSec": 64
         },
         "poster": "log-a-past-incident-en.jpg"
       },
@@ -907,7 +907,7 @@
         ],
         "video": {
           "file": "notifications-not-arriving-en.mp4",
-          "durationSec": 79
+          "durationSec": 86
         },
         "poster": "notifications-not-arriving-en.jpg"
       },
@@ -942,7 +942,7 @@
         ],
         "video": {
           "file": "quiet-hours-en.mp4",
-          "durationSec": 107
+          "durationSec": 93
         },
         "poster": "quiet-hours-en.jpg"
       },
@@ -1003,7 +1003,7 @@
         ],
         "video": {
           "file": "second-circle-en.mp4",
-          "durationSec": 77
+          "durationSec": 76
         },
         "poster": "second-circle-en.jpg"
       },
@@ -1085,7 +1085,7 @@
         ],
         "video": {
           "file": "privacy-and-security-en.mp4",
-          "durationSec": 83
+          "durationSec": 84
         },
         "poster": "privacy-and-security-en.jpg"
       }
@@ -1121,7 +1121,7 @@
         ],
         "video": {
           "file": "create-a-care-circle-es.mp4",
-          "durationSec": 72
+          "durationSec": 74
         },
         "poster": "create-a-care-circle-es.jpg"
       },
@@ -1156,7 +1156,7 @@
         ],
         "video": {
           "file": "invite-family-es.mp4",
-          "durationSec": 62
+          "durationSec": 68
         },
         "poster": "invite-family-es.jpg"
       },
@@ -1191,7 +1191,7 @@
         ],
         "video": {
           "file": "join-a-circle-es.mp4",
-          "durationSec": 132
+          "durationSec": 129
         },
         "poster": "join-a-circle-es.jpg"
       },
@@ -1219,7 +1219,7 @@
         ],
         "video": {
           "file": "roles-and-permissions-es.mp4",
-          "durationSec": 65
+          "durationSec": 68
         },
         "poster": "roles-and-permissions-es.jpg"
       },
@@ -1288,7 +1288,7 @@
         ],
         "video": {
           "file": "add-a-medication-es.mp4",
-          "durationSec": 93
+          "durationSec": 97
         },
         "poster": "add-a-medication-es.jpg"
       },
@@ -1322,7 +1322,7 @@
         ],
         "video": {
           "file": "medication-schedules-es.mp4",
-          "durationSec": 113
+          "durationSec": 102
         },
         "poster": "medication-schedules-es.jpg"
       },
@@ -1355,7 +1355,7 @@
         ],
         "video": {
           "file": "confirm-a-dose-es.mp4",
-          "durationSec": 68
+          "durationSec": 73
         },
         "poster": "confirm-a-dose-es.jpg"
       },
@@ -1382,7 +1382,7 @@
         ],
         "video": {
           "file": "reminders-and-alerts-es.mp4",
-          "durationSec": 114
+          "durationSec": 119
         },
         "poster": "reminders-and-alerts-es.jpg"
       },
@@ -1413,7 +1413,7 @@
         ],
         "video": {
           "file": "stop-or-delete-a-medication-es.mp4",
-          "durationSec": 76
+          "durationSec": 75
         },
         "poster": "stop-or-delete-a-medication-es.jpg"
       },
@@ -1446,7 +1446,7 @@
         ],
         "video": {
           "file": "as-needed-medications-es.mp4",
-          "durationSec": 127
+          "durationSec": 136
         },
         "poster": "as-needed-medications-es.jpg"
       },
@@ -1480,7 +1480,7 @@
         ],
         "video": {
           "file": "routine-reminders-es.mp4",
-          "durationSec": 92
+          "durationSec": 85
         },
         "poster": "routine-reminders-es.jpg"
       },
@@ -1515,7 +1515,7 @@
         ],
         "video": {
           "file": "appointments-es.mp4",
-          "durationSec": 149
+          "durationSec": 106
         },
         "poster": "appointments-es.jpg"
       },
@@ -1551,7 +1551,7 @@
         ],
         "video": {
           "file": "tasks-es.mp4",
-          "durationSec": 84
+          "durationSec": 96
         },
         "poster": "tasks-es.jpg"
       },
@@ -1590,7 +1590,7 @@
         ],
         "video": {
           "file": "care-shifts-es.mp4",
-          "durationSec": 172
+          "durationSec": 157
         },
         "poster": "care-shifts-es.jpg"
       },
@@ -1623,7 +1623,7 @@
         ],
         "video": {
           "file": "doctor-visits-and-notes-es.mp4",
-          "durationSec": 89
+          "durationSec": 100
         },
         "poster": "doctor-visits-and-notes-es.jpg"
       },
@@ -1658,7 +1658,7 @@
         ],
         "video": {
           "file": "daily-care-notes-es.mp4",
-          "durationSec": 58
+          "durationSec": 54
         },
         "poster": "daily-care-notes-es.jpg"
       },
@@ -1690,7 +1690,7 @@
         ],
         "video": {
           "file": "find-older-notes-es.mp4",
-          "durationSec": 93
+          "durationSec": 94
         },
         "poster": "find-older-notes-es.jpg"
       },
@@ -1725,7 +1725,7 @@
         ],
         "video": {
           "file": "care-info-and-summary-es.mp4",
-          "durationSec": 75
+          "durationSec": 88
         },
         "poster": "care-info-and-summary-es.jpg"
       },
@@ -1760,7 +1760,7 @@
         ],
         "video": {
           "file": "documents-es.mp4",
-          "durationSec": 55
+          "durationSec": 57
         },
         "poster": "documents-es.jpg"
       },
@@ -1795,7 +1795,7 @@
         ],
         "video": {
           "file": "vitals-es.mp4",
-          "durationSec": 62
+          "durationSec": 67
         },
         "poster": "vitals-es.jpg"
       },
@@ -1830,7 +1830,7 @@
         ],
         "video": {
           "file": "export-your-data-es.mp4",
-          "durationSec": 45
+          "durationSec": 43
         },
         "poster": "export-your-data-es.jpg"
       },
@@ -1867,7 +1867,7 @@
         ],
         "video": {
           "file": "medication-history-report-es.mp4",
-          "durationSec": 53
+          "durationSec": 51
         },
         "poster": "medication-history-report-es.jpg"
       },
@@ -1902,7 +1902,7 @@
         ],
         "video": {
           "file": "log-a-past-incident-es.mp4",
-          "durationSec": 60
+          "durationSec": 65
         },
         "poster": "log-a-past-incident-es.jpg"
       },
@@ -1938,7 +1938,7 @@
         ],
         "video": {
           "file": "notifications-not-arriving-es.mp4",
-          "durationSec": 79
+          "durationSec": 86
         },
         "poster": "notifications-not-arriving-es.jpg"
       },
@@ -1973,7 +1973,7 @@
         ],
         "video": {
           "file": "quiet-hours-es.mp4",
-          "durationSec": 108
+          "durationSec": 93
         },
         "poster": "quiet-hours-es.jpg"
       },
@@ -2001,7 +2001,7 @@
         ],
         "video": {
           "file": "free-and-premium-es.mp4",
-          "durationSec": 96
+          "durationSec": 97
         },
         "poster": "free-and-premium-es.jpg"
       },
@@ -2034,7 +2034,7 @@
         ],
         "video": {
           "file": "second-circle-es.mp4",
-          "durationSec": 78
+          "durationSec": 77
         },
         "poster": "second-circle-es.jpg"
       },
@@ -2116,7 +2116,7 @@
         ],
         "video": {
           "file": "privacy-and-security-es.mp4",
-          "durationSec": 83
+          "durationSec": 86
         },
         "poster": "privacy-and-security-es.jpg"
       }
