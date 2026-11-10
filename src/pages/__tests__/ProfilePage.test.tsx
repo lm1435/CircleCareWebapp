@@ -733,16 +733,31 @@ describe('ProfilePage — compact header', () => {
     expect(screen.queryByTestId('profile-premium-chip')).not.toBeInTheDocument();
   });
 
-  it('premium account: a labelled Premium chip on its own line under the email', async () => {
+  // Owner 2026-11-09: no plan pill in the header; the Subscription row is the one place that shows
+  // the plan (mobile parity).
+  it('premium account: the header has no plan pill; the Subscription row says Premium', async () => {
     subscriptionTier = 'premium';
     renderPage();
     const header = await screen.findByTestId('profile-header');
-    const chip = within(header).getByTestId('profile-premium-chip');
-    expect(chip).toHaveTextContent('Premium');
-    expect(chip.tagName).toBe('P');
-    const email = within(header).getByText('sam@example.com');
-    expect(email.compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(chip.parentElement).toBe(email.parentElement);
+    expect(within(header).queryByTestId('profile-premium-chip')).not.toBeInTheDocument();
+    expect(within(header).queryByText('Premium')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('settings-row-subscription')).getByText('Premium')).toBeInTheDocument();
+  });
+
+  // Owner 2026-11-09: the list read sparse. Header → first label 24px (mt-6); end of one group →
+  // next label 28px (gap-7); label → its card unchanged (mt-2). Mobile ProfileGrouping matches.
+  it('spaces the list tightly: 24 under the header, 28 between groups, 8 label → card', async () => {
+    renderPage();
+    const first = await screen.findByTestId('settings-group-you');
+    const list = first.parentElement!;
+    expect(list).toHaveClass('mt-6', 'gap-7');
+    expect(list).not.toHaveClass('mt-8');
+    expect(list).not.toHaveClass('gap-6');
+    for (const key of ['you', 'notifications', 'preferences', 'privacyAccount']) {
+      const group = screen.getByTestId(`settings-group-${key}`);
+      expect(group.parentElement).toBe(list);
+      expect(within(group).getByRole('list')).toHaveClass('mt-2');
+    }
   });
 });
 

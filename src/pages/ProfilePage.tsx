@@ -57,7 +57,6 @@ import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import {
   Avatar,
-  Badge,
   Button,
   Card,
   ConfirmDialog,
@@ -756,8 +755,8 @@ export default function ProfilePage(): ReactElement {
       <section className="mx-auto w-full max-w-2xl p-6 md:p-8">
         {/* Compact identity header (mobile ProfileScreen's): avatar LEFT, the
             name with its edit pencil immediately beside it, the email under the
-            name, and — for Premium accounts only — a small labelled chip on its
-            own line, left-aligned with the name. The page's old title moves to
+            name. No plan pill (owner 2026-11-09): the Subscription row under YOU
+            is the one place that shows the plan. The page's old title moves to
             the eyebrow. The row is NOT one pressable: the pencil is its own
             button, so nothing swallows it. */}
         <header className="flex items-center gap-4" data-testid="profile-header">
@@ -789,13 +788,6 @@ export default function ProfilePage(): ReactElement {
               </button>
             </div>
             <p className="m-0 break-all text-sm text-ink-2">{user.email}</p>
-            {isPremium ? (
-              <p className="m-0 mt-1.5" data-testid="profile-premium-chip">
-                <Badge variant="accent" size="sm" icon="star">
-                  {t('header.premium')}
-                </Badge>
-              </p>
-            ) : null}
           </div>
         </header>
 

@@ -77,7 +77,7 @@ for (const viewport of [
       expect((await box(hero)).height).toBeLessThanOrEqual(140);
     });
 
-    test('Profile: avatar left; name with its pencil beside it; email under; no page overflow', async ({
+    test('Profile: avatar left; name with its pencil beside it; email under; tight list; no page overflow', async ({
       page,
     }) => {
       await page.goto('/profile', { waitUntil: 'domcontentloaded' });
@@ -96,14 +96,22 @@ for (const viewport of [
       expect(p.width).toBeGreaterThanOrEqual(44);
       expect(p.height).toBeGreaterThanOrEqual(44);
 
-      // The Premium chip (worker accounts are premium owners) is on its OWN
-      // line under the email, left-aligned with the name.
-      const chip = header.getByTestId('profile-premium-chip');
-      if ((await chip.count()) > 0) {
-        const c = await box(chip);
-        expect(Math.abs(c.x - n.x)).toBeLessThanOrEqual(2);
-        expect(c.y).toBeGreaterThan(n.y + n.height);
-        await expect(chip).toHaveText('Premium');
+      // No plan pill in the header (owner 2026-11-09): the Subscription row shows the plan.
+      await expect(header.getByTestId('profile-premium-chip')).toHaveCount(0);
+      await expect(header.getByText('Premium', { exact: true })).toHaveCount(0);
+
+      // Tight list (owner 2026-11-09): 24px from the header to the first group label, 28px from
+      // the end of one group's card to the next label, 8px from a label to its card.
+      const h = await box(header);
+      const groupKeys = ['you', 'notifications', 'preferences', 'privacyAccount'];
+      let prevBottom = h.y + h.height;
+      for (const [i, key] of groupKeys.entries()) {
+        const group = page.getByTestId(`settings-group-${key}`);
+        const label = await box(group.getByRole('heading', { level: 2 }));
+        const card = await box(group.getByRole('list'));
+        expect(Math.abs(label.y - prevBottom - (i === 0 ? 24 : 28)), `gap above ${key}`).toBeLessThanOrEqual(1);
+        expect(Math.abs(card.y - (label.y + label.height) - 8), `${key} label → card`).toBeLessThanOrEqual(1);
+        prevBottom = card.y + card.height;
       }
 
       const overflow = await page.evaluate(

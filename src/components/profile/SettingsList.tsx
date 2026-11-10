@@ -26,7 +26,9 @@ export interface SettingsListGroup {
  */
 export function SettingsList({ groups }: { groups: SettingsListGroup[] }): ReactElement {
   return (
-    <div className="mt-8 flex flex-col gap-6">
+    // 24px under the header, 28px from the end of one group to the next label; label → card 8px
+    // (owner 2026-11-09, was 32/24; mobile ProfileScreen matches).
+    <div className="mt-6 flex flex-col gap-7">
       {groups.map((group) => {
         const headingId = `settings-group-${group.key}-title`;
         return (
