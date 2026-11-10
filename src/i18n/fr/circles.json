@@ -191,5 +191,37 @@
     "notFoundTitle": "Cercle introuvable",
     "notFoundBody": "Ce cercle a été supprimé ou n’existe plus.",
     "returnToCircles": "Retour aux cercles"
+  },
+  "timezone": {
+    "label": "Fuseau horaire",
+    "sourceCircle": "Défini par vous",
+    "sourceRecipient": "Selon l’appareil de {{name}}",
+    "sourceOwner": "Selon votre appareil (par défaut)",
+    "automatic": "Automatique",
+    "automaticRecipient": "Suivre l’appareil de {{name}} · actuellement {{city}}",
+    "automaticOwn": "Suivre votre appareil · actuellement {{city}}",
+    "helper": "Les heures des médicaments suivent ce fuseau",
+    "wallClockNote": "Les heures restent les mêmes — une dose de 8 h reste à 8 h dans le nouveau fuseau horaire.",
+    "mismatch": "Le téléphone de {{name}} indique {{city}}. Votre réglage l’emporte — le planning suit l’heure de {{setCity}}.",
+    "createLabel": "Où vit {{name}} ?",
+    "createLabelNoName": "Où vit la personne que vous aidez ?",
+    "createCaption": "Prérempli d’après votre navigateur. Vous pouvez le modifier à tout moment dans les paramètres du cercle.",
+    "searchPlaceholder": "Rechercher une ville ou une région",
+    "listLabel": "Fuseaux horaires",
+    "resultCount_one": "{{count}} fuseau horaire",
+    "resultCount_other": "{{count}} fuseaux horaires",
+    "noResults": "Aucun fuseau horaire correspondant",
+    "regions": {
+      "America": "Amériques",
+      "Europe": "Europe",
+      "Asia": "Asie",
+      "Africa": "Afrique",
+      "Australia": "Australie",
+      "Pacific": "Pacifique",
+      "Atlantic": "Atlantique",
+      "Indian": "Océan Indien",
+      "Antarctica": "Antarctique",
+      "Arctic": "Arctique"
+    }
   }
 }

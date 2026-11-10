@@ -117,6 +117,10 @@ export const updateCircleSchema = z
     // `null` clears a stored date of birth (backend nullable since 2026-11-08).
     recipient_dob: recipientDobSchema.nullable().optional(),
     recipient_conditions: z.array(z.string()).optional(),
+    // Owner-set circle time zone (IANA). `null` clears the override back to
+    // automatic (recipient device → owner device → America/New_York). The
+    // backend validates against Intl.supportedValuesOf('timeZone').
+    timezone: z.string().min(1).nullable().optional(),
   })
   .strict();
 
@@ -169,6 +173,8 @@ export const createCircleSchema = z
     recipient_dob: recipientDobSchema.optional(),
     recipient_conditions: z.array(z.string()).optional(),
     is_self_care: z.boolean().optional(),
+    // Optional circle time zone (IANA). Omitted = automatic (today's behavior).
+    timezone: z.string().min(1).optional(),
   })
   .strict();
 

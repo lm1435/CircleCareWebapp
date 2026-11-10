@@ -191,5 +191,37 @@
     "notFoundTitle": "Circle not found",
     "notFoundBody": "This circle has been deleted or no longer exists.",
     "returnToCircles": "Return to circles"
+  },
+  "timezone": {
+    "label": "Time zone",
+    "sourceCircle": "Set by you",
+    "sourceRecipient": "From {{name}}'s device",
+    "sourceOwner": "From your device (default)",
+    "automatic": "Automatic",
+    "automaticRecipient": "Follow {{name}}'s device · currently {{city}}",
+    "automaticOwn": "Follow your device · currently {{city}}",
+    "helper": "Medication times follow this zone",
+    "wallClockNote": "Times keep their clock time — an 8:00 AM dose stays 8:00 AM in the new time zone.",
+    "mismatch": "{{name}}'s phone reports {{city}}. Your setting wins — the schedule runs on {{setCity}} time.",
+    "createLabel": "Where does {{name}} live?",
+    "createLabelNoName": "Where does the person you care for live?",
+    "createCaption": "Prefilled from your browser. You can change it any time in Circle settings.",
+    "searchPlaceholder": "Search city or region",
+    "listLabel": "Time zones",
+    "resultCount_one": "{{count}} time zone",
+    "resultCount_other": "{{count}} time zones",
+    "noResults": "No matching time zones",
+    "regions": {
+      "America": "Americas",
+      "Europe": "Europe",
+      "Asia": "Asia",
+      "Africa": "Africa",
+      "Australia": "Australia",
+      "Pacific": "Pacific",
+      "Atlantic": "Atlantic",
+      "Indian": "Indian Ocean",
+      "Antarctica": "Antarctica",
+      "Arctic": "Arctic"
+    }
   }
 }

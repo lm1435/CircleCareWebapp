@@ -26,8 +26,10 @@ describe(`inbox server 72h window vs client local-day buckets (${TZ_NOTE})`, () 
 const mk = (updated_at: string, read_at: string | null = null): InboxItem =>
   ({ id: updated_at, type: 'medication_missed', circle_id: 'c1', updated_at, read_at }) as unknown as InboxItem;
 
-describe('inbox window: every returned row is listed (Denver local days)', () => {
-  const now = new Date('2026-11-07T18:58:10-07:00');
+describe('inbox window: every returned row is listed (runner-local days)', () => {
+  // Local constructor, like every row below: a fixed `-07:00` instant is already Nov 8 in
+  // any zone east of UTC-2, which moved the day-boundary rows one bucket over there.
+  const now = new Date(2026, 10, 7, 18, 58, 10);
 
   it('a row exactly 72h old (the server window edge) is listed under Earlier', () => {
     const edge = mk(new Date(now.getTime() - 72 * 3_600_000).toISOString());

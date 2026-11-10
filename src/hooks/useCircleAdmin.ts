@@ -47,6 +47,19 @@ function invalidateCircleQueries(
   void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
 }
 
+/** Refresh every query whose answer depends on the circle's time zone. */
+function invalidateCircleZoneQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  circleId: string
+): void {
+  // `calendarEvents(circleId)` is the prefix of the range, presence and single
+  // event keys, so one call covers them all.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.shifts(circleId) });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.medicationTodaySummary(circleId) });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.medicationConfirmations(circleId) });
+}
+
 /** Shared onError for circle-admin mutations (owner-gated → mostly 403). */
 function useCircleAdminOnError(
   circleId: string,
@@ -137,9 +150,13 @@ export function useUpdateCircle(
 
   return useMutation({
     mutationFn: (data: UpdateCircleRequest) => updateCircle(circleId, data),
-    onSuccess: () => {
+    onSuccess: (_result, data) => {
       Analytics.circleUpdated(circleId);
       invalidateCircleQueries(queryClient, circleId);
+      // A circle time-zone change moves "today", past-due and dose windows for
+      // every schedule surface (times are stored naive-local in the circle
+      // zone), so the calendar + medication caches are stale too.
+      if (data && 'timezone' in data) invalidateCircleZoneQueries(queryClient, circleId);
     },
     onError,
   });

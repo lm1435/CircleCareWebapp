@@ -191,5 +191,37 @@
     "notFoundTitle": "Cerchia non trovata",
     "notFoundBody": "Questa cerchia è stata eliminata o non esiste più.",
     "returnToCircles": "Torna alle cerchie"
+  },
+  "timezone": {
+    "label": "Fuso orario",
+    "sourceCircle": "Impostato da te",
+    "sourceRecipient": "Dal dispositivo di {{name}}",
+    "sourceOwner": "Dal tuo dispositivo (predefinito)",
+    "automatic": "Automatico",
+    "automaticRecipient": "Segui il dispositivo di {{name}} · attualmente {{city}}",
+    "automaticOwn": "Segui il tuo dispositivo · attualmente {{city}}",
+    "helper": "Gli orari dei farmaci seguono questo fuso",
+    "wallClockNote": "Gli orari restano gli stessi — una dose delle 8:00 resta alle 8:00 nel nuovo fuso orario.",
+    "mismatch": "Il telefono di {{name}} indica {{city}}. Vale la tua impostazione — il programma segue l’ora di {{setCity}}.",
+    "createLabel": "Dove vive {{name}}?",
+    "createLabelNoName": "Dove vive la persona di cui ti prendi cura?",
+    "createCaption": "Precompilato dal tuo browser. Puoi cambiarlo quando vuoi nelle impostazioni della cerchia.",
+    "searchPlaceholder": "Cerca città o regione",
+    "listLabel": "Fusi orari",
+    "resultCount_one": "{{count}} fuso orario",
+    "resultCount_other": "{{count}} fusi orari",
+    "noResults": "Nessun fuso orario corrispondente",
+    "regions": {
+      "America": "Americhe",
+      "Europe": "Europa",
+      "Asia": "Asia",
+      "Africa": "Africa",
+      "Australia": "Australia",
+      "Pacific": "Pacifico",
+      "Atlantic": "Atlantico",
+      "Indian": "Oceano Indiano",
+      "Antarctica": "Antartide",
+      "Arctic": "Artico"
+    }
   }
 }

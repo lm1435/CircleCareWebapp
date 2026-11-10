@@ -1072,7 +1072,7 @@ describe('AddEventModal', () => {
     it('hides the reminders section for a task with no time', async () => {
       render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       // Nothing to fire against: the cron filters scheduled_time IS NOT NULL.
-      expect(screen.queryByText('Send reminders')).not.toBeInTheDocument();
+      expect(screen.queryByText('Enable notifications')).not.toBeInTheDocument();
     });
 
     it('shows the reminders section once a time is set', async () => {
@@ -1083,12 +1083,12 @@ describe('AddEventModal', () => {
       await user.clear(timeInput);
       await user.type(timeInput, '14:00');
 
-      expect(screen.getByText('Send reminders')).toBeInTheDocument();
+      expect(screen.getByText('Enable notifications')).toBeInTheDocument();
     });
 
     it('always shows reminders for a medication', () => {
       render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
-      expect(screen.getByText('Send reminders')).toBeInTheDocument();
+      expect(screen.getByText('Enable notifications')).toBeInTheDocument();
     });
 
     it('persists the task defaults on a timeless task — inert, not zeroed', async () => {
@@ -1199,6 +1199,88 @@ describe('AddEventModal', () => {
       );
     });
 
+    // FOLLOW-UP ALERTS ONLY (owner 2026-11-09, copy locked, mobile parity).
+    // Master ON + at-due OFF + all four earlier OFF reads as "fully off" but the
+    // 15 / 30 / 60 minute chain still fires. Exactly that state, nothing else.
+    describe('follow-up-only warning', () => {
+      const TITLE = 'Reminders are off — follow-up alerts are not';
+      const BODY =
+        "If a dose isn't marked as taken, CircleCare still alerts the circle: after 15 minutes, 30 minutes, and 1 hour. Turn off Notifications above to silence everything for this medication.";
+      const warning = () => screen.queryByTestId('reminders-follow-up-only-warning');
+
+      function renderMed(reminders: Parameters<typeof makeReminderEvent>[1]): void {
+        render(
+          <AddEventModal
+            circleId={CIRCLE_ID}
+            event={makeReminderEvent({ event_type: 'medication', medication_name: 'Lisinopril' }, reminders)}
+            onClose={vi.fn()}
+          />
+        );
+        openMoreDetails();
+      }
+
+      const SILENT_ISH = {
+        notifications_enabled: true,
+        reminder_at_due: false,
+        reminder_24h: false,
+        reminder_1h: false,
+        reminder_30m: false,
+        reminder_15m: false,
+      };
+
+      it('shows the prominent warning in exactly that state (edit)', () => {
+        renderMed(SILENT_ISH);
+        const note = warning();
+        expect(note).not.toBeNull();
+        expect(note).toHaveAttribute('role', 'note');
+        expect(note).toHaveAccessibleName(TITLE);
+        expect(note).toHaveTextContent(BODY);
+        // ADA: never terracotta as text.
+        expect(note!.innerHTML).not.toMatch(/text-terracotta/);
+      });
+
+      it('appears when the user reaches the state on a new medication', async () => {
+        const user = userEvent.setup();
+        render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+        expect(warning()).toBeNull();
+        await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
+        expect(warning()).not.toBeNull();
+      });
+
+      it('absent when the master switch is off', () => {
+        renderMed({ ...SILENT_ISH, notifications_enabled: false });
+        expect(warning()).toBeNull();
+      });
+
+      it('absent when "at the scheduled time" is on', () => {
+        renderMed({ ...SILENT_ISH, reminder_at_due: true });
+        expect(warning()).toBeNull();
+      });
+
+      it.each(['reminder_24h', 'reminder_1h', 'reminder_30m', 'reminder_15m'] as const)(
+        'absent when %s is on',
+        (flag) => {
+          renderMed({ ...SILENT_ISH, [flag]: true });
+          expect(warning()).toBeNull();
+        }
+      );
+
+      it('never on a task or an appointment', () => {
+        for (const event_type of ['task', 'appointment'] as const) {
+          const { unmount } = render(
+            <AddEventModal
+              circleId={CIRCLE_ID}
+              event={makeReminderEvent({ event_type, duration_minutes: 30 }, SILENT_ISH)}
+              onClose={vi.fn()}
+            />
+          );
+          openMoreDetails();
+          expect(warning()).toBeNull();
+          unmount();
+        }
+      });
+    });
+
     it('reverts to the ordinary off-notice once an earlier reminder is picked', async () => {
       const user = userEvent.setup();
       render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
@@ -1249,7 +1331,7 @@ describe('AddEventModal', () => {
       );
       // Turning the anchor off must NOT drag the master down with it — the four
       // earlier reminders are still armed (15m is on for a fresh task).
-      expect(screen.getByRole('switch', { name: 'Send reminders' })).toHaveAttribute(
+      expect(screen.getByRole('switch', { name: 'Enable notifications' })).toHaveAttribute(
         'aria-checked',
         'true'
       );
@@ -1259,7 +1341,7 @@ describe('AddEventModal', () => {
       const user = userEvent.setup();
       render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
-      const master = screen.getByRole('switch', { name: 'Send reminders' });
+      const master = screen.getByRole('switch', { name: 'Enable notifications' });
       await user.click(master);
 
       const warning = screen.getByText(
@@ -1338,7 +1420,7 @@ describe('AddEventModal', () => {
       render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       await setTaskTime(user);
 
-      await user.click(screen.getByRole('switch', { name: 'Send reminders' }));
+      await user.click(screen.getByRole('switch', { name: 'Enable notifications' }));
 
       expect(screen.getByText('No one will be reminded about this — not you, and not anyone else in the circle.')).toBeInTheDocument();
       expect(
@@ -1356,7 +1438,7 @@ describe('AddEventModal', () => {
       render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       await setTaskTime(user);
 
-      const master = screen.getByRole('switch', { name: 'Send reminders' });
+      const master = screen.getByRole('switch', { name: 'Enable notifications' });
       const fifteen = screen.getByRole('checkbox', { name: '15 minutes before' });
       expect(master).toHaveAttribute('aria-checked', 'true');
       // Nothing in "Earlier reminders" is pre-selected any more, so this test
@@ -1388,7 +1470,7 @@ describe('AddEventModal', () => {
       render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       await setTaskTime(user);
 
-      const master = screen.getByRole('switch', { name: 'Send reminders' });
+      const master = screen.getByRole('switch', { name: 'Enable notifications' });
       // Arm 15m first — it is no longer pre-selected — then reach real silence:
       // the anchor off, and only then is "no earlier reminders" the same
       // statement as "master off".
@@ -1415,7 +1497,7 @@ describe('AddEventModal', () => {
       await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
       await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
 
-      expect(screen.getByRole('switch', { name: 'Send reminders' })).toHaveAttribute(
+      expect(screen.getByRole('switch', { name: 'Enable notifications' })).toHaveAttribute(
         'aria-checked',
         'true'
       );
@@ -1441,7 +1523,7 @@ describe('AddEventModal', () => {
       await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
       await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
       await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
-      const master = screen.getByRole('switch', { name: 'Send reminders' });
+      const master = screen.getByRole('switch', { name: 'Enable notifications' });
       expect(master).toHaveAttribute('aria-checked', 'false');
 
       await user.click(master);
@@ -1486,7 +1568,7 @@ describe('AddEventModal', () => {
 
       // The fresh state, untouched: the anchor carries the task and no earlier
       // reminder is selected.
-      const master = screen.getByRole('switch', { name: 'Send reminders' });
+      const master = screen.getByRole('switch', { name: 'Enable notifications' });
       expect(master).toHaveAttribute('aria-checked', 'true');
 
       await user.click(master);
@@ -1522,7 +1604,7 @@ describe('AddEventModal', () => {
 
       await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Refill the water jug');
       await setTaskTime(user);
-      const master = screen.getByRole('switch', { name: 'Send reminders' });
+      const master = screen.getByRole('switch', { name: 'Enable notifications' });
       await user.click(master);
       await user.click(master);
       await user.click(screen.getByRole('button', { name: 'Create' }));
@@ -1552,7 +1634,7 @@ describe('AddEventModal', () => {
         />
       );
 
-      const master = screen.getByRole('switch', { name: 'Send reminders' });
+      const master = screen.getByRole('switch', { name: 'Enable notifications' });
       await user.click(master);
       expect(master).toHaveAttribute('aria-checked', 'false');
 
@@ -1673,7 +1755,7 @@ describe('AddEventModal', () => {
 
       await user.click(fifteenMed);
 
-      expect(screen.getByRole('switch', { name: 'Send reminders' })).toHaveAttribute(
+      expect(screen.getByRole('switch', { name: 'Enable notifications' })).toHaveAttribute(
         'aria-checked',
         'true'
       );
@@ -1699,7 +1781,7 @@ describe('AddEventModal', () => {
       );
 
       openMoreDetails();
-      await user.click(screen.getByRole('switch', { name: 'Send reminders' }));
+      await user.click(screen.getByRole('switch', { name: 'Enable notifications' }));
 
       for (const name of [
         '24 hours before',
@@ -1725,7 +1807,7 @@ describe('AddEventModal', () => {
       );
 
       openMoreDetails();
-      const master = screen.getByRole('switch', { name: 'Send reminders' });
+      const master = screen.getByRole('switch', { name: 'Enable notifications' });
       await user.click(master);
       await user.click(master);
 
@@ -1807,7 +1889,7 @@ describe('AddEventModal', () => {
       const group = screen.getByRole('group', { name: 'Earlier reminders' });
       expect(group).toHaveAttribute('aria-describedby', warning.id);
       // Nothing was flipped for the user: the state is reported, not repaired.
-      expect(screen.getByRole('switch', { name: 'Send reminders' })).toHaveAttribute(
+      expect(screen.getByRole('switch', { name: 'Enable notifications' })).toHaveAttribute(
         'aria-checked',
         'true'
       );

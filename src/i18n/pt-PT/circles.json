@@ -81,5 +81,15 @@
   },
   "join": {
     "button": "Participar num círculo"
+  },
+  "timezone": {
+    "sourceCircle": "Definido por si",
+    "sourceOwner": "Do seu dispositivo (predefinição)",
+    "mismatch": "O telemóvel de {{name}} indica {{city}}. A sua definição prevalece — o horário segue a hora de {{setCity}}.",
+    "createLabel": "Onde vive {{name}}?",
+    "createLabelNoName": "Onde vive a pessoa de quem cuida?",
+    "createCaption": "Preenchido a partir do seu navegador. Pode alterá-lo a qualquer momento nas definições do círculo.",
+    "searchPlaceholder": "Pesquisar cidade ou região",
+    "automaticOwn": "Seguir o seu dispositivo · atualmente {{city}}"
   }
 }

@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { editPatch } from '@/utils/editPatch';
 import { PageMasthead } from '@/components/layout/PageMasthead';
+import { CircleTimezoneCard } from '@/components/circles/CircleTimezoneCard';
 import {
   Avatar,
   Button,
@@ -292,6 +293,10 @@ export default function EditCirclePage(): ReactElement {
           </div>
         </form>
       </Card>
+
+      {/* ── Time zone (circle-timezone spec). Its own Card, saved on pick —
+          not part of the name/DOB form, so it never rides that Save. ── */}
+      <CircleTimezoneCard circleId={circleId} circle={circle} />
 
       {/* ── Danger zone (owner-only; type-to-confirm delete). Row styled like
           mobile's settings row (CircleDetailScreen ~L1618-1650): terracotta

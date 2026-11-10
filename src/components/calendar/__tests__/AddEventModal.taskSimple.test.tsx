@@ -338,7 +338,7 @@ describe('When? Time tile vs Any time (the recipient\'s clock)', () => {
     await user.type(titleBox(), 'Water the plants');
     await user.click(moreToggle());
     expect(screen.queryByLabelText(/^End time/)).toBeNull();
-    expect(screen.queryByRole('switch', { name: 'Send reminders' })).toBeNull();
+    expect(screen.queryByRole('switch', { name: 'Enable notifications' })).toBeNull();
     const body = await saveCreate(user);
     expect(body.scheduled_time).toBeUndefined();
     expect(body.duration_minutes).toBeUndefined();
@@ -381,7 +381,7 @@ describe('When? Time tile vs Any time (the recipient\'s clock)', () => {
     const end = screen.getByLabelText(/^End time/, { selector: 'input' });
     expect(end).toHaveValue('00:00');
     expect(screen.getByRole('radio', { name: '30 min' })).toBeChecked();
-    expect(screen.getByRole('switch', { name: 'Send reminders' })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Enable notifications' })).toBeInTheDocument();
     await user.click(radio('Any time'));
     expect(radio('Any time')).toBeChecked();
     expect(screen.queryByLabelText(/^End time/)).toBeNull();

@@ -693,6 +693,17 @@ export const Analytics = {
   circleViewed: (circleId: string) => capture('circle_viewed', { circle_id: circleId }),
   /** Owner edited the circle (recipient name / DOB / conditions). */
   circleUpdated: (circleId: string) => capture('circle_updated', { circle_id: circleId }),
+  /**
+   * The owner set (or cleared back to automatic) the circle's time zone.
+   * `zone` is an IANA id — an enum-like value, never free text. NO circle_id
+   * (new event; 2026-09-04 decision). Mirrored on mobile.
+   */
+  circleTimezoneSet: (props: {
+    source: 'edit_circle' | 'create_circle';
+    cleared: boolean;
+    zone: string;
+    recipient_zone_mismatch: boolean;
+  }) => capture('circle_timezone_set', props),
   /** Owner deleted (archived) the circle. */
   circleDeleted: (circleId: string) => capture('circle_deleted', { circle_id: circleId }),
 

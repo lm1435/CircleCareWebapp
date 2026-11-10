@@ -310,6 +310,7 @@ function parseRecurrence(
 // group needs stable targets for aria-labelledby / aria-describedby.
 const EARLIER_REMINDERS_LABEL_ID = 'reminders-earlier-label';
 const EARLIER_REMINDERS_WARNING_ID = 'reminders-earlier-warning';
+const FOLLOW_UP_ONLY_TITLE_ID = 'reminders-follow-up-only-title';
 // The days-of-week picker: its group id doubles as the field-error focus target.
 const RECURRENCE_DAYS_ID = 'recurrence_days';
 
@@ -2527,7 +2528,7 @@ function AddEventForm({
                   ("Always on for medications"); `reminder_at_due` makes that
                   sentence false, so it is a checkbox now, first in the group.
                   A CHECKBOX, not a switch, and that distinction is the point:
-                  "Send reminders" above is the one kill switch for this entry,
+                  "Enable notifications" above is the one kill switch for this entry,
                   and everything below it — the anchor included — is a selection
                   WITHIN that permission. Drawn as six identical lozenges the two
                   kinds read as duplicates of each other, which is exactly how
@@ -2605,6 +2606,33 @@ function AddEventForm({
               on exactly the interaction whose consequence it exists to announce.
               The CONTENT stays conditional; the region does not. */}
           <div aria-live="polite">
+            {/* FOLLOW-UP ALERTS ONLY (owner 2026-11-09, mobile parity, copy
+                locked). Medication, master ON, "at the scheduled time" OFF and
+                all four earlier reminders OFF: users read this as "fully off",
+                but notifications_enabled alone still drives the 15 / 30 / 60
+                minute missed-dose chain. A prominent card, not a hint line.
+                ADA: amber-deep icon on amber-soft, text in ink tokens — never
+                terracotta as text. */}
+            {showNoEarlierBeforeDose && (
+              <div
+                role="note"
+                aria-labelledby={FOLLOW_UP_ONLY_TITLE_ID}
+                data-testid="reminders-follow-up-only-warning"
+                className="flex items-start gap-2.5 rounded-xl border border-amber/40 bg-amber-soft p-3"
+              >
+                <span className="mt-0.5 shrink-0 text-amber-deep" aria-hidden="true">
+                  <Icon name="alert-circle-outline" size="inline" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p id={FOLLOW_UP_ONLY_TITLE_ID} className="m-0 text-sm font-semibold text-ink">
+                    {t('addEvent.reminders.followUpOnlyTitle')}
+                  </p>
+                  <p className="m-0 mt-1 text-sm text-ink">
+                    {t('addEvent.reminders.followUpOnlyBody')}
+                  </p>
+                </div>
+              </div>
+            )}
             {showNoneSelectedWarning && (
               <p
                 id={EARLIER_REMINDERS_WARNING_ID}

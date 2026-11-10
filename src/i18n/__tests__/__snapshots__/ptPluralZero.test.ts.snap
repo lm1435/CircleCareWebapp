@@ -97,6 +97,11 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Tarefas: 1",
     "2 tarefas",
   ],
+  "pt circles:timezone.resultCount": [
+    "0 fusos horários",
+    "1 fuso horário",
+    "2 fusos horários",
+  ],
   "pt common:inbox.circleUnreadA11y": [
     "Notificações de Ana, 0 nova",
     "Notificações de Ana, 1 nova",
@@ -521,6 +526,11 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Tarefas: 0",
     "Tarefas: 1",
     "2 tarefas",
+  ],
+  "pt-PT circles:timezone.resultCount": [
+    "0 fusos horários",
+    "1 fuso horário",
+    "2 fusos horários",
   ],
   "pt-PT common:inbox.circleUnreadA11y": [
     "Notificações de Ana, 0 nova",

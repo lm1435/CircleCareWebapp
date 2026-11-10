@@ -191,5 +191,37 @@
     "notFoundTitle": "Círculo no encontrado",
     "notFoundBody": "Este círculo ha sido eliminado o ya no existe.",
     "returnToCircles": "Volver a círculos"
+  },
+  "timezone": {
+    "label": "Zona horaria",
+    "sourceCircle": "Configurada por ti",
+    "sourceRecipient": "Del dispositivo de {{name}}",
+    "sourceOwner": "De tu dispositivo (predeterminada)",
+    "automatic": "Automática",
+    "automaticRecipient": "Seguir el dispositivo de {{name}} · actualmente {{city}}",
+    "automaticOwn": "Seguir tu dispositivo · actualmente {{city}}",
+    "helper": "Los horarios de los medicamentos siguen esta zona",
+    "wallClockNote": "Los horarios conservan su hora de reloj — una dosis de las 8:00 a. m. sigue a las 8:00 a. m. en la nueva zona horaria.",
+    "mismatch": "El teléfono de {{name}} indica {{city}}. Tu configuración tiene prioridad — el horario se rige por la hora de {{setCity}}.",
+    "createLabel": "¿Dónde vive {{name}}?",
+    "createLabelNoName": "¿Dónde vive la persona que cuidas?",
+    "createCaption": "Tomada de tu navegador. Puedes cambiarla cuando quieras en la configuración del círculo.",
+    "searchPlaceholder": "Buscar ciudad o región",
+    "listLabel": "Zonas horarias",
+    "resultCount_one": "{{count}} zona horaria",
+    "resultCount_other": "{{count}} zonas horarias",
+    "noResults": "No hay zonas horarias que coincidan",
+    "regions": {
+      "America": "América",
+      "Europe": "Europa",
+      "Asia": "Asia",
+      "Africa": "África",
+      "Australia": "Australia",
+      "Pacific": "Pacífico",
+      "Atlantic": "Atlántico",
+      "Indian": "Océano Índico",
+      "Antarctica": "Antártida",
+      "Arctic": "Ártico"
+    }
   }
 }

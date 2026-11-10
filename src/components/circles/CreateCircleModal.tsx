@@ -16,6 +16,8 @@ import {
   shouldShowOnboardingPaywall,
 } from '@/lib/onboardingPaywall';
 import { Button, DateField, Modal, TextField, Toggle, useToast, useZodForm } from '@/components/ui';
+import { getDeviceTimezone, isSameTimezone } from '@/utils/timezone';
+import { TimezoneCombobox } from './TimezoneCombobox';
 
 // Plan Stage 8, Task 8.6c — circle create modal.
 //
@@ -83,6 +85,11 @@ export function CreateCircleModal({
   const [recipientName, setRecipientName] = useState('');
   const [recipientDob, setRecipientDob] = useState('');
   const [isSelfCare, setIsSelfCare] = useState(false);
+  // "Where does {name} live?" (circle-timezone spec). Prefilled with the
+  // browser's zone; sent ONLY when the creator picks a different one, so
+  // leaving it alone keeps today's automatic behavior (no `timezone` key).
+  const [browserZone] = useState(getDeviceTimezone);
+  const [zone, setZone] = useState(browserZone);
 
   // A plain `autoFocus` on the name field below would be dead the moment it
   // renders inside Modal — the shell always claims initial focus for its
@@ -123,6 +130,9 @@ export function CreateCircleModal({
       // the date refinement. Conditions are NOT collected at creation (parity
       // with mobile) — set later in Circle Settings / Emergency Info.
       ...(!isSelfCare && recipientDob ? { recipient_dob: recipientDob } : {}),
+      // Self-care: the recipient IS the creator, whose device zone the
+      // automatic chain already follows — the field is not shown.
+      ...(!isSelfCare && !isSameTimezone(zone, browserZone) ? { timezone: zone } : {}),
     };
 
     form.submit(payload, (data) => {
@@ -148,6 +158,19 @@ export function CreateCircleModal({
       create.mutate(data, {
         onSuccess: (circle) => {
           Analytics.circleCreated(isSelfCare);
+          if (data.timezone) {
+            try {
+              Analytics.circleTimezoneSet({
+                source: 'create_circle',
+                cleared: false,
+                zone: data.timezone,
+                // A brand-new circle has no recipient account yet.
+                recipient_zone_mismatch: false,
+              });
+            } catch {
+              // Analytics must never cost the user the create.
+            }
+          }
           // R4-5: first circle created here → onboarding complete. No-op when
           // this browser already saw the user with circles ('existing' fired).
           trackOnboardingCompleted('created');
@@ -251,6 +274,26 @@ export function CreateCircleModal({
                 form.clearError('recipient_dob');
               }}
             />
+            <div>
+              <TimezoneCombobox
+                id="create_circle_timezone"
+                label={
+                  recipientName.trim()
+                    ? t('timezone.createLabel', { name: recipientName.trim() })
+                    : t('timezone.createLabelNoName')
+                }
+                displayZone={zone}
+                selected={zone}
+                onSelect={(next) => {
+                  if (next) setZone(next);
+                }}
+                describedBy="create-circle-timezone-caption"
+                testId="create-circle-timezone"
+              />
+              <p id="create-circle-timezone-caption" className="m-0 mt-1.5 text-sm text-ink-3">
+                {t('timezone.createCaption')}
+              </p>
+            </div>
           </>
         )}
       </form>

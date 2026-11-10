@@ -191,5 +191,37 @@
     "notFoundTitle": "Kreis nicht gefunden",
     "notFoundBody": "Dieser Kreis wurde gelöscht oder existiert nicht mehr.",
     "returnToCircles": "Zurück zu den Kreisen"
+  },
+  "timezone": {
+    "label": "Zeitzone",
+    "sourceCircle": "Von Ihnen festgelegt",
+    "sourceRecipient": "Vom Gerät von {{name}}",
+    "sourceOwner": "Von Ihrem Gerät (Standard)",
+    "automatic": "Automatisch",
+    "automaticRecipient": "Dem Gerät von {{name}} folgen · derzeit {{city}}",
+    "automaticOwn": "Ihrem Gerät folgen · derzeit {{city}}",
+    "helper": "Medikamentenzeiten richten sich nach dieser Zeitzone",
+    "wallClockNote": "Uhrzeiten bleiben gleich — eine Dosis um 8:00 bleibt in der neuen Zeitzone um 8:00.",
+    "mismatch": "Das Telefon von {{name}} meldet {{city}}. Ihre Einstellung hat Vorrang — der Plan richtet sich nach der Uhrzeit in {{setCity}}.",
+    "createLabel": "Wo lebt {{name}}?",
+    "createLabelNoName": "Wo lebt die Person, die Sie betreuen?",
+    "createCaption": "Aus Ihrem Browser übernommen. Sie können sie jederzeit in den Kreiseinstellungen ändern.",
+    "searchPlaceholder": "Stadt oder Region suchen",
+    "listLabel": "Zeitzonen",
+    "resultCount_one": "{{count}} Zeitzone",
+    "resultCount_other": "{{count}} Zeitzonen",
+    "noResults": "Keine passenden Zeitzonen",
+    "regions": {
+      "America": "Amerika",
+      "Europe": "Europa",
+      "Asia": "Asien",
+      "Africa": "Afrika",
+      "Australia": "Australien",
+      "Pacific": "Pazifik",
+      "Atlantic": "Atlantik",
+      "Indian": "Indischer Ozean",
+      "Antarctica": "Antarktis",
+      "Arctic": "Arktis"
+    }
   }
 }

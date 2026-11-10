@@ -197,7 +197,7 @@ describe('new medication: structure', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByLabelText('Instructions')).toBeVisible();
     expect(screen.getByLabelText(/^End date/)).toBeVisible();
-    expect(screen.getByRole('switch', { name: 'Send reminders' })).toBeVisible();
+    expect(screen.getByRole('switch', { name: 'Enable notifications' })).toBeVisible();
     // Mobile's order: photo, Track refills, Prescriber, Pharmacy, Pharmacy phone, Rx number, Instructions.
     const order = [
       screen.getByLabelText('Medication photo'),
@@ -405,7 +405,7 @@ describe('new medication: API payload is IDENTICAL to the full form for the same
     await user.click(chip(/Bedtime/));
     await user.click(screen.getByRole('button', { name: /More details/ }));
     await user.type(screen.getByLabelText('Instructions'), 'With food');
-    await user.click(screen.getByRole('switch', { name: 'Send reminders' }));
+    await user.click(screen.getByRole('switch', { name: 'Enable notifications' }));
     await user.click(screen.getByRole('button', { name: 'Add medication' }));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     expect(mutateCreate.mock.calls[0][0]).toMatchObject({

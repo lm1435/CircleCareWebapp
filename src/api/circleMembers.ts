@@ -131,6 +131,9 @@ export function isPendingInviteExpired(invite: PendingCircleInvite): boolean {
   return getInviteExpiryState(invite).state === 'expired';
 }
 
+/** Which link of the circle-timezone chain produced the effective zone. */
+export type CircleTimezoneSource = 'circle' | 'recipient' | 'owner' | 'default';
+
 export interface CircleDetail {
   id: string;
   name: string;
@@ -143,7 +146,19 @@ export interface CircleDetail {
   owner_id: string;
   created_at: string;
   is_self_care: boolean;
+  /**
+   * The EFFECTIVE scheduling zone: circle override → recipient account's device
+   * zone → owner's device zone → America/New_York. Every date/time consumer
+   * reads this one.
+   */
   care_recipient_timezone: string;
+  /**
+   * The owner's explicit override (`care_circles.timezone`), `null` = automatic.
+   * Optional: a backend older than the circle-timezone feature omits it.
+   */
+  circle_timezone?: string | null;
+  /** Which link of the chain produced `care_recipient_timezone`. Optional (older backend). */
+  circle_timezone_source?: CircleTimezoneSource;
   members: CircleMember[];
   /** Pending invites for this circle. Optional — only returned to viewers who
    *  can manage members (owner, managers); consumers default to []. */

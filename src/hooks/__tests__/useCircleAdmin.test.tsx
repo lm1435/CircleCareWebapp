@@ -171,6 +171,32 @@ describe('useUpdateCircle', () => {
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
   });
 
+  it('a time-zone change also invalidates the calendar + medication queries', async () => {
+    const { invalidateSpy, wrapper } = setup();
+    mockUpdate.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useUpdateCircle(CIRCLE_ID), { wrapper });
+    result.current.mutate({ timezone: null });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockUpdate).toHaveBeenCalledWith(CIRCLE_ID, { timezone: null });
+    expect(invalidatedWith(invalidateSpy, queryKeys.circleDetail(CIRCLE_ID))).toBe(true);
+    expect(invalidatedWith(invalidateSpy, queryKeys.calendarEvents(CIRCLE_ID))).toBe(true);
+    expect(invalidatedWith(invalidateSpy, queryKeys.shifts(CIRCLE_ID))).toBe(true);
+    expect(invalidatedWith(invalidateSpy, queryKeys.medicationTodaySummary(CIRCLE_ID))).toBe(true);
+  });
+
+  it('a name-only edit leaves the calendar cache alone', async () => {
+    const { invalidateSpy, wrapper } = setup();
+    mockUpdate.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useUpdateCircle(CIRCLE_ID), { wrapper });
+    result.current.mutate({ recipient_name: 'Rose' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidatedWith(invalidateSpy, queryKeys.calendarEvents(CIRCLE_ID))).toBe(false);
+  });
+
   it('fires Analytics.circleUpdated(circleId) on success', async () => {
     const { wrapper } = setup();
     mockUpdate.mockResolvedValue(undefined);
