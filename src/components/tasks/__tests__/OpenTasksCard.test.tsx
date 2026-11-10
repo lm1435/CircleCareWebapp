@@ -523,7 +523,12 @@ describe('OpenTasksCard', () => {
       });
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1', source: 'tasks' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({
+        eventId: 'task-1',
+        circleId: 'circle-1',
+        source: 'tasks',
+        occurrence: expect.objectContaining({ id: 'task-1' }),
+      });
     } finally {
       vi.useRealTimers();
     }
@@ -591,7 +596,12 @@ describe('OpenTasksCard', () => {
 
       // `toEqual` on the whole object: a `scheduledDate` sneaking in here would
       // fail this, which is the point.
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'child-0806', circleId: 'circle-1', source: 'tasks' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({
+        eventId: 'child-0806',
+        circleId: 'circle-1',
+        source: 'tasks',
+        occurrence: expect.objectContaining({ id: 'child-0806' }),
+      });
     } finally {
       vi.useRealTimers();
     }

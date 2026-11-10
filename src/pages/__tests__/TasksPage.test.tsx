@@ -377,7 +377,12 @@ describe('TasksPage', () => {
       });
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1', source: 'tasks' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({
+        eventId: 'task-1',
+        circleId: 'circle-1',
+        source: 'tasks',
+        occurrence: expect.objectContaining({ id: 'task-1' }),
+      });
 
       // The timer must not then fire a SECOND request for the same task.
       act(() => {
@@ -442,7 +447,12 @@ describe('TasksPage', () => {
       });
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1', source: 'tasks' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({
+        eventId: 'task-1',
+        circleId: 'circle-1',
+        source: 'tasks',
+        occurrence: expect.objectContaining({ id: 'task-1' }),
+      });
     } finally {
       vi.useRealTimers();
     }
@@ -510,14 +520,24 @@ describe('TasksPage', () => {
         vi.advanceTimersByTime(3000);
       });
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1', source: 'tasks' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({
+        eventId: 'task-1',
+        circleId: 'circle-1',
+        source: 'tasks',
+        occurrence: expect.objectContaining({ id: 'task-1' }),
+      });
 
       // ...and B commits at ITS OWN t+5s (t=7s overall).
       act(() => {
         vi.advanceTimersByTime(2000);
       });
       expect(mockMutate).toHaveBeenCalledTimes(2);
-      expect(mockMutate.mock.calls[1][0]).toEqual({ eventId: 'task-2', circleId: 'circle-1', source: 'tasks' });
+      expect(mockMutate.mock.calls[1][0]).toEqual({
+        eventId: 'task-2',
+        circleId: 'circle-1',
+        source: 'tasks',
+        occurrence: expect.objectContaining({ id: 'task-2' }),
+      });
     } finally {
       vi.useRealTimers();
     }

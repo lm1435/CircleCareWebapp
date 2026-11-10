@@ -1521,6 +1521,16 @@ export const Analytics = {
     capture('event_created', { circle_id: circleId, event_type: eventType, recurring }),
   taskCompleted: (circleId: string) => capture('task_completed', { circle_id: circleId }),
   /**
+   * A task / appointment completion whose POST REJECTED ambiguously (timeout,
+   * network, 5xx) but whose re-read showed it COMPLETED — the caregiver saw
+   * success, no error. Deliberately not `error_occurred` (nothing failed), the
+   * twin of `medication_confirm_recovered`. Same event and properties as
+   * mobile: the event_type enum and `classifyFailureCode`'s closed set. No
+   * circle id, no title.
+   */
+  taskCompleteRecovered: (eventType: 'task' | 'appointment', code: string) =>
+    capture('task_complete_recovered', { event_type: eventType, code }),
+  /**
    * A circle was picked from the picker list ('circle_list') or on the
    * downgrade circle-selection modal ('circle_selection') — the same event and
    * enum as mobile. `position` is 1-based. Integers and an enum only: NO

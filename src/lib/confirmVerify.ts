@@ -4,6 +4,7 @@ import {
   type ConfirmationStatus,
   type TodaysMedication,
 } from '@/api/medicationConfirmations';
+import { getEvents, type CalendarEvent } from '@/api/calendarEvents';
 
 /**
  * VERIFY BEFORE ALERT — the web port of mobile's
@@ -140,4 +141,111 @@ export function markConfirmFailure(error: unknown, outcome: ConfirmFailureOutcom
 
 export function confirmFailureOutcome(error: unknown): ConfirmFailureOutcome | undefined {
   return typeof error === 'object' && error !== null ? OUTCOMES.get(error) : undefined;
+}
+
+// ---------------------------------------------------------------------------
+// TASK / APPOINTMENT COMPLETION — the same verify-before-alert rule, for Done.
+//
+// Production, 1.4.0 iOS, 2026-11-09: a task completion whose RESPONSE was lost
+// (timeout / dropped connection) told the caregiver it failed, with no re-read
+// of whether the completion had landed — exactly the shape doses had until
+// 1.3.0. Mobile now verifies in `mobile/src/utils/confirmVerify.ts`
+// (`verifyCompletionLanded`); this is the web port. Browsers do not suspend a
+// page the way iOS suspends JS, but a hidden tab can be frozen (mobile Safari,
+// Chrome's tab freezing), so the re-read also waits for the page to be visible
+// and retries once, like mobile's.
+//
+// Same classifier (`isAmbiguousConfirmFailure`): a definite refusal — VIEW_ONLY,
+// NOT_FOUND, INVALID_OCCURRENCE_DATE, SUBSCRIPTION_REQUIRED … — is reported as
+// it is, with no re-read.
+// ---------------------------------------------------------------------------
+
+/** The occurrence a completion was for: the row the caregiver pressed. */
+export interface OccurrenceRef {
+  /** The row's own id — a composite `${rootId}_${date}` for a virtual occurrence. */
+  id: string;
+  scheduled_date: string;
+  scheduled_time?: string | null;
+  parent_event_id?: string | null;
+  event_type?: CalendarEvent['event_type'];
+}
+
+/**
+ * What one re-read day says about `occurrence`'s completion. Same matching as
+ * `confirmVerdict`: the exact id (a one-off or a physical row), or the same
+ * series on the same `scheduled_date` — completing a VIRTUAL occurrence
+ * materializes it into a child with a NEW id. The series ROOT is never mistaken
+ * for a later day's occurrence: its own `scheduled_date` is its start date.
+ */
+export function completionVerdict(
+  events: readonly CalendarEvent[],
+  occurrence: OccurrenceRef
+): { verdict: 'recorded' | ConfirmFailureOutcome; row?: CalendarEvent } {
+  const root = seriesOf(occurrence);
+  const candidates = events.filter(
+    (e) =>
+      e != null &&
+      (e.id === occurrence.id ||
+        (seriesOf(e) === root && e.scheduled_date === occurrence.scheduled_date))
+  );
+  const sameTime = candidates.filter(
+    (e) => (e.scheduled_time ?? null) === (occurrence.scheduled_time ?? null)
+  );
+  const pool = sameTime.length > 0 ? sameTime : candidates.length === 1 ? candidates : [];
+  if (pool.length === 0) return { verdict: 'unverified' };
+  const row = pool.find((e) => e.completed_at != null);
+  return row ? { verdict: 'recorded', row } : { verdict: 'not_recorded' };
+}
+
+/** Wait after a failed re-read before the single retry (the network coming back). */
+const COMPLETION_RETRY_DELAY_MS =
+  typeof process !== 'undefined' && process.env?.VITEST ? 0 : 2000;
+
+/** Resolve once the page is visible (immediately if it is). No timeout. */
+function waitUntilVisible(): Promise<void> {
+  if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const onChange = () => {
+      if (document.visibilityState === 'hidden') return;
+      document.removeEventListener('visibilitychange', onChange);
+      resolve();
+    };
+    document.addEventListener('visibilitychange', onChange);
+  });
+}
+
+/**
+ * Re-read the occurrence's day and say whether the completion landed. NEVER
+ * rejects: a failed (twice) or unreadable re-read is 'unverified'.
+ */
+export async function verifyCompletionLanded(
+  circleId: string,
+  occurrence: OccurrenceRef,
+  options: { retryDelayMs?: number } = {}
+): Promise<{ verdict: 'recorded' | ConfirmFailureOutcome; row?: CalendarEvent }> {
+  try {
+    if (!occurrence.scheduled_date) return { verdict: 'unverified' };
+    await waitUntilVisible();
+    const params = {
+      start_date: occurrence.scheduled_date,
+      end_date: occurrence.scheduled_date,
+      ...(occurrence.event_type === 'task' || occurrence.event_type === 'appointment'
+        ? { event_type: occurrence.event_type }
+        : {}),
+    };
+    let events: CalendarEvent[];
+    try {
+      events = await getEvents(circleId, params);
+    } catch {
+      const delay = options.retryDelayMs ?? COMPLETION_RETRY_DELAY_MS;
+      if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+      events = await getEvents(circleId, params);
+    }
+    if (!Array.isArray(events)) return { verdict: 'unverified' };
+    return completionVerdict(events, occurrence);
+  } catch {
+    return { verdict: 'unverified' };
+  }
 }

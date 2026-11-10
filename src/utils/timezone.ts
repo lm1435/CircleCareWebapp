@@ -12,6 +12,7 @@ import i18n from 'i18next';
 import { getCurrentUser, updateProfile } from '../api/users';
 import { devLog, devError } from '../constants/config';
 import type { HourCycle } from './hourCycle';
+import { wallClockMsToInstant } from './wallTimeToInstant';
 import {
   SUPPORTED_LOCALES,
   localeChain,
@@ -740,12 +741,13 @@ function parseWireDay(value: unknown): { y: number; m: number; d: number } | nul
 }
 
 /**
- * The real instant of a naive `hours:minutes` on `day` in `timezone`.
- *
- * Two passes: the offset at noon UTC of the day gives a first guess, then the
- * offset AT that guess corrects it. Noon alone is an hour out on a DST-change
- * day for any time on the other side of the change, which is exactly where a
- * day boundary can move.
+ * The real instant of a naive `hours:minutes` on `day` in `timezone`: the SAME
+ * instant the pg_cron reminder fires at (`wallTimeToInstant`, the Postgres
+ * `AT TIME ZONE` rule — a repeated fall-back time is its SECOND occurrence, a
+ * missing spring-forward time takes the pre-jump offset). The old two-pass
+ * offset guess resolved missing times an hour EARLY, so the viewer half named
+ * an hour the reminder never fired at. An unknown zone degrades to UTC (offset
+ * 0), as `getTimezoneOffsetMinutes` does. Mirrors mobile.
  */
 function eventInstant(
   day: { y: number; m: number; d: number },
@@ -754,9 +756,8 @@ function eventInstant(
   timezone: string
 ): Date {
   const wallAsUtc = Date.UTC(day.y, day.m - 1, day.d, hours, minutes);
-  const noon = new Date(Date.UTC(day.y, day.m - 1, day.d, 12));
-  const guess = new Date(wallAsUtc - getTimezoneOffsetMinutes(timezone, noon) * 60000);
-  return new Date(wallAsUtc - getTimezoneOffsetMinutes(timezone, guess) * 60000);
+  const instant = wallClockMsToInstant(wallAsUtc, timezone);
+  return Number.isNaN(instant.getTime()) ? new Date(wallAsUtc) : instant;
 }
 
 /**
@@ -865,9 +866,17 @@ export function formatEventTimeForDisplay(
     }
 
     // For viewer's time, we need to convert FROM care recipient's TZ TO viewer's TZ
-    // Get the UTC time for this moment
+    // Get the UTC time for this moment.
+    //
+    // With the event's day known, minutes are counted FROM THE INSTANT (UTC
+    // minutes since that day's UTC midnight), never re-derived from the wall
+    // clock and the recipient offset: for a wall time that does not exist (the
+    // spring-forward gap) "wall - offset at the instant" is an hour off the
+    // instant itself, which is what the reminder fires at. Same as mobile.
     const recipientOffset = getTimezoneOffsetMinutes(careRecipientTimezone, refDate);
-    const utcMinutes = hours * 60 + minutes - recipientOffset;
+    const utcMinutes = eventDay
+      ? Math.round((refDate.getTime() - Date.UTC(eventDay.y, eventDay.m - 1, eventDay.d)) / 60000)
+      : hours * 60 + minutes - recipientOffset;
 
     // Convert to viewer's timezone
     const viewerOffset = getTimezoneOffsetMinutes(deviceTimezone, refDate);

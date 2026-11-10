@@ -561,6 +561,12 @@ describe('EventDetailActions', () => {
       expect(completeMutateAsync).toHaveBeenCalledWith({
         eventId: 'parent-1',
         scheduledDate: '2026-08-06',
+        // Verify-before-alert re-reads the OCCURRENCE that was pressed, never the root.
+        occurrence: expect.objectContaining({
+          id: 'parent-1_2026-08-06',
+          parent_event_id: 'parent-1',
+          scheduled_date: '2026-08-06',
+        }),
       });
     });
 
@@ -599,6 +605,7 @@ describe('EventDetailActions', () => {
       expect(completeMutateAsync).toHaveBeenCalledWith({
         eventId: 'child-0806',
         scheduledDate: undefined,
+        occurrence: expect.objectContaining({ id: 'child-0806' }),
       });
     });
 
@@ -623,6 +630,7 @@ describe('EventDetailActions', () => {
       expect(completeMutateAsync).toHaveBeenCalledWith({
         eventId: 'child-0807',
         scheduledDate: undefined,
+        occurrence: expect.objectContaining({ id: 'child-0807' }),
       });
     });
 
@@ -644,6 +652,7 @@ describe('EventDetailActions', () => {
       expect(completeMutateAsync).toHaveBeenCalledWith({
         eventId: 't-solo',
         scheduledDate: undefined,
+        occurrence: expect.objectContaining({ id: 't-solo' }),
       });
     });
 
@@ -667,6 +676,7 @@ describe('EventDetailActions', () => {
       expect(completeMutateAsync).toHaveBeenCalledWith({
         eventId: 'parent-1',
         scheduledDate: undefined,
+        occurrence: expect.objectContaining({ id: 'parent-1' }),
       });
     });
   });
@@ -807,6 +817,7 @@ describe('EventDetailActions', () => {
         expect(completeMutateAsync).toHaveBeenCalledWith({
           eventId: 'parent-1',
           scheduledDate: '2026-08-06',
+          occurrence: expect.objectContaining({ scheduled_date: '2026-08-06' }),
         })
       );
       await waitFor(() => expect(onCompleted).toHaveBeenCalledTimes(1));

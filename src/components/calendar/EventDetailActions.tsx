@@ -323,6 +323,16 @@ export function EventDetailActions({
         // stand in for `is_virtual` here; it is an identity test, not a
         // discriminator.)
         scheduledDate: isVirtualOccurrence ? event.scheduled_date : undefined,
+        // Verify-before-alert: an ambiguous rejection re-reads THIS row's day
+        // (the occurrence, never the root) before any error is shown.
+        occurrence: {
+          id: event.id,
+          scheduled_date: event.scheduled_date,
+          scheduled_time: event.scheduled_time ?? null,
+          parent_event_id: event.parent_event_id ?? null,
+          event_type: event.event_type,
+          title: event.title,
+        },
       });
       // `completed_at` is what every "is this done?" read in the UI keys on, so
       // it must not be left empty by a response that omitted it: the write

@@ -1,4 +1,5 @@
-import { getDateInTimezone, getTimezoneOffsetMinutes } from './timezone';
+import { getDateInTimezone } from './timezone';
+import { wallClockMsToInstant } from './wallTimeToInstant';
 
 /**
  * Date/time conversion for the calendar-event save payload.
@@ -162,22 +163,19 @@ export function clockInZone(instant: Date, timezone: string): string {
 /**
  * The real instant meant by a naive wall-clock reading in `timezone`.
  *
- * Uses the SHARED `getTimezoneOffsetMinutes`, which reads the zone's full
- * wall-clock reading rather than the hour of day — the hour-of-day version it
- * replaced folded offsets past ±12h by a day, so a Kiritimati (+14) recipient's
- * events hydrated a day out. One implementation on purpose: a second local copy
- * is how the two drift apart again.
+ * Delegates to `wallClockMsToInstant` (utils/wallTimeToInstant.ts), the ONE
+ * resolver shared with the dual-clock formatter, mobile and the backend, which
+ * matches the pg_cron SQL's Postgres `AT TIME ZONE` rule exactly:
  *
- * Two passes on purpose. The offset must be looked up AT some instant, and the
- * only one available up front is the naive reading treated as UTC — which sits
- * up to a day away from the true instant and, near a DST transition, on the
- * wrong side of it. Re-reading the offset at the resolved instant and
- * recomputing when it disagrees settles that; a third pass cannot change the
- * answer, because the second lookup is already inside the correct offset period.
+ *   - a wall clock that happens TWICE (fall-back repeat) resolves to the SECOND
+ *     occurrence — the instant the reminder actually fires at;
+ *   - a wall clock that DOES NOT EXIST (spring-forward gap) resolves with the
+ *     offset in force BEFORE the jump, i.e. forward past the gap.
  *
- * On a DST-transition day a naive reading may name two instants (the repeated
- * hour) or none (the spring-forward gap). Neither resolution is "wrong" — which
- * is why the tests assert IDEMPOTENCE rather than an exact wall clock there.
+ * This used to be a two-pass offset lookup whose answer on those two days was
+ * accidental and zone-dependent (and differed from mobile, which normalised
+ * both cases). An unknown zone degrades to UTC (offset 0), as
+ * `getTimezoneOffsetMinutes` does.
  */
 export function instantFromNaiveTimeInZone(
   isoDay: string,
@@ -187,14 +185,8 @@ export function instantFromNaiveTimeInZone(
 ): Date {
   const [y, m, d] = isoDay.split('-').map(Number);
   const naiveAsUtc = Date.UTC(y, (m || 1) - 1, d || 1, hours, minutes);
-
-  const firstOffset = getTimezoneOffsetMinutes(timezone, new Date(naiveAsUtc));
-  const firstPass = new Date(naiveAsUtc - firstOffset * 60000);
-
-  const settledOffset = getTimezoneOffsetMinutes(timezone, firstPass);
-  if (settledOffset === firstOffset) return firstPass;
-
-  return new Date(naiveAsUtc - settledOffset * 60000);
+  const instant = wallClockMsToInstant(naiveAsUtc, timezone);
+  return Number.isNaN(instant.getTime()) ? new Date(naiveAsUtc) : instant;
 }
 
 export interface EventDatesForApiInput {

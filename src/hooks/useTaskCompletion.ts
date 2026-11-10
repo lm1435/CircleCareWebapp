@@ -7,6 +7,19 @@ import { withRefetchCap } from '@/lib/refetchCap';
 import { Analytics } from '@/lib/analytics';
 import { keepalivePost } from '@/lib/keepalivePost';
 import { startUndoTimer, type UndoTimer } from '@/lib/undoTimer';
+import type { OccurrenceRef } from '@/lib/confirmVerify';
+
+/** The occurrence a completion verifies against: the row that was tapped. */
+function occurrenceOf(task: CalendarEvent): OccurrenceRef & { title?: string } {
+  return {
+    id: task.id,
+    scheduled_date: task.scheduled_date,
+    scheduled_time: task.scheduled_time ?? null,
+    parent_event_id: task.parent_event_id ?? null,
+    event_type: task.event_type,
+    title: task.title,
+  };
+}
 
 // Shared task-completion orchestration — the undo grace period every task
 // surface uses. Extracted from TasksPage so the Overview "Open tasks" card gets
@@ -30,6 +43,12 @@ interface PendingCompletion {
    * same address `EventDetailActions` uses.
    */
   target: { eventId: string; scheduledDate?: string };
+  /**
+   * The row that was tapped, for verify-before-alert: an ambiguous rejection
+   * (timeout / network / 5xx) re-reads its day before anything is reported
+   * (`useCompleteEvent`'s `occurrence`, lib/confirmVerify.ts).
+   */
+  occurrence: OccurrenceRef & { title?: string };
   /** The task was added to a shift (docs/plans/shift-tasks.md): its completion is measured. */
   shiftLinked: boolean;
   /** Holdable: paused while the badge is hovered / focused (`lib/undoTimer`). */
@@ -113,10 +132,16 @@ export function useTaskCompletion(
     // pendingIds, without disturbing any id whose timer already fired
     // naturally and is mid-flight toward its own onSettled cleanup.
     const flushedIds = Array.from(timers.keys());
-    timers.forEach(({ timer, circleId: sentCircleId, target, shiftLinked }) => {
+    timers.forEach(({ timer, circleId: sentCircleId, target, occurrence, shiftLinked }) => {
       timer.clear();
       const { eventId, scheduledDate } = target;
-      const vars = { eventId, scheduledDate, circleId: sentCircleId, source: 'tasks' as const };
+      const vars = {
+        eventId,
+        scheduledDate,
+        circleId: sentCircleId,
+        source: 'tasks' as const,
+        occurrence,
+      };
       const request = keepalive
         ? keepalivePost(
             `/circles/${sentCircleId}/events/${eventId}/complete`,
@@ -222,6 +247,7 @@ export function useTaskCompletion(
       ? { eventId: task.parent_event_id ?? task.id, scheduledDate: task.scheduled_date }
       : { eventId: task.id };
     const shiftLinked = !!task.shift && task.shift.status !== 'outside';
+    const occurrence = occurrenceOf(task);
     const existing = timersRef.current.get(eventId);
     if (existing) existing.timer.clear();
     // The circle this tap was made in — see `circleIdRef`.
@@ -229,7 +255,7 @@ export function useTaskCompletion(
 
     const timer = startUndoTimer(() => {
       timersRef.current.delete(eventId);
-      completeMutationRef.current.mutate({ ...target, circleId: sentCircleId, source: 'tasks' }, {
+      completeMutationRef.current.mutate({ ...target, circleId: sentCircleId, source: 'tasks', occurrence }, {
         // SUCCESS: hold the pending id until the TASK ROWS THEMSELVES have
         // refetched, not until the POST settles.
         //
@@ -278,7 +304,7 @@ export function useTaskCompletion(
       });
     }, UNDO_DELAY_MS);
 
-    timersRef.current.set(eventId, { timer, circleId: sentCircleId, target, shiftLinked });
+    timersRef.current.set(eventId, { timer, circleId: sentCircleId, target, occurrence, shiftLinked });
     setPendingIds((prev) => {
       const next = new Set(prev);
       next.add(eventId);

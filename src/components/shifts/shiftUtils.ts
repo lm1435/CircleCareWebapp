@@ -10,6 +10,7 @@ import {
   zoneReferenceInstant,
 } from '@/utils/timezone';
 import { instantFromNaiveTimeInZone } from '@/utils/recipientEventDate';
+import { wallTimeToInstant } from '@/utils/wallTimeToInstant';
 import { addDays } from '@/components/calendar/dateMath';
 import { formatRecurrenceLabel } from '@/components/calendar/recurrenceLabel';
 
@@ -409,16 +410,25 @@ export function formatShiftRangeViewer(
   if (!timezonesAreDifferent(device, tz, startRef) && !timezonesAreDifferent(device, tz, endRef)) {
     return null;
   }
-  const clock = (hm: string, at: Date) => {
-    const total = (parseHm(hm) ?? 0) - getTimezoneOffsetMinutes(tz, at) + getTimezoneOffsetMinutes(device, at);
+  // Converted AT THE REAL INSTANT (`wallTimeToInstant`, the cron's Postgres rule), not with
+  // the day's noon offset: on a DST-change day a time on the other side of the change was an
+  // hour out, and a time inside the spring-forward gap named an hour that never happens.
+  // Mirrors mobile `viewerClock`.
+  const clock = (hm: string, day: string, at: Date) => {
+    const wall = parseHm(hm) ?? 0;
+    const instant = wallTimeToInstant(day, `${String(Math.floor(wall / 60)).padStart(2, '0')}:${String(wall % 60).padStart(2, '0')}`, tz);
+    const [y, m, d] = day.split('-').map(Number);
+    const total = Number.isNaN(instant.getTime())
+      ? wall - getTimezoneOffsetMinutes(tz, at) + getTimezoneOffsetMinutes(device, at)
+      : Math.round((instant.getTime() - Date.UTC(y, m - 1, d)) / 60000) + getTimezoneOffsetMinutes(device, instant);
     const wrapped = ((total % 1440) + 1440) % 1440;
     return {
       text: formatTimeOfDay(Math.floor(wrapped / 60), wrapped % 60, cycle),
       dayDelta: Math.floor(total / 1440),
     };
   };
-  const vs = clock(start, startRef);
-  const ve = clock(end.time, endRef);
+  const vs = clock(start, shift.scheduled_date, startRef);
+  const ve = clock(end.time, end.date, endRef);
   // A DAY IS NAMED only when the viewer's reading is on another calendar day than the
   // recipient's (the same short weekday as the dual time). The start names its own day; the
   // end names its day whenever it is not the viewer's start day, so "Mon 11:00 PM – Tue 7:00 AM"

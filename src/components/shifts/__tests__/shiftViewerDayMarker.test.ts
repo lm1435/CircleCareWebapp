@@ -105,3 +105,22 @@ describe('shift "Your time" names the viewer day', () => {
     );
   });
 });
+
+describe('shift "Your time" converts at the real instant on a DST-change day', () => {
+  // The cron's instant (Postgres `AT TIME ZONE`, `wallTimeToInstant`), not the day's
+  // noon offset. Twin of mobile shiftViewerDayMarker.test.ts. Monterrey is UTC-6 all year.
+  it('NY fall-back day: 00:30 is still EDT; the 01:30 end is the SECOND (EST) occurrence', () => {
+    // 00:30 EDT = 04:30Z = Sat 10:30 PM Monterrey; 01:30 EST = 06:30Z = Sun 12:30 AM.
+    // The noon offset (EST) used to put the start at 11:30 PM.
+    expect(viewer(shift('2027-11-07', '00:30:00', 60), 'America/New_York', 'America/Monterrey')).toBe(
+      'Sat 10:30 PM – Sun 12:30 AM'
+    );
+  });
+
+  it('NY spring-forward day: a 02:30 start (missing hour) is the 03:30 EDT the reminder fires at', () => {
+    // 02:30 -> 07:30Z = 1:30 AM Monterrey (was 12:30 AM); 04:30 EDT end = 08:30Z = 2:30 AM.
+    expect(viewer(shift('2027-03-14', '02:30:00', 120), 'America/New_York', 'America/Monterrey')).toBe(
+      '1:30 AM – 2:30 AM'
+    );
+  });
+});

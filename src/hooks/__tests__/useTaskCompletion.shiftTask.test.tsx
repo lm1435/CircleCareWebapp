@@ -64,7 +64,17 @@ describe('useTaskCompletion: shift tasks', () => {
       vi.advanceTimersByTime(UNDO_DELAY_MS + 10);
     });
     expect(mutate).toHaveBeenCalledWith(
-      { eventId: 'task-root', scheduledDate: '2026-11-10', circleId: 'c', source: 'tasks' },
+      {
+        eventId: 'task-root',
+        scheduledDate: '2026-11-10',
+        circleId: 'c',
+        source: 'tasks',
+        // Verified against the tapped occurrence (its day, its series).
+        occurrence: expect.objectContaining({
+          parent_event_id: 'task-root',
+          scheduled_date: '2026-11-10',
+        }),
+      },
       expect.anything()
     );
     mutate.mockClear();
@@ -72,7 +82,14 @@ describe('useTaskCompletion: shift tasks', () => {
     act(() => {
       vi.advanceTimersByTime(UNDO_DELAY_MS + 10);
     });
-    expect(mutate).toHaveBeenCalledWith({ eventId: 'physical-1', circleId: 'c', source: 'tasks' }, expect.anything());
+    expect(mutate).toHaveBeenCalledWith({
+        eventId: 'physical-1',
+        circleId: 'c',
+        source: 'tasks',
+        occurrence: expect.objectContaining({ id: 'physical-1' }),
+      },
+      expect.anything()
+    );
     expect(mutate.mock.calls[0][0]).not.toHaveProperty('scheduledDate');
   });
 

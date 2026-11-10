@@ -29,6 +29,7 @@ import {
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import {
+  classifyFailureCode,
   failureContext,
   type FailureAction,
   isDoseAlreadyLoggedError,
@@ -47,6 +48,20 @@ import { addDays, daysBetween } from '@/components/calendar/dateMath';
 import { Analytics } from '@/lib/analytics';
 import { todaysMedsKey } from '@/hooks/useMedConfirmation';
 import { isAsNeededImmutableError, isAsNeededUnscheduledError } from '@/api/medicationAsNeeded';
+import {
+  confirmFailureOutcome,
+  isAmbiguousConfirmFailure,
+  markConfirmFailure,
+  verifyCompletionLanded,
+  type OccurrenceRef,
+} from '@/lib/confirmVerify';
+
+/**
+ * A completion whose POST rejected AMBIGUOUSLY but whose re-read showed it
+ * landed: the resolved row -> the failure it recovered from
+ * (`classifyFailureCode`, a closed set). Read by `useCompleteEvent`'s onSuccess.
+ */
+const RECOVERED_COMPLETIONS = new WeakMap<object, string>();
 
 // Module-level constant — never `?? []` inline in selectors/returns.
 const EMPTY_EVENTS: CalendarEvent[] = [];
@@ -414,7 +429,7 @@ function withCalendarRefreshCap(refreshed: Promise<void>): Promise<unknown> {
 function useEventMutationOnError(
   hookCircleId: string,
   action: FailureAction
-): (error: unknown, sentCircleId?: unknown, source?: unknown) => void {
+): (error: unknown, sentCircleId?: unknown, source?: unknown, subjectTitle?: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // PK18: the only SUBSCRIPTION_REQUIRED an event write can get is the
@@ -432,7 +447,9 @@ function useEventMutationOnError(
   // string counts, because most mutations hand this function to TanStack as
   // `onError` directly, and TanStack's second argument is the mutation
   // VARIABLES object, never a circle id.
-  return (error: unknown, sentCircleId?: unknown, errorSource?: unknown) => {
+  // `subjectTitle`: only a string counts, for the same reason as `sentCircleId`
+  // (TanStack's fourth onError argument is its mutation context object).
+  return (error: unknown, sentCircleId?: unknown, errorSource?: unknown, subjectTitle?: unknown) => {
     const circleId = typeof sentCircleId === 'string' ? sentCircleId : hookCircleId;
     // Counted before it is classified for the UI — every failed event write
     // reaches the admin digest as `error_occurred`. ids/enums only: `code` is
@@ -440,9 +457,14 @@ function useEventMutationOnError(
     // 'tasks' only when the task undo window committed a task completion
     // (the sole caller that passes it); every other write is 'calendar_events'.
     const failSource = errorSource === 'tasks' ? 'tasks' : 'calendar_events';
+    // `outcome` (task completion only): an AMBIGUOUS rejection that was
+    // re-read first — 'not_recorded' or 'unverified'. Absent = a definite
+    // refusal reported as it came, or a write that never verifies.
+    const outcome = confirmFailureOutcome(error);
     Analytics.errorOccurred(failSource, `${failSource}_${action}_failed`, {
       circle_id: circleId,
       ...failureContext(failSource, action, error),
+      ...(outcome ? { outcome } : {}),
     });
     if (isSubscriptionRequiredError(error)) {
       promptLapsed(circleId);
@@ -499,6 +521,13 @@ function useEventMutationOnError(
       // the rule is rather than "couldn't save, try again" (a retry cannot work).
       showToast(t('errors.asNeededLocked'), 'error');
       void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
+    } else if (outcome === 'unverified' && typeof subjectTitle === 'string' && subjectTitle) {
+      // A completion whose fate could not be checked (the POST and the re-read
+      // both failed): never claim it failed. The dose wording's twin, reused
+      // with the task's title (mobile shows the same sentence).
+      showToast(t('meds:dialog.errorUnverified', { medication: subjectTitle }), 'error');
+      void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(circleId) });
     } else {
       // Conflict / parallel-edit path: refetch current state.
       showToast(t('errors.saveFailed'), 'error');
@@ -653,6 +682,17 @@ export interface CompleteEventVariables {
   circleId?: string;
   /** Failure-report label: the task list's undo window passes 'tasks'. */
   source?: 'tasks';
+  /**
+   * THE ROW THE CAREGIVER PRESSED, for verify-before-alert. When the POST
+   * rejects AMBIGUOUSLY (timeout, network, 5xx — `isAmbiguousConfirmFailure`)
+   * its day is re-read and this occurrence looked up (exact id, or series +
+   * date for a virtual one the completion materialized): completed -> the
+   * mutation RESOLVES with that row (`task_complete_recovered`); not completed
+   * or unreadable -> it rejects with the outcome attached. Omitted, a
+   * rejection is reported as it came (the pre-verification behaviour).
+   * `title` names the task in the "couldn't check" toast only.
+   */
+  occurrence?: OccurrenceRef & { title?: string };
 }
 
 /** POST /circles/:circleId/events/:eventId/complete — complete a task/appt. */
@@ -663,10 +703,37 @@ export function useCompleteEvent(
   const onError = useEventMutationOnError(circleId, 'update');
 
   return useMutation({
-    mutationFn: ({ eventId, scheduledDate, circleId: sentCircleId }: CompleteEventVariables) =>
-      completeEvent(sentCircleId ?? circleId, eventId, scheduledDate),
+    mutationFn: async ({
+      eventId,
+      scheduledDate,
+      circleId: sentCircleId,
+      occurrence,
+    }: CompleteEventVariables) => {
+      const target = sentCircleId ?? circleId;
+      try {
+        return await completeEvent(target, eventId, scheduledDate);
+      } catch (error) {
+        // VERIFY BEFORE ALERT (mobile parity, 2026-11-10). A definite refusal is
+        // reported as it is; an ambiguous one may have landed — re-read first.
+        if (!occurrence || !isAmbiguousConfirmFailure(error)) throw error;
+        const { verdict, row } = await verifyCompletionLanded(target, occurrence);
+        if (verdict !== 'recorded') throw markConfirmFailure(error, verdict);
+        if (!row) throw markConfirmFailure(error, 'unverified');
+        const recovered: CalendarEvent = { ...row };
+        RECOVERED_COMPLETIONS.set(recovered, classifyFailureCode(error));
+        return recovered;
+      }
+    },
     onSuccess: (event, variables) => {
       const sentCircleId = variables.circleId ?? circleId;
+      const recoveredFrom =
+        event && typeof event === 'object' ? RECOVERED_COMPLETIONS.get(event) : undefined;
+      if (recoveredFrom !== undefined) {
+        Analytics.taskCompleteRecovered(
+          event.event_type === 'appointment' ? 'appointment' : 'task',
+          recoveredFrom
+        );
+      }
       // PHI-safe: only circle_id. Branch on the event_type enum so appointments
       // and tasks land on the matching mobile event names.
       if (event?.event_type === 'appointment') {
@@ -677,6 +744,6 @@ export function useCompleteEvent(
       void invalidateEventQueries(queryClient, sentCircleId, variables.eventId);
     },
     onError: (error, variables) =>
-      onError(error, variables.circleId ?? circleId, variables.source),
+      onError(error, variables.circleId ?? circleId, variables.source, variables.occurrence?.title),
   });
 }
