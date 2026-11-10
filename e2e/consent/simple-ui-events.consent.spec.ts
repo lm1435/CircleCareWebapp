@@ -71,19 +71,26 @@ test('Today: today_viewed (coaching next_step), next_step_shown/tapped/dismissed
   const shown = await posthog.waitForEvent('next_step_shown', { timeoutMs: 20_000 });
   expect(props(shown)).toEqual({ step: 'first_med' });
 
-  // "Not now" -> dismissed (first_med), then the invite step is shown.
-  await page.getByTestId('next-step-card').getByRole('button', { name: 'Not now' }).click();
+  // The button -> tapped (first_med); it opens the medication form, closed unchanged.
+  const card = page.getByTestId('next-step-card');
+  await card.getByRole('button', { name: 'Add medication' }).click();
+  const tapped = await posthog.waitForEvent('next_step_tapped', { timeoutMs: 20_000 });
+  expect(props(tapped)).toEqual({ step: 'first_med' });
+  const form = page.getByRole('dialog', { name: 'New medication' });
+  await expect(form).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(form).toBeHidden();
+
+  // "Not now" -> dismissed (first_med), and the WHOLE card goes for 3 days: it is never
+  // answered by the next step (docs/plans/simple-ui-1-3-1.md; useNextStep.ts and mobile's
+  // utils/nextStep.ts, unit-tested in useNextStep.test.tsx "hides the WHOLE card").
+  await card.getByRole('button', { name: 'Not now' }).click();
   const dismissed = await posthog.waitForEvent('next_step_dismissed', { timeoutMs: 20_000 });
   expect(props(dismissed)).toEqual({ step: 'first_med' });
-  const shownInvite = await posthog.waitForEvent('next_step_shown', {
-    timeoutMs: 20_000,
-    predicate: (e) => e.properties.step === 'invite',
+  await expect(card).toHaveCount(0);
+  await posthog.expectNoEvent('next_step_shown', {
+    predicate: (e) => e.properties.step !== 'first_med',
   });
-  expect(props(shownInvite)).toEqual({ step: 'invite' });
-
-  await page.getByTestId('next-step-card').getByRole('button', { name: 'Invite' }).click();
-  const tapped = await posthog.waitForEvent('next_step_tapped', { timeoutMs: 20_000 });
-  expect(props(tapped)).toEqual({ step: 'invite' });
 
   for (const e of posthog.captures()) {
     if (/^(today_|next_step_|next_up_|add_menu_|entry_form_|time_chip_|coaching_hint_)/.test(e.event)) {
