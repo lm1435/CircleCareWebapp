@@ -9,6 +9,7 @@ import {
   expectNoEventSince,
   nowSec,
   openAccountMenuItem,
+  openPrivacySettings,
   readLocalConsent,
   readServerConsent,
   setServerConsent,
@@ -65,7 +66,7 @@ test('toggle OFF: one withdraw POST, DB stamped, events anonymous after; toggle 
   await restoresSent.expectCount(0);
 
   // ── ON ──
-  await openAccountMenuItem(page, 'Settings');
+  await openPrivacySettings(page);
   await expect(toggle).toHaveAttribute('aria-checked', 'false', { timeout: 20_000 });
   const onAt = nowSec();
   await toggle.click();

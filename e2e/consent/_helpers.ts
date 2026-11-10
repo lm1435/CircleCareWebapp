@@ -437,6 +437,17 @@ export async function openAccountMenuItem(page: Page, name: 'Settings' | 'Help &
   }).toPass({ timeout: 20_000 });
 }
 
+/**
+ * Account menu → Settings → the "Privacy & security" row. Since the 11-08 design
+ * pass /profile is a list of rows; the "Share usage data" switch lives on the
+ * /profile/privacy sub-page.
+ */
+export async function openPrivacySettings(page: Page): Promise<void> {
+  await openAccountMenuItem(page, 'Settings');
+  await page.getByTestId('settings-row-privacy').click();
+  await expect(page.getByTestId('settings-page-privacy')).toBeVisible({ timeout: 20_000 });
+}
+
 /** Sign out through the account menu and its confirm dialog; waits for /login. */
 export async function signOutViaMenu(page: Page): Promise<void> {
   await openAccountMenuItem(page, 'Sign out');
