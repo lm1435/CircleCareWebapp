@@ -9,8 +9,6 @@
 // is exactly as correct with none of that coupling. No cycle exists on this
 // edge.
 import i18n from 'i18next';
-import { getCurrentUser, updateProfile } from '../api/users';
-import { devLog, devError } from '../constants/config';
 import type { HourCycle } from './hourCycle';
 import { wallClockMsToInstant } from './wallTimeToInstant';
 import {
@@ -1017,40 +1015,6 @@ export function formatEventTimeCompact(
 }
 
 /**
- * Syncs the device timezone to the user's profile.
- * Only sets timezone if user doesn't have one set (null).
- *
- * This is a fallback for users who registered before we added timezone to signup.
- * New users get their timezone set during registration.
- * Users can change their timezone from the profile page.
- */
-export async function syncDeviceTimezone(): Promise<void> {
-  try {
-    const deviceTimezone = getDeviceTimezone();
-
-    if (!deviceTimezone) {
-      devLog('[Timezone] Could not detect device timezone');
-      return;
-    }
-
-    // Check if user already has a timezone set
-    const currentUser = await getCurrentUser();
-    if (currentUser.timezone) {
-      devLog(`[Timezone] User already has timezone set: ${currentUser.timezone}, skipping sync`);
-      return;
-    }
-
-    // Only set if null - this handles legacy users who registered before timezone was captured
-    devLog(`[Timezone] No timezone set, setting to device timezone: ${deviceTimezone}`);
-    await updateProfile({ timezone: deviceTimezone });
-    devLog('[Timezone] Successfully set timezone');
-  } catch (error) {
-    // Non-critical - don't fail auth if timezone sync fails
-    devError('[Timezone] Failed to sync timezone:', error);
-  }
-}
-
-/**
  * Determine if a date string represents "today", "yesterday", or neither
  * in the care recipient's timezone.
  *
@@ -1165,17 +1129,23 @@ export function isEventPastDue(
       return false;
     }
 
-    // Get current time in care recipient's timezone. Shares
-    // getMinutesOfDayInTimezone with isDoseConfirmable so both read the clock
-    // the same way — including its rawHour === 24 → 0 normalization (some
-    // Intl implementations report hour 24, not 0, for midnight).
-    const currentTotalMinutes = getMinutesOfDayInTimezone(careRecipientTimezone, now);
-
-    // Parse scheduled time
+    // THE INSTANT, NOT THE WALL MINUTE (BC-5). The reminder cron fires at the dose's real instant; wall
+    // minutes repeat on a fall-back day (01:30 is "past" from the first 01:31, then "not yet" again) and skip on
+    // a spring-forward day (a 02:30 dose is "past" at 03:00, before its 03:30 reminder). Same resolver as the
+    // cron's `AT TIME ZONE`: a repeated time is its SECOND occurrence, a missing one takes the pre-jump offset.
     const scheduledTotalMinutes = parseScheduledMinutes(scheduledTime) ?? 0;
+    const today = parseWireDay(scheduledDate);
+    if (!today) return false;
+    const due = eventInstant(
+      today,
+      Math.floor(scheduledTotalMinutes / 60),
+      scheduledTotalMinutes % 60,
+      careRecipientTimezone
+    );
+    const nowMinute = Math.floor(now.getTime() / 60000) * 60000;
 
-    // Past due if current time is strictly after scheduled time
-    return currentTotalMinutes > scheduledTotalMinutes;
+    // Past due if the current minute is strictly after the dose's minute
+    return nowMinute > due.getTime();
   } catch {
     return false;
   }
@@ -1361,7 +1331,17 @@ export function isDoseConfirmable(
     const currentMinutes = getMinutesOfDayInTimezone(careRecipientTimezone, now);
 
     if (scheduledDate === todayInRecipientTZ) {
-      return currentMinutes >= scheduledMinutes - earlyWindowMinutes;
+      // By INSTANT (BC-5), like the cron: wall minutes repeat / skip on a clock-change day.
+      const day = parseWireDay(scheduledDate);
+      if (!day) return false;
+      const due = eventInstant(
+        day,
+        Math.floor(scheduledMinutes / 60),
+        scheduledMinutes % 60,
+        careRecipientTimezone
+      );
+      const nowMinute = Math.floor(now.getTime() / 60000) * 60000;
+      return nowMinute >= due.getTime() - earlyWindowMinutes * 60000;
     }
 
     // Later day. Only TOMORROW can fall inside a sub-24h window, and only late

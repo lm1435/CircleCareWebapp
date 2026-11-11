@@ -46,6 +46,10 @@ export interface MedSchedulePreset {
  * med chip strip; every chip sets a COMPLETE daily schedule — time + daily
  * recurrence together; untap clears both).
  *
+ * `time` is the CIRCLE's clock ("Every morning 8:00" is 08:00 where the person lives, for
+ * every viewer), like the time chips: the form applies it through its circle-clock setter and
+ * matches it against the circle clock, never the viewer's.
+ *
  * SUBSET NOTE: mobile's full set adds twiceDaily/threeTimesDaily, which need
  * ADDITIONAL dose times per day. The web form (like the API's calendar_events
  * shape it mirrors) has exactly ONE scheduled_time per event, so only the

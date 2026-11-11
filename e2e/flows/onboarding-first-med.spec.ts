@@ -2,6 +2,8 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { dbQuery, sqlStr } from '../unhappy';
 import { createAccount, runScopedEmail, ACCOUNT_PASSWORD } from '../isolation';
+import { sqlExec } from '../db';
+import { refuseZoneSync } from '../helpers';
 import { cookieLogin, stubJson, uniq } from '../unhappy/auth-invites/_helpers';
 
 // Onboarding 1.3.1 (docs/plans/onboarding-1-3-1.md), the FIRST-MED path end to end against the
@@ -76,6 +78,35 @@ function confirmations(eventId: string): { status: string }[] {
     `select status from medication_confirmations where event_id = ${sqlStr(eventId)}::uuid`
   );
 }
+
+test.describe('onboarding first med: the schedule means the circle clock (BC-8)', () => {
+  test.setTimeout(120_000);
+  // The browser is in New York; the account (and so the new circle) is in Denver. The wizard form's "Morning" is
+  // the CIRCLE's 8:00 AM, exactly as the old "Every morning 8:00" preset now is: it saves 08:00, never 06:00.
+  test.use({ timezoneId: 'America/New_York' });
+
+  test('a New York browser, a Denver circle: Morning saves 08:00', async ({ page, context, baseURL }) => {
+    await refuseZoneSync(page);
+    await stubJson(page, 'GET', '/api/drugs/search', { body: { success: true, data: { drugs: [] } } });
+    const a = await freeAccount('obtz');
+    sqlExec(`update users set timezone = ${sqlStr('America/Denver')} where id = ${sqlStr(a.userId)}::uuid;`);
+    await cookieLogin(context, a, baseURL);
+    const circleId = await createFirstCircle(page, uniq('ObTz'));
+    await page.getByTestId('first-run-primary').click();
+    const form = page.getByRole('dialog').last();
+    await form.getByLabel(/Medication name/i).fill('Metformin');
+    const morning = form.getByRole('checkbox', { name: /Morning$/ });
+    await morning.click();
+    await expect(morning).toBeChecked();
+    await form.getByRole('button', { name: 'Add medication' }).click();
+    await expect(wizard(page).getByText('ALL SET')).toBeVisible({ timeout: 20_000 });
+    const rows = dbQuery<{ scheduled_time: string }>(
+      `select scheduled_time::text from calendar_events
+        where circle_id = ${sqlStr(circleId)}::uuid and event_type = 'medication' and parent_event_id is null`
+    );
+    expect(rows.map((r) => r.scheduled_time.slice(0, 5))).toEqual(['08:00']);
+  });
+});
 
 test.describe('onboarding first med (web)', () => {
   test.setTimeout(120_000);

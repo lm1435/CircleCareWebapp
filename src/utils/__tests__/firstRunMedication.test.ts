@@ -39,7 +39,8 @@ const BASE = {
   customTime: null,
   recurrence: 'daily' as const,
   timezone: 'America/New_York',
-  todayStr: '2026-09-01',
+  circleTodayStr: '2026-09-01',
+  viewerTodayStr: '2026-09-01',
 };
 
 /** The wire body the API actually receives — `undefined` keys do not survive. */
@@ -59,7 +60,6 @@ describe('buildFirstRunMedication', () => {
       primary,
       additionalTimes,
       timezone: BASE.timezone,
-      todayStr: BASE.todayStr,
       refillGroupId: 'primary-id',
     });
     expect(siblings.map((s) => s.entry_source)).toEqual(additionalTimes.map(() => 'form'));
@@ -243,7 +243,7 @@ describe('buildFirstRunMedication', () => {
     // agree.
     expect(primary.scheduled_time).toBe(
       eventDatesForApi({
-        dateStr: BASE.todayStr,
+        dateStr: BASE.viewerTodayStr,
         timeStr: '14:30',
         recurrenceEndDateStr: null,
         timezone: BASE.timezone,
@@ -280,7 +280,7 @@ describe('buildFirstRunMedication', () => {
    * be satisfied by a single viewer-zone value, in any runner zone.
    */
   it('resolves scheduled_date in the recipient timezone, not the viewer’s', () => {
-    const primaryInstant = viewerInstant(BASE.todayStr, '08:00');
+    const primaryInstant = viewerInstant(BASE.viewerTodayStr, '08:00');
 
     const dateIn = (timeZone: string): string =>
       new Intl.DateTimeFormat('en-CA', {
@@ -311,7 +311,9 @@ describe('buildFirstRunMedication', () => {
     for (const zone of pair as readonly [string, string]) {
       const { primary } = buildFirstRunMedication({
         ...BASE,
-        presetKey: 'everyMorning',
+        // A CUSTOM time is the viewer's wall clock (a preset is the circle's, on the circle's own today).
+        presetKey: 'custom',
+        customTime: '08:00',
         timezone: zone,
       });
       expect(primary.scheduled_date).toBe(dateIn(zone));
@@ -448,7 +450,7 @@ describe('buildSiblingDoseRequests across a day boundary', () => {
     presetKey: 'custom',
     customTime: at(early),
     timezone,
-    todayStr,
+    viewerTodayStr: todayStr,
   }).primary;
 
   it('gives each dose its own recipient-frame time', () => {
@@ -456,7 +458,7 @@ describe('buildSiblingDoseRequests across a day boundary', () => {
       primary,
       additionalTimes: [at(late)],
       timezone,
-      todayStr,
+      viewer: { todayStr, primaryTime: at(early) },
     });
 
     expect(sibling.scheduled_time).toBe(
@@ -471,20 +473,22 @@ describe('buildSiblingDoseRequests across a day boundary', () => {
   });
 
   /**
-   * THE ASSERTION THE EXTRACTION EXISTS FOR. A sibling copying the primary's
-   * date is not merely imprecise here — it stores the dose on the wrong calendar
-   * day.
+   * THE ASSERTION THE EXTRACTION EXISTS FOR (BC-1). Every dose row starts on the
+   * primary's circle day; re-placing the extra on the primary's VIEWER day stored
+   * it a day early.
    */
-  it('advances the sibling date when the dose crosses midnight there', () => {
+  it('keeps the sibling on the primary’s circle day when its own instant crosses midnight there', () => {
     const [sibling] = buildSiblingDoseRequests({
       primary,
       additionalTimes: [at(late)],
       timezone,
-      todayStr,
+      viewer: { todayStr, primaryTime: at(early) },
     });
 
-    expect(sibling.scheduled_date).toBe(dayIn(timezone, late));
-    expect(sibling.scheduled_date).not.toBe(primary.scheduled_date);
+    // BC-1: one medication starts on ONE circle day. The old reading (the extra re-placed on the primary's viewer
+    // day) put it on the day its own viewer-day instant falls on, which is the day the primary is NOT on.
+    expect(dayIn(timezone, late)).not.toBe(primary.scheduled_date);
+    expect(sibling.scheduled_date).toBe(primary.scheduled_date);
   });
 
   it('points every sibling at the primary bottle', () => {
@@ -492,7 +496,7 @@ describe('buildSiblingDoseRequests across a day boundary', () => {
       primary,
       additionalTimes: [at(early), at(late)],
       timezone,
-      todayStr,
+      viewer: { todayStr, primaryTime: at(early) },
       refillGroupId: 'evt-1',
     });
 
@@ -529,7 +533,7 @@ describe('buildSiblingDoseRequests across a day boundary', () => {
       primary: trackedPrimary,
       additionalTimes: [at(late)],
       timezone,
-      todayStr,
+      viewer: { todayStr, primaryTime: at(early) },
       refillGroupId: 'evt-1',
     });
     expect(sibling.track_refills).toBe(false);
@@ -558,7 +562,7 @@ describe('buildSiblingDoseRequests across a day boundary', () => {
       primary,
       additionalTimes: [at(late)],
       timezone,
-      todayStr,
+      viewer: { todayStr, primaryTime: at(early) },
     });
     expect('refill_group_id' in sibling).toBe(false);
   });
@@ -568,7 +572,7 @@ describe('buildSiblingDoseRequests across a day boundary', () => {
       primary,
       additionalTimes: [at(late)],
       timezone,
-      todayStr,
+      viewer: { todayStr, primaryTime: at(early) },
       refillGroupId: 'evt-1',
     });
     expect(sibling.title).toBe(primary.title);
@@ -655,5 +659,102 @@ describe('viewerToday', () => {
   it('reports the viewer’s own calendar day, zero-padded', () => {
     const now = new Date(2026, 8, 3, 4, 5);
     expect(viewerToday(now)).toBe('2026-09-03');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BC-8: the schedule presets mean the CIRCLE's clock (08:00 where the person
+// lives), on the circle's own today. BC-1: every dose row starts on that same
+// circle day. The viewer is the process zone (TZ); the table is ambient.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('BC-8 / BC-1 presets are the circle clock, rows share the circle day', () => {
+  const AMBIENT = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const dayIn = (timeZone: string, now: Date) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  const TABLE: Array<{
+    viewer: string[];
+    circle: string;
+    preset: 'everyMorning' | 'everyEvening' | 'twiceDaily' | 'threeTimesDaily';
+    now: string;
+    day: string;
+    times: string[];
+  }> = [
+    { viewer: ['America/New_York'], circle: 'America/Denver', preset: 'everyMorning', now: '2026-11-12T15:00:00Z', day: '2026-11-12', times: ['08:00'] },
+    { viewer: ['America/Denver'], circle: 'America/New_York', preset: 'everyMorning', now: '2026-11-12T15:00:00Z', day: '2026-11-12', times: ['08:00'] },
+    { viewer: ['UTC', 'Etc/UTC'], circle: 'America/Denver', preset: 'twiceDaily', now: '2026-11-12T15:00:00Z', day: '2026-11-12', times: ['08:00', '20:00'] },
+    { viewer: ['Europe/London'], circle: 'America/Denver', preset: 'threeTimesDaily', now: '2026-11-12T15:00:00Z', day: '2026-11-12', times: ['08:00', '14:00', '20:00'] },
+    { viewer: ['Pacific/Auckland'], circle: 'America/Denver', preset: 'twiceDaily', now: '2026-11-12T03:00:00Z', day: '2026-11-11', times: ['08:00', '20:00'] },
+    { viewer: ['Asia/Kolkata', 'Asia/Calcutta'], circle: 'America/Los_Angeles', preset: 'everyEvening', now: '2026-11-12T15:00:00Z', day: '2026-11-12', times: ['20:00'] },
+  ];
+
+  function rowsFor(preset: (typeof TABLE)[number]['preset'], circle: string, circleTodayStr: string) {
+    const { primary, additionalTimes } = buildFirstRunMedication({
+      ...BASE,
+      presetKey: preset,
+      timezone: circle,
+      circleTodayStr,
+    });
+    const siblings = buildSiblingDoseRequests({
+      primary,
+      additionalTimes,
+      timezone: circle,
+    });
+    return [primary, ...siblings].map((r) => ({ date: r.scheduled_date, time: r.scheduled_time }));
+  }
+
+  it('the ambient zone is in the table', () => {
+    if (!TABLE.some((r) => r.viewer.includes(AMBIENT))) throw new Error(`ambient zone ${AMBIENT} is not in the BC-8 table`);
+  });
+
+  it('New York viewer, Denver circle: Every morning saves 08:00', () => {
+    // Table row, run in whatever zone this process is: the preset never depends on the viewer's zone.
+    const now = new Date('2026-11-12T15:00:00Z');
+    expect(rowsFor('everyMorning', 'America/Denver', dayIn('America/Denver', now))).toEqual([
+      { date: '2026-11-12', time: '08:00' },
+    ]);
+  });
+
+  it('the ambient row: preset rows are the preset clocks on the circle day', () => {
+    const row = TABLE.find((r) => r.viewer.includes(AMBIENT));
+    if (!row) throw new Error(`ambient zone ${AMBIENT} is not in the BC-8 table`);
+    expect(dayIn(row.circle, new Date(row.now))).toBe(row.day);
+    expect(rowsFor(row.preset, row.circle, row.day)).toEqual(row.times.map((time) => ({ date: row.day, time })));
+  });
+
+  it('twice daily: both rows share the circle’s day', () => {
+    const rows = rowsFor('twiceDaily', 'Pacific/Auckland', '2026-09-27');
+    expect(rows).toEqual([
+      { date: '2026-09-27', time: '08:00' },
+      { date: '2026-09-27', time: '20:00' },
+    ]);
+  });
+
+  it('twice daily saves exactly 08:00 and 20:00 on the circle day, on every clock-change day and the days either side', () => {
+    const days = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+    // Spring-forward and fall-back days of 2026 from the spec's section 3 (discovered + checked in dstMatrix.test.ts).
+    const TRANSITION_DAYS: Record<string, string[]> = {
+      'America/New_York': ['2026-03-08', '2026-11-01'],
+      'America/Denver': ['2026-03-08', '2026-11-01'],
+      'America/Adak': ['2026-03-08', '2026-11-01'],
+      'Europe/London': ['2026-03-29', '2026-10-25'],
+      'Europe/Berlin': ['2026-03-29', '2026-10-25'],
+      'Pacific/Auckland': ['2026-09-27', '2026-04-05'],
+      'Australia/Sydney': ['2026-10-04', '2026-04-05'],
+      'America/Santiago': ['2026-09-06', '2026-04-04'],
+      'America/Havana': ['2026-03-08', '2026-11-01'],
+      'Australia/Lord_Howe': ['2026-10-04', '2026-04-05'],
+      'Pacific/Chatham': ['2026-09-27', '2026-04-05'],
+    };
+    for (const [zone, transitionDays] of Object.entries(TRANSITION_DAYS)) {
+      for (const d of transitionDays) {
+        for (const n of [-1, 0, 1]) {
+          const day = days(d, n);
+          expect(rowsFor('twiceDaily', zone, day)).toEqual([
+            { date: day, time: '08:00' },
+            { date: day, time: '20:00' },
+          ]);
+        }
+      }
+    }
   });
 });

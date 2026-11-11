@@ -641,7 +641,8 @@ describe('new medication: more than one time (mobile AddEventScreen / first-run 
       primary,
       additionalTimes: ['10:00'], // the wizard's viewer-frame field: Midday 12:00 New York = 10:00 Denver
       timezone: RECIPIENT_TZ,
-      todayStr,
+      // BC-1: the viewer-frame extra is placed on the primary's circle day (the primary: Morning 8:00 New York = 6:00 Denver).
+      viewer: { todayStr, primaryTime: '06:00' },
       refillGroupId: 'p',
     })[0];
     expect(sibling.scheduled_time).toBe(expected.scheduled_time);

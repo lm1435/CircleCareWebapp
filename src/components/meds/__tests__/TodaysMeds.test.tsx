@@ -1504,9 +1504,13 @@ describe('TodaysMeds', () => {
    * instant would POST a dose that is not due — a falsified adherence row.
    */
   it('refuses a stale Confirm when the dose stopped being due (DST fall-back), and says so', async () => {
-    // 2026-11-01 is America/New_York's fall-back day.
-    const BEFORE_FALL_BACK = new Date('2026-11-01T05:45:00Z'); // 01:45 EDT
-    const AFTER_FALL_BACK = new Date('2026-11-01T06:00:00Z'); // 01:00 EST
+    // 2026-11-01 is America/New_York's fall-back day. BC-5: "due" is judged by INSTANT, so a fall-back can no
+    // longer turn a live dose into a not-due one (the 03:30 dose, 08:30Z, opens at 06:30Z whatever the wall
+    // clock reads: it was "live" at 01:45 EDT only by wall minutes). The handler's click-time re-check is still
+    // reachable when the system clock is stepped BACK between render and click (a clock correction), which is
+    // what this drives: live at 07:00Z (02:00 EST), then the clock reads 05:45Z (01:45 EDT).
+    const BEFORE_FALL_BACK = new Date('2026-11-01T07:00:00Z');
+    const AFTER_FALL_BACK = new Date('2026-11-01T05:45:00Z');
     const DST_DAY = '2026-11-01';
     const dose = makeMed({
       id: 'dst-dose',
@@ -1537,10 +1541,10 @@ describe('TodaysMeds', () => {
     renderWidget();
 
     await screen.findByText('Warfarin');
-    // Live at render time: 01:45 is inside the window that opened at 01:30.
+    // Live at render time: 07:00Z is inside the window that opened at 06:30Z.
     const take = action(medRow('Warfarin'), 'Taken');
 
-    // The clock falls back with no render in between, then the stale button
+    // The clock steps back with no render in between, then the stale button
     // is pressed. The undo window is run out so a POST that slipped through
     // would be visible.
     vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: AFTER_FALL_BACK });

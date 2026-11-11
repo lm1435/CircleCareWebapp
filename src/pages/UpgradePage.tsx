@@ -224,11 +224,11 @@ export default function UpgradePage(): ReactElement {
    * run keeps the gate a pure render decision.
    *
    * TWO SIGNALS, BOTH REQUIRED: the account's saved zone AND the browser's
-   * live one must each land on the allowlist. The account zone is written
-   * once at signup and never refreshed (mobile's `syncDeviceSettings` skips
-   * a non-empty column), so on its own it is a historical record rather than
-   * a location; the browser zone is live but describes a machine, not an
-   * account. Full reasoning — including the deliberate, un-bypassed cost to a
+   * live one must each land on the allowlist. The account zone is kept in
+   * step with the last device that signed in (mobile's `syncDeviceSettings`,
+   * the web's `DeviceTimezoneSync`), so on its own it is a recent record
+   * rather than a location; the browser zone is live but describes a machine,
+   * not an account. Full reasoning — including the deliberate, un-bypassed cost to a
    * US customer buying while abroad — is in lib/checkoutCountry.ts.
    *
    * THREE STATES BEFORE SUBSCRIBE CAN APPEAR, and the page renders something

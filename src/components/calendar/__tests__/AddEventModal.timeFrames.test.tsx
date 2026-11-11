@@ -342,11 +342,16 @@ describe('the end time (mobile fix 3): web has no equivalent of the anchor-day f
     render(<AddEventModal circleId={CIRCLE_ID} layout="full" onClose={vi.fn()} />);
     const presets = screen.getByRole('radiogroup', { name: 'Common schedules' });
     await user.click(within(presets).getByRole('radio', { name: 'Every morning (8:00 AM)' }));
+    // The preset is the CIRCLE's 08:00 (BC-8); the field holds the viewer's clock for it, so the end that is 75
+    // minutes later is derived from what the field reads.
+    const [sh, sm] = (screen.getByLabelText(/^Time/) as HTMLInputElement).value.split(':').map(Number);
+    const endTotal = (sh * 60 + sm + 75) % 1440;
+    const endValue = `${String(Math.floor(endTotal / 60)).padStart(2, '0')}:${String(endTotal % 60).padStart(2, '0')}`;
     await user.selectOptions(screen.getByLabelText('Type'), 'appointment');
     await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Dentist');
     const end = screen.getByLabelText(/^End time/);
     await user.clear(end);
-    await user.type(end, '09:15');
+    await user.type(end, endValue);
     await user.click(screen.getByRole('button', { name: 'Create' }));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     expect(mutateCreate.mock.calls[0][0]).toMatchObject({ event_type: 'appointment', duration_minutes: 75 });

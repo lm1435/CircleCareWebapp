@@ -129,11 +129,17 @@ import {
   defaultNewEventDate,
   eventDatesForApi,
   eventDatesFromApi,
+  extraDoseForApi,
   viewerInstant,
 } from '@/utils/recipientEventDate';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { useSeriesRoot } from '@/hooks/useSeriesRoot';
 import { DaysOfWeekPicker } from './DaysOfWeekPicker';
+import {
+  clockRangeText as clockRangeTextFor,
+  clockText as clockTextFor,
+  viewerRangeForCaption,
+} from './zoneCaptionRange';
 import {
   addDays,
   daysBetween,
@@ -199,8 +205,12 @@ export interface AddEventModalProps {
    * with both answers GONE, re-answering the exact questions the wizard exists
    * to spare them, on the one path it deliberately refuses to handle.
    *
-   * `initialTime` is a VIEWER-frame `HH:MM` — the same frame this form's time
-   * field is in — so it needs no conversion. `initialRecurrence` is a rule
+   * `initialTime` is a VIEWER-frame `HH:MM` (a hand-picked CUSTOM time, typed on
+   * the viewer's clock) and drops in with no conversion. A schedule PRESET's time
+   * is NOT passed this way: presets are the CIRCLE's clock, so a caller applies one
+   * as a circle-clock `HH:MM` through the form's own setter (the chips' converter,
+   * `chooseRecipientTime`), never as a viewer time. (The first-run wizard is this
+   * form now and hands nothing over.) `initialRecurrence` is a rule
    * string ('daily' | 'every_other_day' | 'weekly') or null for no repeat.
    *
    * KNOWN GAP: only the PRIMARY dose time survives a multi-dose hand-off,
@@ -687,9 +697,8 @@ function AddEventForm({
       });
     }
     return {
-      // `initialTime` is already VIEWER-frame `HH:MM` (the wizard's own field
-      // frame), so it drops straight in with no conversion — the same value the
-      // user would have typed here themselves.
+      // `initialTime` is a VIEWER-frame `HH:MM` (a custom time), so it drops straight in with
+      // no conversion — the same value the user would have typed here themselves.
       // The CARE RECIPIENT's today; '' while the zone is still loading (the same
       // gate as an edit), so no wrong day is shown and then replaced. The resync
       // effect below fills it the moment the zone lands.
@@ -709,6 +718,22 @@ function AddEventForm({
    */
   const [chipInstant, setChipInstant] = useState<Date | null>(null);
   const heldInstant = chipInstant ?? hydrated.instant ?? null;
+  /**
+   * The STORED pair an edit opened with and the instant it names (BC-2). While the fields still read that instant the
+   * save sends the stored strings verbatim, so a time inside the circle's spring-forward gap (02:30 stored, 03:30 on
+   * the clock) is not "rescheduled" by an untouched save. See `eventDatesForApi`.
+   */
+  const heldStored = useMemo(
+    () =>
+      event && scheduleSource?.scheduled_time && hydrated.instant
+        ? {
+            scheduledDate: scheduleSource.scheduled_date,
+            scheduledTime: scheduleSource.scheduled_time,
+            instant: hydrated.instant,
+          }
+        : null,
+    [event, scheduleSource?.scheduled_date, scheduleSource?.scheduled_time, hydrated.instant]
+  );
   const [endTimeStr, setEndTimeStr] = useState(() => {
     // `duration_minutes` is a DELTA, so it is frame-independent: the viewer's
     // end time is the viewer's start time plus the duration. Derived from the
@@ -1415,11 +1440,12 @@ function AddEventForm({
         recurrenceEndDateStr: null,
         timezone,
         heldInstant,
+        heldStored,
       }).scheduledDate;
     } catch {
       return null;
     }
-  }, [timezone, dateStr, timeStr, heldInstant]);
+  }, [timezone, dateStr, timeStr, heldInstant, heldStored]);
   /**
    * The RECIPIENT's wall clock the form's time names (`HH:MM`, what the save sends), or '' with no time
    * or no zone yet. The time chips mean the recipient's clock (mobile parity), so this is what lights one.
@@ -1428,13 +1454,13 @@ function AddEventForm({
     if (!timezone || !dateStr || !timeStr) return '';
     try {
       return (
-        eventDatesForApi({ dateStr, timeStr, recurrenceEndDateStr: null, timezone, heldInstant })
+        eventDatesForApi({ dateStr, timeStr, recurrenceEndDateStr: null, timezone, heldInstant, heldStored })
           .scheduledTime ?? ''
       );
     } catch {
       return '';
     }
-  }, [timezone, dateStr, timeStr, heldInstant]);
+  }, [timezone, dateStr, timeStr, heldInstant, heldStored]);
   /**
    * The end a duration chip or the default length gives the viewer-frame start `viewerStart`: the full length,
    * an end past midnight carrying to the next day (mobile's rule, no 23:59 cap): see `presetEndTimeStr`.
@@ -1692,6 +1718,8 @@ function AddEventForm({
       timezone: tz,
       // The instant an edit opened with, or a chip set, while the fields still read it (fall-back hour).
       heldInstant,
+      // The stored pair, verbatim, while the fields still read the instant the edit opened with (BC-2).
+      heldStored,
     });
     let scheduled_date = apiDates.scheduledDate;
     const scheduled_time = apiDates.scheduledTime;
@@ -1883,11 +1911,12 @@ function AddEventForm({
 
   /**
    * The extra dose rows of a NEW medication ("+ Another dose"), one request per time: the
-   * primary's payload with its OWN clock, its OWN recipient-frame date and repeat-end date
-   * (re-expressed at THAT time, never borrowed from the primary: an evening dose can sit on
-   * another recipient day), no refill state of its own, and `refill_group_id` set to the
-   * primary's id once that is known. Same helper the first-run wizard uses (mobile's
-   * `siblingDosePayload`).
+   * primary's payload with its OWN clock, no refill state of its own, and `refill_group_id` set to the
+   * primary's id once that is known. Every row of one medication starts on the SAME circle-zone day, the
+   * primary's: an extra is held as a viewer-frame clock with no day of its own, so `extraDoseForApi` finds the
+   * viewer day whose instant falls on the primary's circle day (re-placing it on the primary's VIEWER day moved
+   * a dose a whole circle day, BC-1). The repeat-end date is the primary's (same start day, same span). Same
+   * helper the first-run wizard uses (mobile's `siblingDosePayload`).
    */
   function buildSiblingRequests(
     primary: CreateEventRequest,
@@ -1895,24 +1924,32 @@ function AddEventForm({
     primaryId: string | undefined
   ): CreateEventRequest[] {
     if (isEditing || !isMedication || isAsNeeded) return [];
+    const repeatEnd = recurrence !== 'none' && recurrenceEndDate ? recurrenceEndDate : null;
+    const primaryDates = eventDatesForApi({
+      dateStr,
+      timeStr: timeStr || null,
+      recurrenceEndDateStr: repeatEnd,
+      timezone: tz,
+      heldInstant,
+    });
     return extraTimes
       .filter((time) => time !== '')
       .map((time) => {
-        const dates = eventDatesForApi({
+        const dose = extraDoseForApi({
           dateStr,
-          timeStr: time,
-          recurrenceEndDateStr:
-            recurrence !== 'none' && recurrenceEndDate ? recurrenceEndDate : null,
+          timeStr,
+          extraTimeStr: time,
           timezone: tz,
+          heldInstant,
         });
-        let rowDate = dates.scheduledDate;
+        let rowDate = dose.scheduledDate;
         if (recurrence === 'days_of_week' && selectedDays.length > 0 && selectedDays.length < 7) {
           rowDate = nextDateOnWeekdays(rowDate, selectedDays) ?? rowDate;
         }
         return siblingDosePayload(primary, {
-          scheduledTime: dates.scheduledTime as string,
+          scheduledTime: dose.scheduledTime,
           scheduledDate: rowDate,
-          recurrenceEndDate: dates.recurrenceEndDate ?? undefined,
+          recurrenceEndDate: primaryDates.recurrenceEndDate ?? undefined,
           refillGroupId: primaryId,
         });
       });
@@ -2838,14 +2875,16 @@ function AddEventForm({
     }
     setDateStr(next);
   }
-  /** A viewer-frame HH:MM (a field, an extra dose) on the RECIPIENT's clock, on the form's day. */
+  /**
+   * An EXTRA dose's viewer-frame HH:MM on the RECIPIENT's clock: the clock the save sends for it, on the primary's
+   * circle day (`extraDoseForApi`: the extra's own viewer day is found, never assumed to be the primary's).
+   */
   function viewerToRecipient(time: string): string {
     if (!timezone || !dateStr || !time) return time;
     try {
-      return (
-        eventDatesForApi({ dateStr, timeStr: time, recurrenceEndDateStr: null, timezone }).scheduledTime ??
-        time
-      );
+      return timeStr
+        ? extraDoseForApi({ dateStr, timeStr, extraTimeStr: time, timezone, heldInstant }).scheduledTime
+        : (eventDatesForApi({ dateStr, timeStr: time, recurrenceEndDateStr: null, timezone }).scheduledTime ?? time);
     } catch {
       return time;
     }
@@ -3027,22 +3066,9 @@ function AddEventForm({
   }
 
   /** An HH:MM as the viewer reads it (12 / 24 hour). */
-  const clockText = (hhmm: string): string => {
-    const [h, m] = hhmm.split(':').map(Number);
-    return Number.isFinite(h) && Number.isFinite(m) ? formatTimeOfDay(h, m, hourCycle) : hhmm;
-  };
+  const clockText = (hhmm: string): string => clockTextFor(hhmm, hourCycle);
   /** "11:00 – 11:30 AM": the shared AM / PM said once when both ends have it (else both in full). */
-  const clockRangeText = (from: string, to: string): string => {
-    const a = clockText(from);
-    const b = clockText(to);
-    const split = (text: string): [string, string] => {
-      const match = /^(\d{1,2}[:.]\d{2})(.*)$/.exec(text);
-      return match ? [match[1], match[2]] : [text, ''];
-    };
-    const [aDigits, aSuffix] = split(a);
-    const [, bSuffix] = split(b);
-    return aSuffix.trim() !== '' && aSuffix === bSuffix ? `${aDigits} – ${b}` : `${a} – ${b}`;
-  };
+  const clockRangeText = (from: string, to: string): string => clockRangeTextFor(from, to, hourCycle);
   /** "a, b and c" with the locale's joiner. */
   const listText = (items: string[]): string =>
     items.length <= 1
@@ -3055,12 +3081,35 @@ function AddEventForm({
    * "… 11:00 – 11:30 AM your time (New York)". The viewer's clock is the fields' own (the viewer-frame state), so
    * nothing is converted here. Replaces the older "Your time / X's time" and "Times are for X" lines.
    */
+  /**
+   * The caption's "your time" range for a timed appointment / task (BC-4): the START is the viewer's own clock, the
+   * END is the circle's end wall time (circle start + the duration, wall minutes) resolved to an instant and read on
+   * the viewer's clock. "Viewer start clock + duration" is an hour off when exactly one of the two zones changes
+   * clocks inside the span. Null (the caller falls back to the viewer-frame pair) while a piece is missing.
+   */
+  function viewerCaptionRange(): string | null {
+    if (!timezone || !recipientStartDate || !recipientClock || !timeStr || !endTimeStr) return null;
+    const durationMinutes = spanMinutes(timeStr, endTimeStr);
+    if (durationMinutes === null) return null;
+    try {
+      return viewerRangeForCaption({
+        scheduledDate: recipientStartDate,
+        startHm: recipientClock,
+        durationMinutes,
+        circleZone: timezone,
+        viewerZone: deviceTimezone,
+        cycle: hourCycle,
+      });
+    } catch {
+      return null;
+    }
+  }
   const zoneCaptionTimes =
     simpleKind === 'medication'
       ? listText([timeStr, ...extraTimes].filter(Boolean).map(clockText))
       : timeStr
         ? endTimeStr
-          ? clockRangeText(timeStr, endTimeStr)
+          ? (viewerCaptionRange() ?? clockRangeText(timeStr, endTimeStr))
           : clockText(timeStr)
         : '';
   const zoneCaption =
@@ -4173,10 +4222,14 @@ function AddEventForm({
         {/* Medication SCHEDULE presets (R6-2) — the ONE med chip strip: every
             chip sets a COMPLETE daily schedule (time + daily recurrence) in
             one tap; tapping the selected chip again returns both to unset.
-            Selected state is an EXACT match of time + recurrence. Prefill
-            only — the save path below is untouched. (Web subset: the form has
-            a single time field, so only the single-time presets are offered —
-            see MED_SCHEDULE_PRESETS.) */}
+            A preset's time is the CIRCLE's clock, like the time chips ("Every
+            morning" is 8:00 AM where the person lives): it goes in through the
+            circle-clock setter (`chooseRecipientTime`), and the selected state
+            is an EXACT match of the form's circle clock + recurrence, so the
+            chip stays lit for a viewer in another zone and a stored daily 08:00
+            reads "Every morning" for everyone. Prefill only — the save path
+            below is untouched. (Web subset: the form has a single time field, so
+            only the single-time presets are offered — see MED_SCHEDULE_PRESETS.) */}
         {isMedication && !isAsNeeded && (
           <ChipSelect
             id="schedule-presets"
@@ -4187,7 +4240,7 @@ function AddEventForm({
             }))}
             value={
               MED_SCHEDULE_PRESETS.find(
-                (preset) => preset.time === timeStr && preset.recurrence === recurrence
+                (preset) => preset.time === recipientClock && preset.recurrence === recurrence
               )?.id ?? null
             }
             onChange={(next) => {
@@ -4197,12 +4250,14 @@ function AddEventForm({
               datesTouched.current = true;
               touchRecurrence();
               if (preset) {
-                setTimeStr(preset.time);
+                chooseRecipientTime(preset.time);
                 setRecurrence(preset.recurrence);
                 clearError('scheduled_time');
               } else {
-                // Untap — return the preset-controlled fields to unset.
-                setTimeStr('');
+                // Untap — return the preset-controlled fields to unset, the day included: the preset's time may
+                // have moved the viewer-frame day (far zones), and with no time the date IS the circle's day.
+                if (recipientStartDate) moveViewerDay(recipientStartDate);
+                chooseRecipientTime('');
                 setRecurrence('none');
               }
             }}

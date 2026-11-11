@@ -160,6 +160,41 @@ test.describe("time chips are the recipient's clock", () => {
   });
 });
 
+test.describe('extra doses start on the primary circle day (BC-1)', () => {
+  test('Denver browser, Tokyo recipient: Morning + Bedtime save 08:00 and 21:00 on the same circle day', async ({
+    page,
+    context,
+    request,
+    baseURL,
+  }) => {
+    // Tokyo 21:00 is 06:00 the same morning in Denver, and 08:00 Tokyo is 17:00 the evening BEFORE: the two doses
+    // sit on different Denver days. The extra dose used to be re-placed on the primary's Denver day and saved a
+    // Tokyo day early (11-11 21:00 for a series starting 11-12). A future day keeps the backend's start roll out of it.
+    const a = await arrange(request, 'extrajp', 'Asia/Tokyo');
+    await cookieLogin(context, a.owner, baseURL);
+    const name = `ZZ_E2E_EXTRA_${uniqueSuffix()}`;
+    const dialog = await openMedForm(page, a.circleId);
+    await dialog.locator('#medication_name').fill(name);
+    const day = dateInTz('Asia/Tokyo', 5);
+    await dialog.locator('#scheduled_date').fill(day);
+    const morning = dialog.getByRole('checkbox', { name: /Morning$/ });
+    await morning.click();
+    await expect(morning).toBeChecked();
+    const bedtime = dialog.getByRole('checkbox', { name: /Bedtime$/ });
+    await bedtime.click();
+    await expect(bedtime).toBeChecked();
+    await dialog.getByRole('button', { name: 'Add medication' }).click();
+    await expect(dialog).toBeHidden({ timeout: 20_000 });
+    const rows = medRoots(a.circleId, name)
+      .map((r) => ({ date: r.scheduled_date, time: r.scheduled_time?.slice(0, 5) }))
+      .sort((x, y) => String(x.time).localeCompare(String(y.time)));
+    expect(rows).toEqual([
+      { date: day, time: '08:00' },
+      { date: day, time: '21:00' },
+    ]);
+  });
+});
+
 test.describe('"Other time" is on the same clock as the chips (owner 1.4.0)', () => {
   test('Denver browser, New York recipient: Other… is the recipient clock; 07:30 is its own chip "7:30 AM / Other", the caption names the viewer clock', async ({
     page,

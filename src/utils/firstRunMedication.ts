@@ -1,6 +1,6 @@
 import type { CreateEventRequest } from '@/api/calendarEvents';
 import { WEB_ENTRY_SOURCE } from '@/utils/entrySource';
-import { eventDatesForApi } from '@/utils/recipientEventDate';
+import { eventDatesForApi, extraDoseForApi } from '@/utils/recipientEventDate';
 import type { HourCycle } from '@/utils/hourCycle';
 import { formatTimeOfDay, getDateInTimezone, isEventPastDue } from '@/utils/timezone';
 
@@ -17,23 +17,28 @@ import { formatTimeOfDay, getDateInTimezone, isEventPastDue } from '@/utils/time
  * for the same answers, on both platforms. Kept pure, that is a unit assertion
  * (`__tests__/firstRunMedication.test.ts`) instead of a rendered-screen
  * comparison — and the one case that actually matters, a sibling dose whose
- * RECIPIENT-frame day differs from the primary's, is unreachable from a
- * rendered test whose viewer/recipient pairing sits a couple of hours apart.
+ * instant falls on another VIEWER day than the primary's (it must still start
+ * on the primary's circle day), is unreachable from a rendered test whose
+ * viewer/recipient pairing sits a couple of hours apart.
  *
  * ── WEB ADAPTATION ────────────────────────────────────────────────────────
  *
  * Mobile's pickers produce `Date` objects, so its helpers take and return
  * Dates. The web form holds STRINGS (`<input type="time">` → `HH:MM`,
- * `<input type="date">` → `YYYY-MM-DD`) in the VIEWER's frame, and
- * `utils/recipientEventDate` is string-in/string-out to match. So every time
- * here is an `HH:MM` string and `todayStr` is a viewer-frame `YYYY-MM-DD`.
+ * `<input type="date">` → `YYYY-MM-DD`) and `utils/recipientEventDate` is
+ * string-in/string-out to match. So every time here is an `HH:MM` string.
  *
- * The COMPUTATION is unchanged, and that is what parity rests on: mobile
- * combines `today` with a `setHours`-built primary time into a device-local
- * instant and re-expresses it in the recipient's zone; `eventDatesForApi` here
- * builds `new Date(y, m-1, d, hh, mm)` from the same two halves and does the
- * same. For one viewer wall clock and one recipient zone, both platforms
- * serialise the same `scheduled_date` / `scheduled_time`.
+ * ── WHOSE CLOCK (BC-8) ────────────────────────────────────────────────────
+ *
+ * A schedule PRESET ("Every morning 8:00", "Twice daily 8:00 + 20:00") names
+ * the CIRCLE's clock, like the time chips do: 08:00 where the person lives, for
+ * every viewer. A preset row is therefore sent VERBATIM — `scheduled_time` is
+ * the preset's `HH:MM` and `scheduled_date` is the circle's own today
+ * (`circleTodayStr`), never converted through the viewer's zone. Only a CUSTOM
+ * time (a hand-picked one) is still the VIEWER's wall clock on the viewer's day
+ * and goes through `eventDatesForApi` as before.
+ *
+ * All rows of one medication start on the SAME circle day (BC-1): the primary's.
  */
 
 export type FirstRunPresetKey =
@@ -86,7 +91,7 @@ export const FIRST_RUN_SCHEDULE_PRESETS: readonly FirstRunSchedulePreset[] = [
 /** The default the wizard opens on — 08:00, which is why rule 7 exists. */
 export const FIRST_RUN_DEFAULT_PRESET: FirstRunPresetKey = 'everyMorning';
 
-/** The viewer's own calendar day, `YYYY-MM-DD` — the frame the form's inputs are in. */
+/** The viewer's own calendar day, `YYYY-MM-DD` — the frame a CUSTOM time is typed in. */
 export function viewerToday(now: Date = new Date()): string {
   const m = String(now.getMonth() + 1).padStart(2, '0');
   const d = String(now.getDate()).padStart(2, '0');
@@ -187,13 +192,15 @@ export interface FirstRunMedicationInput {
   rxcui?: string;
   /** The CARE RECIPIENT's IANA zone — see the precedence note in the modal. */
   timezone: string;
-  /** The viewer's calendar day, `YYYY-MM-DD`. */
-  todayStr: string;
+  /** The CIRCLE's own today (`getDateInTimezone(timezone, now)`): the start day of every preset row. */
+  circleTodayStr: string;
+  /** The viewer's calendar day, `YYYY-MM-DD`: the day a CUSTOM time is typed on. Defaults to the viewer's today. */
+  viewerTodayStr?: string;
 }
 
 export interface FirstRunMedicationPayload {
   primary: CreateEventRequest;
-  /** `HH:MM` viewer-frame times for the extra doses; one sibling row per entry. */
+  /** `HH:MM` times for the extra doses (the circle's clock for a preset); one sibling row per entry. */
   additionalTimes: string[];
 }
 
@@ -202,16 +209,21 @@ export interface FirstRunMedicationPayload {
  * answers.
  */
 export function buildFirstRunMedication(input: FirstRunMedicationInput): FirstRunMedicationPayload {
-  const { name, dosage, presetKey, customTime, recurrence, rxcui, timezone, todayStr } = input;
+  const { name, dosage, presetKey, customTime, recurrence, rxcui, timezone, circleTodayStr } = input;
 
   const { primaryTime, additionalTimes } = firstRunPresetTimes(presetKey, customTime);
 
-  const { scheduledDate, scheduledTime } = eventDatesForApi({
-    dateStr: todayStr,
-    timeStr: primaryTime,
-    recurrenceEndDateStr: null,
-    timezone,
-  });
+  // A PRESET is the circle's clock on the circle's day, verbatim (BC-8). A CUSTOM time is the viewer's wall clock
+  // on the viewer's day and is converted into the circle's frame.
+  const { scheduledDate, scheduledTime } =
+    presetKey === 'custom'
+      ? eventDatesForApi({
+          dateStr: input.viewerTodayStr ?? viewerToday(),
+          timeStr: primaryTime,
+          recurrenceEndDateStr: null,
+          timezone,
+        })
+      : { scheduledDate: circleTodayStr, scheduledTime: primaryTime };
 
   const trimmedName = name.trim();
   const trimmedDosage = dosage.trim();
@@ -321,35 +333,38 @@ export function siblingDosePayload(
 }
 
 /**
- * One `CreateEventRequest` per ADDITIONAL dose time, each carrying its OWN
- * clock and its OWN date rather than the primary's.
+ * One `CreateEventRequest` per ADDITIONAL dose time. Every row of one medication starts on the SAME circle-zone day,
+ * the primary's (BC-1): the extra dose differs only in its clock.
  *
- * The case this exists for is a dose whose recipient-frame DAY differs from the
- * primary's — an evening dose that has already rolled past midnight in the
- * recipient's zone. Borrowing the primary's `scheduled_date` there stores the
- * dose a full calendar day out and the reminder fires 24 hours late.
+ * `additionalTimes` are the CIRCLE's clock `HH:MM` for a preset (sent verbatim, on the primary's day). Pass `viewer`
+ * when they are hand-picked VIEWER wall clocks instead: each is then re-expressed in the circle's zone with
+ * `extraDoseForApi`, which finds the viewer day whose instant falls on the primary's circle day (placing it on the
+ * primary's VIEWER day moved a dose whose real instant is on another viewer day a whole circle day early).
  */
 export function buildSiblingDoseRequests(input: {
   primary: CreateEventRequest;
   additionalTimes: string[];
   timezone: string;
-  todayStr: string;
+  /** Set when `additionalTimes` are viewer-frame clocks: the viewer's day and the primary's viewer clock. */
+  viewer?: { todayStr: string; primaryTime: string };
   /** Absent when the primary create returned no id — see `siblingDosePayload`. */
   refillGroupId?: string;
 }): CreateEventRequest[] {
-  const { primary, additionalTimes, timezone, todayStr, refillGroupId } = input;
+  const { primary, additionalTimes, timezone, viewer, refillGroupId } = input;
 
   return additionalTimes.map((extraTime) => {
-    // BOTH re-expressed at THAT dose's time — never borrowed from the primary.
-    const { scheduledDate, scheduledTime } = eventDatesForApi({
-      dateStr: todayStr,
-      timeStr: extraTime,
-      recurrenceEndDateStr: null,
-      timezone,
-    });
+    const { scheduledDate, scheduledTime } = viewer
+      ? extraDoseForApi({
+          dateStr: viewer.todayStr,
+          timeStr: viewer.primaryTime,
+          extraTimeStr: extraTime,
+          timezone,
+        })
+      : { scheduledDate: primary.scheduled_date, scheduledTime: extraTime };
     return siblingDosePayload(primary, {
-      scheduledTime: scheduledTime as string,
+      scheduledTime,
       scheduledDate,
+      recurrenceEndDate: primary.recurrence_end_date ?? undefined,
       refillGroupId,
     });
   });

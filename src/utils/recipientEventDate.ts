@@ -200,6 +200,14 @@ export interface EventDatesForApiInput {
   timezone: string;
   /** The instant the fields were filled with (an edit or a time chip); see `viewerInstant`. */
   heldInstant?: Date | null;
+  /**
+   * The STORED pair an edit opened with, and the instant it names (`eventDatesFromApi().instant`). While the
+   * fields still read exactly that instant the save sends the stored strings verbatim: a stored time inside the
+   * circle's spring-forward gap (02:30 on the transition day) names an instant whose real clock is 03:30, and
+   * re-deriving the pair from the instant would "reschedule" an event the user never touched. Any change to the
+   * date or time no longer equals the held instant, so normal conversion applies.
+   */
+  heldStored?: { scheduledDate: string; scheduledTime: string; instant: Date } | null;
 }
 
 /**
@@ -241,17 +249,28 @@ export function eventDatesForApi(input: EventDatesForApiInput): {
   scheduledTime?: string;
   recurrenceEndDate?: string;
 } {
-  const { dateStr, timeStr, recurrenceEndDateStr, timezone, heldInstant } = input;
+  const { dateStr, timeStr, recurrenceEndDateStr, timezone, heldInstant, heldStored } = input;
 
   // No time means no instant to re-express: the calendar day the user picked is
   // exactly what they mean. Mirrors the null-time branch of the inverse below.
   const hasTime = !!timeStr;
-  const scheduledDate = hasTime
-    ? dayInZone(viewerInstant(dateStr, timeStr as string, heldInstant), timezone)
-    : dateStr;
-  const scheduledTime = hasTime
-    ? clockInZone(viewerInstant(dateStr, timeStr as string, heldInstant), timezone)
-    : undefined;
+  const instant = hasTime ? viewerInstant(dateStr, timeStr as string, heldInstant) : null;
+  // UNTOUCHED (BC-2): the fields still name the instant the edit opened with -> the stored strings, verbatim.
+  const untouched =
+    !!instant &&
+    !!heldStored &&
+    Number.isFinite(heldStored.instant.getTime()) &&
+    Math.floor(instant.getTime() / 60000) === Math.floor(heldStored.instant.getTime() / 60000);
+  const scheduledDate = untouched
+    ? (heldStored as NonNullable<typeof heldStored>).scheduledDate
+    : instant
+      ? dayInZone(instant, timezone)
+      : dateStr;
+  const scheduledTime = untouched
+    ? (heldStored as NonNullable<typeof heldStored>).scheduledTime.slice(0, 5)
+    : instant
+      ? clockInZone(instant, timezone)
+      : undefined;
 
   if (!recurrenceEndDateStr) {
     return { scheduledDate, scheduledTime, recurrenceEndDate: undefined };
@@ -337,4 +356,44 @@ export function eventDatesFromApi(input: EventDatesFromApiInput): {
       ? addDaysToIsoDay(dateStr, isoDaysBetween(scheduledDate, storedEnd))
       : '',
   };
+}
+
+export interface ExtraDoseForApiInput {
+  /** The PRIMARY dose's viewer-frame day and clock, as the form holds them. */
+  dateStr: string;
+  timeStr: string;
+  /** The EXTRA dose's viewer-frame clock (`HH:MM`). Its own viewer DAY is not stored; see below. */
+  extraTimeStr: string;
+  /** The CARE RECIPIENT's IANA timezone. */
+  timezone: string;
+  /** The primary's held instant (a chip / the picker), as for `eventDatesForApi`. */
+  heldInstant?: Date | null;
+}
+
+/**
+ * The circle-zone pair to save for an EXTRA dose of a NEW multi-dose medication (BC-1).
+ *
+ * Every dose row of one medication starts on the SAME circle-zone day: the primary's `scheduledDate`, at the extra
+ * dose's own circle-clock `HH:MM` (exactly the clock the chip / tile showed). The extra is held as a viewer-frame
+ * clock with no day of its own; re-placing it on the PRIMARY's viewer day (what the form used to do) moves a dose
+ * whose real instant is on another viewer day a whole circle day, and across a clock change an hour. So the clock
+ * is placed on the viewer day (primary day, then the next, then the previous) whose instant falls on the primary's
+ * circle day, and the circle clock of that instant is the saved time. No match (no such viewer day) keeps the
+ * primary's viewer day.
+ */
+export function extraDoseForApi(input: ExtraDoseForApiInput): {
+  scheduledDate: string;
+  scheduledTime: string;
+} {
+  const { dateStr, timeStr, extraTimeStr, timezone, heldInstant } = input;
+  const { scheduledDate } = eventDatesForApi({
+    dateStr,
+    timeStr: timeStr || null,
+    recurrenceEndDateStr: null,
+    timezone,
+    heldInstant,
+  });
+  const candidates = [0, 1, -1].map((k) => viewerInstant(addDaysToIsoDay(dateStr, k), extraTimeStr));
+  const chosen = candidates.find((c) => dayInZone(c, timezone) === scheduledDate) ?? candidates[0];
+  return { scheduledDate, scheduledTime: clockInZone(chosen, timezone) };
 }

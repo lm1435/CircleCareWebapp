@@ -16,8 +16,6 @@ vi.mock('../../constants/config', () => ({
   IS_DEV: false,
 }));
 
-import { getCurrentUser, updateProfile } from '../../api/users';
-import type { User } from '../../api/users';
 import {
   getDeviceTimezone,
   formatTimeOfDay,
@@ -30,9 +28,11 @@ import {
   timezonesAreDifferent,
   getTimezoneOffsetMinutes,
   convertDateToRecipientTimezone,
-  syncDeviceTimezone,
   normalizeTimeOfDay,
+  zoneReferenceInstant,
 } from '../../utils/timezone';
+import fs from 'fs';
+import path from 'path';
 
 // Pin the "device" timezone to America/New_York for deterministic tests
 // (the dev machine is America/Denver — tests must never depend on it).
@@ -597,42 +597,6 @@ describe('convertTimeBetweenTimezones additional', () => {
     const result = convertTimeBetweenTimezones(23, 30, 'America/Los_Angeles', 'Asia/Tokyo');
     expect(result.hours).toBeGreaterThanOrEqual(0);
     expect(result.hours).toBeLessThan(24);
-  });
-});
-
-// ============================================================================
-// syncDeviceTimezone
-// ============================================================================
-describe('syncDeviceTimezone', () => {
-  const mockGetCurrentUser = vi.mocked(getCurrentUser);
-  const mockUpdateProfile = vi.mocked(updateProfile);
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should set timezone when user has no timezone set', async () => {
-    mockGetCurrentUser.mockResolvedValue({ timezone: null } as unknown as User);
-    mockUpdateProfile.mockResolvedValue({} as unknown as User);
-
-    await syncDeviceTimezone();
-
-    expect(mockUpdateProfile).toHaveBeenCalledWith({ timezone: 'America/New_York' });
-  });
-
-  it('should skip update when user already has timezone set', async () => {
-    mockGetCurrentUser.mockResolvedValue({ timezone: 'America/Chicago' } as unknown as User);
-
-    await syncDeviceTimezone();
-
-    expect(mockUpdateProfile).not.toHaveBeenCalled();
-  });
-
-  it('should handle errors gracefully', async () => {
-    mockGetCurrentUser.mockRejectedValue(new Error('Network error'));
-
-    // Should not throw
-    await expect(syncDeviceTimezone()).resolves.toBeUndefined();
   });
 });
 
@@ -1355,5 +1319,120 @@ describe('isDoseConfirmable', () => {
     expect(isDoseConfirmable('2030-01-01', '21:00:00', 'Not/AZone', fourOhSevenPmDenver)).toBe(
       false
     );
+  });
+});
+
+// ============================================================================
+// BC-5: isEventPastDue / isDoseConfirmable judge the day's own dose by INSTANT
+// (the cron fires at the instant; wall minutes repeat and skip on DST days).
+// Expected instants are literal ISO strings worked out by hand from the zone
+// rules, never produced by the code under test.
+// ============================================================================
+
+describe('BC-5 isEventPastDue across clock changes (instant, not wall minutes)', () => {
+  const NY = 'America/New_York';
+  it.each([
+    // Fall back, NY 2026-11-01 (01:00-01:59 happens twice). The dose 01:30 is the SECOND one (06:30Z).
+    ['NY fall-back 01:30, first 01:45', NY, '2026-11-01', '01:30', '2026-11-01T05:45:00Z', false],
+    ['NY fall-back 01:30, second 01:15', NY, '2026-11-01', '01:30', '2026-11-01T06:15:00Z', false],
+    ['NY fall-back 01:30, second 01:31', NY, '2026-11-01', '01:30', '2026-11-01T06:31:00Z', true],
+    // Spring forward, NY 2026-03-08: 02:30 does not exist; it is 02:30 EST = 07:30Z (03:30 EDT).
+    ['NY spring-forward 02:30, 03:10 EDT', NY, '2026-03-08', '02:30', '2026-03-08T07:10:00Z', false],
+    ['NY spring-forward 02:30, 03:31 EDT', NY, '2026-03-08', '02:30', '2026-03-08T07:31:00Z', true],
+    // Lord Howe 2026-04-05 01:30-01:59 twice; second 01:45 = 15:15Z (+10:30).
+    ['Lord_Howe 01:45, first 01:50', 'Australia/Lord_Howe', '2026-04-05', '01:45', '2026-04-04T14:50:00Z', false],
+    ['Lord_Howe 01:45, second 01:46', 'Australia/Lord_Howe', '2026-04-05', '01:45', '2026-04-04T15:16:00Z', true],
+    // No DST: unchanged.
+    ['Phoenix 02:30, 02:31', 'America/Phoenix', '2026-03-08', '02:30', '2026-03-08T09:31:00Z', true],
+    ['Kolkata 08:00, 08:01', 'Asia/Kolkata', '2026-03-08', '08:00', '2026-03-08T02:31:00Z', true],
+    ['Kolkata 08:00, 07:59', 'Asia/Kolkata', '2026-03-08', '08:00', '2026-03-08T02:29:00Z', false],
+  ] as const)('%s', (_name, zone, date, time, nowIso, expected) => {
+    expect(isEventPastDue(date, time, zone, new Date(nowIso))).toBe(expected);
+  });
+
+  it('is never past due before the instant and stays past due after it (NY fall-back 01:30)', () => {
+    const due = Date.parse('2026-11-01T06:30:00Z');
+    for (let min = -120; min <= 120; min += 1) {
+      const now = new Date(due + min * 60000);
+      expect(isEventPastDue('2026-11-01', '01:30', NY, now)).toBe(min > 0);
+    }
+  });
+});
+
+describe('BC-5 isDoseConfirmable opens an early window before the INSTANT', () => {
+  const NY = 'America/New_York';
+  it('NY fall-back 01:30 opens at 06:30Z minus the window, not 05:30Z minus the window', () => {
+    const windowMin = 30;
+    const due = Date.parse('2026-11-01T06:30:00Z');
+    const opens = due - windowMin * 60000;
+    expect(isDoseConfirmable('2026-11-01', '01:30', NY, new Date(opens - 60000), windowMin)).toBe(false);
+    expect(isDoseConfirmable('2026-11-01', '01:30', NY, new Date(opens), windowMin)).toBe(true);
+    // The first 01:10 (05:10Z) is inside the OLD wall-minute window but is 80 minutes before the dose.
+    expect(isDoseConfirmable('2026-11-01', '01:30', NY, new Date('2026-11-01T05:10:00Z'), windowMin)).toBe(false);
+  });
+  it('NY spring-forward 02:30 (07:30Z) opens at 07:30Z minus the window', () => {
+    const windowMin = 30;
+    const opens = Date.parse('2026-03-08T07:30:00Z') - windowMin * 60000;
+    expect(isDoseConfirmable('2026-03-08', '02:30', NY, new Date(opens - 60000), windowMin)).toBe(false);
+    expect(isDoseConfirmable('2026-03-08', '02:30', NY, new Date(opens), windowMin)).toBe(true);
+  });
+  it('the default window still applies', () => {
+    const due = Date.parse('2026-11-01T06:30:00Z');
+    expect(isDoseConfirmable('2026-11-01', '01:30', NY, new Date(due - 6 * 3600000))).toBe(false);
+    expect(isDoseConfirmable('2026-11-01', '01:30', NY, new Date(due))).toBe(true);
+  });
+});
+
+// ============================================================================
+// BC-6: the dual display given the event's DAY STRING resolves at the event's
+// real instant; a Date reference converts with the day's noon-UTC offsets.
+// ============================================================================
+
+describe('BC-6 dual display resolves at the event instant', () => {
+  const pinDevice = (zone: string) =>
+    vi
+      .mocked(Intl.DateTimeFormat.prototype.resolvedOptions)
+      .mockReturnValue({ timeZone: zone } as Intl.ResolvedDateTimeFormatOptions);
+  afterEach(() => pinDevice('America/New_York'));
+
+  it('the dual display given the event\'s day string resolves at the event instant', () => {
+    // Auckland device, Denver circle, 09:00 on 2026-09-26: Auckland springs forward at 14:00Z that day, and the
+    // dose is 15:00Z = 04:00 NZDT on the 27th (noon-UTC offsets of the 26th would say 3:00 AM).
+    pinDevice('Pacific/Auckland');
+    const exact = formatEventTimeForDisplay('09:00', 'America/Denver', undefined, '2026-09-26', '12h');
+    expect(exact).toContain('4:00 AM');
+    const noonOffsets = formatEventTimeForDisplay(
+      '09:00',
+      'America/Denver',
+      undefined,
+      zoneReferenceInstant('2026-09-26'),
+      '12h'
+    );
+    expect(noonOffsets).toContain('3:00 AM');
+
+    // Denver device, Auckland circle, 01:00 on 2026-09-27 (NZ is already NZDT +13 at 01:00? No: the jump is at
+    // 02:00, so 01:00 is NZST +12 = 13:00Z on the 26th = 07:00 MDT).
+    pinDevice('America/Denver');
+    expect(
+      formatEventTimeForDisplay('01:00', 'Pacific/Auckland', undefined, '2026-09-27', '12h')
+    ).toContain('7:00 AM');
+    expect(
+      formatEventTimeForDisplay(
+        '01:00',
+        'Pacific/Auckland',
+        undefined,
+        zoneReferenceInstant('2026-09-27'),
+        '12h'
+      )
+    ).toContain('6:00 AM');
+  });
+
+  it('the first-run payoff passes the dose day string, not a Date reference (source guard)', () => {
+    const src = fs
+      .readFileSync(path.join(__dirname, '../../components/circles/firstRun/steps.tsx'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|[^:])\/\/.*$/gm, '$1');
+    expect(src).not.toContain('zoneReferenceInstant(');
+    expect(src).toMatch(/formatEventTimeForDisplay\(\s*dose\.scheduledTime,\s*saved\.timezone,\s*undefined,\s*dose\.scheduledDate,/);
   });
 });

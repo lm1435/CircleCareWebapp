@@ -2,6 +2,12 @@ import { getTimezoneDependentCircles, updateProfile } from '@/api/users';
 import { Analytics } from '@/lib/analytics';
 import { getDeviceTimezone, isSameTimezone } from '@/utils/timezone';
 
+/**
+ * Returning to a tab re-reads the browser zone at most this often (mobile's constant of the same name,
+ * `useDeviceSettingsForegroundSync`): a tab left open across travel would otherwise keep the old zone.
+ */
+export const FOREGROUND_SETTINGS_SYNC_THROTTLE_MS = 5 * 60 * 1000;
+
 export type DeviceTimezoneSyncOutcome = 'same' | 'written' | 'failed';
 
 /**

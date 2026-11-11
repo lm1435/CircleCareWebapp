@@ -984,6 +984,9 @@ describe('AddEventModal', () => {
   describe('schedule presets (R6-2)', () => {
     const MORNING_CHIP = 'Every morning (8:00 AM)';
     const EVENING_CHIP = 'Every evening (8:00 PM)';
+    // The presets are the CIRCLE's clock (BC-8): 08:00 / 20:00 New York is 06:00 / 18:00 on the Denver viewer's field.
+    const VIEWER_08_NY = '06:00';
+    const VIEWER_20_NY = '18:00';
 
     it('tapping a preset sets the time AND daily recurrence in one gesture', async () => {
       const user = userEvent.setup();
@@ -995,7 +998,8 @@ describe('AddEventModal', () => {
 
       await user.click(chip);
 
-      expect(screen.getByLabelText(/^Time/)).toHaveValue('08:00');
+      // BC-8: the preset is the CIRCLE's 08:00 (New York); this field is the viewer's clock (Denver).
+      expect(screen.getByLabelText(/^Time/)).toHaveValue(VIEWER_08_NY);
       expect(screen.getByLabelText('Repeat')).toHaveValue('daily');
       expect(within(group).getByRole('radio', { name: MORNING_CHIP })).toBeChecked();
     });
@@ -1006,14 +1010,14 @@ describe('AddEventModal', () => {
       const group = screen.getByRole('radiogroup', { name: 'Common schedules' });
 
       await user.click(within(group).getByRole('radio', { name: 'Every evening (8:00 PM)' }));
-      expect(screen.getByLabelText(/^Time/)).toHaveValue('20:00');
+      expect(screen.getByLabelText(/^Time/)).toHaveValue(VIEWER_20_NY);
       expect(screen.getByLabelText('Repeat')).toHaveValue('daily');
       expect(within(group).getByRole('radio', { name: EVENING_CHIP })).toBeChecked();
       expect(within(group).getByRole('radio', { name: MORNING_CHIP })).not.toBeChecked();
 
       // Switching to the morning chip moves the whole schedule.
       await user.click(within(group).getByRole('radio', { name: MORNING_CHIP }));
-      expect(screen.getByLabelText(/^Time/)).toHaveValue('08:00');
+      expect(screen.getByLabelText(/^Time/)).toHaveValue(VIEWER_08_NY);
       expect(screen.getByLabelText('Repeat')).toHaveValue('daily');
       expect(within(group).getByRole('radio', { name: EVENING_CHIP })).not.toBeChecked();
     });
@@ -1024,7 +1028,7 @@ describe('AddEventModal', () => {
       const group = screen.getByRole('radiogroup', { name: 'Common schedules' });
 
       await user.click(within(group).getByRole('radio', { name: MORNING_CHIP }));
-      expect(screen.getByLabelText(/^Time/)).toHaveValue('08:00');
+      expect(screen.getByLabelText(/^Time/)).toHaveValue(VIEWER_08_NY);
 
       await user.click(within(group).getByRole('radio', { name: MORNING_CHIP }));
 
@@ -1038,10 +1042,10 @@ describe('AddEventModal', () => {
       render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
       const group = screen.getByRole('radiogroup', { name: 'Common schedules' });
 
-      // 08:00 typed alone (no recurrence) is NOT the schedule preset.
+      // The circle's 08:00 typed alone (06:00 on the viewer's field; no recurrence) is NOT the schedule preset.
       const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
       await user.clear(timeInput);
-      await user.type(timeInput, '08:00');
+      await user.type(timeInput, VIEWER_08_NY);
       expect(within(group).getByRole('radio', { name: MORNING_CHIP })).not.toBeChecked();
 
       // Adding daily recurrence completes the exact match.
@@ -1066,11 +1070,10 @@ describe('AddEventModal', () => {
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       const payload = mutateCreate.mock.calls[0][0];
       expect(payload.recurrence_rule).toBe('daily');
-      // The "8:00 AM" preset means 8 AM on the CAREGIVER's clock — the same
-      // frame every other time on this form is in — so it stores 10:00 for a
-      // New York recipient. The live conversion hint is what shows the user
-      // that, rather than leaving them to work it out.
-      expect(payload.scheduled_time).toBe('10:00');
+      // The "8:00 AM" preset means 8 AM on the CIRCLE's clock (BC-8, owner decision), exactly as the time chips
+      // do: it stores 08:00 for a New York recipient whatever the caregiver's zone. (It used to be the caregiver's
+      // clock and stored 10:00.)
+      expect(payload.scheduled_time).toBe('08:00');
       expect(payload.scheduled_date).toBe('2027-01-05');
     });
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactElement, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, Eyebrow, Icon, TEXT_CLASS, Text } from '@/components/ui';
 import { formatWeekdayList } from '@/components/calendar/recurrenceLabel';
-import { formatEventTimeForDisplay, zoneReferenceInstant } from '@/utils/timezone';
+import { formatEventTimeForDisplay } from '@/utils/timezone';
 import { formatDateForDisplay } from '@/components/calendar/dateMath';
 import { startsWhen, type SavedMedicationInfo } from '@/utils/firstMedSaved';
 import { useIsOffline } from '@/hooks/useIsOffline';
@@ -179,7 +179,8 @@ export function FirstMedPayoffStep({
       dose.scheduledTime,
       saved.timezone,
       undefined,
-      zoneReferenceInstant(dose.scheduledDate),
+      // The DAY itself (not a noon-UTC reference): the viewer half is then converted at the dose's real instant.
+      dose.scheduledDate,
       hourCycle
     )
   );

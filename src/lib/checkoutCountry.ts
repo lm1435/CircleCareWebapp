@@ -60,17 +60,14 @@
  * `webCheckoutVerdict` requires the ACCOUNT zone AND the BROWSER's live zone
  * to be on the allowlist. Do not simplify this back to one of them.
  *
- * THE ACCOUNT ZONE IS STALE BY DESIGN. Mobile's `syncDeviceSettings()`
- * (mobile/src/store/authStore.ts) writes `users.timezone` from the device
- * ONLY when the column is currently empty — `if (currentUser.timezone) skip`.
- * It is written once, at signup, and never updated again. So it records where
- * someone WAS when they created the account, possibly years ago: a user who
- * signed up in Mexico and has lived in Denver ever since is permanently
- * `America/Mexico_City`, and a user who signed up while visiting the US is
- * permanently allowlisted no matter where they have been since. Mobile's
- * timezone util also falls back to `America/New_York` when device detection
- * fails, which stamps a non-US signup as US outright. On its own the account
- * zone is therefore a historical record, not a location.
+ * THE ACCOUNT ZONE IS A RECORD OF WHERE THE ACCOUNT WAS LAST OPENED, not of
+ * where the person is now. Both platforms keep `users.timezone` in step with
+ * the device (mobile's `syncDeviceSettings` on launch and foreground, the web's
+ * `DeviceTimezoneSync` at session start and on return to the tab), so it
+ * follows whichever device signed in last. It can still be a day or more old
+ * (the app has not been opened since the move), and a device whose zone was
+ * detected wrongly stamps the account with that zone. On its own it is
+ * therefore a recent record, not a location.
  *
  * THE BROWSER ZONE IS LIVE BUT BELONGS TO A MACHINE, not an account — a
  * borrowed laptop, a VPS, a work VM. On its own it is equally weak.
