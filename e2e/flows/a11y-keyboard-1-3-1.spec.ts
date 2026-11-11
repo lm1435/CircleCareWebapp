@@ -369,10 +369,18 @@ async function createFirstCircleByKeyboard(page: Page, recipient: string): Promi
 
 /** Name + a PAST time ("Other time" 00:01) in the simple form, all by keyboard. */
 async function fillPastTimeMedByKeyboard(page: Page, name: string): Promise<void> {
-  const form = page.getByRole('dialog').last();
+  // The form's own dialog (the time picker it opens is a dialog too, and would be `.last()` while open).
+  const form = page.locator('[role="dialog"]:has([data-testid="simple-medication-form"])').last();
   await form.getByLabel(/Medication name/i).fill(name);
-  await press(form.getByRole('button', { name: 'Other time' }));
-  await form.getByLabel(/^Time/).fill('00:01');
+  // "Other…" (build 11) is the time picker: opened by keyboard, closed with Escape (focus back on it), then the
+  // value goes into its hidden #scheduled_time.
+  const other = form.getByTestId('time-chip-other');
+  await press(other);
+  await expect(other).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Escape');
+  await expect(other).toHaveAttribute('aria-expanded', 'false');
+  await expect(other).toBeFocused();
+  await form.locator('#scheduled_time').fill('00:01');
   await expect(form.getByTestId('dose-past-time-note')).toBeVisible();
 }
 

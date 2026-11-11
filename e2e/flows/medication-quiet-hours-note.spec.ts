@@ -42,8 +42,8 @@ async function openForm(browser: Browser, baseURL: string | undefined, acc: Scop
   await expect(page.getByRole('heading', { level: 1, name: /'s meds$/ })).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Add medication' }).first().click();
   const form = page.getByRole('dialog', { name: 'New medication' });
-  // The simple form: a custom time is behind "Other time" (the chips are Morning 8:00 AM ...).
-  await form.getByRole('button', { name: 'Other time' }).click();
+  // The simple form: a custom time is "Other…", the time picker over the hidden #scheduled_time (build 11).
+  await expect(form.getByTestId('time-chip-other')).toBeVisible();
   return { ctx, page, form };
 }
 
@@ -59,7 +59,7 @@ test('a NEW account has quiet hours OFF, so a 10 PM dose shows no note', async (
 
   const { ctx, form } = await openForm(browser, baseURL, owner, circleId);
   try {
-    await form.getByLabel(/^Time/).fill('22:30');
+    await form.locator('#scheduled_time').fill('22:30');
     // Give the profile query time to settle: the note must STAY absent.
     await form.page().waitForTimeout(1500);
     await expect(form.getByTestId('dose-quiet-hours-note')).toHaveCount(0);
@@ -83,7 +83,7 @@ test('with quiet hours ON the note shows for a 10 PM dose, not a 9 AM one, and n
 
   const { ctx, page, form } = await openForm(browser, baseURL, owner, circleId);
   try {
-    const time = form.getByLabel(/^Time/);
+    const time = form.locator('#scheduled_time');
     await time.fill('22:30');
     await expect(form.getByTestId('dose-quiet-hours-note')).toHaveText(NOTE, { timeout: 15_000 });
 

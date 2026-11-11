@@ -173,7 +173,7 @@ test.describe('first-run wizard (onboarding 1.3.1: Setup -> the ONE simple form 
     await expect(page.getByLabel(COPY.en.nameLabel)).toHaveValue(DRUGS[2].name);
 
     const form = page.getByRole('dialog').last();
-    await form.getByRole('radio', { name: /Morning/ }).click();
+    await form.getByRole('checkbox', { name: /Morning$/ }).click();
     await form.getByRole('button', { name: 'Add medication' }).click();
 
     // The payoff, in the wizard dialog: ALL SET, the reminder sentence, ONE primary.
@@ -268,7 +268,8 @@ test.describe('first-run wizard (onboarding 1.3.1: Setup -> the ONE simple form 
     await expect(page.getByText(c.title(recipient))).toBeVisible();
     await page.getByLabel(c.nameLabel).fill('Metformina');
     const form = page.getByRole('dialog').last();
-    await form.getByRole('radio').first().click();
+    // The first time chip (build 11: How often? sits above What time?, and the chips are checkboxes).
+    await form.locator('#time-chips').getByRole('checkbox').first().click();
     await form.getByRole('button', { name: c.save }).click();
     await expect(page.getByText('TODO LISTO')).toBeVisible({ timeout: 20_000 });
     expect(
@@ -314,7 +315,7 @@ test.describe('first-run wizard (onboarding 1.3.1: Setup -> the ONE simple form 
       await asTyped.click();
       await expect(page.getByLabel(COPY.en.nameLabel)).toHaveValue('Doliprane');
       const form = page.getByRole('dialog').last();
-      await form.getByRole('radio', { name: /Morning/ }).click();
+      await form.getByRole('checkbox', { name: /Morning$/ }).click();
       await form.getByRole('button', { name: 'Add medication' }).click();
       await expect(page.getByText('ALL SET')).toBeVisible({ timeout: 20_000 });
       expect(

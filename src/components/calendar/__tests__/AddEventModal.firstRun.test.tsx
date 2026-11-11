@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import { Analytics } from '@/lib/analytics';
@@ -110,7 +110,7 @@ const user = () => userEvent.setup();
 
 async function fillAndSave(u: ReturnType<typeof userEvent.setup>, name = 'Metformin') {
   await u.type(screen.getByRole('combobox', { name: /^Medication name/ }), name);
-  await u.click(screen.getByRole('radio', { name: /Morning/ }));
+  await u.click(screen.getByRole('checkbox', { name: /Morning/ }));
   await u.click(screen.getByTestId('add-event-save'));
 }
 
@@ -126,8 +126,9 @@ describe('first-run mode', () => {
     expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
     // It IS the real simple form: the same Save, chips and How often.
     expect(screen.getByTestId('add-event-save')).toHaveTextContent('Add medication');
-    expect(screen.getByRole('radiogroup', { name: 'Common dose times' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'How often?' })).toBeInTheDocument();
+    // Build 11: the time-first chips are a multi-select group on a new medication; How often? is the grid in When?.
+    expect(screen.getByRole('group', { name: 'Common dose times' })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'How often?' })).toBeInTheDocument();
   });
 
   it('self-care: "YOUR FIRST MED" / "What do you take?"', () => {
@@ -186,8 +187,9 @@ describe('first-run mode', () => {
     renderForm({ firstRun: true });
     const u = user();
     await u.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
-    await u.click(screen.getByRole('button', { name: 'Other time' }));
-    await u.type(screen.getByLabelText(/^Time/), '09:30');
+    // "Other…" is the time picker itself (a PickerTile over the hidden input named "Other time").
+    await u.click(screen.getByTestId('time-chip-other'));
+    fireEvent.change(screen.getByLabelText('Other time', { selector: 'input' }), { target: { value: '09:30' } });
     await u.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(firstRunSaved).toHaveBeenCalled());
     expect(firstRunSaved.mock.calls[0][0]).toMatchObject({ preset: 'other' });
@@ -218,7 +220,7 @@ describe('med_name_suggestion_outcome', () => {
     const u = user();
     await u.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Met');
     await u.click(await screen.findByRole('option', { name: 'Metformin' }));
-    await u.click(screen.getByRole('radio', { name: /Morning/ }));
+    await u.click(screen.getByRole('checkbox', { name: /Morning/ }));
     await u.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(outcome).toHaveBeenCalledWith('suggestion'));
   });
@@ -228,7 +230,7 @@ describe('med_name_suggestion_outcome', () => {
     const u = user();
     await u.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Doliprane');
     await u.click(await screen.findByTestId('drug-use-as-typed'));
-    await u.click(screen.getByRole('radio', { name: /Morning/ }));
+    await u.click(screen.getByRole('checkbox', { name: /Morning/ }));
     await u.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(outcome).toHaveBeenCalledWith('as_typed'));
     expect(mutateCreate.mock.calls[0][0]).not.toHaveProperty('rxcui');
@@ -241,7 +243,7 @@ describe('med_name_suggestion_outcome', () => {
     await u.type(input, 'Doliprane');
     await u.click(await screen.findByTestId('drug-use-as-typed'));
     await u.type(input, 'X');
-    await u.click(screen.getByRole('radio', { name: /Morning/ }));
+    await u.click(screen.getByRole('checkbox', { name: /Morning/ }));
     await u.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(outcome).toHaveBeenCalledWith('typed'));
   });

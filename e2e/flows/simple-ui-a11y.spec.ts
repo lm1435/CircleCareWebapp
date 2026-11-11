@@ -43,8 +43,10 @@ for (const size of SIZES) {
       await openAddOption(page, 'Med');
       const dialog = page.getByRole('dialog', { name: 'New medication' });
       await expect(dialog).toBeVisible();
-      await dialog.getByRole('radio', { name: /Morning/ }).click();
-      await dialog.getByTestId('add-another-dose').click();
+      // Two times chosen (build 11: multi-select chips; the second is an extra dose), the Reminders card open.
+      await dialog.getByRole('checkbox', { name: /Morning$/ }).click();
+      await dialog.getByRole('checkbox', { name: /Evening$/ }).click();
+      await dialog.getByTestId('reminders-summary-row').click();
       await checkA11y(page, `new-medication ${size.name}`, testInfo, WCAG22);
     });
 

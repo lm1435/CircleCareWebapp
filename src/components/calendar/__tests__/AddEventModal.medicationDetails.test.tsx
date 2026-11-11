@@ -99,8 +99,9 @@ afterEach(() => {
 });
 
 type User = ReturnType<typeof userEvent.setup>;
+// Build 11: time-first chips, checkboxes on a new medication (multi-select: a further chip is an extra dose).
 const chip = (name: RegExp) =>
-  within(screen.getByRole('radiogroup', { name: 'Common dose times' })).getByRole('radio', { name });
+  within(screen.getByRole('group', { name: 'Common dose times' })).getByRole('checkbox', { name });
 
 function renderNew() {
   return render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
@@ -160,7 +161,8 @@ describe('new medication: refills + prescription details', () => {
     const user = userEvent.setup();
     renderNew();
     await nameAndTime(user);
-    await user.click(screen.getByTestId('add-another-dose'));
+    // A second chosen time is the extra dose ("+ Another dose" before build 11).
+    await user.click(chip(/Morning/));
     await openMore(user);
     await user.click(screen.getByRole('checkbox', { name: /Track refills/ }));
     await user.type(screen.getByLabelText('Pills remaining'), '60');
@@ -329,7 +331,7 @@ describe('new medication: photo', () => {
 });
 
 describe('edit medication', () => {
-  it('hydrates from the single-event GET, opens More details, shows the stored photo and echoes mobile’s keys', async () => {
+  it('hydrates from the single-event GET (More details stays collapsed on edit), shows the stored photo and echoes mobile’s keys', async () => {
     getDetails.mockResolvedValue({ details: STORED, photoUrl: 'https://signed.example/photo.png' });
     const user = userEvent.setup();
     renderEdit();
@@ -338,7 +340,9 @@ describe('edit medication', () => {
       'https://signed.example/photo.png'
     );
     expect(getDetails).toHaveBeenCalledWith(CIRCLE_ID, 'med-1');
-    expect(screen.getByRole('button', { name: /^More details/ })).toHaveAttribute('aria-expanded', 'true');
+    // Build 11 (owner 2026-11-10): More details is collapsed by default on edit too, stored details or not.
+    expect(screen.getByRole('button', { name: /^More details/ })).toHaveAttribute('aria-expanded', 'false');
+    await openMore(user);
     expect(screen.getByRole('checkbox', { name: /Track refills/ })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByLabelText('Pills remaining')).toHaveValue('60');
     expect(screen.getByLabelText('Prescriber')).toHaveValue('Dr. Lee');
@@ -369,6 +373,8 @@ describe('edit medication', () => {
     getDetails.mockResolvedValue({ details: STORED, photoUrl: 'https://signed.example/photo.png' });
     const user = userEvent.setup();
     renderEdit();
+    await screen.findByAltText('Photo of the medication');
+    await openMore(user); // collapsed by default on edit (build 11)
     await user.click(await screen.findByRole('button', { name: 'Remove photo' }));
     expect(screen.queryByAltText('Photo of the medication')).toBeNull();
     await save(user);

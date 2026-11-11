@@ -61,11 +61,12 @@ async function openCreateOption(page: Page, name: string): Promise<void> {
 }
 
 
-/** The simple New-medication form keeps the start date under "More details" and a custom time behind "Other time". */
+/**
+ * The simple New-medication form (build 11): the "Starts" tile and "Other…" are the date / time pickers over the
+ * hidden #scheduled_date / #scheduled_time.
+ */
 async function fillSimpleMedTimes(dialog: import('@playwright/test').Locator, date: string, time: string): Promise<void> {
-  await dialog.getByRole('button', { name: /More details/ }).click();
   await dialog.locator('#scheduled_date').fill(date);
-  await dialog.getByRole('button', { name: 'Other time' }).click();
   await dialog.locator('#scheduled_time').fill(time);
 }
 
@@ -83,7 +84,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 /** "11:00 AM in Tokyo is 8:00 PM the day before for you (Denver)" — the conversion line's shape (1.4.0). */
-const CONVERSION_TEXT = 'text=/\\d{1,2}:\\d{2}.* in .* is .*\\d{1,2}:\\d{2}.* for you/';
+// Build 11 (owner 2026-11-10): the zone caption, the circle's time first: "Tokyo time · 4:00 AM your time (Denver)".
+const CONVERSION_TEXT = 'text=/^.+ time · .*\\d{1,2}:\\d{2}.* your time \\(.+\\)$/';
 
 /**
  * Viewer zones chosen for what they expose, not for coverage: Denver is the dev
@@ -139,11 +141,11 @@ for (const timezoneId of VIEWER_ZONES) {
 
       await fillSimpleMedTimes(dialog, '2026-09-01', '20:00');
 
-      // The "Other time" field is typed on the RECIPIENT's clock (1.4.0) and holds what was typed. The start date
-      // row is the viewer's day of that time, as after a chip: 20:00 Tokyo on 09-01 is 11:00Z.
+      // "Other…" is typed on the RECIPIENT's clock (1.4.0) and holds what was typed. Build 11: the Starts tile is
+      // the CIRCLE's day too (the day typed), whatever viewer day 20:00 Tokyo falls on.
       await expect(dialog.locator('#scheduled_time')).toHaveValue('20:00');
-      const viewerDay = new Intl.DateTimeFormat('en-CA', { timeZone: timezoneId }).format(new Date('2026-09-01T11:00:00Z'));
-      await expect(dialog.locator('#scheduled_date')).toHaveValue(viewerDay);
+      await expect(dialog.locator('#scheduled_date')).toHaveValue('2026-09-01');
+      await expect(dialog.getByTestId('starts-tile')).toContainText('Sep 1');
     });
   });
 }

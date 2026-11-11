@@ -278,8 +278,8 @@
         "nothingAtTime": "nichts zur geplanten Zeit",
         "change": "Ändern",
         "hint": "Zeigt die Einstellungen für Erinnerungen.",
-        "pickTime": "Wähle eine Uhrzeit, um Erinnerungen zu erhalten",
-        "pickTimeLabel": "Erinnerungen: Wähle eine Uhrzeit, um Erinnerungen zu erhalten. Führt zur Zeitauswahl."
+        "pickTime": "Wählen Sie eine Uhrzeit, um Erinnerungen zu erhalten",
+        "pickTimeLabel": "Erinnerungen: Wählen Sie eine Uhrzeit, um Erinnerungen zu erhalten. Führt zur Zeitauswahl."
       }
     },
     "validation": {
@@ -316,7 +316,6 @@
     },
     "dualTimezoneHint": "Ihre Zeit / Zeit von {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Ihre Zeit / Zeit der umsorgten Person ({{timezone}})",
-    "timeInZone": "Uhrzeit in {{zone}}",
     "quietHoursDoseWarning": "Diese Uhrzeit liegt in den Ruhezeiten, daher wird dann keine Erinnerung gesendet. Sie können die Ruhezeiten unter Einstellungen im Bereich Ruhezeiten ändern.",
     "pastTimeInline": "Beginnt mit der nächsten Dosis. Diese Uhrzeit ist heute bereits vorbei.",
     "conversion": {
@@ -364,7 +363,6 @@
       "whoIsGoing": "Wer geht mit?",
       "moreDetails": "Weitere Details",
       "moreDetailsSummary": "Nachschub, Apotheke, Ärztin/Arzt, Hinweise",
-      "startDate": "Startdatum",
       "starts": "Beginnt",
       "addMedication": "Medikament hinzufügen",
       "addAppointment": "Termin hinzufügen",
@@ -373,8 +371,6 @@
       "everyDay": "Jeden Tag",
       "someDays": "An bestimmten Tagen",
       "whenNeeded": "Bei Bedarf",
-      "anotherDose": "+ Weitere Einnahme",
-      "removeDose": "Dosis {{number}} entfernen",
       "new": {
         "task": "Neue Aufgabe"
       },
@@ -388,23 +384,37 @@
       "everyWeek": "Jede Woche",
       "whoDoingIt": "Wer übernimmt das?",
       "me": "Ich",
-      "taskMoreHint": "Details, Enddatum",
+      "taskMoreHint": "Details",
       "apptMoreHint": "Ärztin/Arzt, Ort, Details",
       "custom": "Benutzerdefiniert…",
       "customHeading": "Benutzerdefiniert",
       "everyOtherDay": "Jeden zweiten Tag",
       "monthly": "Monatlich",
       "yearly": "Jährlich",
-      "daysOnOff": "Tage an / aus"
+      "daysOnOff": "Tage an / aus",
+      "repeatsUntil": "Wiederholt bis",
+      "never": "Nie",
+      "doesntRepeat": "Keine Wiederholung",
+      "whatTime": "Um wie viel Uhr?",
+      "from": "Von",
+      "to": "Bis",
+      "otherEllipsis": "Andere…",
+      "zoneCaption": "Zeit in {{circleZone}} · {{times}} Ihre Zeit ({{yourZone}})",
+      "listAnd": "und",
+      "noEnd": "Kein Ende",
+      "clearRepeatEnd": "Wiederholungsende löschen",
+      "clearEndTime": "Endzeit löschen",
+      "changeDoseTime": "Uhrzeit der Dosis ändern: {{time}}",
+      "removeDoseTime": "Dosis entfernen: {{time}}"
     },
     "timeChips": {
       "label": "Übliche Einnahmezeiten",
       "morning": "Morgens",
       "midday": "Mittags",
       "evening": "Abends",
-      "bedtime": "Zur Schlafenszeit"
+      "bedtime": "Zur Schlafenszeit",
+      "other": "Andere"
     },
-    "doseNumber": "Dosis {{number}}",
     "firstRun": {
       "eyebrow": "ERSTES MEDIKAMENT VON {{name}}",
       "eyebrowSelf": "IHR ERSTES MEDIKAMENT",

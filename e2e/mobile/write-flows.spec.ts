@@ -81,12 +81,11 @@ test.describe('phone writes', () => {
     await dialog.locator('#medication_name').fill(name);
     await dialog.locator('#medication_dosage').fill('5 mg');
 
-    // The simple form keeps the start date under "More details" and a custom time behind "Other time".
-    await dialog.getByRole('button', { name: /More details/ }).tap();
-    // DATE: tap -> sheet -> tap the day. The recipient's +3 (never "today", so
+    // The simple form (build 11): the "Starts" tile and "Other…" ARE the date / time pickers (sheets on a phone).
+    // DATE: tap the tile -> sheet -> tap the day. The recipient's +3 (never "today", so
     // the past-time notice cannot interpose). The sheet opens on the current
     // month; +3 days may be next month, so page forward when the cell is absent.
-    await dialog.locator('#scheduled_date').tap();
+    await dialog.getByTestId('starts-tile').tap();
     const datePicker = page.getByRole('dialog', { name: 'Date picker' });
     await expect(datePicker).toBeVisible();
     const cell = datePicker.locator(`[data-day="${date}"]`);
@@ -97,9 +96,8 @@ test.describe('phone writes', () => {
     await expect(datePicker).toBeHidden();
     await expect(dialog.locator('#scheduled_date')).toHaveValue(date);
 
-    // TIME: "Other time" -> tap -> sheet -> hour, minute, period.
-    await dialog.getByRole('button', { name: 'Other time' }).tap();
-    await dialog.locator('#scheduled_time').tap();
+    // TIME: "Other…" -> tap -> sheet -> hour, minute, period.
+    await dialog.getByTestId('time-chip-other').tap();
     await pickTime(page, 9, 0);
     await expect(dialog.locator('#scheduled_time')).toHaveValue(/^(09:00|0?9:00\s?(AM|a\.\s?m\.))$/i);
 

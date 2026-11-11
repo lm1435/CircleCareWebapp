@@ -1,6 +1,6 @@
 import type { Locator, Page, Request } from '@playwright/test';
 import { test, expect } from '../fixtures';
-import { checkA11y, fillSimpleTime, openCalendarNew } from '../helpers';
+import { checkA11y, expandReminders, fillSimpleTime, openCalendarNew } from '../helpers';
 
 // FOLLOW-UP ALERTS ONLY (owner 2026-11-09, copy LOCKED, mobile parity).
 //
@@ -81,13 +81,13 @@ async function openMedicationForm(page: Page, circleId: string, copy: Copy): Pro
   return dialog;
 }
 
-/** Fill the minimum, open More details, and return the dialog with the reminder controls on screen. */
+/** Fill the minimum, expand the Reminders row, and return the dialog with the reminder controls on screen. */
 async function openReminders(page: Page, circleId: string, copy: Copy): Promise<Locator> {
   const dialog = await openMedicationForm(page, circleId, copy);
   await dialog.locator('#medication_name').fill(`ZZ_E2E_FOLLOWUPS_${Date.now()}`);
   await fillSimpleTime(dialog, '08:00');
-  const more = dialog.locator('#more-details');
-  if ((await more.getAttribute('aria-expanded')) !== 'true') await more.click();
+  // The Reminders card is the summary row's accordion (owner 2026-11-10), not inside More details.
+  await expandReminders(dialog);
   await expect(dialog.getByRole('switch', { name: copy.enable })).toBeVisible();
   return dialog;
 }

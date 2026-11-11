@@ -10,8 +10,10 @@ import { AddEventModal } from '../AddEventModal';
 // "OTHER TIME" ON THE RECIPIENT'S CLOCK (owner 1.4.0, mobile parity, "one clock on the control").
 //
 // The chips and the "Other time" tile name the CARE RECIPIENT's clock; the time field "Other time" reveals used
-// to be typed in the VIEWER's clock and converted on save. It is now typed in the recipient's clock and
-// labelled "Time in <city>" when the zones differ.
+// to be typed in the VIEWER's clock and converted on save. It is now on the recipient's clock. Build 11 (owner
+// 2026-11-10): "Other…" IS the time picker (a PickerTile over the hidden `#scheduled_time`, named "Other time"),
+// the custom time becomes its own chip ("7:15 AM / Other"), and the viewer's clock is only in the zone caption
+// ("Auckland time · 11:15 AM your time (Denver)").
 //
 // WHAT MUST NOT CHANGE: the saved pair (naive recipient-local). Typing X in the new field must post EXACTLY
 // what typing "X converted to the viewer's clock" (with the viewer-frame start date) posted in the old field.
@@ -158,16 +160,15 @@ function renderMed() {
   return render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
 }
 
-/** The start date ("Starts", the top of When?) then the "Other time" field, the way a person fills them. */
+/** The start date ("Starts", the top of When?) then the "Other…" time picker, the way a person fills them. */
 async function fill(user: ReturnType<typeof userEvent.setup>, zone: string, day: string, time: string) {
   useCircleResult.timezone = zone;
   renderMed();
   await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
   fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: day } });
-  await user.click(screen.getByRole('button', { name: 'Other time' }));
-  const field = await screen.findByLabelText(/^Time/);
-  await user.clear(field);
-  await user.type(field, time);
+  await user.click(screen.getByTestId('time-chip-other'));
+  // The picker writes through the hidden native input (PickerTile), exactly as a pick does.
+  fireEvent.change(screen.getByLabelText('Other time', { selector: 'input' }), { target: { value: time } });
 }
 
 async function save(user: ReturnType<typeof userEvent.setup>): Promise<Record<string, unknown>> {
@@ -224,29 +225,40 @@ if (CAPTURE) {
     });
   });
 
-  describe('the field and the tile speak one clock', () => {
-    it('labelled "Time in <city>" when the zones differ; the tile, the field and the line agree', async () => {
+  describe('the picker and the chip speak one clock', () => {
+    it('zones differ: the custom chip names the recipient clock; the zone caption alone gives the viewer clock', async () => {
       const user = userEvent.setup();
       await fill(user, 'Pacific/Auckland', '2027-02-10', '07:15');
-      const field = screen.getByLabelText(/^Time in Auckland/);
-      expect(field).toHaveValue('07:15');
-      expect(screen.getByTestId('time-chip-other-time')).toHaveTextContent(/^7:15 AM$/);
-      // The viewer's clock is only in the conversion line (7:15 AM Auckland = 11:15 AM the day before in Denver).
-      expect(screen.getByText(/^7:15 AM in Auckland is 11:15 AM the day before for you/)).toBeInTheDocument();
-    });
-
-    it('plain "Time" when the viewer is in the recipient\'s zone', async () => {
-      const user = userEvent.setup();
-      await fill(user, VIEWER_TZ, '2027-02-10', '14:30');
-      expect(screen.getByLabelText(/^Time/)).toHaveValue('14:30');
+      expect(screen.getByLabelText('Other time', { selector: 'input' })).toHaveValue('07:15');
+      // The custom time is its own chip, time first, on the RECIPIENT's clock, lit (chosen: the dark fill), and its
+      // own picker holds that same recipient time (Fix13: tap to change it in place).
+      const custom = screen.getByTestId('time-chip-custom');
+      expect(custom).toHaveTextContent(/^7:15 AM\s*Other$/);
+      expect(screen.getByTestId('time-chip-custom-box')).toHaveClass('bg-ink', 'text-cream');
+      expect(screen.getByLabelText('Change 7:15 AM dose time', { selector: 'input' })).toHaveValue('07:15');
+      // The viewer's clock is only in the caption (7:15 AM Auckland = 11:15 AM the day before in Denver).
+      expect(screen.getByTestId('time-zone-caption')).toHaveTextContent(
+        'Auckland time · 11:15 AM your time (Denver)'
+      );
+      // No "Time in <city>" field any more.
       expect(screen.queryByLabelText(/^Time in/)).toBeNull();
     });
 
-    it('a typed time that is a chip lights that chip', async () => {
+    it('zones equal: no caption, the chip names the time', async () => {
+      const user = userEvent.setup();
+      await fill(user, VIEWER_TZ, '2027-02-10', '14:30');
+      expect(screen.getByLabelText('Other time', { selector: 'input' })).toHaveValue('14:30');
+      expect(screen.getByTestId('time-chip-custom')).toHaveTextContent(/^2:30 PM\s*Other$/);
+      expect(screen.queryByTestId('time-zone-caption')).toBeNull();
+      expect(screen.queryByLabelText(/^Time in/)).toBeNull();
+    });
+
+    it('a picked time that is a chip lights that chip (no custom chip)', async () => {
       const user = userEvent.setup();
       await fill(user, 'Pacific/Midway', '2027-02-10', '18:00');
-      const evening = screen.getByRole('radio', { name: /Evening/ });
+      const evening = screen.getByRole('checkbox', { name: /Evening$/ });
       expect(evening).toBeChecked();
+      expect(screen.queryByTestId('time-chip-custom')).toBeNull();
     });
 
     it('an edit shows the STORED recipient time in the field and saves it back untouched', async () => {
@@ -270,7 +282,11 @@ if (CAPTURE) {
           onClose={vi.fn()}
         />
       );
-      expect(screen.getByLabelText(/^Time in Kiritimati/)).toHaveValue('07:40');
+      // The picker opens on the STORED recipient time, and the edit's one custom chip names it (no preset lit).
+      expect(screen.getByLabelText('Other time', { selector: 'input' })).toHaveValue('07:40');
+      expect(screen.getByTestId('time-chip-custom')).toHaveAccessibleName(/^7:40 AM\s*Other$/);
+      expect(screen.getByLabelText('Change 7:40 AM dose time', { selector: 'input' })).toHaveValue('07:40');
+      expect(screen.getAllByRole('radio', { checked: true }).filter((r) => r.closest('#time-chips'))).toHaveLength(0);
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
       await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
       const data = (mutateUpdate.mock.calls[0][0] as { data: Record<string, unknown> }).data;

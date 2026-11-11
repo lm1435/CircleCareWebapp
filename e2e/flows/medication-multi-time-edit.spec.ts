@@ -125,7 +125,7 @@ async function openEditForTime(page: Page, circleId: string, name: string, timeL
 }
 
 async function changeTimeAndSave(page: Page, dialog: Locator, circleId: string, rootId: string, from: string, to: string, otherRootId: string): Promise<void> {
-  await dialog.getByRole('button', { name: 'Other time' }).click();
+  // An edit's "Other…" (build 11) holds the stored time in its hidden #scheduled_time.
   await expect(dialog.locator('#scheduled_time')).toHaveValue(from, { timeout: 15_000 });
   await dialog.locator('#scheduled_time').fill(to);
   if (FALSIFY.has('multi-edit-wrong-series')) {
@@ -292,7 +292,6 @@ test('the Meds page Edit on the 8:00 PM row of a twice-daily medication edits th
   test.slow();
   const s = await arrange(page, request, account, circleId);
   const dialog = await openEditForTime(page, circleId, s.name, '8:00 PM');
-  await dialog.getByRole('button', { name: 'Other time' }).click();
   await expect(dialog.locator('#scheduled_time'), 'the 8:00 PM row opens the 8:00 PM series').toHaveValue('20:00', {
     timeout: 15_000,
   });

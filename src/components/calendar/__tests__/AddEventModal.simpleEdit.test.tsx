@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
@@ -13,7 +13,8 @@ import { AddEventModal } from '../AddEventModal';
 //     (`layout="full"`, the layout every edit used before) must be identical;
 //   - the prefill of every "How often?" kind and of the time chips, "Other time" included;
 //   - the locks an edit keeps (no "When needed" on a scheduled med, no "+ Another dose");
-//   - a stored value behind "More details" opens it; a doctor's address filling the location opens it;
+//   - "More details" stays collapsed on an edit even with stored values behind it (build 11, owner 2026-11-10:
+//     edit = new, pre-filled); a doctor's address filling the location keeps it open;
 //   - the add-form funnel never counts an edit; entry_save_tapped carries `layout`.
 // Mobile parity: mobile/src/__tests__/screens/AddEventSimpleEdit.test.tsx.
 
@@ -199,10 +200,16 @@ describe('it looks like the add form', () => {
     renderEdit(EVENTS.medDays);
     expect(screen.getByRole('dialog', { name: 'Edit medication' })).toBeInTheDocument();
     expect(screen.getByTestId('simple-medication-form')).toBeInTheDocument();
-    for (const h of ['What is it?', 'When?', 'How often?']) {
-      expect(screen.getByRole('heading', { name: h })).toBeInTheDocument();
-    }
+    // The add form's order (build 11): What is it? / When? (Starts | Repeats until, How often?) / What time?.
+    expect(
+      within(screen.getByTestId('simple-medication-form')).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
+    ).toEqual(['What is it?', 'When? *', 'What time?']);
+    expect(screen.getByRole('heading', { name: 'When?' }).closest('section')).toContainElement(howOften());
+    expect(screen.getByTestId('starts-tile')).toBeInTheDocument();
+    expect(screen.getByTestId('repeats-until-tile')).toBeInTheDocument();
     expect(screen.getByTestId('add-event-save')).toHaveTextContent('Save changes');
+    // An edit holds ONE dose: the chips are a radiogroup (one answer), never the add form's checkboxes.
+    expect(within(timeChips()).queryAllByRole('checkbox')).toHaveLength(0);
     // No "+ Another dose" on an edit (each extra dose is a NEW medication), even with a time set.
     expect(screen.queryByTestId('add-another-dose')).toBeNull();
     expect(screen.queryByLabelText('Type')).toBeNull();
@@ -212,9 +219,12 @@ describe('it looks like the add form', () => {
     renderEdit(EVENTS.appt);
     expect(screen.getByRole('dialog', { name: 'Edit appointment' })).toBeInTheDocument();
     expect(screen.getByTestId('simple-appointment-form')).toBeInTheDocument();
-    for (const h of ['What is it?', 'When?', 'How often?', "Who's going?"]) {
-      expect(screen.getByRole('heading', { name: h })).toBeInTheDocument();
-    }
+    expect(
+      within(screen.getByTestId('simple-appointment-form')).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
+    ).toEqual(['What is it?', 'When? *', 'What time?', "Who's going?"]);
+    expect(screen.getByRole('radio', { name: 'Pick a time' })).toBeChecked();
+    expect(screen.getByTestId('appt-from-tile')).toBeInTheDocument();
+    expect(screen.getByTestId('appt-to-tile')).toBeInTheDocument();
     for (const id of ['row-doctor', 'row-place', 'row-notes', 'row-repeat']) expect(row(id)).toBeNull();
     expect(moreToggle()).toBeInTheDocument();
     // Suggestions are for a NEW appointment only.
@@ -247,22 +257,28 @@ describe('the time chips light from the stored time', () => {
     expect(screen.queryByTestId('time-chip-other-time')).toBeNull();
   });
 
-  it('a time that is no chip lights "Other time", which names it; the time field shows it', async () => {
+  it('a time that is no chip is its own lit chip ("7:30 AM / Other"); the Other… picker holds it', async () => {
     renderEdit(EVENTS.medDays); // 7:30 New York = 5:30 Denver
-    for (const radio of within(timeChips()).getAllByRole('radio')) expect(radio).not.toBeChecked();
-    // ONE clock on the control (owner 1.4.0): the cell AND the field name the RECIPIENT's 7:30, like the
-    // chips' times; the viewer's 5:30 is in the conversion line only.
-    expect(screen.getByTestId('time-chip-other-time')).toHaveTextContent(/^7:30 AM$/);
-    expect(screen.getByRole('button', { name: 'Other time, 7:30 AM' })).toBeInTheDocument();
-    expect(screen.getByTestId('time-chip-other')).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByLabelText(/^Time in New York/)).toHaveValue('07:30');
-    // Typing a chip's time keeps the field (it must not vanish under the cursor), and lights the chip.
+    for (const name of [/Morning/, /Midday/, /Evening/, /Bedtime/]) expect(chip(name)).not.toBeChecked();
+    // ONE clock on the control: the chip names the RECIPIENT's 7:30, time first, like the presets; the viewer's
+    // 5:30 is in the zone caption only.
+    // Fix13: a lit box outside the presets' radiogroup, its own picker on the stored 7:30, and a "×".
+    const custom = screen.getByTestId('time-chip-custom');
+    expect(timeChips()).not.toContainElement(custom);
+    expect(screen.getByTestId('time-chip-custom-box')).toHaveClass('bg-ink', 'text-cream');
+    expect(custom).toHaveTextContent(/^7:30 AM\s*Other$/);
+    expect(screen.getByLabelText('Change 7:30 AM dose time', { selector: 'input' })).toHaveValue('07:30');
+    expect(screen.getByRole('button', { name: 'Remove 7:30 AM dose' })).toBeInTheDocument();
+    expect(screen.getByTestId('time-zone-caption')).toHaveTextContent('New York time · 5:30 AM your time (Denver)');
+    // "Other…" opens on the stored time (its hidden input carries it, on the recipient's clock).
+    const other = screen.getByLabelText('Other time', { selector: 'input' });
+    expect(other).toHaveValue('07:30');
+    // Choosing a chip's time there lights that chip; the custom chip goes.
     const user = userEvent.setup();
-    const field = screen.getByLabelText(/^Time/);
-    await user.clear(field);
-    await user.type(field, '08:00');
+    await user.click(screen.getByTestId('time-chip-other'));
+    fireEvent.change(other, { target: { value: '08:00' } });
     expect(chip(/Morning/)).toBeChecked();
-    expect(screen.getByLabelText(/^Time/)).toBeInTheDocument();
+    expect(screen.queryByTestId('time-chip-custom')).toBeNull();
   });
 });
 
@@ -282,13 +298,17 @@ describe('"How often?" reflects the stored repeat', () => {
     expect(screen.getByRole('group', { name: 'Repeat on' })).toBeInTheDocument();
   });
 
-  it('as needed -> When needed, locked (disabled) with the helper; no When? question', () => {
+  it('as needed -> When needed, locked (disabled) with the helper; no dates and no What time?', () => {
     renderEdit(EVENTS.medPrn);
     const needed = within(howOften()).getByRole('radio', { name: 'When needed' });
     expect(needed).toBeChecked();
     for (const r of within(howOften()).getAllByRole('radio')) expect(r).toBeDisabled();
     expect(screen.getByTestId('as-needed-locked-how-often')).toHaveTextContent(/can't be changed/);
-    expect(screen.queryByRole('heading', { name: 'When?' })).toBeNull();
+    // When? holds only How often? (the server pins an as-needed schedule): no Starts | Repeats until tiles.
+    expect(screen.queryByTestId('starts-tile')).toBeNull();
+    expect(screen.queryByTestId('repeats-until-tile')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'What time?' })).toBeNull();
+    expect(screen.queryByRole('radiogroup', { name: 'Common dose times' })).toBeNull();
   });
 
   it.each([
@@ -315,13 +335,19 @@ describe('"How often?" reflects the stored repeat', () => {
   });
 });
 
-describe('a saved value behind a disclosure opens it', () => {
-  it('medication: instructions or a repeat end date open More details; a plain one stays closed', () => {
+// Build 11 (owner 2026-11-10): "More details (collapsed by default, also on edit)". The stored values are there,
+// pre-filled, behind the collapsed row; the repeat end is the "Repeats until" tile in When?.
+describe('More details stays collapsed on an edit; saved values are pre-filled', () => {
+  it('medication: instructions sit pre-filled behind a COLLAPSED More details; the repeat end is the Repeats until tile', () => {
     const { unmount } = renderEdit(med());
     expect(moreToggle()).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByTestId('repeats-until-tile')).toHaveTextContent('Never');
     unmount();
     renderEdit(EVENTS.medDaily);
-    expect(moreToggle()).toHaveAttribute('aria-expanded', 'true');
+    expect(moreToggle()).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByLabelText(/^Repeats until/, { selector: 'input' })).toHaveValue('2099-12-31');
+    expect(screen.getByTestId('repeats-until-tile')).toHaveTextContent('Thu, Dec 31');
+    fireEvent.click(moreToggle());
     expect(screen.getByLabelText('Instructions')).toHaveValue('With food');
   });
 
@@ -331,9 +357,16 @@ describe('a saved value behind a disclosure opens it', () => {
     ['notes', { location: '', description: 'Bring the list' }],
     ['a doctor', { location: '', description: '', provider_id: PATEL_ID }],
     ['a repeat end date', { location: '', description: '', duration_minutes: 30, recurrence_rule: 'weekly', recurrence_end_date: '2099-03-31' }],
-  ])('appointment: %s opens More details', (_name, over) => {
+  ])('appointment: %s keeps More details collapsed', (_name, over) => {
     renderEdit(appt(over as Partial<CalendarEvent>));
-    expect(moreToggle()).toHaveAttribute('aria-expanded', 'true');
+    expect(moreToggle()).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('appointment: a stored repeat end shows on the Repeats until tile (outside More details)', () => {
+    renderEdit(appt({ recurrence_rule: 'weekly', recurrence_end_date: '2099-03-31' } as Partial<CalendarEvent>));
+    expect(screen.getByLabelText(/^Repeats until/, { selector: 'input' })).toHaveValue('2099-03-31');
+    expect(screen.getByTestId('repeats-until-tile')).toHaveTextContent('Tue, Mar 31');
+    expect(document.getElementById('more-details-panel')).not.toContainElement(screen.getByTestId('repeats-until-tile'));
   });
 
   it('appointment: nothing stored behind it keeps More details closed', () => {
@@ -341,28 +374,33 @@ describe('a saved value behind a disclosure opens it', () => {
     expect(moreToggle()).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('appointment edit: Starts | Ends are seeded from the event, on the viewer clock, under the time choice', () => {
-    // 10:00 New York = 8:00 AM Denver (the viewer), 45 minutes long.
+  it('appointment edit: From | To are seeded from the event, on the CIRCLE clock, under What time?', () => {
+    // 10:00 New York (the circle) = 8:00 AM Denver (the viewer), 45 minutes long.
     renderEdit(appt({}));
-    expect(screen.getByTestId('appt-start-tile')).toHaveAccessibleName(/^Starts, 8:00 AM/);
-    expect(screen.getByTestId('appt-end-tile')).toHaveAccessibleName(/^Ends, 8:45 AM/);
-    expect(screen.getByTestId('appt-duration-caption')).toHaveTextContent('45 minutes · Times are for Denver.');
-    for (const name of ['30 min', '1 hr', '2 hrs']) {
-      expect(screen.getByRole('radio', { name })).not.toBeChecked();
-    }
+    expect(screen.getByTestId('appt-from-tile')).toHaveTextContent('10:00 AM');
+    expect(screen.getByTestId('appt-to-tile')).toHaveTextContent('10:45 AM');
+    expect(screen.getByLabelText('From', { selector: 'input' })).toHaveValue('10:00');
+    expect(screen.getByLabelText('To', { selector: 'input' })).toHaveValue('10:45');
+    // Circle time first, the viewer's range in the caption (replaces "Times are for Denver.").
+    expect(screen.getByTestId('time-zone-caption')).toHaveTextContent('New York time · 8:00 – 8:45 AM your time (Denver)');
+    expect(screen.queryByText(/Times are for/)).toBeNull();
+    // No length chips (build 11).
+    for (const name of ['30 min', '1 hr', '2 hrs']) expect(screen.queryByRole('radio', { name })).toBeNull();
   });
 
-  it('appointment: a length other than 30 min no longer opens More details (Ends sits under the time)', () => {
+  it('appointment: a length other than 30 min keeps More details closed (To sits under What time?)', () => {
     renderEdit(appt({ location: '', description: '', duration_minutes: 45 }));
     expect(moreToggle()).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getByTestId('appt-end-tile')).toBeVisible();
+    expect(screen.getByTestId('appt-to-tile')).toBeVisible();
   });
 
-  it('appointment: the stored doctor and location show inside More details', () => {
+  it('appointment: the stored doctor and location show inside More details once opened', () => {
     const { unmount } = renderEdit(EVENTS.apptWeekly);
+    fireEvent.click(moreToggle());
     expect(screen.getByRole('combobox', { name: 'Doctor' })).toHaveValue(PATEL_ID);
     unmount();
     renderEdit(EVENTS.appt);
+    fireEvent.click(moreToggle());
     expect(screen.getByLabelText(/^Location/)).toHaveValue('1 Main St');
   });
 

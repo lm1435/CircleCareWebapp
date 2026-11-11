@@ -7,6 +7,12 @@ import {
   choiceTileSubClass,
 } from './inputStyles';
 
+/**
+ * The caption line of a VALUE tile (13/500 muted: `hierarchy="value"`'s label size), shared with the simple forms'
+ * picker value tiles ("Starts", "Repeats until", "From", "To"; owner 2026-11-10).
+ */
+export const VALUE_TILE_LABEL = 'max-w-full text-[13px] font-medium text-ink-2';
+
 /** The unselected tile with the error border instead of the resting one (one border color per class string). */
 const TILE_INVALID = 'border-terracotta text-ink hover:bg-bg-2';
 

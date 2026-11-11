@@ -4,18 +4,18 @@ import { sqlExec } from '../db';
 import { countRequests, dbQuery, sqlStr } from '../unhappy';
 import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from '../unhappy/auth-invites/_helpers';
 import { dateInTz, uniqueSuffix } from '../notesFirstClassShared';
-import { checkA11y, unfoldSimpleEnd } from '../helpers';
+import { checkA11y, fillSimpleDate, fillSimpleTime, unfoldSimpleEnd } from '../helpers';
 
 // THE ADD MENU AND THE TWO SIMPLE FORMS (docs/plans/simple-ui-1-3-1.md).
 //
 //   Add menu: Med, Appt, Task, Note, Shift for EVERYONE. At a large root font
 //   (24px) it becomes a vertical list of full-word rows.
-//   New medication: "What is it?" / "When?" ("Starts" date, 4 time chips + Other time +
-//   "+ Another dose") / "How often?" (Every day, Every week, When needed, Custom…) /
-//   "More details". Save = "Add medication". No Medication/Appointment/Task type switch.
-//   New appointment (the task / shift pattern, owner 2026-11-08): "What is it?" / "When?"
-//   (date, Time tile, Any time) / "How often?" / "Who's going?" / "More details".
-//   Save = "Add appointment".
+//   Build 11 (owner 2026-11-10): one order on every simple form, new and edit.
+//   New medication: "What is it?" (name, dose) / "When?" (Starts | Repeats until tiles, then How often?:
+//   Every day, Every week, When needed, Custom…) / "What time?" (time-first chips, multi-select, + "Other…") /
+//   Reminders / "More details". Save = "Add medication". No Medication/Appointment/Task type switch.
+//   New appointment: "What is it?" / "When?" (Starts | Repeats until, How often?) / "What time?" (Pick a time |
+//   Any time, then From | To) / "Who's going?" / Reminders / "More details". Save = "Add appointment".
 //
 // A fresh owner + circle per test: the writes are asserted in the REAL database.
 
@@ -26,6 +26,9 @@ test.setTimeout(90_000);
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
 const EVENTS_POST = '/api/circles/:id/events';
+/** The simple form's section headings, without the required marker ("When? *"). */
+const sectionHeadings = (dialog: import('@playwright/test').Locator) =>
+  dialog.locator('h3[id^="sf-"]').evaluateAll((els) => els.map((e) => e.textContent?.replace(/\s*\*$/, '').trim()));
 
 async function arrange(request: import('@playwright/test').APIRequestContext, label: string) {
   const owner = await createScopedAccount(label);
@@ -179,7 +182,7 @@ test.describe('New medication (simple form)', () => {
     return dialog;
   }
 
-  test('section order: What is it? > When? > How often? > More details (collapsed)', async ({
+  test('section order: What is it? > When? (Starts | Repeats until, How often?) > What time? > More details (collapsed)', async ({
     page,
     context,
     request,
@@ -188,22 +191,20 @@ test.describe('New medication (simple form)', () => {
     const a = await arrange(request, 'medorder');
     await cookieLogin(context, a.owner, baseURL);
     const dialog = await openMedForm(page, a.circleId);
-    const headings = await dialog.locator('[id^="sf-"]').evaluateAll((els) => els.map((e) => e.textContent?.trim()));
-    expect(headings).toEqual(['What is it?', 'When?', 'How often?']);
-    // Four chips with their times, and the secondary controls.
-    const chips = dialog.getByRole('radiogroup', { name: /time/i }).getByRole('radio');
+    expect(await sectionHeadings(dialog)).toEqual(['What is it?', 'When?', 'What time?']);
+    // Four time-first chips (multi-select on a new medication), and "Other…".
+    const chips = dialog.getByRole('group', { name: 'Common dose times' }).getByRole('checkbox');
     await expect(chips).toHaveCount(4);
-    await expect(chips.nth(0)).toContainText('Morning');
-    await expect(chips.nth(0)).toContainText('8:00 AM');
-    await expect(chips.nth(1)).toContainText('12:00 PM');
-    await expect(chips.nth(2)).toContainText('6:00 PM');
-    await expect(chips.nth(3)).toContainText('Bedtime');
-    await expect(chips.nth(3)).toContainText('9:00 PM');
-    await expect(dialog.getByRole('button', { name: 'Other time' })).toBeVisible();
-    // No "+ Another dose" until a time is chosen.
+    await expect(chips.nth(0)).toHaveText(/^8:00 AM\s*Morning$/);
+    await expect(chips.nth(1)).toHaveText(/^12:00 PM\s*Midday$/);
+    await expect(chips.nth(2)).toHaveText(/^6:00 PM\s*Evening$/);
+    await expect(chips.nth(3)).toHaveText(/^9:00 PM\s*Bedtime$/);
+    await expect(dialog.getByTestId('time-chip-other')).toHaveText(/^Other…/);
+    // No "+ Another dose" tile: a further chip is a further time.
     await expect(dialog.getByTestId('add-another-dose')).toHaveCount(0);
-    // The "Starts" date opens When?; Every day is the default How-often answer, Custom… holds the rest.
-    await expect(dialog.getByLabel(/^Starts/)).toBeVisible();
+    // When? opens on Starts | Repeats until; Every day is the default How-often answer, Custom… holds the rest.
+    await expect(dialog.getByTestId('starts-tile')).toBeVisible();
+    await expect(dialog.getByTestId('repeats-until-tile')).toHaveText(/Repeats until\s*Never/);
     await expect(dialog.getByRole('radio', { name: 'Every day' })).toBeChecked();
     await expect(dialog.getByRole('radio', { name: 'Every week' })).toBeVisible();
     await expect(dialog.getByTestId('repeat-custom')).toHaveAttribute('aria-expanded', 'false');
@@ -223,7 +224,7 @@ test.describe('New medication (simple form)', () => {
     const dialog = await openMedForm(page, a.circleId);
     await dialog.locator('#medication_name').fill(name);
     await dialog.locator('#medication_dosage').fill('5 mg');
-    const evening = dialog.getByRole('radio', { name: /Evening/ });
+    const evening = dialog.getByRole('checkbox', { name: /Evening$/ });
     await evening.click();
     await expect(evening).toBeChecked();
     const posts = countRequests(page, 'POST', EVENTS_POST);
@@ -243,7 +244,7 @@ test.describe('New medication (simple form)', () => {
     });
   });
 
-  test('"+ Another dose" saves one sibling series per time (two POSTs, two times)', async ({
+  test('two chips save one sibling series per time (two POSTs, two times)', async ({
     page,
     context,
     request,
@@ -254,13 +255,11 @@ test.describe('New medication (simple form)', () => {
     const name = `ZZ_E2E_SIMPLE_${uniqueSuffix()}`;
     const dialog = await openMedForm(page, a.circleId);
     await dialog.locator('#medication_name').fill(name);
-    await dialog.getByRole('radio', { name: /Morning/ }).click();
-    await dialog.getByTestId('add-another-dose').click();
-    const extra = dialog.getByTestId('extra-dose-1');
-    await expect(extra).toBeVisible();
-    // The new row starts on the first chip time not already used (Midday).
-    await expect(extra.locator('#extra_dose_time_1')).toHaveValue('12:00');
-    await extra.locator('#extra_dose_time_1').fill('21:00');
+    // Multi-select (build 11): Morning is the medication's time, Bedtime a second one (what "+ Another dose" was).
+    await dialog.getByRole('checkbox', { name: /Morning$/ }).click();
+    await dialog.getByRole('checkbox', { name: /Bedtime$/ }).click();
+    await expect(dialog.getByRole('checkbox', { name: /Morning$/ })).toBeChecked();
+    await expect(dialog.getByRole('checkbox', { name: /Bedtime$/ })).toBeChecked();
 
     const posts = countRequests(page, 'POST', EVENTS_POST);
     await dialog.getByRole('button', { name: 'Add medication' }).click();
@@ -277,14 +276,56 @@ test.describe('New medication (simple form)', () => {
     expect(rows.map((r) => r.scheduled_time?.slice(0, 5))).toEqual(['08:00', '21:00']);
   });
 
-  test('a dose row can be removed again before saving', async ({ page, context, request, baseURL }) => {
+  test('Fix13: a custom dose changes in place; Repeats until clears in its tile (×); the save matches', async ({
+    page,
+    context,
+    request,
+    baseURL,
+  }) => {
+    const a = await arrange(request, 'medfix13');
+    await cookieLogin(context, a.owner, baseURL);
+    const name = `ZZ_E2E_SIMPLE_${uniqueSuffix()}`;
+    const dialog = await openMedForm(page, a.circleId);
+    await dialog.locator('#medication_name').fill(name);
+    await dialog.getByRole('checkbox', { name: /Morning$/ }).click();
+    // "Other…" adds a second, custom time.
+    await dialog.locator('#scheduled_time').fill('14:30');
+    const custom = dialog.getByTestId('time-chip-custom');
+    await expect(custom).toHaveText(/^2:30 PM\s*Other$/);
+    // Its body is that dose's picker: change it in place (no remove + re-add).
+    await dialog.getByLabel('Change 2:30 PM dose time').fill('15:00');
+    await expect(custom).toHaveText(/^3:00 PM\s*Other$/);
+    await expect(dialog.getByRole('button', { name: 'Remove 3:00 PM dose' })).toBeVisible();
+    // Repeats until: "Mar 1 ×"-style, × back to Never.
+    await dialog.locator('#recurrence_end_date').fill(dateInTz(TZ, 40));
+    const clear = dialog.getByRole('button', { name: 'Clear repeat end' });
+    await expect(clear).toBeVisible();
+    await clear.click();
+    await expect(dialog.getByTestId('repeats-until-tile')).toContainText('Never');
+    await expect(clear).toHaveCount(0);
+    const posts = countRequests(page, 'POST', EVENTS_POST);
+    await dialog.getByRole('button', { name: 'Add medication' }).click();
+    await expect(dialog).toBeHidden({ timeout: 20_000 });
+    await posts.expectCount(2);
+    const rows = medRoots(a.circleId, name);
+    expect(rows.map((r) => r.scheduled_time?.slice(0, 5))).toEqual(['08:00', '15:00']);
+    const ends = dbQuery<{ e: string | null }>(
+      `select recurrence_end_date::text as e from calendar_events
+        where circle_id = ${sqlStr(a.circleId)}::uuid and title = ${sqlStr(name)} and parent_event_id is null`
+    );
+    expect(ends.map((r) => r.e)).toEqual([null, null]);
+  });
+
+  test('a second time can be un-chosen again before saving', async ({ page, context, request, baseURL }) => {
     const a = await arrange(request, 'medrm');
     await cookieLogin(context, a.owner, baseURL);
     const dialog = await openMedForm(page, a.circleId);
-    await dialog.getByRole('radio', { name: /Morning/ }).click();
-    await dialog.getByTestId('add-another-dose').click();
-    await expect(dialog.getByTestId('extra-dose-1')).toBeVisible();
-    await dialog.getByRole('button', { name: 'Remove dose 2' }).click();
+    await dialog.getByRole('checkbox', { name: /Morning$/ }).click();
+    await dialog.getByRole('checkbox', { name: /Evening$/ }).click();
+    await expect(dialog.getByTestId('extra-dose-1')).toHaveCount(1);
+    await dialog.getByRole('checkbox', { name: /Evening$/ }).click();
+    await expect(dialog.getByRole('checkbox', { name: /Evening$/ })).not.toBeChecked();
+    await expect(dialog.getByRole('checkbox', { name: /Morning$/ })).toBeChecked();
     await expect(dialog.getByTestId('extra-dose-1')).toHaveCount(0);
   });
 
@@ -301,7 +342,7 @@ test.describe('New medication (simple form)', () => {
     const daysName = `ZZ_E2E_SIMPLE_${uniqueSuffix()}_d`;
     let dialog = await openMedForm(page, a.circleId);
     await dialog.locator('#medication_name').fill(daysName);
-    await dialog.getByRole('radio', { name: /Midday/ }).click();
+    await dialog.getByRole('checkbox', { name: /Midday$/ }).click();
     await dialog.getByTestId('repeat-custom').click();
     await dialog.getByRole('radio', { name: 'Some days' }).click();
     // The weekday picker appears; pick Monday and Friday on top of the start day.
@@ -324,8 +365,10 @@ test.describe('New medication (simple form)', () => {
     dialog = await openMedForm(page, a.circleId);
     await dialog.locator('#medication_name').fill(prnName);
     await dialog.getByRole('radio', { name: 'When needed' }).click();
-    // No time is asked for an as-needed medication.
-    await expect(dialog.getByRole('radiogroup', { name: /time/i })).toHaveCount(0);
+    // No time (and no Starts / Repeats until) is asked for an as-needed medication.
+    await expect(dialog.getByRole('group', { name: 'Common dose times' })).toHaveCount(0);
+    await expect(dialog.getByRole('heading', { name: 'What time?' })).toHaveCount(0);
+    await expect(dialog.getByTestId('when-date-tiles')).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Add medication' }).click();
     await expect(dialog).toBeHidden({ timeout: 20_000 });
     const prn = medRoots(a.circleId, prnName);
@@ -369,7 +412,7 @@ test.describe('New medication (simple form)', () => {
     const dialog = await openMedForm(page, a.circleId);
     // Phone width once the form is open (the sidebar's New button is the desktop entry).
     await page.setViewportSize({ width: 375, height: 900 });
-    // The row is "Other time"'s parent (located by structure, not by a test id, so the check also reads
+    // The row is "Other…"'s parent (located by structure, not by a test id, so the check also reads
     // an older layout).
     const row = dialog.getByTestId('time-chip-other').locator('xpath=..');
     await expect(row).toBeVisible();
@@ -388,10 +431,11 @@ test.describe('New medication (simple form)', () => {
     expect(new Set(tops).size).toBeLessThan(tiles.length);
   });
 
-  // Owner 1.4.0 (mobile parity): the four time chips and "Other time" are ONE content-sized wrapping row --
+  // Owner 1.4.0 (mobile parity), build 11: the four time chips and "Other…" are ONE content-sized wrapping row --
   // the same tile for every answer (and for "How often?"), never an equal-column grid and never a full-width
-  // list -- and choosing a time never changes the arrangement. Measured in a real browser: jsdom has no layout.
-  test('time chips + Other time: one wrapping row of content-sized tiles that selection never rearranges (375px + desktop)', async ({
+  // list -- and choosing a chip never moves a tile; a custom time joins as its own chip in the same style.
+  // Measured in a real browser: jsdom has no layout.
+  test('time chips + Other…: one wrapping row of content-sized tiles that selection never rearranges (375px + desktop)', async ({
     page,
     context,
     request,
@@ -405,26 +449,27 @@ test.describe('New medication (simple form)', () => {
     const row = other.locator('xpath=..');
     await expect(other).toBeVisible();
 
+    const style = (loc: import('@playwright/test').Locator) =>
+      loc.evaluate((e) => {
+        const cs = getComputedStyle(e);
+        return { radius: cs.borderTopLeftRadius, border: cs.borderTopWidth, padLeft: cs.paddingLeft, minH: cs.minHeight };
+      });
     /** Every tile's line (top), height and whether it is inside the row; plus the shared tile style. */
     async function layout() {
       const rowBox = (await row.boundingBox())!;
-      // "+ Another dose" joins the row once a time is chosen (create only, 8e8a5d4): it is appended after
-      // "Other time", so it is left out of the arrangement being compared.
+      // A custom chip counts once (its box), not as its picker body and its "×" (Fix13).
       const tiles = await row
-        .locator('button:visible:not([data-testid="add-another-dose"])')
+        .locator(
+          'button:visible:not([data-testid="time-chip-custom"]):not([data-testid="time-chip-custom-remove"]), [data-testid="time-chip-custom-box"]'
+        )
         .evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON() as DOMRect));
-      const style = (loc: import('@playwright/test').Locator) =>
-        loc.evaluate((e) => {
-          const cs = getComputedStyle(e);
-          return { radius: cs.borderTopLeftRadius, border: cs.borderTopWidth, padLeft: cs.paddingLeft, minH: cs.minHeight };
-        });
       return {
         rowBox,
         tiles,
         lines: tiles.map((t) => Math.round(t.y - rowBox.y)),
         heights: tiles.map((t) => Math.round(t.height)),
         otherStyle: await style(other),
-        chipStyle: await style(dialog.getByRole('radio', { name: /Morning/ })),
+        chipStyle: await style(dialog.getByRole('checkbox', { name: /Morning$/ })),
         howOftenStyle: await style(dialog.getByRole('radio', { name: 'Every day' })),
       };
     }
@@ -436,29 +481,46 @@ test.describe('New medication (simple form)', () => {
       // Content-sized: the tiles are not all one width (Morning vs Midday differ), and none spills past the row.
       expect(new Set(before.tiles.map((t) => Math.round(t.width))).size).toBeGreaterThan(1);
       for (const t of before.tiles) expect(t.x + t.width).toBeLessThanOrEqual(before.rowBox.x + before.rowBox.width + 1);
-      // One height for every tile: a one-line "Other time" lines up with the two-line chips.
+      // One height for every tile: a one-line "Other…" lines up with the two-line chips.
       for (const h of before.heights) expect(near(h, before.heights[0])).toBe(true);
-      // The same tile everywhere: Other time, the chips and "How often?".
+      // The same tile everywhere: Other…, the chips and "How often?".
       expect(before.otherStyle).toEqual(before.chipStyle);
       expect(before.howOftenStyle).toEqual(before.chipStyle);
       await checkA11y(page, `med-form-time-row-${width}`, testInfo, { include: '[data-testid="time-chip-row"]', wcag22: true });
     }
 
-    // Selection never rearranges the row: a chip, then a custom time (which "Other time" then names under its
-    // label), give the same lines at phone width as nothing chosen.
+    // Selection never rearranges the row: a chip gives the same lines at phone width as nothing chosen. A custom
+    // time ("Other…", the time picker) joins as its own chip ("10:45 AM / Other") after the four, in the same tile:
+    // the four keep their lines and every tile keeps one height.
     await page.setViewportSize({ width: 375, height: 900 });
     const base = await layout();
-    await dialog.getByRole('radio', { name: /Evening/ }).click();
-    await expect(dialog.getByRole('radio', { name: /Evening/ })).toBeChecked();
+    await dialog.getByRole('checkbox', { name: /Evening$/ }).click();
+    await expect(dialog.getByRole('checkbox', { name: /Evening$/ })).toBeChecked();
     expect((await layout()).lines).toEqual(base.lines);
-    await expect(row.getByTestId('add-another-dose')).toBeVisible();
+    await expect(row.getByTestId('add-another-dose')).toHaveCount(0);
     await other.click();
     await expect(other).toHaveAttribute('aria-expanded', 'true');
     await dialog.locator('#scheduled_time').fill('10:45');
-    await expect(dialog.getByTestId('time-chip-other-time')).toHaveText('10:45 AM');
+    // Tapping "Other…" again closes its picker.
+    await other.click();
+    await expect(other).toHaveAttribute('aria-expanded', 'false');
+    const customChip = dialog.getByTestId('time-chip-custom');
+    await expect(customChip).toHaveText(/^10:45 AM\s*Other$/);
+    // Fix13: the custom chip's body changes that dose, its own "×" (44px) removes it.
+    const remove = dialog.getByRole('button', { name: 'Remove 10:45 AM dose' });
+    const removeBox = (await remove.boundingBox())!;
+    expect(removeBox.width).toBeGreaterThanOrEqual(44);
+    expect(removeBox.height).toBeGreaterThanOrEqual(44);
     const custom = await layout();
-    expect(custom.lines).toEqual(base.lines);
+    expect(custom.lines.slice(0, 4)).toEqual(base.lines.slice(0, 4));
+    expect(custom.tiles).toHaveLength(base.tiles.length + 1);
     for (const h of custom.heights) expect(near(h, custom.heights[0])).toBe(true);
+    // Same tile: the box has the chips' radius and border; its body the chips' padding and height.
+    const boxStyle = await style(dialog.getByTestId('time-chip-custom-box'));
+    const bodyStyle = await style(customChip);
+    expect({ radius: boxStyle.radius, border: boxStyle.border, padLeft: bodyStyle.padLeft, minH: bodyStyle.minH }).toEqual(
+      base.chipStyle
+    );
     await expect(other).not.toContainText('·');
   });
 });
@@ -478,8 +540,7 @@ test.describe('New appointment (simple form)', () => {
     const dialog = page.getByRole('dialog', { name: 'New appointment' });
     await expect(dialog).toBeVisible();
 
-    const headings = await dialog.locator('[id^="sf-"]').evaluateAll((els) => els.map((e) => e.textContent?.trim()));
-    expect(headings).toEqual(['What is it?', 'When?', 'How often?', "Who's going?"]);
+    expect(await sectionHeadings(dialog)).toEqual(['What is it?', 'When?', 'What time?', "Who's going?"]);
     // One More details (no Doctor / Place / Notes / Repeat rows).
     await expect(dialog.locator('#row-doctor, #row-place, #row-notes, #row-repeat')).toHaveCount(0);
     await expect(dialog.locator('#more-details')).toHaveAttribute('aria-expanded', 'false');
@@ -490,12 +551,13 @@ test.describe('New appointment (simple form)', () => {
     const title = `ZZ_E2E_APPT_${uniqueSuffix()}`;
     await dialog.locator('#title').fill(title);
     const tz = TZ;
-    await dialog.locator('#scheduled_date').fill(dateInTz(tz, 3));
-    await dialog.getByTestId('appt-time-tile').click();
-    await dialog.locator('#scheduled_time').fill('14:30');
-    // Ends sits beside Starts under the time choice (owner 2026-11-10), not in More details.
+    await fillSimpleDate(dialog, 'scheduled_date', dateInTz(tz, 3));
+    // What time? (build 11): Pick a time, then From | To (the circle's clock; the browser is in the circle's zone).
+    await fillSimpleTime(dialog, '14:30');
+    await expect(dialog.getByTestId('appt-to-tile')).toContainText('3:00 PM');
     await expect(dialog.locator('#more-details')).toHaveAttribute('aria-expanded', 'false');
     await (await unfoldSimpleEnd(dialog)).fill('15:30');
+    await expect(dialog.getByTestId('appt-to-tile')).toContainText('3:30 PM');
     const posts = countRequests(page, 'POST', EVENTS_POST);
     await dialog.getByRole('button', { name: 'Add appointment' }).click();
     await expect(dialog).toBeHidden({ timeout: 20_000 });

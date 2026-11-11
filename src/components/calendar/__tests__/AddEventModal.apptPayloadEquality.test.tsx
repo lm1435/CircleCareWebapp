@@ -163,9 +163,29 @@ async function title(user: User, text: string) {
   await user.type(box, text);
 }
 function date(day: string) {
-  fireEvent.change(screen.getByLabelText(/^Date/), { target: { value: day } });
+  // Build 11: the "Starts" tile (a PickerTile over the hidden `#scheduled_date`); the old form's "Date" field.
+  fireEvent.change(screen.queryByLabelText(/^Starts/) ?? screen.getByLabelText(/^Date/), { target: { value: day } });
+}
+/**
+ * Build 11 puts From | To on the CIRCLE's clock (New York here), as the chips and the task's At are; the viewer is
+ * in Denver. The cases name the VIEWER's clock (what the old field took), so the new driver types the same instant
+ * on the circle's clock: two hours later on every date these cases use (both zones change for DST on the same day).
+ */
+function onCircleClock(viewerTime: string): string {
+  const [h, m] = viewerTime.split(':').map(Number);
+  return `${String((h + 2) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+const MINUTES: Record<string, number> = { '30 min': 30, '1 hr': 60, '90 min': 90, '2 hrs': 120 };
+/** "Pick a time" (a no-op once From | To show). */
+async function pickATime(user: User) {
+  if (!document.getElementById('scheduled_time')) await user.click(screen.getByRole('radio', { name: 'Pick a time' }));
 }
 const timeInput = () => screen.getByLabelText(/^Time/, { selector: 'input' });
+/** The simple forms' Reminders card is the summary row's accordion (owner 2026-11-10), not in More details. */
+async function expandReminders(user: User) {
+  const row = screen.queryByTestId('reminders-summary-row');
+  if (row && row.getAttribute('aria-expanded') !== 'true') await user.click(row);
+}
 async function reminderClicks(user: User) {
   await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
   await user.click(screen.getByRole('checkbox', { name: '1 hour before' }));
@@ -230,21 +250,28 @@ function oldDriver(user: User): Driver {
 function newDriver(user: User): Driver {
   const more = () => openDisclosure(user, 'more-details');
   return {
-    // Starts | Ends sit under the time choice (owner 2026-11-10), each unfolding its field from a tile.
+    // What time? (build 11): Pick a time | Any time, then From | To tiles, each the time picker over a hidden
+    // input, on the circle's clock.
     async time(time) {
-      if (!screen.queryByTestId('appt-start-tile')) await user.click(screen.getByTestId('appt-time-tile'));
-      if (!document.getElementById('scheduled_time')) await user.click(screen.getByTestId('appt-start-tile'));
-      fireEvent.change(screen.getByLabelText(/^Starts/, { selector: 'input' }), { target: { value: time } });
+      await pickATime(user);
+      fireEvent.change(screen.getByLabelText('From', { selector: 'input' }), {
+        target: { value: onCircleClock(time) },
+      });
     },
     async clearTime() {
       await user.click(screen.getByRole('radio', { name: 'Any time' }));
     },
     async endTime(time) {
-      if (!document.getElementById('endTime')) await user.click(screen.getByTestId('appt-end-tile'));
-      fireEvent.change(screen.getByLabelText(/^Ends/, { selector: 'input' }), { target: { value: time } });
+      await pickATime(user);
+      fireEvent.change(screen.getByLabelText('To', { selector: 'input' }), { target: { value: onCircleClock(time) } });
     },
+    // No length chips any more: the same length is To = From + that many minutes.
     async duration(label) {
-      await user.click(screen.getByRole('radio', { name: label }));
+      const from = (screen.getByLabelText('From', { selector: 'input' }) as HTMLInputElement).value;
+      const [h, m] = from.split(':').map(Number);
+      const total = (h * 60 + m + MINUTES[label]) % 1440;
+      const to = `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+      fireEvent.change(screen.getByLabelText('To', { selector: 'input' }), { target: { value: to } });
     },
     async repeat(choice, extra) {
       const tile: Partial<Record<Repeat, string>> = { none: 'Once', daily: 'Every day', weekly: 'Every week' };
@@ -265,8 +292,8 @@ function newDriver(user: User): Driver {
       await daysAndCycle(user, extra);
     },
     async repeatEnd(day) {
-      await more();
-      fireEvent.change(screen.getByLabelText(/^End date/), { target: { value: day } });
+      // The "Repeats until" tile in When? (build 11), not More details.
+      fireEvent.change(screen.getByLabelText(/^Repeats until/), { target: { value: day } });
     },
     async who(who) {
       const name = { anyone: 'Anyone', me: 'Me', ana: 'Ana', rosa: /^Rosa/ }[who];
@@ -286,7 +313,7 @@ function newDriver(user: User): Driver {
       await typeInto(user, screen.getByLabelText(/^Details/), text);
     },
     async reminders() {
-      await more();
+      await expandReminders(user);
       await reminderClicks(user);
     },
     async titleChip() {
@@ -464,9 +491,11 @@ if (CAPTURE) {
       for (const c of [...CREATE_CASES, ...EDIT_CASES]) expect(OLD[c.name], c.name).toBeDefined();
     });
 
-    it('the new layout is really the one under test (a Time tile, no Repeat row)', () => {
+    it('the new layout is really the one under test (Starts | Repeats until, Pick a time, no Repeat row)', () => {
       render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
-      expect(screen.getByTestId('appt-time-tile')).toBeInTheDocument();
+      expect(screen.getByTestId('starts-tile')).toBeInTheDocument();
+      expect(screen.getByTestId('repeats-until-tile')).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'Pick a time' })).toBeInTheDocument();
       expect(document.getElementById('row-repeat')).toBeNull();
     });
 

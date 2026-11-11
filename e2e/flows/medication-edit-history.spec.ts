@@ -191,7 +191,7 @@ test('time + dosage edit of a started series older than 15 days from the Meds pa
   await openMoreDetails(dialog);
   await expect(dialog.locator('#scheduled_date')).toHaveValue(start);
   await dialog.locator('#medication_dosage').fill('20mg');
-  await dialog.getByRole('button', { name: 'Other time' }).click();
+  // "Other…" (build 11) holds the stored time in its hidden #scheduled_time; a new one goes straight in.
   await expect(dialog.locator('#scheduled_time')).toHaveValue('08:00');
   await dialog.locator('#scheduled_time').fill('09:00');
   await saveChanges(page, dialog, circleId, rootId);

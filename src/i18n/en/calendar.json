@@ -316,7 +316,6 @@
     },
     "dualTimezoneHint": "Your time / {{name}}'s time ({{timezone}})",
     "dualTimezoneHintGeneric": "Your time / their time ({{timezone}})",
-    "timeInZone": "Time in {{zone}}",
     "quietHoursDoseWarning": "This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Settings, under Quiet hours.",
     "pastTimeInline": "Starts with the next dose. This time has already passed today.",
     "conversion": {
@@ -364,7 +363,6 @@
       "whoIsGoing": "Who's going?",
       "moreDetails": "More details",
       "moreDetailsSummary": "Refills, pharmacy, prescriber, instructions",
-      "startDate": "Start date",
       "starts": "Starts",
       "addMedication": "Add medication",
       "addAppointment": "Add appointment",
@@ -373,8 +371,6 @@
       "everyDay": "Every day",
       "someDays": "Some days",
       "whenNeeded": "When needed",
-      "anotherDose": "+ Another dose",
-      "removeDose": "Remove dose {{number}}",
       "new": {
         "task": "New task"
       },
@@ -388,23 +384,37 @@
       "everyWeek": "Every week",
       "whoDoingIt": "Who's doing it?",
       "me": "Me",
-      "taskMoreHint": "Details, end date",
+      "taskMoreHint": "Details",
       "apptMoreHint": "Doctor, location, details",
       "custom": "Custom…",
       "customHeading": "Custom",
       "everyOtherDay": "Every other day",
       "monthly": "Monthly",
       "yearly": "Yearly",
-      "daysOnOff": "Days on / off"
+      "daysOnOff": "Days on / off",
+      "repeatsUntil": "Repeats until",
+      "never": "Never",
+      "doesntRepeat": "Doesn't repeat",
+      "whatTime": "What time?",
+      "from": "From",
+      "to": "To",
+      "otherEllipsis": "Other…",
+      "zoneCaption": "{{circleZone}} time · {{times}} your time ({{yourZone}})",
+      "listAnd": "and",
+      "noEnd": "No end",
+      "clearRepeatEnd": "Clear repeat end",
+      "clearEndTime": "Clear end time",
+      "changeDoseTime": "Change {{time}} dose time",
+      "removeDoseTime": "Remove {{time}} dose"
     },
     "timeChips": {
       "label": "Common dose times",
       "morning": "Morning",
       "midday": "Midday",
       "evening": "Evening",
-      "bedtime": "Bedtime"
+      "bedtime": "Bedtime",
+      "other": "Other"
     },
-    "doseNumber": "Dose {{number}}",
     "firstRun": {
       "eyebrow": "{{name}}'S FIRST MED",
       "eyebrowSelf": "YOUR FIRST MED",

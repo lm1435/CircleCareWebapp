@@ -190,6 +190,11 @@ async function pickDaysAndCycle(user: User, extra?: { days?: string[]; cycle?: [
     fireEvent.change(screen.getByLabelText(/^Days off/), { target: { value: extra.cycle[1] } });
   }
 }
+/** The simple forms' Reminders card is the summary row's accordion (owner 2026-11-10), not in More details. */
+async function expandReminders(user: User) {
+  const row = screen.queryByTestId('reminders-summary-row');
+  if (row && row.getAttribute('aria-expanded') !== 'true') await user.click(row);
+}
 async function remindersCommon(user: User) {
   await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
   await user.click(screen.getByRole('checkbox', { name: '1 hour before' }));
@@ -244,12 +249,20 @@ function newDriver(user: User): Driver {
     if (toggle.getAttribute('aria-expanded') !== 'true') await user.click(toggle);
   }
   async function chooseDay(_zone: string, day: string) {
-    // The date field is always there (no Today / Tomorrow / Other day tiles any more).
-    fireEvent.change(screen.getByLabelText(/^Date/), { target: { value: day } });
+    // Build 11: the "Starts" tile (a PickerTile over the hidden `#scheduled_date`), the recipient's day.
+    fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: day } });
   }
+  const fromInput = () => screen.getByLabelText('From', { selector: 'input' }) as HTMLInputElement;
+  const toInput = () => screen.getByLabelText('To', { selector: 'input' }) as HTMLInputElement;
   async function chooseTime(time: string) {
-    await user.click(screen.getByTestId('task-time-tile'));
-    fireEvent.change(screen.getByLabelText(/^Time/, { selector: 'input' }), { target: { value: time } });
+    // What time? (build 11): "Pick a time", then From | To (time pickers over hidden inputs, the recipient's
+    // clock). The task's To starts at From + 30 as the old form's did; the guard below only matters if it ever
+    // did not (then the user sets it through the To tile, for the same intent).
+    if (!document.getElementById('scheduled_time')) await user.click(screen.getByRole('radio', { name: 'Pick a time' }));
+    fireEvent.change(fromInput(), { target: { value: time } });
+    if (screen.queryByRole('dialog', { name: 'New task' }) && toInput().value === '') {
+      fireEvent.change(toInput(), { target: { value: clockPlus(time, 30) } });
+    }
   }
   return {
     title: (text) => changeTitle(user, text),
@@ -281,8 +294,8 @@ function newDriver(user: User): Driver {
       await pickDaysAndCycle(user, extra);
     },
     async repeatEnd(_zone, _start, _time, end) {
-      await openMore();
-      fireEvent.change(screen.getByLabelText(/^End date/), { target: { value: end } });
+      // The "Repeats until" tile in When? (build 11), not More details.
+      fireEvent.change(screen.getByLabelText(/^Repeats until/), { target: { value: end } });
     },
     async who(who) {
       const name = { anyone: 'Anyone', me: 'Me', ana: 'Ana', rosa: /^Rosa/ }[who];
@@ -293,16 +306,16 @@ function newDriver(user: User): Driver {
       await user.clear(screen.getByLabelText(/^Details/));
       await user.type(screen.getByLabelText(/^Details/), text);
     },
+    // No length chips (build 11): a length is the To tile set that many minutes after From.
     async duration(label) {
-      await openMore();
-      await user.click(screen.getByRole('radio', { name: label }));
+      const minutes = ({ '30 min': 30, '1 hr': 60, '90 min': 90, '2 hrs': 120 } as Record<string, number>)[label];
+      fireEvent.change(toInput(), { target: { value: clockPlus(fromInput().value, minutes) } });
     },
     async endTime(_zone, _day, _start, end) {
-      await openMore();
-      fireEvent.change(screen.getByLabelText(/^End time/), { target: { value: end } });
+      fireEvent.change(toInput(), { target: { value: end } });
     },
     async reminders() {
-      await openMore();
+      await expandReminders(user);
       await remindersCommon(user);
     },
   };
@@ -495,6 +508,27 @@ if (CAPTURE) {
 
     it.each(EDIT_CASES.map((c) => [c.name, c] as const))('%s', async (_name, c) => {
       expect(await runEdit(c, 'new')).toEqual(OLD[c.name]);
+    });
+
+    it('build 11: To is optional on a new task: its in-tile "×" clears the default and saves no length', async () => {
+      const user = userEvent.setup();
+      const view = render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      await changeTitle(user, 'Water the plants');
+      await user.click(screen.getByRole('radio', { name: 'Pick a time' }));
+      fireEvent.change(screen.getByLabelText('From', { selector: 'input' }), { target: { value: '10:00' } });
+      // The default end, as the old form gave it; the To tile's "×" (Fix13) clears it.
+      expect((screen.getByLabelText('To', { selector: 'input' }) as HTMLInputElement).value).toBe('10:30');
+      await user.click(screen.getByRole('button', { name: 'Clear end time' }));
+      expect(screen.getByTestId('task-to-tile')).toHaveTextContent(/To\s*No end/);
+      expect(screen.queryByRole('button', { name: 'Clear end time' })).toBeNull();
+      mutateCreate.mockClear();
+      await user.click(screen.getByTestId('add-event-save'));
+      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+      // As sent (JSON): an undefined key does not travel.
+      const body = JSON.parse(JSON.stringify(mutateCreate.mock.calls[0][0])) as Record<string, unknown>;
+      expect(body.scheduled_time).toBeTruthy();
+      expect(body).not.toHaveProperty('duration_minutes');
+      view.unmount();
     });
 
     it('byte-identical, not just deep-equal: the serialized bodies match key order too', async () => {

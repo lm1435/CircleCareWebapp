@@ -117,10 +117,15 @@ interface Driver {
   repeat(choice: Repeat, extra?: RepeatExtra): Promise<void>;
 }
 
-const chipRadio = (name: Chip) =>
-  within(screen.getByRole('radiogroup', { name: 'Common dose times' })).getByRole('radio', {
-    name: new RegExp(`^${name}`),
-  });
+// Build 11 (owner 2026-11-10): TIME-FIRST chips ("8:00 AM Morning"), checkboxes on a new medication (multi-select),
+// radios on an edit (one dose). Same chips, same times.
+const chipRadio = (name: Chip) => {
+  const group = within(document.getElementById('time-chips') as HTMLElement);
+  return (
+    group.queryByRole('checkbox', { name: new RegExp(`${name}$`) }) ??
+    group.getByRole('radio', { name: new RegExp(`${name}$`) })
+  );
+};
 
 async function openMore(user: User) {
   const toggle = screen.getByRole('button', { name: /^More details/ });
@@ -148,11 +153,18 @@ async function chip(user: User, c: Chip) {
   await user.click(chipRadio(c));
 }
 async function otherTime(user: User, time: string) {
+  // "Other…" is the time picker itself (a PickerTile over the hidden `#scheduled_time`).
   await user.click(screen.getByTestId('time-chip-other'));
-  fireEvent.change(screen.getByLabelText(/^Time/, { selector: 'input' }), { target: { value: time } });
+  fireEvent.change(screen.getByLabelText('Other time', { selector: 'input' }), { target: { value: time } });
 }
+/**
+ * "+ Another dose" added the first chip not already used; the multi-select chips (build 11) say the same thing
+ * by choosing that chip as a further time.
+ */
 async function extraDose(user: User) {
-  await user.click(screen.getByTestId('add-another-dose'));
+  const group = within(document.getElementById('time-chips') as HTMLElement);
+  const next = group.getAllByRole('checkbox').find((c) => c.getAttribute('aria-checked') !== 'true');
+  await user.click(next as HTMLElement);
 }
 async function instructions(user: User, text: string) {
   await openMore(user);
@@ -160,11 +172,20 @@ async function instructions(user: User, text: string) {
   await user.type(screen.getByLabelText('Instructions'), text);
 }
 async function endDate(user: User, day: string) {
-  await openMore(user);
-  fireEvent.change(screen.getByLabelText(/^End date/), { target: { value: day } });
+  // The "Repeats until" tile in When? (build 11), no longer in More details.
+  if (!screen.queryByLabelText(/^Repeats until/)) await openMore(user);
+  fireEvent.change(screen.queryByLabelText(/^Repeats until/) ?? screen.getByLabelText(/^End date/), {
+    target: { value: day },
+  });
+}
+/** The simple forms' Reminders card is the summary row's accordion (owner 2026-11-10), not in More details. */
+async function expandReminders(user: User) {
+  const row = screen.queryByTestId('reminders-summary-row');
+  if (row && row.getAttribute('aria-expanded') !== 'true') await user.click(row);
 }
 async function reminders(user: User) {
-  await openMore(user);
+  if (screen.queryByTestId('reminders-summary-row')) await expandReminders(user);
+  else await openMore(user);
   await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
   await user.click(screen.getByRole('checkbox', { name: '1 hour before' }));
 }

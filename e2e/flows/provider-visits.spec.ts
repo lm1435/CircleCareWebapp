@@ -373,6 +373,9 @@ test.describe('Visits & notes: a removed doctor', () => {
     const dialog2 = await openChip(page, s.today, new RegExp(escapeRegExp(title)));
     await dialog2.getByRole('button', { name: 'Edit', exact: true }).click();
     const form2 = page.getByRole('dialog');
+    // Edit = new (build 11): the doctor sits in More details, collapsed on an edit too.
+    await expect(form2.locator('#title')).toHaveValue(title, { timeout: 15_000 });
+    await form2.getByRole('button', { name: /^More details/ }).click();
     await form2.locator('#provider_id').selectOption({ label: keep.name });
     const moved = page.waitForResponse(
       (r) => r.request().method() === 'PATCH' && new URL(r.url()).pathname === `/api/circles/${s.circleId}/events/${ev.id}`

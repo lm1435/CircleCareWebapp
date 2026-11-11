@@ -97,8 +97,9 @@ test('create a task end-to-end from the pill NEW cell', async ({ page, circleId 
   // it should: a passing `fill` would mean touch had been handed back to the
   // OS picker. The desktop flows in `e2e/flows/` still type, correctly — they
   // run under a fine pointer, where the field is still a text control.
-  // The simple task form (owner 1.4.0): the date field is always visible.
-  await dialog.locator('#scheduled_date').tap();
+  // The simple task form (build 11): the "Starts" tile IS the date picker (a sheet on a phone); the native
+  // input behind it is hidden and carries the value.
+  await dialog.getByTestId('starts-tile').tap();
   const datePicker = page.getByRole('dialog', { name: 'Date picker' });
   await expect(datePicker).toBeVisible();
   // The sheet opens on today when the field is empty, so the cell is on screen.

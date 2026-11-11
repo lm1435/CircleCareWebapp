@@ -56,8 +56,8 @@ async function createFirstCircle(page: Page, recipient: string): Promise<string>
 async function fillPastTimeMed(page: Page, name: string): Promise<void> {
   const form = page.getByRole('dialog').last();
   await form.getByLabel(/Medication name/i).fill(name);
-  await form.getByRole('button', { name: 'Other time' }).click();
-  await form.getByLabel(/^Time/).fill('00:01');
+  // "Other…" is the time picker over the hidden #scheduled_time (build 11): the value goes straight in.
+  await form.locator('#scheduled_time').fill('00:01');
   await expect(form.getByTestId('dose-past-time-note')).toBeVisible();
 }
 

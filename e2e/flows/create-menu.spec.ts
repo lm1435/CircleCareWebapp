@@ -250,10 +250,11 @@ test('create a medication end-to-end via the global create menu', async ({ page,
   const doseTime = futureDoseTimeToday();
   await dialog.locator('#medication_name').fill(title);
   await dialog.locator('#medication_dosage').fill('1 tablet');
-  // The simple form: the start date ("Starts") opens When?, a custom time behind "Other time".
+  // The simple form (build 11): the "Starts" tile opens When?; a custom time is "Other…" (the time picker over the
+  // hidden #scheduled_time, filled directly), and it joins the chips as its own.
   await dialog.locator('#scheduled_date').fill(todayISO());
-  await dialog.getByRole('button', { name: 'Other time' }).click();
   await dialog.locator('#scheduled_time').fill(doseTime ?? '09:00');
+  await expect(dialog.getByTestId('time-chip-custom').or(dialog.getByRole('checkbox', { checked: true }))).toHaveCount(1);
   // A med whose time already passed TODAY (in the circle's timezone) shows an inline
   // "Starts with the next dose" note under the time field - NO prompt (create), so Save
   // proceeds directly. With a future `doseTime` it never shows; it is only expected in the

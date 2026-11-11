@@ -16,6 +16,12 @@ import { AddEventModal } from '../AddEventModal';
 // day (mobile's rule, and this form's recipient-clock end row's). Same zone too: no 23:59 cap, the end carries
 // past midnight as on the phone (a same-zone 22:30 + "2 hrs" saved 89 on web, 120 on mobile; see `presetEndTimeStr`).
 //
+// BUILD 11 (owner 2026-11-10): there are no length chips any more. The same lengths are set as the END on the
+// circle's (recipient's) clock: the "To" tile (appointment and task). The rule under test is unchanged: the span
+// between the two recipient-clock times is the saved length, in full, an end at or before the start carrying past
+// the recipient's midnight. The appointment's first start still brings the default 30; the task's To is OPTIONAL
+// (owner 2026-11-10): it starts at the old default (From + 30, as today's form) and its picker's "No end" clears it.
+//
 // The viewer zone is set per block (process.env.TZ); the recipient zone is the circle's. Date pinned 2027-02-10.
 
 const NOW = new Date('2027-02-10T18:40:00Z');
@@ -100,7 +106,7 @@ function viewerZone(zone: string) {
 const SAME_ZONE_EXPECTED: Record<string, unknown> = {
   '10:00|1 hr': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"10:00","duration_minutes":60,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
   '22:30|2 hrs': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"22:30","duration_minutes":120,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
-  '23:45|null': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"23:45","duration_minutes":30,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
+  '23:45|30 min': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"23:45","duration_minutes":30,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
   '23:59|30 min': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"23:59","duration_minutes":30,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
   'appt|22:30|2 hrs': {"eventId":"appt-1","data":{"event_type":"appointment","title":"Cardiology","scheduled_date":"2027-02-15","scheduled_time":"22:30","duration_minutes":120,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"recurrence_rule":null,"recurrence_end_date":null,"assigned_to":null,"provider_id":null}},
   // ^ An EDIT of a one-off now carries `recurrence_rule: null, recurrence_end_date: null` (mobile's
@@ -112,19 +118,36 @@ const DEN = 'America/Denver';
 const AKL = 'Pacific/Auckland';
 const HNL = 'Pacific/Honolulu';
 type Chip = '30 min' | '1 hr' | '2 hrs';
+const CHIP_MINUTES: Record<Chip, number> = { '30 min': 30, '1 hr': 60, '2 hrs': 120 };
+/** `clock` + the length, on the same (recipient's) clock, wrapping past midnight. */
+function endOnCircleClock(clock: string, chip: Chip): string {
+  const [h, m] = clock.split(':').map(Number);
+  const total = (h * 60 + m + CHIP_MINUTES[chip]) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
 
-/** A NEW task on the recipient's `day` at the recipient's `time` (the simple form's date field + Time tile). */
+/**
+ * A NEW task on the recipient's `day` at the recipient's `time` (the Starts tile + Pick a time / From), and the
+ * length through the To tile; `null` = no end (the task's To cleared with "No end").
+ */
 async function createTask(zone: string, day: string, time: string, chip: Chip | null) {
   useCircleResult.timezone = zone;
   const user = userEvent.setup();
   const view = render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
   await user.type(screen.getByRole('textbox', { name: /^Title/ }), 'Physio');
-  fireEvent.change(screen.getByLabelText(/^Date/), { target: { value: day } });
-  await user.click(screen.getByTestId('task-time-tile'));
-  fireEvent.change(screen.getByLabelText(/^Time/, { selector: 'input' }), { target: { value: time } });
+  fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: day } });
+  await user.click(screen.getByRole('radio', { name: 'Pick a time' }));
+  fireEvent.change(screen.getByLabelText('From', { selector: 'input' }), { target: { value: time } });
+  // The task's To starts at the default length (From + 30 on the circle's clock, as today's form).
+  const to = screen.getByLabelText('To', { selector: 'input' });
+  expect(to).toHaveValue(endOnCircleClock(time, '30 min'));
   if (chip) {
-    await user.click(screen.getByRole('button', { name: /^More details/ }));
-    await user.click(screen.getByRole('radio', { name: chip }));
+    // The length as the To tile (recipient clock); no length chips (build 11).
+    fireEvent.change(to, { target: { value: endOnCircleClock(time, chip) } });
+  } else {
+    // "No end" (the To picker's clear) empties it.
+    fireEvent.change(to, { target: { value: '' } });
+    expect(screen.getByTestId('task-to-tile')).toHaveTextContent(/To\s*No end/);
   }
   mutateCreate.mockClear();
   await user.click(screen.getByTestId('add-event-save'));
@@ -142,17 +165,18 @@ const appt = (over: Partial<CalendarEvent>): CalendarEvent =>
     recurrence_end_date: null, scheduled_date: '2027-02-15', scheduled_time: '18:30:00', ...over,
   }) as CalendarEvent;
 
-/** An EDIT of an appointment stored at the recipient's `day` `time`, tapping `chip`. */
+/** An EDIT of an appointment stored at the recipient's `day` `time`, its To set `chip` later. */
 async function editAppointmentChip(zone: string, day: string, time: string, chip: Chip) {
   useCircleResult.timezone = zone;
   const user = userEvent.setup();
   const view = render(
     <AddEventModal circleId={CIRCLE_ID} event={appt({ scheduled_date: day, scheduled_time: `${time}:00` })} onClose={vi.fn()} />
   );
-  // The length sits in More details on the appointment form (owner 2026-11-08, the task / shift pattern).
-  const more = screen.getByRole('button', { name: /^More details/ });
-  if (more.getAttribute('aria-expanded') !== 'true') await user.click(more);
-  await user.click(screen.getByRole('radio', { name: chip }));
+  // From | To under "What time?" (build 11), both on the circle's clock: the stored 30 minutes show as To.
+  expect(screen.getByLabelText('From', { selector: 'input' })).toHaveValue(time);
+  const to = screen.getByLabelText('To', { selector: 'input' });
+  expect(to).toHaveValue(endOnCircleClock(time, '30 min'));
+  fireEvent.change(to, { target: { value: endOnCircleClock(time, chip) } });
   mutateUpdate.mockClear();
   await user.click(screen.getByTestId('add-event-save'));
   await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
@@ -174,8 +198,13 @@ describe('viewer BEHIND the recipient (Denver viewing Auckland)', () => {
     const body = await createTask(AKL, '2027-09-26', '18:30', '1 hr');
     expect(body).toMatchObject({ scheduled_date: '2027-09-26', scheduled_time: '18:30', duration_minutes: 60 });
   });
-  it('the default length, for a start the viewer sees at 23:45 (Auckland 19:45): the full 30 (was 14)', async () => {
+  it('no To ("No end"), for a start the viewer sees at 23:45 (Auckland 19:45): saves no length at all', async () => {
     const body = await createTask(AKL, '2027-02-15', '19:45', null);
+    expect(body).toMatchObject({ scheduled_time: '19:45' });
+    expect(body).not.toHaveProperty('duration_minutes');
+  });
+  it('To = From + 30 (the old default, set through the To tile) for that start: the full 30 (was 14)', async () => {
+    const body = await createTask(AKL, '2027-02-15', '19:45', '30 min');
     expect(body).toMatchObject({ scheduled_time: '19:45', duration_minutes: 30 });
   });
   it('past the RECIPIENT\'s midnight: carried to the next day (mobile\'s rule), 23:00 + "2 hrs" saves 120', async () => {
@@ -221,11 +250,18 @@ describe('same zone (Denver viewing Denver): the full length, carried past midni
   it.each([
     ['10:00', '1 hr' as Chip],
     ['22:30', '2 hrs' as Chip],
-    ['23:45', null],
+    // The old default (HEAD's untouched 23:45 body), now the user's explicit To = From + 30.
+    ['23:45', '30 min' as Chip],
     ['23:59', '30 min' as Chip],
   ])('task %s + %s', async (time, chip) => {
     const body = await createTask(DEN, '2027-02-15', time, chip);
     expect(JSON.stringify(body)).toBe(JSON.stringify(SAME_ZONE_EXPECTED[`${time}|${chip}`]));
+  });
+  it('task 23:45 with no To ("No end"): the same body without duration_minutes, byte for byte', async () => {
+    const body = await createTask(DEN, '2027-02-15', '23:45', null);
+    const expected = { ...(SAME_ZONE_EXPECTED['23:45|30 min'] as Record<string, unknown>) };
+    delete expected.duration_minutes;
+    expect(JSON.stringify(body)).toBe(JSON.stringify(expected));
   });
   it('same zone 22:30 + "2 hrs" saves 120 (was 89 on web; 120 on mobile)', async () => {
     const body = await createTask(DEN, '2027-02-15', '22:30', '2 hrs');

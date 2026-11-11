@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import { Analytics } from '@/lib/analytics';
@@ -97,8 +97,12 @@ function renderMed(props: Partial<React.ComponentProps<typeof AddEventModal>> = 
     <AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} {...props} />
   );
 }
-const chip = (name: RegExp) =>
-  within(screen.getByRole('radiogroup', { name: 'Common dose times' })).getByRole('radio', { name });
+// Build 11 (owner 2026-11-10): time-first chips ("6:00 PM Evening"), checkboxes on a new medication
+// (multi-select), radios on an edit (one dose).
+const chip = (name: RegExp) => {
+  const group = within(document.getElementById('time-chips') as HTMLElement);
+  return group.queryByRole('checkbox', { name }) ?? group.getByRole('radio', { name });
+};
 
 async function save(user: ReturnType<typeof userEvent.setup>): Promise<Record<string, unknown>> {
   await user.click(screen.getByTestId('add-event-save'));
@@ -163,10 +167,14 @@ describe("the chips are the recipient's clock (mobile parity)", () => {
     const user = userEvent.setup();
     renderMed();
     await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
+    // Multi-select (build 11): switching is un-choosing one chip and choosing another.
     await user.click(chip(/Morning/));
+    await user.click(chip(/Morning/));
+    await user.click(chip(/Bedtime/));
     await user.click(chip(/Bedtime/));
     await user.click(chip(/Midday/));
     expect(chip(/Midday/)).toBeChecked();
+    for (const other of [/Morning/, /Evening/, /Bedtime/]) expect(chip(other)).not.toBeChecked();
     const body = await save(user);
     expect({ date: body.scheduled_date, time: body.scheduled_time }).toEqual({
       date: getDateInTimezone(zone, NOW),
@@ -174,61 +182,68 @@ describe("the chips are the recipient's clock (mobile parity)", () => {
     });
   });
 
-  describe('the conversion line under a lit chip (mobile parity)', () => {
+  describe('the zone caption under the chips (build 11, replaces the conversion line)', () => {
     // Denver viewer. Chips are the recipient's clock, so Evening 6:00 PM New York is 4:00 PM Denver.
-    it('zones differ: a lit chip shows the line with both clocks, described by the chip group', async () => {
+    it('zones differ: a lit chip shows the caption, circle time first, described by the chip group', async () => {
       const user = userEvent.setup();
       renderMed();
       await user.click(chip(/Evening/));
-      const line = screen.getByTestId('time-conversion');
-      // Recipient first, the viewer second, in plain words (owner 1.4.0); same day here.
-      expect(line).toHaveTextContent(/^6:00 PM in New York is 4:00 PM for you \(Denver\)$/);
-      // Read with the chip: the radiogroup is described by the line.
-      expect(screen.getByRole('radiogroup', { name: 'Common dose times' })).toHaveAccessibleDescription(
-        '6:00 PM in New York is 4:00 PM for you (Denver)'
+      const line = screen.getByTestId('time-zone-caption');
+      expect(line).toHaveTextContent(/^New York time · 4:00 PM your time \(Denver\)$/);
+      // Read with the chips: the group is described by the caption.
+      expect(screen.getByRole('group', { name: 'Common dose times' })).toHaveAccessibleDescription(
+        'New York time · 4:00 PM your time (Denver)'
       );
+      // Switching (un-choose Evening, choose Morning) moves the caption with it.
+      await user.click(chip(/Evening/));
       await user.click(chip(/Morning/));
-      expect(screen.getByTestId('time-conversion')).toHaveTextContent(/^8:00 AM in New York is 6:00 AM for you \(Denver\)$/);
+      expect(screen.getByTestId('time-zone-caption')).toHaveTextContent(
+        /^New York time · 6:00 AM your time \(Denver\)$/
+      );
     });
 
-    it('no time yet: no line', () => {
+    it('no time yet: no caption', () => {
       renderMed();
-      expect(screen.queryByTestId('time-conversion')).toBeNull();
+      expect(screen.queryByTestId('time-zone-caption')).toBeNull();
     });
 
-    it('zones equal: a lit chip shows no line', async () => {
+    it('zones equal: a lit chip shows no caption', async () => {
       useCircleResult.timezone = 'America/Denver';
       const user = userEvent.setup();
       renderMed();
       await user.click(chip(/Evening/));
       expect(chip(/Evening/)).toBeChecked();
-      expect(screen.queryByTestId('time-conversion')).toBeNull();
-      expect(screen.queryByText(/ for you /)).toBeNull();
+      expect(screen.queryByTestId('time-zone-caption')).toBeNull();
+      expect(screen.queryByText(/your time/)).toBeNull();
     });
 
-    it('the repeated-hour chip names the stored 9:00 PM (the second 01:00), not 8:00 PM', async () => {
+    it('the repeated-hour chip stays the stored 9:00 PM (the second 01:00), not 8:00 PM', async () => {
       useCircleResult.timezone = 'Pacific/Pago_Pago';
       const user = userEvent.setup();
       renderMed();
       await user.click(chip(/Bedtime/));
-      // 9 PM in Pago Pago is after midnight in Denver: the NEXT day for the viewer (build 8 said "(+1 day)" the wrong way).
-      expect(screen.getByTestId('time-conversion')).toHaveTextContent(
-        /^9:00 PM in Pago Pago is 1:00 AM the next day for you \(Denver\)$/
+      // 9 PM in Pago Pago is 1:00 AM in Denver (the second 01:00 of the fall-back).
+      expect(screen.getByTestId('time-zone-caption')).toHaveTextContent(
+        /^Pago Pago time · 1:00 AM your time \(Denver\)$/
       );
-      expect(screen.getByTestId('time-conversion')).not.toHaveTextContent('8:00 PM');
+      // Read back on the recipient's clock it is still Bedtime: a first-01:00 reading would be 8:00 PM, a
+      // custom chip.
+      expect(chip(/Bedtime/)).toBeChecked();
+      expect(screen.queryByTestId('time-chip-custom')).toBeNull();
     });
 
-    it('Other time shows the live conversion as the field hint (once, not also as the chip line)', async () => {
+    it('a time from Other… joins the ONE caption ("… and …"), never a second line', async () => {
       const user = userEvent.setup();
       renderMed();
       await user.click(chip(/Evening/));
-      await user.click(screen.getByRole('button', { name: 'Other time' }));
-      // The field is typed on the RECIPIENT's clock (owner 1.4.0), and says whose.
-      const time = await screen.findByLabelText(/^Time in New York/);
-      await user.clear(time);
-      await user.type(time, '18:30');
-      expect(screen.getAllByText(/^6:30 PM in New York is 4:30 PM for you/)).toHaveLength(1);
-      expect(screen.queryByTestId('time-conversion')).toBeNull();
+      await user.click(screen.getByTestId('time-chip-other'));
+      // On the RECIPIENT's clock (6:30 PM New York): a new medication's next time, its own chip.
+      fireEvent.change(screen.getByLabelText('Other time', { selector: 'input' }), { target: { value: '18:30' } });
+      expect(screen.getByTestId('time-chip-custom')).toHaveTextContent(/^6:30 PM\s*Other$/);
+      expect(screen.getAllByTestId('time-zone-caption')).toHaveLength(1);
+      expect(screen.getByTestId('time-zone-caption')).toHaveTextContent(
+        /^New York time · 4:00 PM and 4:30 PM your time \(Denver\)$/
+      );
     });
   });
 
@@ -237,7 +252,8 @@ describe("the chips are the recipient's clock (mobile parity)", () => {
     const user = userEvent.setup();
     renderMed();
     await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
-    await user.clear(screen.getByLabelText(/^Starts/));
+    // The Starts tile's hidden input, emptied (what an empty start date is).
+    fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: '' } });
     await user.click(chip(/Evening/));
     expect(chip(/Evening/)).toBeChecked();
     expect(await save(user)).toMatchObject({ scheduled_date: '2026-11-01', scheduled_time: '18:00' });
@@ -253,15 +269,19 @@ describe("the chips are the recipient's clock (mobile parity)", () => {
     expect(firstRunSaved).toHaveBeenCalledWith(expect.objectContaining({ preset: 'evening' }));
   });
 
-  it('+ Another dose starts on the next chip on the recipient clock', async () => {
+  it('a second chosen chip is an extra dose on the recipient clock (what + Another dose did)', async () => {
     mutateCreate.mockResolvedValueOnce({ id: 'p' }).mockResolvedValue({ id: 's' });
     const user = userEvent.setup();
     renderMed();
     await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
     await user.click(chip(/Morning/));
-    await user.click(screen.getByTestId('add-another-dose'));
-    // Midday 12:00 New York, shown in the viewer's field as 10:00 Denver.
-    expect(screen.getByLabelText('Dose 2')).toHaveValue('10:00');
+    await user.click(chip(/Midday/));
+    expect(chip(/Morning/)).toBeChecked();
+    expect(chip(/Midday/)).toBeChecked();
+    // Midday 12:00 New York is 10:00 Denver on the viewer's side (the extra's field value).
+    expect(screen.getByTestId('time-zone-caption')).toHaveTextContent(
+      /^New York time · 6:00 AM and 10:00 AM your time \(Denver\)$/
+    );
     await user.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(2));
     expect(mutateCreate.mock.calls.map((c) => (c[0] as { scheduled_time: string }).scheduled_time)).toEqual(
@@ -301,10 +321,14 @@ describe("the viewer's repeated hour: an untouched edit saves the stored pair ba
     if (type === 'appointment') expect(data.duration_minutes).toBe(60);
   });
 
-  it('the conversion line names the stored 9:00 PM, not 8:00 PM', () => {
+  it('the edit lights the stored 9:00 PM (Bedtime), not 8:00 PM; the caption gives 1:00 AM Denver', () => {
     useCircleResult.timezone = 'Pacific/Pago_Pago';
     render(<AddEventModal circleId={CIRCLE_ID} event={stored('medication')} onClose={vi.fn()} />);
-    expect(screen.getByText(/^9:00 PM in .* is 1:00 AM the next day for you/)).toBeInTheDocument();
+    expect(chip(/Bedtime/)).toBeChecked();
+    expect(screen.queryByTestId('time-chip-custom')).toBeNull();
+    expect(screen.getByTestId('time-zone-caption')).toHaveTextContent(
+      /^Pago Pago time · 1:00 AM your time \(Denver\)$/
+    );
   });
 });
 

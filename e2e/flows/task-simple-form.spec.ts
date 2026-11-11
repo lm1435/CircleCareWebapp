@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { sqlExec } from '../db';
-import { checkA11y, refuseZoneSync } from '../helpers';
+import { checkA11y, fillSimpleDate, fillSimpleTime, refuseZoneSync, unfoldSimpleEnd } from '../helpers';
 import { dbQuery, sqlStr } from '../unhappy';
 import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from '../unhappy/auth-invites/_helpers';
 import { uniqueSuffix } from '../notesFirstClassShared';
@@ -85,15 +85,17 @@ test('create a task on the recipient\'s tomorrow at 7:15 AM their time, weekly, 
   const tomorrow = recipientDay(1);
   try {
     const dialog = await openNewTask(page, a.circleId);
-    // The questions, in the mockup's order.
+    // The questions, in the build-11 order (When? holds Starts | Repeats until and How often?).
     await expect(dialog.getByRole('heading', { level: 3 })).toHaveText([
       'What needs doing?',
-      'When?',
-      'How often?',
+      /^When\?\s*\*$/,
+      'What time?',
       "Who's doing it?",
     ]);
-    // One always-visible Date field, holding the recipient's today.
+    // The Starts tile, holding the recipient's today; Repeats until disabled while it is Once.
     await expect(dialog.locator('#scheduled_date')).toHaveValue(recipientDay(0));
+    await expect(dialog.getByTestId('repeats-until-tile')).toBeDisabled();
+    await expect(dialog.getByTestId('repeats-until-tile')).toContainText("Doesn't repeat");
     await expect(dialog.getByRole('radio', { name: 'Any time' })).toBeChecked();
     await expect(dialog.getByRole('radio', { name: 'Once' })).toBeChecked();
     await expect(dialog.getByRole('radio', { name: 'Anyone' })).toBeChecked();
@@ -101,11 +103,14 @@ test('create a task on the recipient\'s tomorrow at 7:15 AM their time, weekly, 
     await checkA11y(page, 'task-simple-form-new', testInfo);
 
     await dialog.locator('#title').fill(title);
-    await dialog.locator('#scheduled_date').fill(tomorrow);
-    await dialog.getByTestId('task-time-tile').click();
-    await expect(dialog.getByLabel(/^Time in Auckland/)).toBeVisible();
-    await dialog.locator('#scheduled_time').fill('07:15');
-    await expect(dialog.getByRole('button', { name: 'Time, 7:15 AM' })).toBeVisible();
+    await fillSimpleDate(dialog, 'scheduled_date', tomorrow);
+    await fillSimpleTime(dialog, '07:15');
+    // From | To are on the recipient's (Auckland) clock; To starts at the default 30 minutes (optional on a task:
+    // its picker's "No end" clears it).
+    await expect(dialog.getByTestId('task-from-tile')).toContainText('7:15 AM');
+    await expect(dialog.getByTestId('task-to-tile')).toContainText('7:45 AM');
+    // The caption gives the browser's own clock.
+    await expect(dialog.getByTestId('time-zone-caption')).toHaveText(/^Auckland time · .+ your time \(Denver\)$/);
     await dialog.getByRole('radio', { name: 'Every week' }).click();
     await dialog.getByRole('radio', { name: 'Me', exact: true }).click();
     await dialog.getByRole('button', { name: 'Add task' }).click();
@@ -125,8 +130,10 @@ test('create a task on the recipient\'s tomorrow at 7:15 AM their time, weekly, 
     await expect(editor).toBeVisible();
     await expect(editor.locator('#title')).toHaveValue(title, { timeout: 15_000 });
     await expect(editor.locator('#scheduled_date')).toHaveValue(tomorrow);
-    await expect(editor.getByRole('button', { name: 'Time, 7:15 AM' })).toBeVisible();
+    await expect(editor.getByRole('radio', { name: 'Pick a time' })).toBeChecked();
+    await expect(editor.getByTestId('task-from-tile')).toContainText('7:15 AM');
     await expect(editor.locator('#scheduled_time')).toHaveValue('07:15');
+    await expect(editor.locator('#endTime')).toHaveValue('07:45');
     await expect(editor.getByRole('radio', { name: 'Every week' })).toBeChecked();
     await expect(editor.getByRole('radio', { name: 'Me', exact: true })).toBeChecked();
     await checkA11y(page, 'task-simple-form-edit', testInfo);
@@ -168,12 +175,12 @@ test('"2 hrs" on a start that is the BROWSER\'s 10:30 PM saves the full 120 minu
   try {
     const dialog = await openNewTask(page, a.circleId);
     await dialog.locator('#title').fill(title);
-    await dialog.locator('#scheduled_date').fill(tomorrow);
-    await dialog.getByTestId('task-time-tile').click();
-    await dialog.locator('#scheduled_time').fill(start);
-    await dialog.getByRole('button', { name: /^More details/ }).click();
-    await dialog.getByRole('radio', { name: '2 hrs' }).click();
-    await expect(dialog.getByRole('radio', { name: '2 hrs' })).toBeChecked();
+    await fillSimpleDate(dialog, 'scheduled_date', tomorrow);
+    await fillSimpleTime(dialog, start);
+    // No length chips (build 11): "2 hrs" is the To tile two hours after From (the recipient clock).
+    const endTotal = (Number(start.slice(0, 2)) * 60 + Number(start.slice(3)) + 120) % 1440;
+    const end = `${String(Math.floor(endTotal / 60)).padStart(2, '0')}:${String(endTotal % 60).padStart(2, '0')}`;
+    await (await unfoldSimpleEnd(dialog)).fill(end);
     await dialog.getByRole('button', { name: 'Add task' }).click();
     await expect(dialog).toBeHidden({ timeout: 20_000 });
 
@@ -205,12 +212,10 @@ test('same zone: 10:30 PM + "2 hrs" saves the full 120 minutes, carried past mid
   try {
     const dialog = await openNewTask(page, a.circleId);
     await dialog.locator('#title').fill(title);
-    await dialog.locator('#scheduled_date').fill(tomorrow);
-    await dialog.getByTestId('task-time-tile').click();
-    await dialog.locator('#scheduled_time').fill('22:30');
-    await dialog.getByRole('button', { name: /^More details/ }).click();
-    await dialog.getByRole('radio', { name: '2 hrs' }).click();
-    await expect(dialog.getByRole('radio', { name: '2 hrs' })).toBeChecked();
+    await fillSimpleDate(dialog, 'scheduled_date', tomorrow);
+    await fillSimpleTime(dialog, '22:30');
+    // No length chips (build 11): the To tile, two hours on, past midnight.
+    await (await unfoldSimpleEnd(dialog)).fill('00:30');
     await dialog.getByRole('button', { name: 'Add task' }).click();
     await expect(dialog).toBeHidden({ timeout: 20_000 });
 
@@ -233,6 +238,41 @@ test('same zone: 10:30 PM + "2 hrs" saves the full 120 minutes, carried past mid
   }
 });
 
+test('the task To is optional: its × clears the default to "No end" and the task saves without a length', async ({
+  page,
+  context,
+  request,
+  baseURL,
+}) => {
+  const a = await arrange(request, 'tasknoend');
+  await cookieLogin(context, a.owner, baseURL);
+  const title = `ZZ_E2E_TASK_NOEND_${uniqueSuffix()}`;
+  const tomorrow = recipientDay(1);
+  try {
+    const dialog = await openNewTask(page, a.circleId);
+    await dialog.locator('#title').fill(title);
+    await fillSimpleDate(dialog, 'scheduled_date', tomorrow);
+    await fillSimpleTime(dialog, '09:00');
+    const to = dialog.getByTestId('task-to-tile');
+    await expect(to).toContainText('9:30 AM');
+    // Clear in the tile (Fix13): its own × button, 44px.
+    const clear = dialog.getByRole('button', { name: 'Clear end time' });
+    const box = await clear.boundingBox();
+    expect(box && box.width >= 44 && box.height >= 44).toBe(true);
+    await clear.click();
+    await expect(to).toContainText('No end');
+    await expect(clear).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Add task' }).click();
+    await expect(dialog).toBeHidden({ timeout: 20_000 });
+    await expect.poll(() => taskRows(a.circleId, title).length, { timeout: 15_000 }).toBe(1);
+    const [row] = taskRows(a.circleId, title);
+    expect(row.scheduled_time?.slice(0, 5)).toBe('09:00');
+    expect(row.duration_minutes).toBeNull();
+  } finally {
+    sqlExec(`delete from calendar_events where circle_id = ${sqlStr(a.circleId)}::uuid and title = ${sqlStr(title)};`);
+  }
+});
+
 test.describe('at phone width', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
@@ -245,7 +285,9 @@ test.describe('at phone width', () => {
     const a = await arrange(request, 'tasksimple375');
     await cookieLogin(context, a.owner, baseURL);
     const dialog = await openNewTask(page, a.circleId);
-    for (const id of ['task-time-row']) {
+    // What time? (Pick a time | Any time), the date tiles and the How often grid.
+    await dialog.getByRole('radio', { name: 'Pick a time' }).click();
+    for (const id of ['when-date-tiles', 'task-from-to']) {
       const row = dialog.getByTestId(id);
       const box = await row.boundingBox();
       expect(box).not.toBeNull();

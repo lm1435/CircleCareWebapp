@@ -415,34 +415,43 @@ export async function openCalendarNew(
 }
 
 /**
- * Set a simple form's time: the medication form's "Other time" tile, the appointment / task "Time" tile,
- * open the `#scheduled_time` field (a no-op once it is open), then fill it.
+ * Set a simple form's time (build 11, owner 2026-11-10): the medication's "Other…", the appointment's From and
+ * the task's At are value tiles that ARE the time picker, over a visually hidden `#scheduled_time` that still
+ * carries the value (PickerTile). The appointment / task tiles show after "Pick a time"; then fill the hidden
+ * input. Times on these forms are the CIRCLE's clock (as the medication chips always were).
  */
 export async function fillSimpleTime(dialog: Locator, time: string): Promise<void> {
   const field = dialog.locator('#scheduled_time');
-  if (!(await field.isVisible())) {
-    // A simple appointment that already has a time shows Starts | Ends tiles (owner 2026-11-10): unfold Starts.
-    const startTile = dialog.getByTestId('appt-start-tile');
-    if (await startTile.isVisible()) await startTile.click();
-    else
-      await dialog
-        .getByTestId('time-chip-other')
-        .or(dialog.getByTestId('appt-time-tile'))
-        .or(dialog.getByTestId('task-time-tile'))
-        .first()
-        .click();
-  }
+  if ((await field.count()) === 0) await dialog.getByRole('radio', { name: 'Pick a time' }).click();
   await field.fill(time);
 }
 
+/** A simple form's day tile ("Starts" / "Repeats until"): fill the hidden native input behind the tile. */
+export async function fillSimpleDate(dialog: Locator, id: 'scheduled_date' | 'recurrence_end_date', day: string): Promise<void> {
+  await dialog.locator(`#${id}`).fill(day);
+}
+
 /**
- * The simple appointment's Starts | Ends sit under the time choice as tiles that unfold their time fields
- * (owner 2026-11-10, the shift form's pattern). Unfolds the end field; a no-op where `#endTime` already shows
- * (the task form's More details, the full layout).
+ * The simple forms' Reminders card is the summary row's accordion above More details (owner 2026-11-10):
+ * expand it (a no-op once it is open).
+ */
+export async function expandReminders(dialog: Locator): Promise<void> {
+  const row = dialog.getByTestId('reminders-summary-row');
+  if ((await row.getAttribute('aria-expanded')) !== 'true') await row.click();
+  await expect(row).toHaveAttribute('aria-expanded', 'true');
+}
+
+/**
+ * The end time: the simple appointment's / task's To tile (a hidden `#endTime` under the time picker, shown with
+ * "Pick a time"; the task's To is optional), or the full layout's field (which may sit in a folded More details).
+ * Returns the input.
  */
 export async function unfoldSimpleEnd(dialog: Locator): Promise<Locator> {
   const field = dialog.locator('#endTime');
-  const tile = dialog.getByTestId('appt-end-tile');
-  if (!(await field.isVisible()) && (await tile.isVisible())) await tile.click();
+  // The task's field sits in the folded More details (mounted, hidden) until it is opened.
+  if (!(await field.isVisible())) {
+    const more = dialog.getByRole('button', { name: /^More details/ });
+    if ((await more.count()) > 0 && (await more.getAttribute('aria-expanded')) !== 'true') await more.click();
+  }
   return field;
 }

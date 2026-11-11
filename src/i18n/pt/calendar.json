@@ -316,7 +316,6 @@
     },
     "dualTimezoneHint": "Seu horário / horário de {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Seu horário / horário da pessoa ({{timezone}})",
-    "timeInZone": "Hora em {{zone}}",
     "quietHoursDoseWarning": "Este horário está dentro do horário de silêncio, então nenhum lembrete será enviado nele. Você pode alterar o horário de silêncio em Configurações, na seção Horário de silêncio.",
     "pastTimeInline": "Começa na próxima dose. Este horário já passou hoje.",
     "conversion": {
@@ -364,7 +363,6 @@
       "whoIsGoing": "Quem vai?",
       "moreDetails": "Mais detalhes",
       "moreDetailsSummary": "Reposição, farmácia, médico que receitou, instruções",
-      "startDate": "Data de início",
       "starts": "Começa",
       "addMedication": "Adicionar medicamento",
       "addAppointment": "Adicionar consulta",
@@ -373,8 +371,6 @@
       "everyDay": "Todos os dias",
       "someDays": "Alguns dias",
       "whenNeeded": "Quando necessário",
-      "anotherDose": "+ Outra dose",
-      "removeDose": "Remover a dose {{number}}",
       "new": {
         "task": "Nova tarefa"
       },
@@ -388,23 +384,37 @@
       "everyWeek": "Toda semana",
       "whoDoingIt": "Quem vai fazer?",
       "me": "Eu",
-      "taskMoreHint": "Detalhes, data de término",
+      "taskMoreHint": "Detalhes",
       "apptMoreHint": "Médico, local, detalhes",
       "custom": "Personalizado…",
       "customHeading": "Personalizado",
       "everyOtherDay": "Em dias alternados",
       "monthly": "Mensalmente",
       "yearly": "Anualmente",
-      "daysOnOff": "Dias sim / dias não"
+      "daysOnOff": "Dias sim / dias não",
+      "repeatsUntil": "Repete até",
+      "never": "Nunca",
+      "doesntRepeat": "Não se repete",
+      "whatTime": "A que horas?",
+      "from": "De",
+      "to": "Até",
+      "otherEllipsis": "Outro…",
+      "zoneCaption": "Horário de {{circleZone}} · {{times}} seu horário ({{yourZone}})",
+      "listAnd": "e",
+      "noEnd": "Sem fim",
+      "clearRepeatEnd": "Limpar fim da repetição",
+      "clearEndTime": "Limpar horário de término",
+      "changeDoseTime": "Alterar horário da dose: {{time}}",
+      "removeDoseTime": "Remover dose: {{time}}"
     },
     "timeChips": {
       "label": "Horários comuns",
       "morning": "Manhã",
       "midday": "Meio-dia",
       "evening": "Noite",
-      "bedtime": "Hora de dormir"
+      "bedtime": "Hora de dormir",
+      "other": "Outro"
     },
-    "doseNumber": "Dose {{number}}",
     "firstRun": {
       "eyebrow": "PRIMEIRO MEDICAMENTO DE {{name}}",
       "eyebrowSelf": "SEU PRIMEIRO MEDICAMENTO",

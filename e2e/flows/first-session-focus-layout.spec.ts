@@ -200,7 +200,7 @@ test.describe('Save is always visible on the add form', () => {
       if (item === 'Medication') {
         // a medication also needs its time; Save stays solid either way
         await expect(save).not.toHaveAttribute('aria-disabled', 'true');
-        await dialog.getByRole('radio', { name: /Morning/ }).click();
+        await dialog.getByRole('checkbox', { name: /Morning$/ }).click();
       }
       await expect(save).toBeEnabled();
       await expect(save).toBeInViewport({ ratio: 1 });
@@ -272,8 +272,8 @@ test.describe('Save is solid; pressing it with a field missing takes you to that
     await expect(dialog.locator('#medication_name')).not.toHaveAttribute('aria-invalid', 'true');
     await expect(dialog.getByText('Medications need a scheduled time.')).toHaveCount(0);
     await save.click();
-    // The simple form has no time input until "Other time": focus goes to the first time chip.
-    await expect(dialog.getByRole('radio', { name: /Morning/ })).toBeFocused();
+    // The simple form's time is the chips (and "Other…", a picker): focus goes to the first time chip.
+    await expect(dialog.getByRole('checkbox', { name: /Morning$/ })).toBeFocused();
     await expect(dialog.getByText('Medications need a scheduled time.')).toBeVisible();
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();

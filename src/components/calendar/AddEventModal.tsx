@@ -18,7 +18,6 @@ import {
   derivedPillsPerDay,
   isCountableForm,
   medicationDetailsFromEvent,
-  medicationDetailsOpenMore,
   medicationDetailsPayload,
   type MedicationDetailsHydration,
   type MedicationDetailsState,
@@ -56,18 +55,14 @@ import {
   type EntryFormStep,
   type TimeChipId,
 } from '@/lib/analytics';
-import { MED_TIME_CHIPS, chipForTime } from '@/lib/medTimeOfDay';
-import {
-  simpleAppointmentMoreOpen,
-  simpleMedicationMoreOpen,
-  simpleTaskMoreOpen,
-} from '@/utils/simpleEditDisclosure';
+import { chipForTime } from '@/lib/medTimeOfDay';
 import { useAuthStore } from '@/store/authStore';
 import { useLargeTextLayoutEvent } from '@/lib/largeText';
 import { TimeChips } from './TimeChips';
+import { PickerTile } from '@/components/ui/PickerTile';
+import { VALUE_TILE_LABEL } from '@/components/ui/ChoiceTileButton';
 import { DisclosureRow } from './DisclosureRow';
 import { RemindersSummaryRow } from './RemindersSummaryRow';
-import { formatShiftDuration } from '@/components/shifts/shiftUtils';
 import { prefersReducedMotion } from '@/components/ui/motion';
 import { reminderSummary } from '@/lib/reminderSummary';
 import { APPOINTMENT_TITLE_KEYS, MED_SCHEDULE_PRESETS, TASK_TITLE_KEYS } from '@/lib/quickPicks';
@@ -85,7 +80,17 @@ import {
   presetEndTimeStr,
   spanMinutes,
 } from '@/lib/eventForm';
-import { INPUT_ERROR } from '@/components/ui/inputStyles';
+import {
+  CHIP_UNSELECTED,
+  CHOICE_TILE_BOX,
+  CHOICE_TILE_LABEL,
+  INPUT_ERROR,
+  VALUE_TILE_CLEARABLE_BODY,
+  VALUE_TILE_CLEARABLE_BOX,
+  VALUE_TILE_CLEAR_BUTTON,
+  choiceTileClass,
+  choiceTileSubClass,
+} from '@/components/ui/inputStyles';
 import {
   Button,
   Card,
@@ -97,6 +102,7 @@ import {
   Eyebrow,
   Icon,
   Modal,
+  RequiredMarker,
   Select,
   Spinner,
   Text,
@@ -314,6 +320,8 @@ function parseRecurrence(
 // group needs stable targets for aria-labelledby / aria-describedby.
 /** The Reminders fieldset the summary row scrolls to (stable for tests and the e2e spec). */
 const REMINDERS_FIELDSET_ID = 'reminders-fieldset';
+/** The simple forms' Reminders accordion panel (the summary row's aria-controls target). */
+const REMINDERS_PANEL_ID = 'reminders-summary-panel';
 const EARLIER_REMINDERS_LABEL_ID = 'reminders-earlier-label';
 const EARLIER_REMINDERS_WARNING_ID = 'reminders-earlier-warning';
 const FOLLOW_UP_ONLY_TITLE_ID = 'reminders-follow-up-only-title';
@@ -339,6 +347,23 @@ const FOCUS_ORDER = [
   RECURRENCE_DAYS_ID,
   'recurrence_end_date',
 ];
+/**
+ * The simple forms' fields drawn as PickerTiles (owner 2026-11-10): the hidden input keeps the field id, the
+ * tile button is `${id}-tile` and is what an error focuses (the input is out of the tab order).
+ */
+const PICKER_TILE_FIELDS = new Set(['scheduled_date', 'recurrence_end_date', 'scheduled_time', 'endTime']);
+const SIMPLE_FOCUS_ORDER = FOCUS_ORDER.flatMap((id) => (PICKER_TILE_FIELDS.has(id) ? [`${id}-tile`, id] : [id]));
+/** A refused simple save's errors, keyed where focus should land: the first chip, a tile. */
+function simpleFocusErrors(
+  errors: FieldErrors,
+  kind: 'medication' | 'appointment' | 'task'
+): FieldErrors {
+  const mapped: FieldErrors = { ...errors };
+  // An unset medication time points at the first chip ("Other…" is the custom-time picker).
+  if (kind === 'medication' && errors.scheduled_time) mapped['time-chips-morning'] = errors.scheduled_time;
+  for (const id of PICKER_TILE_FIELDS) if (errors[id]) mapped[`${id}-tile`] = errors[id];
+  return mapped;
+}
 const RECURRENCE_DAYS_LOCK_ID = 'recurrence_days-lock';
 /** The Repeat select's value for a stored rule no option names (never saved). */
 const UNSHOWN_RULE_VALUE = '__stored_rule__';
@@ -771,7 +796,6 @@ function AddEventForm({
         setMedHydration(hydrated.hydration);
         setStoredPhotoUrl(photoUrl);
         setMedDetailsLoad('ready');
-        if (medicationDetailsOpenMore(details)) setMoreOpen(true);
       })
       .catch(() => {
         if (!cancelled) setMedDetailsLoad('error');
@@ -1027,61 +1051,50 @@ function AddEventForm({
     simpleKind === 'appointment' ? 'appt_form' : 'med_form',
     simpleKind === 'medication' || simpleKind === 'appointment'
   );
-  // The simple forms' disclosure state. The panels stay mounted; these only show them.
-  // On an edit a saved value behind one opens it (utils/simpleEditDisclosure); the
-  // repeat half is re-checked once the series root lands (the effect below).
-  const [moreOpen, setMoreOpen] = useState(
-    () =>
-      isEditing &&
-      ((simpleKind === 'medication' && simpleMedicationMoreOpen(event)) ||
-        (simpleKind === 'appointment' && simpleAppointmentMoreOpen(event, DEFAULT_DURATION_MINUTES)) ||
-        (simpleKind === 'task' && simpleTaskMoreOpen(event, DEFAULT_DURATION_MINUTES)))
-  );
-  // The "Reminders" summary row's tap (above More details): a counter, so the scroll + focus runs in an
-  // effect AFTER the commit that unhides the panel (a hidden fieldset has no box to scroll to).
-  // `time` is the pick-time variant's target (a task / appointment with no time yet): the form's Time tile.
-  const [remindersJump, setRemindersJump] = useState<{ n: number; target: 'reminders' | 'time' } | null>(
-    null
-  );
+  // The simple forms' "More details": collapsed by default, on new AND edit (owner 2026-11-10, build 11: edit is
+  // new, pre-filled). The panel stays mounted; this only shows it. A refused save that errors a field inside it
+  // opens it (`revealErrorFields`), and so does a doctor preset filling the location.
+  const [moreOpen, setMoreOpen] = useState(false);
+  // The simple forms' "Reminders" row (owner 2026-11-10, second pass): an accordion. Tapping it expands the
+  // full Reminders card inline, directly under the row, and tapping again folds it; it never routes the
+  // user down the page. Collapsed by default on new and edit (no save error lives inside the card: the
+  // validator never errors a reminder field, so nothing has to force it open).
+  const [remindersOpen, setRemindersOpen] = useState(false);
+  // THE NUDGE (owner 2026-11-10, build 11): after an expand, the card's first control (the "Enable
+  // notifications" switch) is brought into view with `block: 'nearest'`, so the page moves only by what is
+  // hidden (behind the pinned footer or below the dialog's fold), never when it already shows, and never past
+  // the row (it sits directly above the switch). Instant under Reduce Motion. A counter: it runs after the
+  // commit that unhides the panel (a hidden element has no box to scroll to). Focus stays on the row.
+  const [remindersNudge, setRemindersNudge] = useState(0);
   useEffect(() => {
-    if (!remindersJump) return;
-    if (remindersJump.target === 'reminders') {
-      document
-        .getElementById(REMINDERS_FIELDSET_ID)
-        ?.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
-      // The fieldset's first control, the master switch, so a keyboard / screen-reader user lands IN it.
-      document.getElementById('notifications_enabled')?.focus({ preventScroll: true });
-      return;
-    }
-    const tile = document.querySelector<HTMLElement>(
-      '[data-testid="task-time-tile"], [data-testid="appt-time-tile"]'
+    if (!remindersNudge) return;
+    document
+      .getElementById('notifications_enabled')
+      ?.scrollIntoView?.({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  }, [remindersNudge]);
+  // The pick-time variant's tap (a task / appointment with no time yet): a counter, so the scroll + focus to the
+  // form's "Pick a time" choice runs after the commit.
+  const [timeJump, setTimeJump] = useState(0);
+  useEffect(() => {
+    if (!timeJump) return;
+    const target = document.querySelector<HTMLElement>(
+      '#task-time [role="radio"], #appt-time [role="radio"]'
     );
-    tile?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
-    tile?.focus({ preventScroll: true });
-  }, [remindersJump]);
-  const [otherTimeOpen, setOtherTimeOpen] = useState(false);
-  // The task / appointment forms' "Time" tile (reveals the time field) and every simple form's "Custom…"
+    target?.scrollIntoView?.({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    target?.focus({ preventScroll: true });
+  }, [timeJump]);
+  // The medication's "Other…" time picker: which time it is setting. `primary` = the form's own time (an edit, or
+  // a new medication with no time yet); a number = that extra dose (a new medication's next time). Set when the
+  // picker opens; `null` = decide on the first pick.
+  const [otherTarget, setOtherTarget] = useState<'primary' | number | null>(null);
+  // The task / appointment forms' "Pick a time" (reveals the time tiles) and every simple form's "Custom…"
   // (reveals the rarer repeat rules). One form is mounted at a time, so they share the state.
   const [pickTimeOpen, setPickTimeOpen] = useState(false);
-  // The simple appointment's Starts / Ends tiles (the shift form's pattern): which time field is unfolded.
-  const [apptTimeOpen, setApptTimeOpen] = useState({ start: false, end: false });
   const [taskCustomOpen, setTaskCustomOpen] = useState(false);
   // "+ Another dose" (NEW medication only): extra dose times, viewer-frame HH:MM. Each one is saved
   // as its OWN medication row after the primary (the same sequence as mobile's AddEventScreen and
   // the first-run wizard), pointing at the primary's bottle through `refill_group_id`.
   const [extraTimes, setExtraTimes] = useState<string[]>([]);
-  // The schedule (rule, days, end date) is the series ROOT's, which may land after mount:
-  // once it does, a repeat stored there opens its disclosure too. Once per form, opening only.
-  const editDisclosureRootRef = useRef(false);
-  useEffect(() => {
-    if (!isEditing || simpleKind === null || !scheduleSource || editDisclosureRootRef.current) return;
-    editDisclosureRootRef.current = true;
-    const source = { ...event, ...scheduleSource };
-    if (simpleKind === 'medication' && simpleMedicationMoreOpen(source)) setMoreOpen(true);
-    if (simpleKind === 'appointment' && simpleAppointmentMoreOpen(source, DEFAULT_DURATION_MINUTES)) setMoreOpen(true);
-    if (simpleKind === 'task' && simpleTaskMoreOpen(source, DEFAULT_DURATION_MINUTES)) setMoreOpen(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the root resolves
-  }, [scheduleSource]);
   /** The medication has NO schedule: no date, time, repeat, end date or reminders. */
   const isAsNeeded = isMedication && recurrence === 'as_needed';
   const isPending = createEvent.isPending || updateEvent.isPending;
@@ -1431,13 +1444,6 @@ function AddEventForm({
   }
   /** The time chip the form's time sits on, or null ("Other time" / no time). */
   const litChip = chipForTime(recipientClock);
-  // The simple medication form's time field ("Other time"). Once it is showing (an edit's stored
-  // custom time, a hand-off's), it stays: typing a chip's time into it must not make the field
-  // vanish under the cursor. (Above the `!canEdit` return: a hook.)
-  const customTimeShown = timeStr !== '' && litChip === null;
-  useEffect(() => {
-    if (customTimeShown) setOtherTimeOpen(true);
-  }, [customTimeShown]);
   /**
    * CREATE only: this medication's start rolls to the next dose (the backend does it,
    * `medicationStartRoll.ts`) because its time already passed today in the recipient's zone.
@@ -1488,6 +1494,13 @@ function AddEventForm({
     recurrenceEndDate && dateStr && recipientStartDate
       ? addDays(recipientStartDate, daysBetween(dateStr, recurrenceEndDate))
       : recurrenceEndDate;
+  /** The repeat end (when the series repeats at all) falls before its start: refused at the "Repeats until" tile. */
+  const repeatEndBeforeStart =
+    recurrence !== 'none' &&
+    recurrence !== 'as_needed' &&
+    recurrenceEndDate !== '' &&
+    dateStr !== '' &&
+    recurrenceEndDate < dateStr;
   function chooseRecipientRepeatEnd(next: string): void {
     setRecurrenceEndDate(
       next && dateStr && recipientStartDate ? addDays(dateStr, daysBetween(recipientStartDate, next)) : next
@@ -1635,10 +1648,17 @@ function AddEventForm({
     if (recurrence === 'days_of_week' && selectedDays.length === 0) {
       fieldErrors[RECURRENCE_DAYS_ID] = t('addEvent.daysOfWeek.noneSelected');
     }
+    // An end before the start (owner 2026-11-10, build 11: said at the "Repeats until" tile, not by the server's
+    // RECURRENCE_END_BEFORE_START after a round trip). Only refuses what the server refuses: both days are the
+    // form's viewer-side pair, whose span the save keeps, so "end < start" here is "end < start" there.
+    if (repeatEndBeforeStart) {
+      fieldErrors.recurrence_end_date = t('shifts:validation.repeatEndBeforeStart');
+    }
     if (!isMedication) {
       if (timeStr && !endTimeStr) {
-        // PK21: an EDIT of a row stored without a duration saves with no end.
-        if (!isEditingWithoutDuration) {
+        // PK21: an EDIT of a row stored without a duration saves with no end. The simple task's end is optional
+        // (build 11, "No end"): it saves without one.
+        if (!isEditingWithoutDuration && simpleKind !== 'task') {
           fieldErrors.endTime = t('addEvent.validation.endTimeRequired');
         }
       } else if (timeStr && endTimeStr) {
@@ -2095,13 +2115,14 @@ function AddEventForm({
     if (simpleKind === null) return false;
     let revealed = false;
     if (simpleKind === 'medication') {
-      const hidden = ['description', 'recurrence_end_date', 'alert_days_before'];
+      // The repeat end is the "Repeats until" tile in When? now (owner 2026-11-10), not in More details.
+      const hidden = ['description', 'alert_days_before'];
       if (hidden.some((k) => fieldErrors[k]) && !moreOpen) {
         setMoreOpen(true);
         revealed = true;
       }
     } else if (simpleKind === 'task') {
-      const hidden = ['description', 'endTime', 'recurrence_rule', 'recurrence_end_date'];
+      const hidden = ['description', 'endTime', 'recurrence_rule'];
       if (hidden.some((k) => fieldErrors[k]) && !moreOpen) {
         setMoreOpen(true);
         revealed = true;
@@ -2111,22 +2132,14 @@ function AddEventForm({
         revealed = true;
       }
     } else {
-      // Ends lives with Starts under the time choice now (not in More details).
-      const hidden = ['provider_id', 'location', 'description', 'recurrence_end_date'];
+      // From | To live under "What time?" and the repeat end in When? (owner 2026-11-10), not in More details.
+      const hidden = ['provider_id', 'location', 'description'];
       if (hidden.some((k) => fieldErrors[k]) && !moreOpen) {
         setMoreOpen(true);
         revealed = true;
       }
-      if (fieldErrors.scheduled_time && !showTaskTimeField) {
+      if ((fieldErrors.scheduled_time || fieldErrors.endTime) && !showTaskTimeField) {
         setPickTimeOpen(true);
-        revealed = true;
-      }
-      if (fieldErrors.scheduled_time && !apptTimeOpen.start) {
-        setApptTimeOpen((prev) => ({ ...prev, start: true }));
-        revealed = true;
-      }
-      if (fieldErrors.endTime && !apptTimeOpen.end) {
-        setApptTimeOpen((prev) => ({ ...prev, end: true }));
         revealed = true;
       }
     }
@@ -2165,14 +2178,9 @@ function AddEventForm({
       // fields (description, location, dosage, recurrence) (WCAG SC 3.3.1).
       const revealed = revealErrorFields(built.errors);
       const focusErrors = (): void =>
-        focusFirstError(
-          // The simple medication form has no time input until "Other time" is
-          // opened: an unset time points at the first chip instead.
-          simpleKind === 'medication' && built.errors.scheduled_time && !otherTimeOpen
-            ? { ...built.errors, 'time-chips-morning': built.errors.scheduled_time }
-            : built.errors,
-          FOCUS_ORDER
-        );
+        simpleKind === null
+          ? focusFirstError(built.errors, FOCUS_ORDER)
+          : focusFirstError(simpleFocusErrors(built.errors, simpleKind), SIMPLE_FOCUS_ORDER);
       if (revealed) setTimeout(focusErrors, 0);
       else focusErrors();
       return;
@@ -2306,11 +2314,14 @@ function AddEventForm({
         ? titleFieldId
         : missingField === 'date'
           ? 'scheduled_date'
-          : simpleKind === 'medication' && !otherTimeOpen && !timeStr
+          : simpleKind === 'medication'
             ? 'time-chips-morning'
             : 'scheduled_time';
     const focusIt = (): void => {
-      const el = document.getElementById(id);
+      // The simple forms' day and time are tiles over hidden inputs: the TILE takes focus (see PickerTile).
+      const el =
+        (simpleKind !== null && PICKER_TILE_FIELDS.has(id) ? document.getElementById(`${id}-tile`) : null) ??
+        document.getElementById(id);
       if (!el) return;
       el.scrollIntoView?.({ block: 'center' });
       el.focus({ preventScroll: true });
@@ -2482,54 +2493,31 @@ function AddEventForm({
     </>
   );
 
-  // ── The "Reminders" summary row (owner 2026-11-10, mobile parity) ──────────────────────────────────
-  // Directly ABOVE each simple form's More details, always visible, live from the card's own state.
-  // As-needed medications have no reminders at all: no row. A task / appointment without a time cannot
-  // remind yet: the muted pick-time row, which goes to the time choice instead of More details.
-  const simpleReminderSummary = reminderSummary({
-    eventType,
-    notificationsEnabled,
-    reminderAtDue,
-    reminder24h,
-    reminder1h,
-    reminder30m,
-    reminder15m,
-  });
-  const remindersSummaryRow =
-    simpleKind === null || isAsNeeded ? null : remindersApply(eventType, timeStr) ? (
-      <RemindersSummaryRow
-        variant="summary"
-        summary={simpleReminderSummary}
-        onPress={() => {
-          Analytics.remindersSummaryOpened(simpleKind, simpleReminderSummary.state, moreOpen);
-          // Opens More details if closed; NEVER closes it.
-          if (!moreOpen) setMoreOpen(true);
-          setRemindersJump((prev) => ({ n: (prev?.n ?? 0) + 1, target: 'reminders' }));
-        }}
-      />
-    ) : (
-      <RemindersSummaryRow
-        variant="pickTime"
-        onPress={() => setRemindersJump((prev) => ({ n: (prev?.n ?? 0) + 1, target: 'time' }))}
-      />
-    );
-
-  const reminderBlock = (
+  const asNeededNoRemindersNote = isAsNeeded ? (
+    <p className="m-0 text-sm text-ink-3" data-testid="as-needed-no-reminders">
+      {t('addEvent.asNeeded.remindersNone')}
+    </p>
+  ) : null;
+  /**
+   * The Reminders card. `inRow`: the simple forms' accordion under the summary row, which already says
+   * "Reminders" — so the legend is visually hidden there but STAYS the fieldset's first child, keeping every
+   * control in it named by the group ("Reminders").
+   */
+  const reminderBlockFor = (inRow: boolean) => (
     <>
         {/* Reminders — only once there is a time to fire against. */}
-        {isAsNeeded && (
-          <p className="m-0 text-sm text-ink-3" data-testid="as-needed-no-reminders">
-            {t('addEvent.asNeeded.remindersNone')}
-          </p>
-        )}
+        {!inRow && asNeededNoRemindersNote}
         {remindersApply(eventType, timeStr) && !isAsNeeded && (
         <fieldset
           id={REMINDERS_FIELDSET_ID}
           data-testid="reminders-fieldset"
-          // Clear of the dialog's sticky header when the summary row scrolls it to the top.
-          className="m-0 flex scroll-mt-4 flex-col gap-3 border-0 p-0"
+          className="m-0 flex flex-col gap-3 border-0 p-0"
         >
-          <Text variant="sectionTitle" as="legend" className="p-0 text-base!">
+          <Text
+            variant="sectionTitle"
+            as="legend"
+            className={inRow ? 'sr-only' : 'p-0 text-base!'}
+          >
             {t('addEvent.reminders.section')}
           </Text>
           {/* WHERE THESE ACTUALLY GO.
@@ -2722,20 +2710,51 @@ function AddEventForm({
         )}
     </>
   );
+  /** The full layout's Reminders, where it always was. */
+  const reminderBlock = reminderBlockFor(false);
+
+  // ── The "Reminders" summary row (owner 2026-11-10, mobile parity) ──────────────────────────────────
+  // Directly ABOVE each simple form's More details, always visible, live from the card's own state. An
+  // accordion: tapping it expands the full Reminders card inline under it (and folds it again), outside More
+  // details. As-needed medications have no reminders at all: no row. A task / appointment without a time cannot
+  // remind yet: the muted pick-time row, which goes to the time choice and expands nothing.
+  const simpleReminderSummary = reminderSummary({
+    eventType,
+    notificationsEnabled,
+    reminderAtDue,
+    reminder24h,
+    reminder1h,
+    reminder30m,
+    reminder15m,
+  });
+  const remindersSummaryRow =
+    simpleKind === null || isAsNeeded ? null : remindersApply(eventType, timeStr) ? (
+      <RemindersSummaryRow
+        variant="summary"
+        summary={simpleReminderSummary}
+        expanded={remindersOpen}
+        panelId={REMINDERS_PANEL_ID}
+        onPress={() => {
+          Analytics.remindersSummaryToggled(
+            simpleKind,
+            simpleReminderSummary.state,
+            remindersOpen ? 'collapse' : 'expand'
+          );
+          if (!remindersOpen) setRemindersNudge((n) => n + 1);
+          setRemindersOpen(!remindersOpen);
+        }}
+      >
+        {reminderBlockFor(true)}
+      </RemindersSummaryRow>
+    ) : (
+      <RemindersSummaryRow variant="pickTime" onPress={() => setTimeJump((n) => n + 1)} />
+    );
 
   // SIMPLE-UI FIELDS (new medication / new appointment): defined below.
   const durationOptions = DURATION_PRESETS.map((mins) => ({
     value: String(mins),
     label: t(`addEvent.durations.${mins}`),
   }));
-
-  /** The time field's change rules (shared by the full form's inline handler's twin). */
-  function changeTime(next: string): void {
-    datesTouched.current = true;
-    setTimeStr(next);
-    clearError('scheduled_time');
-    followEndTime(timeStr, next);
-  }
 
   /**
    * The end time a NEW viewer-frame start brings (the full form's time-field rules, verbatim): no start, no
@@ -2750,26 +2769,23 @@ function AddEventForm({
       if (shifted) setEndTimeStr(shifted);
       clearError('endTime');
     } else if (!isMedication && !endTimeStr && !isEditingWithoutDuration) {
+      // A first start gets the default length, as the form always did (the task too: its To tile shows it, and
+      // "No end" clears it, owner 2026-11-10).
       setEndTimeStr(presetEndFor(nextStart, DEFAULT_DURATION_MINUTES));
       clearError('endTime');
     }
   }
 
-  // ── SIMPLE LAYOUT (new medication / new appointment) ─────────────────────────
-  // Same state, same `buildPayload`, same Save: only the arrangement differs, so
-  // the API payload for a given set of answers is IDENTICAL to the full form's.
-  const showOtherTime = otherTimeOpen || (timeStr !== '' && litChip === null);
-  /**
-   * The conversion line under a LIT chip, when the viewer's zone differs from the recipient's (mobile parity:
-   * the same line "Other time" shows as the time field's hint, which is why it is not repeated while that
-   * field is open). It names the instant the save sends (`heldInstant`), and the chip group is described by it
-   * so a screen reader reads it with the chip.
-   */
-  const chipConversion = showOtherTime ? null : conversionText;
+  // ── SIMPLE LAYOUT (medication / appointment / task; owner 2026-11-10, build 11) ──────────────────────
+  // Same state, same `buildPayload`, same Save: only the arrangement differs, so the API payload for a
+  // given set of answers is IDENTICAL to the full form's (the payload-equality suites pin it). One order on
+  // all three, on new AND edit: What → When? (Starts | Repeats until, then How often?) → What time? → Who →
+  // Reminders → More details.
   const timeErrorText = errors.scheduled_time ?? missingErrorFor('time');
-  const sectionHeading = (headingId: string, text: string): ReactElement => (
+  const sectionHeading = (headingId: string, text: string, required = false): ReactElement => (
     <Text variant="sectionTitle" as="h3" id={headingId} className="text-base!">
       {text}
+      {required && <RequiredMarker />}
     </Text>
   );
 
@@ -2784,6 +2800,10 @@ function AddEventForm({
   function chooseTimeChip(chip: TimeChipId | null, time: string): void {
     datesTouched.current = true;
     if (chip === null) {
+      // With no time the date IS the recipient's day (`eventDatesForApi`'s date-only branch), so the day stays
+      // the recipient day the time was on: the viewer-frame day of a far-zone chip would otherwise become it, and
+      // the next chip would land a day off (untap-then-tap is how the multi-select chips switch).
+      if (recipientStartDate) moveViewerDay(recipientStartDate);
       setTimeStr('');
       setChipInstant(null);
       setExtraTimes([]);
@@ -2797,7 +2817,7 @@ function AddEventForm({
       timezone,
     });
     if (!viewer.timeStr) return;
-    setDateStr(viewer.dateStr);
+    moveViewerDay(viewer.dateStr);
     setTimeStr(viewer.timeStr);
     setChipInstant(viewer.instant ?? null);
     clearError('scheduled_time');
@@ -2807,33 +2827,129 @@ function AddEventForm({
   }
 
   /**
-   * The first chip not already used, so a new row starts on something sensible. Chips are the
-   * recipient's clock, so "used" is read in that frame and the new row gets the chip's viewer clock.
+   * The viewer-frame start day moved because a TIME was resolved on the circle's clock (a chip, Other…, From /
+   * At, a cleared time): in far zones that instant falls on another viewer day. The repeat end is held as a
+   * viewer-side span from that day, so it moves by the same days: the "Repeats until" day the user picked (the
+   * circle's day) stays put. A no-op when the day does not move (same / near zones, every payload suite case).
    */
-  function addExtraDose(): void {
-    const toRecipient = (time: string): string => {
-      if (!timezone || !dateStr) return time;
-      try {
-        return (
-          eventDatesForApi({ dateStr, timeStr: time, recurrenceEndDateStr: null, timezone })
-            .scheduledTime ?? time
-        );
-      } catch {
-        return time;
-      }
-    };
-    const used = new Set([recipientClock, ...extraTimes.map(toRecipient)]);
-    const chip = MED_TIME_CHIPS.find((candidate) => !used.has(candidate.time));
-    let next = '12:00';
-    if (chip && timezone && recipientStartDate) {
-      next =
-        eventDatesFromApi({
-          scheduledDate: recipientStartDate,
-          scheduledTime: chip.time,
-          timezone,
-        }).timeStr || next;
+  function moveViewerDay(next: string): void {
+    if (next !== dateStr && dateStr && next && recurrenceEndDate) {
+      setRecurrenceEndDate(addDays(recurrenceEndDate, daysBetween(dateStr, next)));
     }
-    setExtraTimes((prev) => (prev.length < 3 ? [...prev, next] : prev));
+    setDateStr(next);
+  }
+  /** A viewer-frame HH:MM (a field, an extra dose) on the RECIPIENT's clock, on the form's day. */
+  function viewerToRecipient(time: string): string {
+    if (!timezone || !dateStr || !time) return time;
+    try {
+      return (
+        eventDatesForApi({ dateStr, timeStr: time, recurrenceEndDateStr: null, timezone }).scheduledTime ??
+        time
+      );
+    } catch {
+      return time;
+    }
+  }
+  /**
+   * A recipient HH:MM as an EXTRA dose's viewer-frame clock: the conversion "+ Another dose" made (the day is
+   * the recipient's start day), so a chip picked as a second time saves exactly what that tile saved.
+   */
+  function recipientToExtraViewer(time: string): string {
+    if (!timezone || !recipientStartDate) return time;
+    return eventDatesFromApi({ scheduledDate: recipientStartDate, scheduledTime: time, timezone }).timeStr || time;
+  }
+  /**
+   * Every dose time the medication form holds, on the RECIPIENT's clock, one per SLOT: index 0 the primary, then the
+   * extras ('' while there is no time). The chips address a custom dose by its slot.
+   */
+  const doseRecipientTimes = [recipientClock, ...extraTimes.map(viewerToRecipient)];
+  /** A custom dose chip's picker (Fix13): change THAT dose's time in place. */
+  function changeDoseTime(slot: number, next: string): void {
+    setOtherTarget(null);
+    if (slot === 0) {
+      chooseRecipientTime(next);
+      return;
+    }
+    const viewer = recipientToExtraViewer(next);
+    setExtraTimes((prev) => prev.map((time, i) => (i === slot - 1 ? viewer : time)));
+  }
+  /** A custom dose chip's "×": remove that dose (the medication's own time hands over to the next, as untapping). */
+  function removeDose(slot: number, time: string): void {
+    if (slot === 0) {
+      toggleDoseChip(time, null, true);
+      return;
+    }
+    setOtherTarget(null);
+    setExtraTimes((prev) => prev.filter((_, i) => i !== slot - 1));
+  }
+  /** One medication row per time (create only): the primary plus at most three extras. */
+  const doseTimesFull = !isEditing && timeStr !== '' && extraTimes.length >= 3;
+
+  /**
+   * A tap on a "What time?" chip (owner 2026-11-10, A2). A NEW medication's chips are multi-select: the first
+   * time chosen is the form's own (`chooseTimeChip`, as before), each further one an extra dose saved as its own
+   * medication (what "+ Another dose" did, at that chip's time); un-choosing the primary moves the next time up.
+   * An EDIT holds one dose (it cannot see its siblings): a chip replaces the time, the lit chip clears it.
+   */
+  function toggleDoseChip(time: string, chip: TimeChipId | null, wasOn: boolean): void {
+    setOtherTarget(null);
+    const pick = (): void => {
+      if (chip) chooseTimeChip(chip, time);
+      else chooseRecipientTime(time);
+    };
+    if (isEditing || !timeStr) {
+      if (wasOn) chooseTimeChip(null, '');
+      else pick();
+      return;
+    }
+    if (!wasOn) {
+      if (extraTimes.length < 3) setExtraTimes((prev) => [...prev, recipientToExtraViewer(time)]);
+      return;
+    }
+    if (time === recipientClock) {
+      if (extraTimes.length === 0) {
+        chooseTimeChip(null, '');
+        return;
+      }
+      const [next, ...rest] = extraTimes;
+      chooseRecipientTime(viewerToRecipient(next));
+      setExtraTimes(rest);
+      return;
+    }
+    const index = extraTimes.findIndex((extra) => viewerToRecipient(extra) === time);
+    if (index !== -1) setExtraTimes((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  /** "Other…" opened: it sets the form's own time (an edit, or no time yet), else the next extra dose. */
+  function openOtherTime(): void {
+    if (!isEditing) Analytics.timeChipSelected({ chip: 'other' });
+    setOtherTarget(isEditing || !timeStr ? 'primary' : extraTimes.length);
+  }
+  const otherTargetResolved: 'primary' | number =
+    otherTarget ?? (isEditing || !timeStr ? 'primary' : extraTimes.length);
+  /** What the "Other…" picker shows: its target's time on the RECIPIENT's clock ('' for a new extra). */
+  const otherTimeValue =
+    otherTargetResolved === 'primary'
+      ? recipientClock
+      : viewerToRecipient(extraTimes[otherTargetResolved] ?? '');
+  /** A time from "Other…" (the RECIPIENT's clock): it becomes its own chip ("2:30 PM / Other"). */
+  function chooseOtherTime(next: string): void {
+    const target = otherTargetResolved;
+    setOtherTarget(target);
+    if (target === 'primary') {
+      chooseRecipientTime(next);
+      if (next) completeStep('when');
+      return;
+    }
+    if (!next) {
+      setExtraTimes((prev) => prev.filter((_, i) => i !== target));
+      setOtherTarget(null);
+      return;
+    }
+    const viewer = recipientToExtraViewer(next);
+    setExtraTimes((prev) =>
+      target < prev.length ? prev.map((t, i) => (i === target ? viewer : t)) : prev.length < 3 ? [...prev, viewer] : prev
+    );
   }
 
   /**
@@ -2860,7 +2976,7 @@ function AddEventForm({
       timezone,
     });
     if (!viewer.timeStr) return;
-    setDateStr(viewer.dateStr);
+    moveViewerDay(viewer.dateStr);
     setTimeStr(viewer.timeStr);
     setChipInstant(viewer.instant ?? null);
     // A task's end follows its start exactly as the full form's time field made it (the med form has none).
@@ -2884,17 +3000,10 @@ function AddEventForm({
     }
     const viewer = eventDatesFromApi({ scheduledDate: day, scheduledTime: recipientClock, timezone });
     if (!viewer.timeStr) return;
-    setDateStr(viewer.dateStr);
+    moveViewerDay(viewer.dateStr);
     setTimeStr(viewer.timeStr);
     setChipInstant(viewer.instant ?? null);
     followEndTime(timeStr, viewer.timeStr);
-  }
-
-  function toggleTaskTime(): void {
-    // A set time keeps its field open (clearing it is "Any time").
-    const opening = timeStr !== '' || !pickTimeOpen;
-    setPickTimeOpen(opening);
-    if (opening) requestAnimationFrame(() => document.getElementById('scheduled_time')?.focus());
   }
 
   /**
@@ -2917,41 +3026,262 @@ function AddEventForm({
     setEndTimeStr(span === null ? next : endTimeForDuration(timeStr, span));
   }
 
-  function openOtherTime(): void {    if (!otherTimeOpen && !isEditing) Analytics.timeChipSelected({ chip: 'other' });
-    setOtherTimeOpen(true);
-    requestAnimationFrame(() => document.getElementById('scheduled_time')?.focus());
-  }
+  /** An HH:MM as the viewer reads it (12 / 24 hour). */
+  const clockText = (hhmm: string): string => {
+    const [h, m] = hhmm.split(':').map(Number);
+    return Number.isFinite(h) && Number.isFinite(m) ? formatTimeOfDay(h, m, hourCycle) : hhmm;
+  };
+  /** "11:00 – 11:30 AM": the shared AM / PM said once when both ends have it (else both in full). */
+  const clockRangeText = (from: string, to: string): string => {
+    const a = clockText(from);
+    const b = clockText(to);
+    const split = (text: string): [string, string] => {
+      const match = /^(\d{1,2}[:.]\d{2})(.*)$/.exec(text);
+      return match ? [match[1], match[2]] : [text, ''];
+    };
+    const [aDigits, aSuffix] = split(a);
+    const [, bSuffix] = split(b);
+    return aSuffix.trim() !== '' && aSuffix === bSuffix ? `${aDigits} – ${b}` : `${a} – ${b}`;
+  };
+  /** "a, b and c" with the locale's joiner. */
+  const listText = (items: string[]): string =>
+    items.length <= 1
+      ? (items[0] ?? '')
+      : `${items.slice(0, -1).join(', ')} ${t('addEvent.simple.listAnd')} ${items[items.length - 1]}`;
+  /**
+   * THE ZONE CAPTION under "What time?" (owner 2026-11-10, build 11), ONLY when the viewer's zone differs from
+   * the circle's: the circle's time first (the tiles and chips are on its clock), then the same instant on the
+   * viewer's: "Denver time · 10:00 AM your time (New York)", "… 10:00 AM and 8:00 PM your time (New York)",
+   * "… 11:00 – 11:30 AM your time (New York)". The viewer's clock is the fields' own (the viewer-frame state), so
+   * nothing is converted here. Replaces the older "Your time / X's time" and "Times are for X" lines.
+   */
+  const zoneCaptionTimes =
+    simpleKind === 'medication'
+      ? listText([timeStr, ...extraTimes].filter(Boolean).map(clockText))
+      : timeStr
+        ? endTimeStr
+          ? clockRangeText(timeStr, endTimeStr)
+          : clockText(timeStr)
+        : '';
+  const zoneCaption =
+    showDualTimezone && timezone && zoneCaptionTimes
+      ? t('addEvent.simple.zoneCaption', {
+          circleZone: recipientZone || timezone,
+          times: zoneCaptionTimes,
+          yourZone: getTimezoneLabel(deviceTimezone) || deviceTimezone,
+        })
+      : null;
+  const zoneCaptionLine = zoneCaption ? (
+    <Text variant="caption" as="p" id="time-zone-caption" data-testid="time-zone-caption">
+      {zoneCaption}
+    </Text>
+  ) : null;
 
-  /** The form's time on the RECIPIENT's clock (the chips' frame), as "Other time" names it once it is the answer. */
-  const otherTimeClock = (() => {
-    const [h, m] = recipientClock.split(':').map(Number);
-    return Number.isFinite(h) && Number.isFinite(m) ? formatTimeOfDay(h, m, hourCycle) : undefined;
-  })();
+  /** A value tile's look (owner 2026-11-10): outlined, label small over the value, a trailing chevron. */
+  const valueTileClass = (invalid: boolean, disabled: boolean): string =>
+    `${CHOICE_TILE_BOX} w-full min-w-0 ${invalid ? 'border-terracotta text-ink hover:bg-bg-2' : CHIP_UNSELECTED}${disabled ? ' cursor-default opacity-50' : ' cursor-pointer'}`;
+  const valueTileContent = (label: string, value: string, chevron = true): ReactElement => (
+    <>
+      <span className={VALUE_TILE_LABEL}>{label}</span>
+      {/* The name reads "Starts Tue, Nov 10": a space between the lines in every accessibility tree. */}{' '}
+      <span className="flex max-w-full items-center gap-1 text-base font-medium text-ink">
+        <span className="min-w-0 tabular-nums">{value}</span>
+        {chevron && <Icon name="chevron-forward" size="inline" className="text-ink-2" />}
+      </span>
+    </>
+  );
+  /**
+   * A value tile that IS its picker (PickerTile). `clear` (owner 2026-11-10, Fix13): an OPTIONAL value is cleared
+   * INSIDE the tile, by a trailing "×" that is its own 44px button with its own name ("Clear repeat end"),
+   * replacing the chevron while there is a value; the picker itself has no separate clear. Clearing returns
+   * focus to the tile (the × is gone).
+   */
+  const valueTile = (p: {
+    kind: 'date' | 'time';
+    inputId: string;
+    label: string;
+    testId: string;
+    value: string;
+    display: string;
+    onChange: (next: string) => void;
+    today?: string;
+    min?: string;
+    disabled?: boolean;
+    invalid?: boolean;
+    describedBy?: string;
+    clear?: string;
+  }): ReactElement => {
+    const clearable = !!p.clear && p.value !== '' && !p.disabled;
+    const tile = (className: string): ReactElement => (
+      <PickerTile
+        kind={p.kind}
+        inputId={p.inputId}
+        inputLabel={p.label}
+        testId={p.testId}
+        value={p.value}
+        today={p.today}
+        min={p.min}
+        clearLabel={null}
+        disabled={p.disabled}
+        invalid={p.invalid}
+        describedBy={p.describedBy}
+        className={className}
+        onChange={p.onChange}
+      >
+        {valueTileContent(p.label, p.display, !clearable)}
+      </PickerTile>
+    );
+    if (!clearable) return tile(valueTileClass(!!p.invalid, !!p.disabled));
+    return (
+      <div
+        data-testid={`${p.testId}-box`}
+        className={`${VALUE_TILE_CLEARABLE_BOX} ${p.invalid ? 'border-terracotta' : 'border-line-strong'}`}
+      >
+        {tile(VALUE_TILE_CLEARABLE_BODY)}
+        <button
+          type="button"
+          aria-label={p.clear}
+          data-testid={`${p.testId}-clear`}
+          onClick={() => {
+            p.onChange('');
+            requestAnimationFrame(() => document.getElementById(`${p.inputId}-tile`)?.focus());
+          }}
+          className={VALUE_TILE_CLEAR_BUTTON}
+        >
+          <Icon name="close-outline" size="row" />
+        </button>
+      </div>
+    );
+  };
+  const fieldError = (id: string, text: string | undefined): ReactElement | null =>
+    text ? (
+      <p id={`${id}-error`} role="alert" className={INPUT_ERROR}>
+        <Icon name="alert-circle-outline" size="inline" />
+        {text}
+      </p>
+    ) : null;
+  const dayText = (day: string): string =>
+    day
+      ? formatDateForDisplay(day, { weekday: 'short', month: 'short', day: 'numeric' }, language)
+      : t('common:datePicker.open');
 
-  const dateFieldBlock = !isAsNeeded ? (
-    <DateField
-      id="scheduled_date"
-      // The simple medication form's "When?" opens on it: "Starts" (the task / shift pattern's date row).
-      label={
-        simpleKind === 'medication'
-          ? t('addEvent.simple.starts')
-          : isMedication
-            ? t('addEvent.simple.startDate')
-            : t('addEvent.fields.date')
-      }
-      required
-      value={dateStr}
-      today={pickerToday}
-      error={errors.scheduled_date ?? missingErrorFor('date')}
-      hint={showDualTimezone ? dualTimezoneLabel : undefined}
-      onChange={(e) => {
-        datesTouched.current = true;
-        setDateStr(e.target.value);
-        clearError('scheduled_date');
+  // ── When?: Starts | Repeats until (owner 2026-11-10, build 11) ──────────────────────────────────────
+  // Two value tiles side by side, each the date picker itself (PickerTile). On all three forms the days are the
+  // CIRCLE's (recipient's) calendar, as the times are its clock (owner: the tiles show and pick the circle's
+  // date and time). The state stays the viewer-frame pair: a picked day is re-resolved with the same recipient
+  // clock (`chooseTaskDay`, the task form's converter) and the repeat end keeps its span (`recipientRepeatEnd`
+  // / `chooseRecipientRepeatEnd`), so the save is the circle-local pair it always was. "Repeats until" reads
+  // "Never" when blank (its picker's clear is "No end date"); with Once it stays in place, disabled, "Doesn't
+  // repeat" (no layout jump). An end before the start is said at that tile, live and on Save.
+  const startTileValue = recipientStartDate ?? '';
+  const startTileToday = recipientPickerToday;
+  const repeatsAtAll = recurrence !== 'none' && recurrence !== 'as_needed';
+  const repeatEndTileValue = repeatsAtAll ? recipientRepeatEnd : '';
+  const startTileError = errors.scheduled_date ?? missingErrorFor('date');
+  const repeatEndError =
+    errors.recurrence_end_date ??
+    (repeatEndBeforeStart ? t('shifts:validation.repeatEndBeforeStart') : undefined);
+  const whenDateTiles = (
+    <div className="grid grid-cols-2 gap-2" data-testid="when-date-tiles">
+      <div className="flex min-w-0 flex-col gap-1">
+        {valueTile({
+          kind: 'date',
+          inputId: 'scheduled_date',
+          label: t('addEvent.simple.starts'),
+          testId: 'starts-tile',
+          value: startTileValue,
+          display: dayText(startTileValue),
+          today: startTileToday,
+          invalid: !!startTileError,
+          describedBy: startTileError ? 'scheduled_date-error' : undefined,
+          onChange: chooseTaskDay,
+        })}
+        {fieldError('scheduled_date', startTileError)}
+      </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        {valueTile({
+          kind: 'date',
+          inputId: 'recurrence_end_date',
+          label: t('addEvent.simple.repeatsUntil'),
+          testId: 'repeats-until-tile',
+          value: repeatEndTileValue,
+          display: !repeatsAtAll
+            ? t('addEvent.simple.doesntRepeat')
+            : repeatEndTileValue
+              ? dayText(repeatEndTileValue)
+              : t('addEvent.simple.never'),
+          min: startTileValue || undefined,
+          today: startTileToday,
+          disabled: !repeatsAtAll,
+          invalid: !!repeatEndError,
+          describedBy: repeatEndError ? 'recurrence_end_date-error' : undefined,
+          // Optional: "Mar 1 ×", and × back to "Never".
+          clear: t('addEvent.simple.clearRepeatEnd'),
+          onChange: (next) => {
+            datesTouched.current = true;
+            chooseRecipientRepeatEnd(next);
+            clearError('recurrence_end_date');
+          },
+        })}
+        {fieldError('recurrence_end_date', repeatEndError)}
+      </div>
+    </div>
+  );
+
+  // ── What time? on the appointment and task forms (owner 2026-11-10, build 11) ─────────────────────
+  // A small choice, "Pick a time | Any time"; with Pick a time, value tiles that ARE the time picker: the
+  // appointment's From | To, the task's At. Every time is on the CIRCLE's (recipient's) clock, as the
+  // medication chips are, with the viewer's under them in the zone caption; the state stays the viewer-frame
+  // pair (`chooseRecipientTime` / `chooseRecipientEndTime`, the task form's converters), so the save is
+  // unchanged. To starts at From + 30 minutes and keeps the length when From moves (`followEndTime`, as today).
+  // No length chips.
+  const timeChoice = (id: 'appt-time' | 'task-time'): ReactElement => (
+    <ChipSelect
+      id={id}
+      label={t('addEvent.simple.whatTime')}
+      allowDeselect={false}
+      options={[
+        { value: 'pick', label: t('addEvent.simple.pickTime') },
+        { value: 'any', label: t('addEvent.simple.anyTime') },
+      ]}
+      value={showTaskTimeField ? 'pick' : 'any'}
+      onChange={(next) => {
+        if (next === 'pick') {
+          setPickTimeOpen(true);
+          requestAnimationFrame(() => document.getElementById('scheduled_time-tile')?.focus());
+          return;
+        }
+        if (next !== 'any') return;
+        setPickTimeOpen(false);
+        chooseRecipientTime('');
         completeStep('when');
       }}
     />
-  ) : null;
+  );
+  const fromTileError = errors.scheduled_time ?? (simpleKind === 'medication' ? undefined : missingErrorFor('time'));
+  const startTimeTile = (label: string, testId: string): ReactElement => (
+    <div className="flex min-w-0 flex-col gap-1">
+      {valueTile({
+        kind: 'time',
+        inputId: 'scheduled_time',
+        label,
+        testId,
+        value: recipientClock,
+        display: recipientClock ? clockText(recipientClock) : t('shifts:form.chooseTime'),
+        invalid: !!fromTileError,
+        describedBy:
+          [fromTileError ? 'scheduled_time-error' : '', zoneCaption ? 'time-zone-caption' : '']
+            .filter(Boolean)
+            .join(' ') || undefined,
+        onChange: (next) => {
+          chooseRecipientTime(next);
+          if (next) completeStep('when');
+        },
+      })}
+      {fieldError('scheduled_time', fromTileError)}
+    </div>
+  );
+
 
   const detailsBlock = (
     <TextArea
@@ -2998,7 +3328,7 @@ function AddEventForm({
     };
     return (
       <>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 [&_[role=radio]]:w-full [&>button]:w-full">
+        <div className="grid grid-cols-2 gap-2 [&_[role=radio]]:w-full [&>button]:w-full">
           <ChipSelect
             id="how-often"
             label={t('addEvent.simple.howOften')}
@@ -3130,6 +3460,7 @@ function AddEventForm({
             clearError(titleFieldId, 'title');
           }}
         />
+        {/* The dose on its own full-width line under the name (long drug names, owner 2026-11-10). */}
         <TextField
           id="medication_dosage"
           label={t('addEvent.fields.dosage')}
@@ -3144,132 +3475,11 @@ function AddEventForm({
         />
       </section>
 
-      {!isAsNeeded && (
-        <section aria-labelledby="sf-when" className="flex flex-col gap-3">
-          {sectionHeading('sf-when', t('addEvent.simple.when'))}
-          {/* The task / shift pattern: the date first ("Starts"), then the dose times. */}
-          {dateFieldBlock}
-          <TimeChips
-            id="time-chips"
-            value={recipientClock}
-            hourCycle={hourCycle}
-            describedBy={
-              [timeErrorText ? 'scheduled_time-error' : '', chipConversion ? 'time-conversion' : '']
-                .filter(Boolean)
-                .join(' ') || undefined
-            }
-            onChange={chooseTimeChip}
-            other={{
-              label: t('addEvent.simple.otherTime'),
-              expanded: showOtherTime,
-              // Lit like a chosen chip when a custom (non-chip) time is the answer (mobile parity),
-              // and then it names that time under its label, as a chip names its own. ONE clock on the
-              // control: the RECIPIENT's, like the chips' times (the viewer's is only in the line).
-              selected: timeStr !== '' && litChip === null,
-              time: timeStr !== '' && litChip === null ? otherTimeClock : undefined,
-              onClick: openOtherTime,
-            }}
-            // Create only, as on the full form: each extra dose is saved as its own medication. A tile of the
-            // same row (owner 2026-11-08), after "Other time".
-            extra={
-              !isEditing && timeStr && extraTimes.length < 3 ? (
-                <ChoiceTileButton
-                  testId="add-another-dose"
-                  label={t('addEvent.simple.anotherDose')}
-                  subSpacer
-                  onClick={addExtraDose}
-                />
-              ) : undefined
-            }
-          />
-          {showOtherTime && (
-            <TimeField
-              id="scheduled_time"
-              // ONE clock on the control (owner 1.4.0): this field is typed in the RECIPIENT's clock, like the chips and
-              // the "Other time" tile, and says so when the viewer's zone differs ("Time in Denver"); the viewer's own
-              // clock is only in the conversion line under it.
-              label={
-                showDualTimezone
-                  ? t('addEvent.timeInZone', { zone: recipientZone || timezone })
-                  : t('addEvent.fields.time')
-              }
-              required
-              value={recipientClock}
-              error={errors.scheduled_time ?? missingErrorFor('time')}
-              hint={conversionText ?? undefined}
-              onChange={(e) => {
-                chooseRecipientTime(e.target.value);
-                if (e.target.value) completeStep('when');
-              }}
-            />
-          )}
-          {!showOtherTime && timeErrorText && (
-            <p id="scheduled_time-error" role="alert" className={INPUT_ERROR}>
-              <Icon name="alert-circle-outline" size="inline" />
-              {timeErrorText}
-            </p>
-          )}
-          <DoseQuietHoursNote
-            applies={isMedication && notificationsEnabled && reminderAtDue}
-            dateStr={dateStr}
-            timeStr={timeStr}
-            heldInstant={heldInstant}
-            members={members}
-            ownerId={circle?.owner_id}
-          />
-          <DosePastTimeNote visible={startsNextDose} />
-          {extraTimes.map((time, index) => (
-            <div
-              key={index}
-              data-testid={`extra-dose-${index + 1}`}
-              className="flex flex-col gap-2"
-            >
-              <div className="flex items-end gap-2">
-                <div className="min-w-0 flex-1">
-                  <TimeField
-                    id={`extra_dose_time_${index + 1}`}
-                    label={t('addEvent.doseNumber', { number: index + 2 })}
-                    value={time}
-                    onChange={(e) =>
-                      setExtraTimes((prev) =>
-                        prev.map((existing, i) => (i === index ? e.target.value : existing))
-                      )
-                    }
-                  />
-                </div>
-                <button
-                  type="button"
-                  aria-label={t('addEvent.simple.removeDose', { number: index + 2 })}
-                  onClick={() => setExtraTimes((prev) => prev.filter((_, i) => i !== index))}
-                  className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-ink-2 hover:text-ink"
-                >
-                  <Icon name="close-outline" size="row" />
-                </button>
-              </div>
-              <DoseQuietHoursNote
-                applies={isMedication && notificationsEnabled && reminderAtDue}
-                dateStr={dateStr}
-                timeStr={time}
-                members={members}
-                ownerId={circle?.owner_id}
-              />
-              <DosePastTimeNote
-                visible={doseStartsNext(time)}
-                testId={`dose-past-time-note-${index + 1}`}
-              />
-            </div>
-          ))}
-          {chipConversion && (
-            <Text variant="caption" id="time-conversion" data-testid="time-conversion">
-              {chipConversion}
-            </Text>
-          )}
-        </section>
-      )}
-
-      <section aria-labelledby="sf-how-often" className="flex flex-col gap-3">
-        {sectionHeading('sf-how-often', t('addEvent.simple.howOften'))}
-        {/* Every day / Every week / When needed, then Custom… (Once and the rarer repeats). Scheduled <-> as
+      <section aria-labelledby="sf-when" className="flex flex-col gap-3">
+        {sectionHeading('sf-when', t('addEvent.simple.when'), true)}
+        {/* As needed has no start, end or time (the server pins it): the tiles go, How often? stays. */}
+        {!isAsNeeded && whenDateTiles}
+        {/* Every day / Every week / When needed / Custom… (Once and the rarer repeats). Scheduled <-> as
             needed is locked after create (the server refuses it): an edit of a scheduled medication never
             offers "When needed"; an as-needed one shows it lit and the whole choice disabled. */}
         {howOftenGrid(
@@ -3292,6 +3502,78 @@ function AddEventForm({
         {asNeededReasonBlock}
       </section>
 
+      {!isAsNeeded && (
+        <section aria-labelledby="sf-what-time" className="flex flex-col gap-3">
+          {sectionHeading('sf-what-time', t('addEvent.simple.whatTime'))}
+          <TimeChips
+            id="time-chips"
+            values={doseRecipientTimes}
+            hourCycle={hourCycle}
+            multiple={!isEditing}
+            full={doseTimesFull}
+            describedBy={
+              [timeErrorText ? 'scheduled_time-error' : '', zoneCaption ? 'time-zone-caption' : '']
+                .filter(Boolean)
+                .join(' ') || undefined
+            }
+            onToggle={toggleDoseChip}
+            onChangeCustom={changeDoseTime}
+            onRemoveCustom={removeDose}
+            other={
+              <PickerTile
+                kind="time"
+                inputId="scheduled_time"
+                inputLabel={t('addEvent.simple.otherTime')}
+                testId="time-chip-other"
+                value={otherTimeValue}
+                disabled={doseTimesFull}
+                onOpen={openOtherTime}
+                onChange={chooseOtherTime}
+                className={`${choiceTileClass(false)}${doseTimesFull ? ' cursor-default opacity-50' : ' cursor-pointer'}`}
+              >
+                <span className={CHOICE_TILE_LABEL}>{t('addEvent.simple.otherEllipsis')}</span>
+                {/* An empty second line: "Other…" is as tall as the two-line chips at every text size. */}
+                <span aria-hidden="true" className={`${choiceTileSubClass(false)} invisible`}>
+                  {' '}
+                </span>
+              </PickerTile>
+            }
+          />
+          {timeErrorText && (
+            <p id="scheduled_time-error" role="alert" className={INPUT_ERROR}>
+              <Icon name="alert-circle-outline" size="inline" />
+              {timeErrorText}
+            </p>
+          )}
+          <DoseQuietHoursNote
+            applies={isMedication && notificationsEnabled && reminderAtDue}
+            dateStr={dateStr}
+            timeStr={timeStr}
+            heldInstant={heldInstant}
+            members={members}
+            ownerId={circle?.owner_id}
+          />
+          <DosePastTimeNote visible={startsNextDose} />
+          {/* The extra doses' own notes (each is its own medication row, saved after the primary). */}
+          {extraTimes.map((time, index) => (
+            <div key={index} data-testid={`extra-dose-${index + 1}`} className="contents">
+              <DoseQuietHoursNote
+                applies={isMedication && notificationsEnabled && reminderAtDue}
+                dateStr={dateStr}
+                timeStr={time}
+                members={members}
+                ownerId={circle?.owner_id}
+              />
+              <DosePastTimeNote
+                visible={doseStartsNext(time)}
+                testId={`dose-past-time-note-${index + 1}`}
+              />
+            </div>
+          ))}
+          {zoneCaptionLine}
+        </section>
+      )}
+
       {remindersSummaryRow}
       <DisclosureRow
         id="more-details"
@@ -3303,137 +3585,41 @@ function AddEventForm({
       >
         {medicationExtraFields}
         {detailsBlock}
-        {endDateBlock}
-        {reminderBlock}
+        {/* The Reminders card lives in the summary row's accordion above; an as-needed medication has none. */}
+        {asNeededNoRemindersNote}
       </DisclosureRow>
     </div>
   );
 
-  /** The appointment's start on the VIEWER's clock (its field's frame), as the "Time" tile names it once set. */
-  const viewerTimeClock = (() => {
-    const [h, m] = timeStr.split(':').map(Number);
-    return timeStr && Number.isFinite(h) && Number.isFinite(m) ? formatTimeOfDay(h, m, hourCycle) : undefined;
-  })();
-  // ── The simple appointment's Starts | Ends (owner 2026-11-10, mobile parity) ─────────────────────────
-  // Built like the shift form's: two value tiles that unfold their time field, the length chips as quick
-  // setters for Ends, then one caption ("1 hour · Times are for Chicago."). The SAME state and handlers the
-  // length / end-time fields had inside More details (timeStr / endTimeStr, matchingDurationIndex,
-  // presetEndFor), so the save is unchanged (apptPayloadEquality pins it). The times are the VIEWER's clock
-  // (this form's frame), so the zone the caption names is the viewer's, and only when it differs.
-  const apptEndClock = (() => {
-    const [h, m] = endTimeStr.split(':').map(Number);
-    return endTimeStr && Number.isFinite(h) && Number.isFinite(m) ? formatTimeOfDay(h, m, hourCycle) : undefined;
-  })();
-  const apptStartError = errors.scheduled_time ?? missingErrorFor('time');
-  const apptStartOpen = apptTimeOpen.start || !!apptStartError;
-  const apptEndOpen = apptTimeOpen.end || !!errors.endTime;
-  const apptSpan = timeStr && endTimeStr ? spanMinutes(timeStr, endTimeStr) : null;
-  const apptCaption = [
-    apptSpan !== null && apptSpan > 0 ? formatShiftDuration(apptSpan, t) : '',
-    showDualTimezone
-      ? t('shifts:form.timezoneNote', { zone: getTimezoneLabel(deviceTimezone) || deviceTimezone })
-      : '',
-  ]
-    .filter(Boolean)
-    .join(' · ');
-  const toggleApptTime = (which: 'start' | 'end'): void => {
-    const open = which === 'start' ? apptStartOpen : apptEndOpen;
-    setApptTimeOpen((prev) => ({ ...prev, [which]: !open }));
-    if (!open) {
-      const id = which === 'start' ? 'scheduled_time' : 'endTime';
-      requestAnimationFrame(() => document.getElementById(id)?.focus());
-    }
-  };
-  const apptStartsEnds = (
-    <>
-      <div className="flex flex-wrap gap-2" data-testid="appt-start-end-tiles">
-        <ChoiceTileButton
-          id="appt-start-tile"
-          testId="appt-start-tile"
-          hierarchy="value"
-          label={t('addEvent.simple.starts')}
-          sub={viewerTimeClock ?? t('shifts:form.chooseTime')}
-          expanded={apptStartOpen}
-          invalid={!!apptStartError}
-          describedBy="appt-duration-caption"
-          onClick={() => toggleApptTime('start')}
-        />
-        <ChoiceTileButton
-          id="appt-end-tile"
-          testId="appt-end-tile"
-          hierarchy="value"
-          label={t('shifts:form.ends')}
-          sub={
-            apptEndClock
-              ? // At or before the start is the next day (the save's PK21 rule), as the shift tile says it.
-                `${apptEndClock}${timeStr && endTimeStr <= timeStr ? ` ${t('shifts:nextDay')}` : ''}`
-              : t('shifts:form.chooseTime')
-          }
-          expanded={apptEndOpen}
-          invalid={!!errors.endTime}
-          describedBy="appt-duration-caption"
-          onClick={() => toggleApptTime('end')}
-        />
+  // The To on the CIRCLE's clock; at or before From (on that same clock: the tiles' frame) it is the next day
+  // (the save's PK21 rule). Both start at From + 30; the task's To is OPTIONAL (owner 2026-11-10): its "×"
+  // clears it, and the tile then reads "No end".
+  const toTileText = recipientEndClock
+    ? `${clockText(recipientEndClock)}${recipientClock && recipientEndClock <= recipientClock ? ` ${t('shifts:nextDay')}` : ''}`
+    : simpleKind === 'task'
+      ? t('addEvent.simple.noEnd')
+      : t('shifts:form.chooseTime');
+  const fromToTiles = (testIdPrefix: 'appt' | 'task'): ReactElement => (
+    <div className="grid grid-cols-2 gap-2" data-testid={`${testIdPrefix}-from-to`}>
+      {startTimeTile(t('addEvent.simple.from'), `${testIdPrefix}-from-tile`)}
+      <div className="flex min-w-0 flex-col gap-1">
+        {valueTile({
+          kind: 'time',
+          inputId: 'endTime',
+          label: t('addEvent.simple.to'),
+          testId: `${testIdPrefix}-to-tile`,
+          value: recipientEndClock,
+          display: toTileText,
+          disabled: !timeStr,
+          invalid: !!errors.endTime,
+          describedBy: errors.endTime ? 'endTime-error' : undefined,
+          // The task's To is optional ("9:30 AM ×", × back to "No end"); the appointment's is required (no ×).
+          clear: simpleKind === 'task' ? t('addEvent.simple.clearEndTime') : undefined,
+          onChange: chooseRecipientEndTime,
+        })}
+        {fieldError('endTime', errors.endTime)}
       </div>
-      {(apptStartOpen || apptEndOpen) && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {apptStartOpen && (
-            <TimeField
-              id="scheduled_time"
-              label={t('addEvent.simple.starts')}
-              value={timeStr}
-              error={apptStartError}
-              hint={conversionText ?? undefined}
-              onChange={(e) => {
-                changeTime(e.target.value);
-                if (e.target.value) completeStep('when');
-              }}
-            />
-          )}
-          {apptEndOpen && (
-            <TimeField
-              id="endTime"
-              label={t('shifts:form.ends')}
-              required={!isEditingWithoutDuration}
-              value={endTimeStr}
-              error={errors.endTime}
-              onChange={(e) => {
-                setEndTimeStr(e.target.value);
-                clearError('endTime');
-              }}
-            />
-          )}
-        </div>
-      )}
-      {/* Length: quick setters for Ends, only with a start to measure from. */}
-      {timeStr && (
-        <ChipSelect
-          id="duration-presets"
-          label={t('addEvent.fields.duration')}
-          options={durationOptions}
-          value={(() => {
-            const index = matchingDurationIndex(timeStr, endTimeStr);
-            return index === -1 ? null : String(DURATION_PRESETS[index]);
-          })()}
-          onChange={(next) => {
-            if (!next) return;
-            setEndTimeStr(presetEndFor(timeStr, Number(next)));
-            clearError('endTime');
-          }}
-        />
-      )}
-      {/* Always mounted while the tiles show: a live region must exist before its text changes. */}
-      <Text
-        variant="caption"
-        as="p"
-        id="appt-duration-caption"
-        data-testid="appt-duration-caption"
-        aria-live="polite"
-        className={apptCaption ? undefined : 'sr-only'}
-      >
-        {apptCaption}
-      </Text>
-    </>
+    </div>
   );
   const simpleAppointmentFields = (
     <div className="flex flex-col gap-6" data-testid="simple-appointment-form" data-large-text={largeText}>
@@ -3477,45 +3663,8 @@ function AddEventForm({
       </section>
 
       <section aria-labelledby="sf-when" className="flex flex-col gap-3">
-        {sectionHeading('sf-when', t('addEvent.simple.when'))}
-        {/* The task / shift pattern: the date, then a "Time" tile (revealing the time field) and "Any time".
-            The same viewer-frame fields as before, so the save is unchanged. */}
-        {dateFieldBlock}
-        <div className="flex flex-wrap gap-2" data-testid="appt-time-row">
-          <ChoiceTileButton
-            hierarchy="value"
-            label={t('addEvent.fields.time')}
-            sub={viewerTimeClock ?? t('addEvent.simple.pickTime')}
-            selected={timeStr !== ''}
-            expanded={showTaskTimeField}
-            testId="appt-time-tile"
-            onClick={() => {
-              // "Pick a time" unfolds Starts' field (toggleTaskTime focuses it); a set time stays as it is.
-              if (!showTaskTimeField) setApptTimeOpen((prev) => ({ ...prev, start: true }));
-              toggleTaskTime();
-            }}
-          />
-          <ChipSelect
-            id="appt-time"
-            label={t('addEvent.fields.time')}
-            variant="tile"
-            contents
-            allowDeselect={false}
-            options={[{ value: 'any', label: t('addEvent.simple.anyTime') }]}
-            value={timeStr ? null : 'any'}
-            onChange={() => {
-              setPickTimeOpen(false);
-              setApptTimeOpen({ start: false, end: false });
-              changeTime('');
-              completeStep('when');
-            }}
-          />
-        </div>
-        {showTaskTimeField && apptStartsEnds}
-      </section>
-
-      <section aria-labelledby="sf-how-often" className="flex flex-col gap-3">
-        {sectionHeading('sf-how-often', t('addEvent.simple.howOften'))}
+        {sectionHeading('sf-when', t('addEvent.simple.when'), true)}
+        {whenDateTiles}
         {howOftenGrid(
           [
             { value: 'none', label: t('addEvent.simple.once') },
@@ -3525,6 +3674,13 @@ function AddEventForm({
           sharedCustomRepeatOptions,
           false
         )}
+      </section>
+
+      <section aria-labelledby="sf-what-time" className="flex flex-col gap-3">
+        {sectionHeading('sf-what-time', t('addEvent.simple.whatTime'))}
+        {timeChoice('appt-time')}
+        {showTaskTimeField && fromToTiles('appt')}
+        {zoneCaptionLine}
       </section>
 
       <section aria-labelledby="sf-who" className="flex flex-col gap-3">
@@ -3583,17 +3739,15 @@ function AddEventForm({
           }}
         />
         {detailsBlock}
-        {endDateBlock}
-        {reminderBlock}
       </DisclosureRow>
     </div>
   );
 
-  // ── SIMPLE TASK FORM (owner 1.4.0, mobile parity: AddEventScreen) ─────────────────────────────────
-  // "What needs doing? / When? / How often? / Who's doing it? / More details". Every day it names is the
-  // RECIPIENT's (the tiles, the Other day field, the repeat end), and its times are typed on the recipient's
-  // clock (job 1's "Time in <city>" field), so nothing on it is in the viewer's frame except the conversion
-  // line. Same state and payload as the full form (AddEventModal.taskPayloadEquality pins it).
+  // ── SIMPLE TASK FORM (owner 1.4.0, mobile parity: AddEventScreen; build 11 order) ───────────────────
+  // "What needs doing? / When? / What time? / Who's doing it? / Reminders / More details". Every day it names is
+  // the RECIPIENT's (the Starts and Repeats until tiles), and its time is on the recipient's clock (the At tile),
+  // so nothing on it is in the viewer's frame except the zone caption. Same state and payload as the full form
+  // (AddEventModal.taskPayloadEquality pins it).
   const taskHowOftenValue = ['none', 'daily', 'weekly'].includes(recurrence) ? recurrence : null;
   // The rarer rules live behind "Custom…" (shift form parity); the panel is open while one is the answer.
   const taskCustomOptions = [
@@ -3610,9 +3764,6 @@ function AddEventForm({
     chooseRecurrence(next as RecurrenceChoice);
     completeStep('how_often');
   };
-  const taskTimeLabel = showDualTimezone
-    ? t('addEvent.timeInZone', { zone: recipientZone || timezone })
-    : t('addEvent.fields.time');
   const simpleTaskFields = (
     <div className="flex flex-col gap-6" data-testid="simple-task-form">
       <section
@@ -3654,66 +3805,9 @@ function AddEventForm({
       </section>
 
       <section aria-labelledby="sf-when" className="flex flex-col gap-3">
-        {sectionHeading('sf-when', t('addEvent.simple.when'))}
-        <DateField
-          id="scheduled_date"
-          // The RECIPIENT's day, the same day the save sends (with a time the full form's own date field is
-          // the viewer's; this one is not, and says so when the zones differ).
-          label={t('addEvent.fields.date')}
-          required
-          value={recipientStartDate ?? ''}
-          today={recipientPickerToday}
-          error={errors.scheduled_date ?? missingErrorFor('date')}
-          // With Some days the chips carry the same zone note: say it once, under the chips.
-          hint={showDualTimezone && recurrence !== 'days_of_week' ? daysTimezoneNote : undefined}
-          onChange={(e) => chooseTaskDay(e.target.value)}
-        />
-        <div className="flex flex-wrap gap-2" data-testid="task-time-row">
-          <ChoiceTileButton
-            hierarchy="value"
-            label={t('addEvent.fields.time')}
-            sub={timeStr ? otherTimeClock : t('addEvent.simple.pickTime')}
-            // Lit (neutral) while a time is the answer, as "Any time" is while none is (mobile parity).
-            selected={timeStr !== ''}
-            expanded={showTaskTimeField}
-            testId="task-time-tile"
-            onClick={toggleTaskTime}
-          />
-          <ChipSelect
-            id="task-time"
-            label={t('addEvent.fields.time')}
-            variant="tile"
-            contents
-            allowDeselect={false}
-            options={[{ value: 'any', label: t('addEvent.simple.anyTime') }]}
-            value={timeStr ? null : 'any'}
-            onChange={() => {
-              setPickTimeOpen(false);
-              chooseRecipientTime('');
-              completeStep('when');
-            }}
-          />
-        </div>
-        {showTaskTimeField && (
-          <TimeField
-            id="scheduled_time"
-            // Typed on the RECIPIENT's clock, labelled "Time in <city>" when the viewer's zone differs; the
-            // viewer's clock is only in the conversion line (job 1).
-            label={taskTimeLabel}
-            value={recipientClock}
-            error={errors.scheduled_time}
-            hint={conversionText ?? undefined}
-            onChange={(e) => {
-              chooseRecipientTime(e.target.value);
-              if (e.target.value) completeStep('when');
-            }}
-          />
-        )}
-      </section>
-
-      <section aria-labelledby="sf-how-often" className="flex flex-col gap-3">
-        {sectionHeading('sf-how-often', t('addEvent.simple.howOften'))}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 [&_[role=radio]]:w-full [&>button]:w-full">
+        {sectionHeading('sf-when', t('addEvent.simple.when'), true)}
+        {whenDateTiles}
+        <div className="grid grid-cols-2 gap-2 [&_[role=radio]]:w-full [&>button]:w-full">
           <ChipSelect
             id="how-often"
             label={t('addEvent.simple.howOften')}
@@ -3775,6 +3869,13 @@ function AddEventForm({
         {cycleBlock}
       </section>
 
+      <section aria-labelledby="sf-what-time" className="flex flex-col gap-3">
+        {sectionHeading('sf-what-time', t('addEvent.simple.whatTime'))}
+        {timeChoice('task-time')}
+        {showTaskTimeField && fromToTiles('task')}
+        {zoneCaptionLine}
+      </section>
+
       <section aria-labelledby="sf-who" className="flex flex-col gap-3">
         {sectionHeading('sf-who', t('addEvent.simple.whoDoingIt'))}
         <ChipSelect
@@ -3801,37 +3902,6 @@ function AddEventForm({
         onToggle={setMoreOpen}
       >
         {detailsBlock}
-        {timeStr && (
-          <>
-            <ChipSelect
-              id="duration-presets"
-              label={t('addEvent.fields.duration')}
-              options={durationOptions}
-              value={(() => {
-                const index = matchingDurationIndex(timeStr, endTimeStr);
-                return index === -1 ? null : String(DURATION_PRESETS[index]);
-              })()}
-              onChange={(next) => {
-                // Deselect is a no-op: once there is a start the end is required.
-                if (!next) return;
-                setEndTimeStr(presetEndFor(timeStr, Number(next)));
-                clearError('endTime');
-              }}
-            />
-            <TimeField
-              id="endTime"
-              label={t('addEvent.fields.endTime')}
-              required={!isEditingWithoutDuration}
-              // The recipient's clock, like the start; named when the viewer's zone differs.
-              value={recipientEndClock}
-              error={errors.endTime}
-              hint={showDualTimezone ? taskTimeLabel : undefined}
-              onChange={(e) => chooseRecipientEndTime(e.target.value)}
-            />
-          </>
-        )}
-        {endDateBlock}
-        {reminderBlock}
       </DisclosureRow>
     </div>
   );

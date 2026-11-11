@@ -5,10 +5,10 @@ import { Analytics } from '@/lib/analytics';
 import { resetLargeTextReports } from '@/lib/largeText';
 import { AddEventModal } from '../AddEventModal';
 
-// The simple "New medication" / "New appointment" forms (docs/plans/simple-ui-1-3-1.md).
-// Same state and same payload builder as the full form, arranged as
-// What is it? / When? / How often? (or Who's going?). The payload tests below
-// run the SAME answers through both layouts and require identical API bodies.
+// The simple "New medication" / "New appointment" forms (docs/plans/simple-ui-1-3-1.md; build 11 order,
+// owner 2026-11-10): What is it? / When? (Starts | Repeats until, then the How often? grid) / What time? /
+// Who's going? / Reminders / More details. Same state and same payload builder as the full form. The payload
+// tests below run the SAME answers through both layouts and require identical API bodies.
 
 const ORIGINAL_TZ = process.env.TZ;
 beforeAll(() => {
@@ -107,17 +107,26 @@ function renderAppt(props: Partial<React.ComponentProps<typeof AddEventModal>> =
   );
 }
 
-const timeChips = () => screen.getByRole('radiogroup', { name: 'Common dose times' });
+// Build 11: TIME-FIRST chips ("8:00 AM" over "Morning"), checkboxes on a new medication (multi-select: each
+// further chip is an extra dose, saved as its own row as "+ Another dose" did).
+const timeChips = () => screen.getByRole('group', { name: 'Common dose times' });
 const title = () => screen.getByLabelText(/^Title( \*)?( \(required\))?$/);
-const chip = (name: RegExp) => within(timeChips()).getByRole('radio', { name });
+const chip = (name: RegExp) => within(timeChips()).getByRole('checkbox', { name });
+/** "Other…": the time picker itself, over the hidden input named "Other time". */
+const otherTile = () => screen.getByTestId('time-chip-other');
+const otherInput = () => screen.getByLabelText('Other time', { selector: 'input' });
 
 describe('new medication: structure', () => {
-  it('shows What is it? / When? / How often?, a collapsed More details and "Add medication"', () => {
+  it('shows What is it? / When? / What time?, a collapsed More details and "Add medication"', () => {
     renderMed();
     expect(screen.getByRole('dialog', { name: 'New medication' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'What is it?' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'When?' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'How often?' })).toBeInTheDocument();
+    // Build 11: How often? is the grid inside When? (no heading of its own); What time? follows.
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
+      'What is it?',
+      'When? *',
+      'What time?',
+    ]);
+    expect(screen.getByRole('radiogroup', { name: 'How often?' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /More details/ })).toHaveAttribute(
       'aria-expanded',
       'false'
@@ -126,17 +135,26 @@ describe('new medication: structure', () => {
     expect(screen.queryByRole('button', { name: 'Create' })).toBeNull();
   });
 
-  it('has the four time chips with their times, plus Other time; + Another dose only once a time is set', async () => {
+  it('has the four TIME-FIRST chips (time over day part, tabular numerals), then Other…; no + Another dose tile', async () => {
+    const user = userEvent.setup();
     renderMed();
-    expect(within(timeChips()).getAllByRole('radio')).toHaveLength(4);
-    expect(chip(/^Morning\s*8:00 AM$/)).toBeInTheDocument();
-    expect(chip(/^Midday\s*12:00 PM$/)).toBeInTheDocument();
-    expect(chip(/^Evening\s*6:00 PM$/)).toBeInTheDocument();
-    expect(chip(/^Bedtime\s*9:00 PM$/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Other time' })).toBeInTheDocument();
+    expect(within(timeChips()).getAllByRole('checkbox')).toHaveLength(4);
+    expect(chip(/^8:00 AM\s*Morning$/)).toBeInTheDocument();
+    expect(chip(/^12:00 PM\s*Midday$/)).toBeInTheDocument();
+    expect(chip(/^6:00 PM\s*Evening$/)).toBeInTheDocument();
+    expect(chip(/^9:00 PM\s*Bedtime$/)).toBeInTheDocument();
+    const morning = chip(/Morning/);
+    expect(morning.firstElementChild).toHaveTextContent('8:00 AM');
+    expect(morning.firstElementChild).toHaveClass('tabular-nums');
+    expect(morning.lastElementChild).toHaveTextContent('Morning');
+    expect(screen.getByRole('button', { name: 'Other…' })).toBe(otherTile());
     expect(screen.queryByTestId('add-another-dose')).toBeNull();
-    await userEvent.setup().click(chip(/Morning/));
-    expect(screen.getByRole('button', { name: '+ Another dose' })).toBeInTheDocument();
+    // Multi-select: a second chip is a second time, both filled; "+ Another dose" never appears.
+    await user.click(chip(/Morning/));
+    await user.click(chip(/Evening/));
+    expect(chip(/Morning/)).toBeChecked();
+    expect(chip(/Evening/)).toBeChecked();
+    expect(screen.queryByTestId('add-another-dose')).toBeNull();
   });
 
   it('How often? is the task / shift grid: Every day (default) / Every week / When needed, then Custom…', async () => {
@@ -171,15 +189,19 @@ describe('new medication: structure', () => {
     expect(screen.getByTestId('repeat-custom')).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('When? opens on the "Starts" date, above the dose times; + Another dose is a tile of the same row', async () => {
-    const user = userEvent.setup();
+  it('When? opens on Starts | Repeats until, then How often?; What time? (chips + Other… in one row) comes after', async () => {
     renderMed();
-    const when = screen.getByRole('heading', { name: 'When?' }).closest('section') as HTMLElement;
-    const starts = within(when).getByLabelText(/^Starts/);
-    expect(starts.compareDocumentPosition(timeChips()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    await user.click(chip(/Morning/));
+    const when = screen.getByRole('heading', { name: /^When\?/ }).closest('section') as HTMLElement;
+    const tiles = within(when).getByTestId('when-date-tiles');
+    expect(within(tiles).getByTestId('starts-tile')).toHaveTextContent(/^Starts/);
+    expect(within(tiles).getByTestId('repeats-until-tile')).toHaveTextContent(/^Repeats until\s*Never$/);
+    expect(within(when).getByLabelText(/^Starts/)).toHaveAttribute('id', 'scheduled_date');
+    const often = within(when).getByRole('radiogroup', { name: 'How often?' });
+    expect(tiles.compareDocumentPosition(often) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(when).not.toContainElement(timeChips());
+    expect(often.compareDocumentPosition(timeChips()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const row = screen.getByTestId('time-chip-row');
-    expect(within(row).getByTestId('add-another-dose')).toHaveTextContent('+ Another dose');
+    expect(row).toContainElement(otherTile());
   });
 
   it('has NO Medication / Appointment / Task type switch', () => {
@@ -187,7 +209,7 @@ describe('new medication: structure', () => {
     expect(screen.queryByLabelText('Type')).toBeNull();
   });
 
-  it('More details holds the photo, refills, prescription details, instructions, the end date and reminders (no start date, no Repeat select)', async () => {
+  it('More details holds the photo, refills, prescription details and instructions (no end date, no start date, no Repeat select; Reminders is the row above)', async () => {
     const user = userEvent.setup();
     renderMed();
     const toggle = screen.getByRole('button', { name: /More details/ });
@@ -196,8 +218,14 @@ describe('new medication: structure', () => {
     await user.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByLabelText('Instructions')).toBeVisible();
-    expect(screen.getByLabelText(/^End date/)).toBeVisible();
-    expect(screen.getByRole('switch', { name: 'Enable notifications' })).toBeVisible();
+    // The repeat end is the "Repeats until" tile in When? now (build 11), never inside More details.
+    const panel = document.getElementById('more-details-panel') as HTMLElement;
+    expect(panel).not.toContainElement(screen.getByLabelText(/^Repeats until/));
+    expect(screen.queryByLabelText(/^End date/)).toBeNull();
+    // The Reminders card is the summary row's accordion now, never inside More details.
+    expect(document.getElementById('more-details-panel')).not.toContainElement(
+      screen.getByTestId('reminders-fieldset')
+    );
     // Mobile's order: photo, Track refills, Prescriber, Pharmacy, Pharmacy phone, Rx number, Instructions.
     const order = [
       screen.getByLabelText('Medication photo'),
@@ -207,7 +235,6 @@ describe('new medication: structure', () => {
       screen.getByLabelText('Pharmacy phone'),
       screen.getByLabelText('Rx number'),
       screen.getByLabelText('Instructions'),
-      screen.getByLabelText(/^End date/),
     ];
     for (let i = 1; i < order.length; i++) {
       expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -216,27 +243,98 @@ describe('new medication: structure', () => {
     expect(screen.queryByRole('combobox', { name: 'Repeat', hidden: true })).toBeNull();
   });
 
-  it('Other time reveals the regular time field; a non-chip time selects no chip', async () => {
+  it('Other… is the time picker: a non-chip time becomes its own chip ("7:15 AM / Other") and lights no preset', async () => {
     const user = userEvent.setup();
     renderMed();
-    expect(screen.queryByLabelText(/^Time/)).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Other time' }));
-    const time = await screen.findByLabelText(/^Time/);
-    await user.clear(time);
-    await user.type(time, '07:15');
-    for (const radio of within(timeChips()).getAllByRole('radio')) {
-      expect(radio).not.toBeChecked();
-    }
-    // The field is the RECIPIENT's clock, like the chips (owner 1.4.0): the viewer time that IS 12:00 in
+    expect(screen.queryByTestId('time-chip-custom')).toBeNull();
+    await user.click(otherTile());
+    expect(otherTile()).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.change(otherInput(), { target: { value: '07:15' } });
+    for (const box of within(timeChips()).getAllByRole('checkbox')) expect(box).not.toBeChecked();
+    // Fix13: the custom chip is not a toggle: a lit box (outside the preset group) holding its own time picker and
+    // a "×" that removes the dose.
+    const custom = screen.getByTestId('time-chip-custom');
+    expect(timeChips()).not.toContainElement(custom);
+    expect(custom).toHaveAccessibleName(/^7:15 AM\s*Other$/);
+    expect(custom).toHaveAttribute('aria-haspopup', 'dialog');
+    const box = screen.getByTestId('time-chip-custom-box');
+    expect(box).toHaveClass('rounded-2xl', 'border', 'bg-ink', 'text-cream', 'border-ink');
+    expect(custom).toHaveClass('min-h-[48px]');
+    expect(within(box).getByRole('button', { name: 'Remove 7:15 AM dose' })).toBeInTheDocument();
+    // The same time-first lines as a preset chip.
+    expect(Array.from(custom.querySelectorAll('span')).map((sp) => sp.textContent)).toEqual(['7:15 AM', 'Other']);
+    // The picker is the RECIPIENT's clock, like the chips (owner 1.4.0): the viewer time that IS 12:00 in
     // New York (10:00 Denver) does NOT light Midday...
-    await user.clear(time);
-    await user.type(time, '10:00');
+    fireEvent.change(otherInput(), { target: { value: '10:00' } });
     expect(chip(/Midday/)).not.toBeChecked();
-    // ...and typing the chip's own time does, the field naming whose clock it is.
-    await user.clear(time);
-    await user.type(time, '12:00');
+    // ...and the chip's own time does (it IS that chip, not a second "Other" one).
+    fireEvent.change(otherInput(), { target: { value: '12:00' } });
     expect(chip(/Midday/)).toBeChecked();
-    expect(screen.getByLabelText(/^Time in New York/)).toHaveValue('12:00');
+    expect(screen.queryByTestId('time-chip-custom')).toBeNull();
+    expect(otherInput()).toHaveValue('12:00');
+  });
+
+  it('Fix13: tapping a custom dose changes ITS time in place (its own picker); a preset still toggles', async () => {
+    mutateCreate.mockResolvedValue({ id: 'p' });
+    const user = userEvent.setup();
+    renderMed();
+    await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
+    await user.click(chip(/Morning/));
+    fireEvent.change(otherInput(), { target: { value: '14:30' } }); // an extra, custom dose
+    expect(screen.getByTestId('time-chip-custom')).toHaveAccessibleName(/^2:30 PM\s*Other$/);
+    // The chip body is the picker for THAT dose: it opens on its time and a pick moves it, in place.
+    await user.click(screen.getByTestId('time-chip-custom'));
+    expect(screen.getByTestId('time-chip-custom')).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.change(screen.getByLabelText('Change 2:30 PM dose time', { selector: 'input' }), {
+      target: { value: '15:00' },
+    });
+    expect(screen.getAllByTestId('time-chip-custom')).toHaveLength(1);
+    expect(screen.getByTestId('time-chip-custom')).toHaveAccessibleName(/^3:00 PM\s*Other$/);
+    expect(chip(/Morning/)).toBeChecked();
+    await user.click(screen.getByTestId('add-event-save'));
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(2));
+    expect(mutateCreate.mock.calls.map((c) => (c[0] as { scheduled_time: string }).scheduled_time)).toEqual([
+      '08:00',
+      '15:00',
+    ]);
+  });
+
+  it('Fix13: a custom dose\'s "×" removes it (an extra goes; the primary hands over to the next time)', async () => {
+    mutateCreate.mockResolvedValue({ id: 'p' });
+    const user = userEvent.setup();
+    renderMed();
+    await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
+    // A custom primary (7:15) plus Evening as an extra.
+    fireEvent.change(otherInput(), { target: { value: '07:15' } });
+    await user.click(chip(/Evening/));
+    const remove = screen.getByRole('button', { name: 'Remove 7:15 AM dose' });
+    expect(remove).toHaveClass('h-11', 'w-11');
+    await user.click(remove);
+    expect(screen.queryByTestId('time-chip-custom')).toBeNull();
+    expect(chip(/Evening/)).toBeChecked();
+    // An extra custom dose: × drops just that one.
+    fireEvent.change(otherInput(), { target: { value: '22:45' } });
+    expect(screen.getByTestId('time-chip-custom')).toHaveAccessibleName(/^10:45 PM\s*Other$/);
+    await user.click(screen.getByRole('button', { name: 'Remove 10:45 PM dose' }));
+    expect(screen.queryByTestId('time-chip-custom')).toBeNull();
+    await user.click(screen.getByTestId('add-event-save'));
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+    expect(mutateCreate.mock.calls[0][0]).toMatchObject({ scheduled_time: '18:00' });
+  });
+
+  it('un-choosing the first time moves the next one up (it becomes the saved time)', async () => {
+    mutateCreate.mockResolvedValue({ id: 'p' });
+    const user = userEvent.setup();
+    renderMed();
+    await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
+    await user.click(chip(/Morning/));
+    await user.click(chip(/Evening/));
+    await user.click(chip(/Morning/)); // the primary goes: Evening is now the only time
+    expect(chip(/Morning/)).not.toBeChecked();
+    expect(chip(/Evening/)).toBeChecked();
+    await user.click(screen.getByTestId('add-event-save'));
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+    expect(mutateCreate.mock.calls[0][0]).toMatchObject({ scheduled_time: '18:00' });
   });
 
   it('tapping the selected chip again clears the time', async () => {
@@ -258,6 +356,7 @@ describe('new medication: structure', () => {
     expect(screen.getByTestId('dose-past-time-note')).toHaveTextContent(
       'Starts with the next dose. This time has already passed today.'
     );
+    await user.click(chip(/Morning/)); // un-chosen: no time, no note
     await user.click(chip(/Evening/)); // 18:00 New York: still ahead
     expect(screen.queryByTestId('dose-past-time-note')).toBeNull();
   });
@@ -279,12 +378,76 @@ describe('new medication: a missing answer is shown where it is', () => {
     renderMed();
     await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
     await user.click(chip(/Morning/));
-    await user.clear(screen.getByLabelText(/^Starts/));
+    fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: '' } });
     await user.click(screen.getByTestId('add-event-save'));
     expect(await screen.findByText('Please choose a date.')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByLabelText(/^Starts/)).toHaveFocus());
+    // The message is AT the Starts tile, which takes focus (its hidden input is out of the tab order).
+    const tile = screen.getByTestId('starts-tile');
+    await waitFor(() => expect(tile).toHaveFocus());
+    expect(tile).toHaveAttribute('aria-invalid', 'true');
+    expect(tile).toHaveAttribute('aria-describedby', 'scheduled_date-error');
+    expect(document.getElementById('scheduled_date-error')).toHaveTextContent('Please choose a date.');
     expect(screen.getByRole('button', { name: /More details/ })).toHaveAttribute('aria-expanded', 'false');
     expect(mutateCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe('new medication: Repeats until (build 11)', () => {
+  it('reads Never when blank; a picked day names it; its in-tile "×" clears it back to Never (Fix13)', async () => {
+    const user = userEvent.setup();
+    renderMed();
+    const tile = screen.getByTestId('repeats-until-tile');
+    expect(tile).toHaveTextContent(/Never/);
+    expect(tile).toBeEnabled();
+    expect(screen.queryByTestId('repeats-until-tile-clear')).toBeNull();
+    fireEvent.change(screen.getByLabelText(/^Repeats until/), { target: { value: '2027-03-31' } });
+    expect(screen.getByTestId('repeats-until-tile')).toHaveTextContent(/Wed, Mar 31/);
+    // The picker has no separate "No end date" button any more.
+    await user.click(screen.getByTestId('repeats-until-tile'));
+    await screen.findByRole('grid');
+    expect(screen.queryByRole('button', { name: 'No end date' })).toBeNull();
+    // A second tap on the tile closes its picker.
+    await user.click(screen.getByTestId('repeats-until-tile'));
+    expect(screen.queryByRole('grid')).toBeNull();
+    const clear = screen.getByRole('button', { name: 'Clear repeat end' });
+    expect(clear).toHaveClass('h-11', 'w-11');
+    await user.click(clear);
+    expect(screen.getByTestId('repeats-until-tile')).toHaveTextContent(/Never/);
+    expect(screen.getByLabelText(/^Repeats until/)).toHaveValue('');
+    expect(screen.queryByTestId('repeats-until-tile-clear')).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('repeats-until-tile')).toHaveFocus());
+  });
+
+  it('Once keeps the tile in place, disabled, reading "Doesn\'t repeat"', async () => {
+    const user = userEvent.setup();
+    renderMed();
+    await user.click(screen.getByTestId('repeat-custom'));
+    await user.click(screen.getByRole('radio', { name: 'Once' }));
+    const tile = screen.getByTestId('repeats-until-tile');
+    expect(tile).toBeDisabled();
+    expect(tile).toHaveTextContent(/Doesn't repeat/);
+  });
+
+  it('an end before the start errors AT the tile, live, and Save refuses it (focus on the tile)', async () => {
+    const user = userEvent.setup();
+    renderMed();
+    await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
+    await user.click(chip(/Evening/));
+    fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: '2027-03-10' } });
+    fireEvent.change(screen.getByLabelText(/^Repeats until/), { target: { value: '2027-03-01' } });
+    const tile = screen.getByTestId('repeats-until-tile');
+    const message = 'The end date must be on or after the first date.';
+    expect(document.getElementById('recurrence_end_date-error')).toHaveTextContent(message);
+    expect(tile).toHaveAttribute('aria-invalid', 'true');
+    await user.click(screen.getByTestId('add-event-save'));
+    await waitFor(() => expect(tile).toHaveFocus());
+    expect(mutateCreate).not.toHaveBeenCalled();
+    // A day on or after the start clears it and saves.
+    fireEvent.change(screen.getByLabelText(/^Repeats until/), { target: { value: '2027-03-10' } });
+    expect(document.getElementById('recurrence_end_date-error')).toBeNull();
+    await user.click(screen.getByTestId('add-event-save'));
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+    expect(mutateCreate.mock.calls[0][0]).toMatchObject({ recurrence_end_date: '2027-03-10' });
   });
 });
 
@@ -405,6 +568,7 @@ describe('new medication: API payload is IDENTICAL to the full form for the same
     await user.click(chip(/Bedtime/));
     await user.click(screen.getByRole('button', { name: /More details/ }));
     await user.type(screen.getByLabelText('Instructions'), 'With food');
+    await user.click(screen.getByTestId('reminders-summary-row'));
     await user.click(screen.getByRole('switch', { name: 'Enable notifications' }));
     await user.click(screen.getByRole('button', { name: 'Add medication' }));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
@@ -416,7 +580,8 @@ describe('new medication: API payload is IDENTICAL to the full form for the same
   });
 });
 
-describe('new medication: + Another dose (mobile AddEventScreen / first-run wizard parity)', () => {
+// Build 11: "+ Another dose" is gone; choosing a further chip IS another dose (multi-select). Same rows, same order.
+describe('new medication: more than one time (mobile AddEventScreen / first-run wizard parity)', () => {
   const fillName = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
     await user.type(screen.getByLabelText('Dosage'), '500 mg');
@@ -428,8 +593,8 @@ describe('new medication: + Another dose (mobile AddEventScreen / first-run wiza
     renderMed();
     await fillName(user);
     await user.click(chip(/Morning/)); // 8:00 New York (the recipient's clock)
-    await user.click(screen.getByTestId('add-another-dose')); // starts on the first unused chip: Midday
-    await user.click(screen.getByRole('button', { name: '+ Another dose' }));
+    await user.click(chip(/Midday/)); // a second time
+    await user.click(chip(/Evening/)); // a third
     await user.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(3));
 
@@ -457,7 +622,7 @@ describe('new medication: + Another dose (mobile AddEventScreen / first-run wiza
         refill_group_id: 'primary-1',
       });
     expectSibling(second, '12:00'); // Midday, on the recipient's clock like the chips
-    expectSibling(third, '18:00'); // next unused chip: Evening 6:00 PM New York
+    expectSibling(third, '18:00'); // Evening 6:00 PM New York
   });
 
   it('the request sequence equals the first-run wizard / mobile helper for the same answers', async () => {
@@ -467,7 +632,7 @@ describe('new medication: + Another dose (mobile AddEventScreen / first-run wiza
     renderMed();
     await fillName(user);
     await user.click(chip(/Morning/));
-    await user.click(screen.getByTestId('add-another-dose'));
+    await user.click(chip(/Midday/));
     await user.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(2));
     const [primary, sibling] = mutateCreate.mock.calls.map((c) => c[0]);
@@ -484,19 +649,27 @@ describe('new medication: + Another dose (mobile AddEventScreen / first-run wiza
     expect(sibling.track_refills).toBe(false);
   });
 
-  it('a row can be removed, 3 extras is the limit, and untapping the time clears the extras', async () => {
+  it('a time can be un-chosen, four times is the limit (the rest shown, not offered), un-choosing frees a slot', async () => {
     const user = userEvent.setup();
     renderMed();
+    await user.click(otherTile());
+    fireEvent.change(otherInput(), { target: { value: '07:15' } }); // the first time: a custom one
     await user.click(chip(/Morning/));
-    for (let i = 0; i < 3; i += 1) await user.click(screen.getByTestId('add-another-dose'));
+    await user.click(chip(/Midday/));
+    await user.click(chip(/Evening/));
     expect(screen.getByTestId('extra-dose-3')).toBeInTheDocument();
-    expect(screen.queryByTestId('add-another-dose')).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Remove dose 3' }));
+    // Four times chosen: Bedtime and Other… are shown, not offered.
+    expect(chip(/Bedtime/)).toBeDisabled();
+    expect(otherTile()).toBeDisabled();
+    await user.click(chip(/Bedtime/));
+    expect(chip(/Bedtime/)).not.toBeChecked();
+    await user.click(chip(/Evening/)); // un-choose an extra
     expect(screen.queryByTestId('extra-dose-3')).toBeNull();
-    expect(screen.getByTestId('add-another-dose')).toBeInTheDocument();
-    await user.click(chip(/Morning/)); // untap: time cleared, extras gone
-    expect(screen.queryByTestId('extra-dose-1')).toBeNull();
-    expect(screen.queryByTestId('add-another-dose')).toBeNull();
+    expect(chip(/Bedtime/)).toBeEnabled();
+    expect(otherTile()).toBeEnabled();
+    // The primary (the custom 7:15) is untouched.
+    expect(screen.getByTestId('time-chip-custom')).toHaveAccessibleName(/^7:15 AM\s*Other$/);
+    expect(screen.getByLabelText('Change 7:15 AM dose time', { selector: 'input' })).toHaveValue('07:15');
   });
 
   it('each extra dose gets its own inline past-time note', async () => {
@@ -505,15 +678,17 @@ describe('new medication: + Another dose (mobile AddEventScreen / first-run wiza
     const user = userEvent.setup();
     renderMed();
     await user.click(chip(/Bedtime/)); // 9 PM New York: still ahead
-    await user.click(screen.getByTestId('add-another-dose'));
-    // The new row starts on the first unused chip: Morning 8:00 New York, already passed today.
+    await user.click(chip(/Morning/)); // a second time: 8:00 New York, already passed today
     expect(screen.getByTestId('dose-past-time-note-1')).toHaveTextContent(
       'Starts with the next dose. This time has already passed today.'
     );
     // The primary (9 PM) is still ahead, so ITS note stays hidden.
     expect(screen.queryByTestId('dose-past-time-note')).toBeNull();
-    const second = within(screen.getByTestId('extra-dose-1')).getByLabelText('Dose 2');
-    fireEvent.change(second, { target: { value: '19:00' } });
+    // Swap the second time for one still ahead (7 PM New York, through Other…): its note goes.
+    await user.click(chip(/Morning/));
+    await user.click(otherTile());
+    fireEvent.change(otherInput(), { target: { value: '19:00' } });
+    expect(screen.getByTestId('extra-dose-1')).toBeInTheDocument();
     expect(screen.queryByTestId('dose-past-time-note-1')).toBeNull();
   });
 
@@ -521,7 +696,7 @@ describe('new medication: + Another dose (mobile AddEventScreen / first-run wiza
     const user = userEvent.setup();
     renderMed();
     await user.click(chip(/Morning/));
-    await user.click(screen.getByTestId('add-another-dose'));
+    await user.click(chip(/Midday/));
     await user.click(screen.getByRole('radio', { name: 'When needed' }));
     await fillName(user);
     await user.click(screen.getByTestId('add-event-save'));
@@ -535,7 +710,7 @@ describe('new medication: + Another dose (mobile AddEventScreen / first-run wiza
     renderMed();
     await fillName(user);
     await user.click(chip(/Morning/));
-    await user.click(screen.getByTestId('add-another-dose'));
+    await user.click(chip(/Midday/));
     await user.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(failed).toHaveBeenCalledWith('circle-1', 'medication', 'additional_dose_create_failed'));
     expect(showToast).toHaveBeenCalledWith(expect.stringContaining('12:00'), 'error');
@@ -580,14 +755,15 @@ describe('new medication: analytics', () => {
     expect(opened).toHaveBeenCalledWith({ type: 'medication', entry: 'other' });
   });
 
-  it('each chip fires time_chip_selected with ITS id; Other time fires "other"; untap does not', async () => {
+  it('each chip fires time_chip_selected with ITS id; Other… fires "other"; untap does not', async () => {
     const user = userEvent.setup();
     renderMed();
-    await user.click(chip(/Morning/));
-    await user.click(chip(/Midday/));
-    await user.click(chip(/Evening/));
-    await user.click(chip(/Bedtime/));
-    await user.click(screen.getByRole('button', { name: 'Other time' }));
+    // Each chip as THE time (chosen, then un-chosen, so the next one is the time again).
+    for (const name of [/Morning/, /Midday/, /Evening/, /Bedtime/]) {
+      await user.click(chip(name));
+      await user.click(chip(name));
+    }
+    await user.click(otherTile());
     expect((chipSpy.mock.calls as Array<[{ chip: string }]>).map((c) => c[0].chip)).toEqual([
       'morning',
       'midday',
@@ -595,6 +771,9 @@ describe('new medication: analytics', () => {
       'bedtime',
       'other',
     ]);
+    chipSpy.mockClear();
+    await user.click(otherTile()); // close the picker
+    await user.click(chip(/Bedtime/));
     chipSpy.mockClear();
     await user.click(chip(/Bedtime/)); // selected -> untap
     expect(chipSpy).not.toHaveBeenCalled();
@@ -661,19 +840,18 @@ describe('new medication: analytics', () => {
 });
 
 describe('new appointment', () => {
-  it('is built like the task form: What is it? / When? / How often? / Who\'s going? / More details', () => {
+  it("is built like the task form: What is it? / When? / What time? / Who's going? / More details", () => {
     renderAppt();
     expect(screen.getByRole('dialog', { name: 'New appointment' })).toBeInTheDocument();
     const headings = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
-    expect(headings).toEqual(['What is it?', 'When?', 'How often?', "Who's going?"]);
-    // When? = the date, then a "Time" tile and "Any time" (lit: no time yet); the field opens from the tile.
-    const date = screen.getByLabelText(/^Date/);
-    const timeTile = screen.getByTestId('appt-time-tile');
-    expect(date.compareDocumentPosition(timeTile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByRole('radio', { name: 'Any time' })).toBeChecked();
-    expect(screen.queryByLabelText(/^Time/, { selector: 'input' })).toBeNull();
-    // How often? = Once (default) / Every day / Every week, then Custom….
-    const often = screen.getByRole('radiogroup', { name: 'How often?' });
+    expect(headings).toEqual(['What is it?', 'When? *', 'What time?', "Who's going?"]);
+    // When? = Starts | Repeats until (Once: disabled, "Doesn't repeat"), then the How often? grid.
+    const when = screen.getByRole('heading', { name: /^When\?/ }).closest('section') as HTMLElement;
+    expect(within(when).getByTestId('starts-tile')).toHaveTextContent(/^Starts/);
+    const until = within(when).getByTestId('repeats-until-tile');
+    expect(until).toBeDisabled();
+    expect(until).toHaveTextContent(/^Repeats until\s*Doesn't repeat$/);
+    const often = within(when).getByRole('radiogroup', { name: 'How often?' });
     expect(within(often).getAllByRole('radio').map((r) => r.textContent)).toEqual([
       'Once',
       'Every day',
@@ -681,6 +859,11 @@ describe('new appointment', () => {
     ]);
     expect(within(often).getByRole('radio', { name: 'Once' })).toBeChecked();
     expect(screen.getByTestId('repeat-custom')).toHaveTextContent('Custom…');
+    // What time? = Pick a time | Any time (Any time lit: no time yet); no time tiles until Pick a time.
+    const what = screen.getByRole('radiogroup', { name: 'What time?' });
+    expect(within(what).getAllByRole('radio').map((r) => r.textContent)).toEqual(['Pick a time', 'Any time']);
+    expect(screen.getByRole('radio', { name: 'Any time' })).toBeChecked();
+    expect(screen.queryByTestId('appt-from-to')).toBeNull();
     // One More details (no Doctor / Place / Notes / Repeat rows), collapsed, naming what is inside.
     for (const id of ['row-doctor', 'row-place', 'row-notes', 'row-repeat']) {
       expect(document.getElementById(id)).toBeNull();
@@ -692,26 +875,42 @@ describe('new appointment', () => {
     expect(screen.queryByLabelText('Type')).toBeNull();
   });
 
-  // Owner 2026-11-10 (mobile parity): Starts | Ends sit directly under the time choice, built like the shift
-  // form's tiles, the length chips set Ends, one caption names the length (and the zone when it differs).
-  // More details keeps Doctor, Location and Details.
-  it('Pick a time shows Starts | Ends, the length chips and the caption; Any time hides them all', async () => {
+  // Build 11 (owner 2026-11-10, mobile parity): with Pick a time, From | To value tiles (each the time picker),
+  // on the CIRCLE's clock; To starts at From + 30 minutes and keeps the length when From moves; no length chips;
+  // the zone caption only when the zones differ. More details keeps Doctor, Location and Details.
+  const fromInput = () => screen.getByLabelText('From', { selector: 'input' });
+  const toInput = () => screen.getByLabelText('To', { selector: 'input' });
+  it('Fix13: the appointment To is required: no "×" on it (the task\'s is optional and has one)', async () => {
     const user = userEvent.setup();
     renderAppt();
-    expect(screen.queryByTestId('appt-start-end-tiles')).toBeNull();
-    await user.click(screen.getByTestId('appt-time-tile'));
-    expect(screen.getByTestId('appt-start-tile')).toHaveAccessibleName('Starts, Choose a time');
-    expect(screen.getByTestId('appt-end-tile')).toHaveAccessibleName('Ends, Choose a time');
-    const start = screen.getByLabelText(/^Starts/, { selector: 'input' });
-    fireEvent.change(start, { target: { value: '09:00' } });
-    expect(screen.getByTestId('appt-time-tile')).toHaveAccessibleName('Time, 9:00 AM');
-    expect(screen.getByTestId('appt-start-tile')).toHaveAccessibleName(/^Starts, 9:00 AM/);
-    expect(screen.getByTestId('appt-end-tile')).toHaveAccessibleName(/^Ends, 9:30 AM/);
+    await user.click(screen.getByRole('radio', { name: 'Pick a time' }));
+    fireEvent.change(screen.getByLabelText('From', { selector: 'input' }), { target: { value: '09:00' } });
+    // It has its value (From + 30), shown with the chevron and no clear.
+    expect(screen.getByLabelText('To', { selector: 'input' })).toHaveValue('09:30');
+    expect(screen.getByTestId('appt-to-tile')).toHaveTextContent(/To\s*\d/);
+    expect(screen.queryByRole('button', { name: 'Clear end time' })).toBeNull();
+    expect(screen.queryByTestId('appt-to-tile-clear')).toBeNull();
+    expect(screen.queryByTestId('appt-to-tile-box')).toBeNull();
+  });
+
+  it('Pick a time shows From | To (no length chips) and the zone caption; Any time hides them all', async () => {
+    const user = userEvent.setup();
+    renderAppt();
+    await user.click(screen.getByRole('radio', { name: 'Pick a time' }));
+    expect(screen.getByTestId('appt-from-tile')).toHaveTextContent(/^From\s*Choose a time$/);
+    expect(screen.getByTestId('appt-to-tile')).toHaveTextContent(/^To\s*Choose a time$/);
+    expect(screen.getByTestId('appt-to-tile')).toBeDisabled(); // nothing to end before a start
+    fireEvent.change(fromInput(), { target: { value: '11:00' } }); // 11:00 New York (the circle's clock)
+    expect(screen.getByTestId('appt-from-tile')).toHaveTextContent(/^From\s*11:00 AM$/);
+    expect(screen.getByTestId('appt-to-tile')).toHaveTextContent(/^To\s*11:30 AM$/);
+    expect(screen.queryByRole('radio', { name: '30 min' })).toBeNull();
     // Not folded: visible with More details closed.
     expect(screen.getByRole('button', { name: /^More details/ })).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getByRole('radio', { name: '30 min' })).toBeChecked();
-    // Viewer Denver, recipient New York: the zone the tiles speak (the viewer's) is named.
-    expect(screen.getByTestId('appt-duration-caption')).toHaveTextContent('30 minutes · Times are for Denver.');
+    // Viewer Denver, circle New York: the circle's time first, then the viewer's range.
+    expect(screen.getByTestId('time-zone-caption')).toHaveTextContent(
+      'New York time · 9:00 – 9:30 AM your time (Denver)'
+    );
+    expect(screen.queryByTestId('appt-duration-caption')).toBeNull();
     await user.click(screen.getByRole('button', { name: /^More details/ }));
     const panel = document.getElementById('more-details-panel') as HTMLElement;
     expect(within(panel).queryByRole('radio', { name: '1 hr' })).toBeNull();
@@ -720,64 +919,54 @@ describe('new appointment', () => {
     expect(within(panel).getByLabelText(/^Details/)).toBeVisible();
     expect(within(panel).getByRole('combobox', { name: 'Doctor' })).toBeVisible();
     await user.click(screen.getByRole('radio', { name: 'Any time' }));
-    expect(screen.queryByTestId('appt-start-end-tiles')).toBeNull();
-    expect(screen.queryByRole('radio', { name: '30 min' })).toBeNull();
-    expect(screen.queryByTestId('appt-duration-caption')).toBeNull();
+    expect(screen.queryByTestId('appt-from-to')).toBeNull();
+    expect(screen.queryByTestId('time-zone-caption')).toBeNull();
     expect(document.getElementById('endTime')).toBeNull();
   });
 
-  it('a length chip sets Ends; typing an Ends no chip matches deselects the chip', async () => {
+  it('To keeps the length when From moves; an end at or before From is the next day', async () => {
     const user = userEvent.setup();
     renderAppt();
-    await user.click(screen.getByTestId('appt-time-tile'));
-    fireEvent.change(screen.getByLabelText(/^Starts/, { selector: 'input' }), { target: { value: '09:00' } });
-    await user.click(screen.getByRole('radio', { name: '2 hrs' }));
-    expect(screen.getByTestId('appt-end-tile')).toHaveAccessibleName(/^Ends, 11:00 AM/);
-    expect(screen.getByTestId('appt-duration-caption')).toHaveTextContent(/^2 hours/);
-    await user.click(screen.getByTestId('appt-end-tile'));
-    const ends = screen.getByLabelText(/^Ends/, { selector: 'input' });
-    expect(ends).toHaveValue('11:00');
-    fireEvent.change(ends, { target: { value: '10:45' } });
-    for (const name of ['30 min', '1 hr', '2 hrs']) {
-      expect(screen.getByRole('radio', { name })).not.toBeChecked();
-    }
-    expect(screen.getByTestId('appt-duration-caption')).toHaveTextContent(/^1 h 45 min/);
+    await user.click(screen.getByRole('radio', { name: 'Pick a time' }));
+    fireEvent.change(fromInput(), { target: { value: '09:00' } });
+    fireEvent.change(toInput(), { target: { value: '11:00' } });
+    expect(screen.getByTestId('appt-to-tile')).toHaveTextContent(/11:00 AM$/);
+    fireEvent.change(fromInput(), { target: { value: '13:00' } }); // two hours kept
+    expect(toInput()).toHaveValue('15:00');
+    expect(screen.getByTestId('appt-to-tile')).toHaveTextContent(/3:00 PM$/);
     // An end at or before the start is the next day (the save's PK21 rule): the tile says so.
-    fireEvent.change(ends, { target: { value: '08:00' } });
-    expect(screen.getByTestId('appt-end-tile')).toHaveAccessibleName(/^Ends, 8:00 AM next day/);
-    expect(screen.getByTestId('appt-duration-caption')).toHaveTextContent(/^23 hours/);
+    fireEvent.change(toInput(), { target: { value: '08:00' } });
+    expect(screen.getByTestId('appt-to-tile')).toHaveTextContent(/8:00 AM next day$/);
   });
 
-  it('the caption names no zone when the viewer and the recipient share one', async () => {
+  it('the zone caption is not shown when the viewer and the recipient share a zone', async () => {
     const saved = useCircleResult.timezone;
     useCircleResult.timezone = 'America/Denver';
     try {
       const user = userEvent.setup();
       renderAppt();
-      await user.click(screen.getByTestId('appt-time-tile'));
-      fireEvent.change(screen.getByLabelText(/^Starts/, { selector: 'input' }), { target: { value: '09:00' } });
-      expect(screen.getByTestId('appt-duration-caption')).toHaveTextContent(/^30 minutes$/);
+      await user.click(screen.getByRole('radio', { name: 'Pick a time' }));
+      fireEvent.change(fromInput(), { target: { value: '09:00' } });
+      expect(screen.getByTestId('appt-from-tile')).toHaveTextContent(/9:00 AM$/);
+      expect(screen.queryByTestId('time-zone-caption')).toBeNull();
     } finally {
       useCircleResult.timezone = saved;
     }
   });
 
-  it('a missing end errors AT the Ends tile (unfolded, invalid), not in More details', async () => {
+  it('a missing end errors AT the To tile (focused, invalid), not in More details', async () => {
     const user = userEvent.setup();
     renderAppt();
     await user.type(title(), 'Checkup');
-    await user.click(screen.getByTestId('appt-time-tile'));
-    fireEvent.change(screen.getByLabelText(/^Starts/, { selector: 'input' }), { target: { value: '09:00' } });
-    await user.click(screen.getByTestId('appt-end-tile'));
-    fireEvent.change(screen.getByLabelText(/^Ends/, { selector: 'input' }), { target: { value: '' } });
-    await user.click(screen.getByTestId('appt-end-tile')); // fold it again: the error must unfold it
-    expect(document.getElementById('endTime')).toBeNull();
+    await user.click(screen.getByRole('radio', { name: 'Pick a time' }));
+    fireEvent.change(fromInput(), { target: { value: '09:00' } });
+    fireEvent.change(toInput(), { target: { value: '' } });
     await user.click(screen.getByRole('button', { name: 'Add appointment' }));
-    const ends = await screen.findByLabelText(/^Ends/, { selector: 'input' });
-    expect(ends).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByText('Please add an end time.')).toBeVisible();
-    await waitFor(() => expect(ends).toHaveFocus());
-    expect(screen.getByTestId('appt-end-tile')).toHaveAttribute('aria-invalid', 'true');
+    const tile = screen.getByTestId('appt-to-tile');
+    expect(await screen.findByText('Please add an end time.')).toBeVisible();
+    await waitFor(() => expect(tile).toHaveFocus());
+    expect(tile).toHaveAttribute('aria-invalid', 'true');
+    expect(tile).toHaveAttribute('aria-describedby', 'endTime-error');
     expect(screen.getByRole('button', { name: /^More details/ })).toHaveAttribute('aria-expanded', 'false');
     expect(mutateCreate).not.toHaveBeenCalled();
   });
@@ -809,13 +998,19 @@ describe('new appointment', () => {
       const user = userEvent.setup();
       const view = renderAppt(full ? { layout: 'full' } : {});
       await user.type(title(), 'Cardiology follow-up');
-      const date = screen.getByLabelText(/^Date/);
-      await user.clear(date);
-      await user.type(date, '2026-10-29');
-      if (!full) await user.click(screen.getByTestId('appt-time-tile'));
-      const time = screen.getByLabelText(full ? /^Time/ : /^Starts/, { selector: 'input' });
-      await user.clear(time);
-      await user.type(time, '14:30');
+      if (full) {
+        const date = screen.getByLabelText(/^Date/);
+        await user.clear(date);
+        await user.type(date, '2026-10-29');
+        const time = screen.getByLabelText(/^Time/, { selector: 'input' });
+        await user.clear(time);
+        await user.type(time, '14:30');
+      } else {
+        // Build 11: the Starts tile and the From tile, From on the circle's clock (16:30 New York = 14:30 Denver).
+        fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: '2026-10-29' } });
+        await user.click(screen.getByRole('radio', { name: 'Pick a time' }));
+        fireEvent.change(screen.getByLabelText('From', { selector: 'input' }), { target: { value: '16:30' } });
+      }
       if (full) {
         await user.selectOptions(screen.getByLabelText('Assigned to'), LUIS_ID);
         await user.type(screen.getByLabelText('Location'), 'Clinic');

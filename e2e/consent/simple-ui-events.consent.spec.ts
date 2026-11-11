@@ -197,7 +197,7 @@ test('Add menu + medication form funnel: add_menu_opened, option tapped, entry_f
   });
   expect(props(what)).toEqual({ type: 'medication', step: 'what' });
 
-  await dialog.getByRole('radio', { name: /Evening/ }).click();
+  await dialog.getByRole('checkbox', { name: /Evening$/ }).click();
   expect(props(await posthog.waitForEvent('time_chip_selected', { timeoutMs: 20_000 }))).toEqual({
     chip: 'evening',
   });
@@ -216,7 +216,8 @@ test('Add menu + medication form funnel: add_menu_opened, option tapped, entry_f
   });
   expect(props(oft)).toEqual({ type: 'medication', step: 'how_often' });
 
-  await dialog.getByRole('button', { name: 'Other time' }).click();
+  // "Other…" (build 11) opens the time picker: that counts as the 'other' chip, as opening the field did.
+  await dialog.getByTestId('time-chip-other').click();
   await posthog.waitForEvent('time_chip_selected', {
     timeoutMs: 20_000,
     predicate: (e) => e.properties.chip === 'other',

@@ -800,19 +800,19 @@ export const Analytics = {
    */
   reminderRoutingNoticeDismissed: () => capture('reminder_routing_notice_dismissed'),
   /**
-   * The simple form's "Reminders" summary row (outside More details) was tapped. Enums and a
-   * boolean only (never circle_id): which form, what the summary said, and whether More details
-   * was already open. Same name and props as mobile.
+   * The simple form's "Reminders" summary row (an accordion above More details) was tapped: it expanded or
+   * folded the Reminders card. Enums only (never circle_id): which form, what the summary said, and which way.
+   * Same name and props as mobile.
    */
-  remindersSummaryOpened: (
+  remindersSummaryToggled: (
     eventType: 'medication' | 'appointment' | 'task',
     summaryState: 'off' | 'none' | 'follow_ups_only' | 'set',
-    moreWasOpen: boolean
+    action: 'expand' | 'collapse'
   ) =>
-    capture('reminders_summary_opened', {
+    capture('reminders_summary_toggled', {
       event_type: pickEnum(eventType, ['medication', 'appointment', 'task'], 'medication'),
       summary_state: pickEnum(summaryState, ['off', 'none', 'follow_ups_only', 'set'], 'set'),
-      more_was_open: moreWasOpen === true,
+      action: pickEnum(action, ['expand', 'collapse'], 'expand'),
     }),
   /** A tappable row on the card or the full page. Enums only: which row, and where. */
   dailyUpdateRowTapped: (row: DailyUpdateRow, source: 'card' | 'page') =>

@@ -1,4 +1,4 @@
-import { useId, type ReactElement } from 'react';
+import { useId, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '@/components/ui';
 import { fieldShell } from '@/components/ui/inputStyles';
@@ -17,13 +17,26 @@ import {
  *
  * Two looks:
  *  - `summary`: "Reminders" / the summary line, and a moss "Change >" (the one moss accent). The
- *    whole row is one button named by the full sentence, so truncation never loses meaning.
+ *    whole row is one button named by the full sentence, so truncation never loses meaning. It is an
+ *    ACCORDION (owner 2026-11-10, second pass): the button expands the full Reminders card (`children`)
+ *    inline, directly under it, and folds it again; it never routes the user down the page. The panel
+ *    stays MOUNTED while folded (`hidden`), so `aria-controls` always points at a real element and the
+ *    card's state and ids are stable. Expanded, the header shows a chevron-up instead of "Change >".
  *  - `pickTime`: a task / appointment with no time yet (reminders need one). Muted, no "Change";
  *    the parent sends the tap to the form's time choice instead of More details.
  */
 
 export type RemindersSummaryRowProps =
-  | { variant: 'summary'; summary: ReminderSummary; onPress: () => void }
+  | {
+      variant: 'summary';
+      summary: ReminderSummary;
+      expanded: boolean;
+      /** The panel's id (the button's aria-controls). */
+      panelId: string;
+      onPress: () => void;
+      /** The Reminders card, shown in the panel while expanded. */
+      children: ReactNode;
+    }
   | { variant: 'pickTime'; onPress: () => void };
 
 export function RemindersSummaryRow(props: RemindersSummaryRowProps): ReactElement {
@@ -37,12 +50,15 @@ export function RemindersSummaryRow(props: RemindersSummaryRowProps): ReactEleme
   const label = isPickTime
     ? t('addEvent.reminders.summary.pickTimeLabel')
     : reminderSummaryLabel(t, props.summary, locale);
-  return (
+  const expanded = props.variant === 'summary' && props.expanded;
+  const button = (
     <button
       type="button"
       data-testid="reminders-summary-row"
       data-variant={props.variant}
       aria-label={label}
+      aria-expanded={props.variant === 'summary' ? props.expanded : undefined}
+      aria-controls={props.variant === 'summary' ? props.panelId : undefined}
       // Mobile's accessibilityHint ("Shows the reminder settings."); the pick-time label already says
       // where it goes.
       aria-describedby={isPickTime ? undefined : hintId}
@@ -70,7 +86,7 @@ export function RemindersSummaryRow(props: RemindersSummaryRowProps): ReactEleme
           {t('addEvent.reminders.summary.hint')}
         </span>
       )}
-      {!isPickTime && (
+      {!isPickTime && !expanded && (
         <span
           data-testid="reminders-summary-change"
           className="flex shrink-0 items-center gap-1 text-sm font-semibold text-moss-deep"
@@ -79,6 +95,22 @@ export function RemindersSummaryRow(props: RemindersSummaryRowProps): ReactEleme
           <Icon name="chevron-forward" size="inline" />
         </span>
       )}
+      {expanded && (
+        // chevron-up: the down chevron turned over (no separate icon; the registry needs mobile precedent).
+        <span data-testid="reminders-summary-collapse" className="flex shrink-0 text-moss-deep">
+          <Icon name="chevron-down" size="inline" className="rotate-180" />
+        </span>
+      )}
     </button>
+  );
+  if (props.variant === 'pickTime') return button;
+  return (
+    <div className="flex flex-col gap-3" data-testid="reminders-summary">
+      {button}
+      {/* Full width under the row, no extra indent. */}
+      <div id={props.panelId} data-testid="reminders-summary-panel" hidden={!props.expanded}>
+        {props.children}
+      </div>
+    </div>
   );
 }

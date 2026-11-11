@@ -139,16 +139,15 @@ test.describe("time chips are the recipient's clock", () => {
     const name = `ZZ_E2E_CHIP_${uniqueSuffix()}`;
     const dialog = await openMedForm(page, a.circleId);
     await dialog.locator('#medication_name').fill(name);
-    const evening = dialog.getByRole('radio', { name: /Evening/ });
+    const evening = dialog.getByRole('checkbox', { name: /Evening$/ });
     await evening.click();
     await expect(evening).toBeChecked();
-    // The zones differ (Denver browser, New York recipient): the conversion line sits under the lit chip, and the
-    // chip group is described by it so a screen reader reads it with the chip.
-    const line = dialog.getByTestId('time-conversion');
-    // Recipient first, the viewer second, in plain words (owner 1.4.0).
-    await expect(line).toHaveText('6:00 PM in New York is 4:00 PM for you (Denver)');
-    await expect(dialog.getByRole('radiogroup', { name: 'Common dose times' })).toHaveAccessibleDescription(
-      '6:00 PM in New York is 4:00 PM for you (Denver)'
+    // The zones differ (Denver browser, New York recipient): the zone caption sits under the chips (build 11, the
+    // circle's time first), and the chip group is described by it so a screen reader reads it with the chips.
+    const line = dialog.getByTestId('time-zone-caption');
+    await expect(line).toHaveText('New York time · 4:00 PM your time (Denver)');
+    await expect(dialog.getByRole('group', { name: 'Common dose times' })).toHaveAccessibleDescription(
+      'New York time · 4:00 PM your time (Denver)'
     );
     await dialog.getByRole('button', { name: 'Add medication' }).click();
     await expect(dialog).toBeHidden({ timeout: 20_000 });
@@ -162,7 +161,7 @@ test.describe("time chips are the recipient's clock", () => {
 });
 
 test.describe('"Other time" is on the same clock as the chips (owner 1.4.0)', () => {
-  test('Denver browser, New York recipient: the field is typed on the recipient clock ("Time in New York"); 07:30 reads "Other time, 7:30 AM", the line names both', async ({
+  test('Denver browser, New York recipient: Other… is the recipient clock; 07:30 is its own chip "7:30 AM / Other", the caption names the viewer clock', async ({
     page,
     context,
     request,
@@ -171,17 +170,22 @@ test.describe('"Other time" is on the same clock as the chips (owner 1.4.0)', ()
     const a = await arrange(request, 'otherny', 'America/New_York');
     await cookieLogin(context, a.owner, baseURL);
     const dialog = await openMedForm(page, a.circleId);
-    await dialog.getByRole('button', { name: 'Other time' }).click();
-    // ONE clock on the control: the field, the cell and every chip are the RECIPIENT's clock, and the field says so.
-    await expect(dialog.getByLabel(/^Time in New York/)).toBeVisible();
-    await dialog.locator('#scheduled_time').fill('07:30');
+    // "Other…" is the time picker itself (build 11): the value goes through its hidden #scheduled_time.
     const other = dialog.getByTestId('time-chip-other');
-    await expect(other).toHaveAccessibleName('Other time, 7:30 AM');
-    await expect(dialog.getByTestId('time-chip-other-time')).toHaveText('7:30 AM');
+    await other.click();
+    await expect(other).toHaveAttribute('aria-expanded', 'true');
+    await dialog.locator('#scheduled_time').fill('07:30');
+    // ONE clock on the control: the custom chip and every preset are the RECIPIENT's clock.
+    const custom = dialog.getByTestId('time-chip-custom');
+    await expect(custom).toHaveAccessibleName('7:30 AM Other');
+    // A custom chip is not a toggle (Fix13): its body changes that dose, its × removes it.
+    await expect(dialog.getByRole('button', { name: 'Remove 7:30 AM dose' })).toBeVisible();
     await expect(dialog.locator('#scheduled_time')).toHaveValue('07:30');
     await expect(other).not.toContainText('·');
-    // The viewer's own clock only in the conversion line (here the time field's hint).
-    await expect(dialog.getByText('7:30 AM in New York is 5:30 AM for you (Denver)')).toBeVisible();
+    // The viewer's own clock only in the zone caption.
+    await expect(dialog.getByTestId('time-zone-caption')).toHaveText('New York time · 5:30 AM your time (Denver)');
+    await other.click();
+    await expect(other).toHaveAttribute('aria-expanded', 'false');
     const name = `ZZ_E2E_OTHER_${uniqueSuffix()}`;
     await dialog.locator('#medication_name').fill(name);
     await dialog.getByRole('button', { name: 'Add medication' }).click();
@@ -244,7 +248,7 @@ test.describe("the browser's repeated (fall-back) hour", () => {
     await expect(dialog).toBeVisible({ timeout: 15_000 });
     await expect(dialog.locator('#scheduled_date')).toHaveValue(pastViewer.date, { timeout: 20_000 });
     await expect(
-      dialog.getByRole('radiogroup', { name: 'Common dose times' }).getByRole('radio', { name: /Morning/ })
+      dialog.getByRole('radiogroup', { name: 'Common dose times' }).getByRole('radio', { name: /Morning$/ })
     ).toBeChecked();
 
     const patch = page.waitForResponse(
@@ -276,11 +280,11 @@ test.describe("the browser's repeated (fall-back) hour", () => {
     await dialog.locator('#medication_name').fill(name);
     // The start date ("Starts") opens When?; with no time yet it is the recipient's day the chip lands on.
     await dialog.locator('#scheduled_date').fill(recipient.date);
-    const morning = dialog.getByRole('radio', { name: /Morning/ });
+    const morning = dialog.getByRole('checkbox', { name: /Morning$/ });
     await morning.click();
     await expect(morning).toBeChecked();
-    // The line names the instant that is saved: 08:00 London is the SECOND 01:00 in Denver (the first would read 7:00 AM).
-    await expect(dialog.getByTestId('time-conversion')).toHaveText('8:00 AM in London is 1:00 AM for you (Denver)');
+    // The caption names the instant that is saved: 08:00 London is the SECOND 01:00 in Denver (the first would read 7:00 AM).
+    await expect(dialog.getByTestId('time-zone-caption')).toHaveText('London time · 1:00 AM your time (Denver)');
     await dialog.getByRole('button', { name: 'Add medication' }).click();
     await expect(dialog).toBeHidden({ timeout: 20_000 });
     const rows = medRoots(a.circleId, name);

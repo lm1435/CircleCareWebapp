@@ -10,6 +10,11 @@ function openMoreDetails(): void {
   const toggle = document.getElementById('more-details');
   if (toggle && toggle.getAttribute('aria-expanded') === 'false') fireEvent.click(toggle);
 }
+/** The simple forms' Reminders card is the summary row's accordion (owner 2026-11-10), outside More details. */
+function expandRemindersRow(): void {
+  const row = screen.queryByTestId('reminders-summary-row');
+  if (row && row.getAttribute('aria-expanded') === 'false') fireEvent.click(row);
+}
 
 // This file PINS the device zone, unconditionally — including under
 // scripts/run-unit-timezones.sh.
@@ -127,14 +132,14 @@ vi.mock('@/components/ui', async (importOriginal) => {
 });
 
 /**
- * The simple appointment form's Starts | Ends live under the time choice as tiles that unfold their fields
- * (owner 2026-11-10); unfold both so a test can read / type the times. A no-op on the full layout.
+ * The simple appointment form's From | To (build 11, owner 2026-11-10) sit under "What time?" once "Pick a time"
+ * is the answer (an edit with a time opens on it): value tiles that ARE the time picker, over hidden inputs
+ * (`#scheduled_time` "From", `#endTime` "To") on the CIRCLE's clock. Choose "Pick a time" if it is not the answer
+ * yet, so a test can read / set the times. A no-op on the full layout.
  */
 function unfoldApptTimes(): void {
-  for (const id of ['appt-start-tile', 'appt-end-tile']) {
-    const tile = screen.queryByTestId(id);
-    if (tile && tile.getAttribute('aria-expanded') !== 'true') fireEvent.click(tile);
-  }
+  const pick = screen.queryByRole('radio', { name: 'Pick a time' });
+  if (pick && pick.getAttribute('aria-checked') !== 'true') fireEvent.click(pick);
 }
 
 function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
@@ -582,8 +587,10 @@ describe('AddEventModal', () => {
 
       // Denver device, New York recipient: 22:00 NY hydrates to 20:00 MT, and
       // 20:00 + 180 rolls to 23:00 — still same-day, so this one SAVES and must
-      // round-trip its duration exactly.
-      expect((screen.getByLabelText(/^Ends/, { selector: 'input' }) as HTMLInputElement).value).toBe('23:00');
+      // round-trip its duration exactly. The simple form's To names the CIRCLE's
+      // clock (build 11): 22:00 + 180 is 01:00 the next day in New York.
+      expect((screen.getByLabelText('To', { selector: 'input' }) as HTMLInputElement).value).toBe('01:00');
+      expect(screen.getByTestId('appt-to-tile')).toHaveTextContent('1:00 AM next day');
 
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
       await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
@@ -605,12 +612,13 @@ describe('AddEventModal', () => {
 
       render(<AddEventModal circleId={CIRCLE_ID} event={stored} onClose={vi.fn()} />);
       unfoldApptTimes();
-      expect((screen.getByLabelText(/^Ends/, { selector: 'input' }) as HTMLInputElement).value).toBe('01:00');
+      // On the circle's clock (build 11): 23:00 NY + 240 is 03:00 the next day.
+      expect((screen.getByLabelText('To', { selector: 'input' }) as HTMLInputElement).value).toBe('03:00');
 
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
       await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
       expect(mutateUpdate.mock.calls[0][0].data.duration_minutes).toBe(240);
-      expect(screen.getByLabelText(/^Ends/, { selector: 'input' })).not.toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByTestId('appt-to-tile')).not.toHaveAttribute('aria-invalid', 'true');
     });
 
     it('keeps scheduled_date and recurrence_end_date in the SAME frame', async () => {
@@ -872,9 +880,11 @@ describe('AddEventModal', () => {
         />
       );
 
-      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeInput);
-      await user.type(timeInput, '12:00'); // typed on the recipient's (New York) clock — already past.
+      // The simple form's "Other…" time picker (build 11), over its hidden input, on the recipient's clock.
+      await user.click(screen.getByTestId('time-chip-other'));
+      fireEvent.change(screen.getByLabelText('Other time', { selector: 'input' }), {
+        target: { value: '12:00' },
+      }); // the recipient's (New York) clock — already past.
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
       // No roll on the edit path: the row stays on today, only the reminder is
@@ -1793,7 +1803,7 @@ describe('AddEventModal', () => {
         />
       );
 
-      openMoreDetails();
+      expandRemindersRow();
       await user.click(screen.getByRole('switch', { name: 'Enable notifications' }));
 
       for (const name of [
@@ -1819,7 +1829,7 @@ describe('AddEventModal', () => {
         />
       );
 
-      openMoreDetails();
+      expandRemindersRow();
       const master = screen.getByRole('switch', { name: 'Enable notifications' });
       await user.click(master);
       await user.click(master);
@@ -2219,7 +2229,7 @@ describe('AddEventModal — the 15-minute default', () => {
         onClose={vi.fn()}
       />
     );
-    openMoreDetails();
+    expandRemindersRow();
     expect(screen.getByRole('checkbox', { name: '15 minutes before' })).toHaveAttribute(
       'aria-checked',
       'false'
@@ -2784,19 +2794,20 @@ describe('AddEventModal — days of the week', () => {
 
 // ── B9b: PK21 start/end + PK23 zone note ─────────────────────────────────────
 describe('PK21: moving the start moves the end', () => {
-  // The full layout's "Time" / "End time"; the simple appointment's "Starts" / "Ends".
+  // The full layout's "Time" / "End time"; the simple appointment's "From" / "To" (build 11, the circle's clock).
   const timeInput = () =>
-    screen.getByLabelText(/^(Time|Starts)/, { selector: 'input' }) as HTMLInputElement;
+    screen.getByLabelText(/^(Time|From)(\s|$)/, { selector: 'input' }) as HTMLInputElement;
   const endInput = () =>
-    screen.getByLabelText(/^(End time|Ends)/, { selector: 'input' }) as HTMLInputElement;
+    screen.getByLabelText(/^(End time|To)(\s|$)/, { selector: 'input' }) as HTMLInputElement;
 
   it('keeps the duration when the start changes (edit: 14:00 NY = 12:00 MT, 60 min)', async () => {
     const user = userEvent.setup();
     const stored = makeEvent({ scheduled_time: '14:00:00', duration_minutes: 60 });
     render(<AddEventModal circleId={CIRCLE_ID} event={stored} onClose={vi.fn()} />);
     unfoldApptTimes();
-    expect(timeInput().value).toBe('12:00');
-    expect(endInput().value).toBe('13:00');
+    // From | To name the CIRCLE's clock (New York), 14:00 – 15:00.
+    expect(timeInput().value).toBe('14:00');
+    expect(endInput().value).toBe('15:00');
 
     fireEvent.change(timeInput(), { target: { value: '15:30' } });
     expect(endInput().value).toBe('16:30');
@@ -2844,22 +2855,25 @@ describe('PK21: editing a row stored without a duration', () => {
     const stored = makeEvent({ scheduled_time: '14:00:00' }); // no duration_minutes
     render(<AddEventModal circleId={CIRCLE_ID} event={stored} onClose={vi.fn()} />);
     unfoldApptTimes();
-    const end = screen.getByLabelText(/^Ends/, { selector: 'input' }) as HTMLInputElement;
+    const end = screen.getByLabelText('To', { selector: 'input' }) as HTMLInputElement;
     expect(end.value).toBe('');
     expect(end).not.toBeRequired();
+    expect(screen.getByTestId('appt-to-tile')).toHaveTextContent('Choose a time');
 
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
     expect(mutateUpdate.mock.calls[0][0].data.duration_minutes).toBeUndefined();
-    expect(end).not.toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByTestId('appt-to-tile')).not.toHaveAttribute('aria-invalid', 'true');
+    expect(document.getElementById('endTime-error')).toBeNull();
   });
 
   it('moving its start does not invent an end', async () => {
     const stored = makeEvent({ scheduled_time: '14:00:00' });
     render(<AddEventModal circleId={CIRCLE_ID} event={stored} onClose={vi.fn()} />);
     unfoldApptTimes();
-    fireEvent.change(screen.getByLabelText(/^Starts/, { selector: 'input' }), { target: { value: '16:00' } });
-    expect((screen.getByLabelText(/^Ends/, { selector: 'input' }) as HTMLInputElement).value).toBe('');
+    fireEvent.change(screen.getByLabelText('From', { selector: 'input' }), { target: { value: '16:00' } });
+    expect((screen.getByLabelText('From', { selector: 'input' }) as HTMLInputElement).value).toBe('16:00');
+    expect((screen.getByLabelText('To', { selector: 'input' }) as HTMLInputElement).value).toBe('');
   });
 });
 
@@ -2976,7 +2990,8 @@ describe('AddEventModal — editing a recurring TASK series from any occurrence'
 
       // The SERIES' values, never the occurrence's snapshot.
       expect(titleInput()).toHaveValue('Water the plants');
-      expect(screen.getByLabelText(/^Date/)).toHaveValue('2026-06-15');
+      // The simple task form's "Starts" tile (build 11), the series' start.
+      expect(screen.getByLabelText(/^Starts/, { selector: 'input' })).toHaveValue('2026-06-15');
       const note = screen.getByTestId('series-edit-note');
       expect(note).toHaveTextContent('Applies to upcoming tasks only.');
       // The simple task form carries it in the footer, beside Save (no notice card on top).
@@ -3075,7 +3090,7 @@ describe('AddEventModal — editing a recurring TASK series from any occurrence'
           onClose={vi.fn()}
         />
       );
-      expect(screen.getByLabelText(/^Date/)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^Starts/, { selector: 'input' })).toBeInTheDocument();
       expect(screen.getByTestId('series-edit-note')).toHaveTextContent('Applies to upcoming appointments only.');
       expect(screen.getAllByTestId('series-edit-note')).toHaveLength(1);
       expect(screen.queryByRole('note')).toBeNull();

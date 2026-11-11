@@ -54,7 +54,7 @@ test('add a medication with refill tracking + prescriber on the web; the edit fo
     const form = page.getByRole('dialog', { name: 'New medication' });
     await form.getByLabel(/Medication name/i).fill(name);
     await form.getByLabel(/Dosage/i).fill('500 mg');
-    await form.getByRole('radio', { name: /^Evening/ }).click();
+    await form.getByRole('checkbox', { name: /Evening$/ }).click();
 
     const more = form.getByRole('button', { name: /^More details/ });
     await expect(more).toContainText('Refills, pharmacy, prescriber, instructions');
@@ -89,13 +89,17 @@ test('add a medication with refill tracking + prescriber on the web; the edit fo
       rx_number: 'RX-4471',
     });
 
-    // Edit: More details opens on the stored values; an untouched bottle is not re-seeded.
+    // Edit = new (build 11): More details stays collapsed; opened, it holds the stored values; an untouched bottle
+    // is not re-seeded.
     const card = page.getByRole('listitem').filter({ hasText: name });
     await card.getByRole('button', { name: `More actions for ${name}` }).click();
     await page.getByRole('menuitem', { name: 'Edit' }).click();
     const edit = page.getByRole('dialog', { name: 'Edit medication' });
+    const editMore = edit.getByRole('button', { name: /^More details/ });
+    await expect(editMore).toHaveAttribute('aria-expanded', 'false');
+    await editMore.click();
+    await expect(editMore).toHaveAttribute('aria-expanded', 'true');
     await expect(edit.getByLabel('Prescriber')).toHaveValue('Dr. Rivera', { timeout: 15_000 });
-    await expect(edit.getByRole('button', { name: /^More details/ })).toHaveAttribute('aria-expanded', 'true');
     await expect(edit.getByRole('checkbox', { name: /Track refills/ })).toHaveAttribute('aria-checked', 'true');
     await expect(edit.getByLabel('Pills remaining')).toHaveValue('60');
     await edit.getByLabel('Rx number').fill('RX-9000');

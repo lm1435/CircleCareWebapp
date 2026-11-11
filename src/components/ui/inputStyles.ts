@@ -308,3 +308,23 @@ export function optionRow(selected: boolean, disabled?: boolean, plain?: boolean
     disabled ? `cursor-not-allowed ${INPUT_SHELL_DISABLED}` : 'cursor-pointer',
   ].join(' ');
 }
+
+/**
+ * The simple forms' VALUE TILES (owner 2026-11-10, build 11: "Starts | Repeats until", "From | To"): an outlined
+ * tile that is its picker, the label small over the value (`VALUE_TILE_LABEL`, in ChoiceTileButton: the
+ * `hierarchy="value"` caption size). With an in-tile clear (Fix13) the outline moves to
+ * `VALUE_TILE_CLEARABLE_BOX` and the picker body (`VALUE_TILE_CLEARABLE_BODY`) shares it with a 44px "×"
+ * (`VALUE_TILE_CLEAR_BUTTON`).
+ */
+export const VALUE_TILE_CLEARABLE_BOX =
+  'flex min-h-[48px] w-full min-w-0 items-center rounded-2xl border transition-colors duration-fast';
+export const VALUE_TILE_CLEARABLE_BODY =
+  'flex min-h-[48px] min-w-0 flex-1 cursor-pointer flex-col items-start justify-center gap-px rounded-2xl border-0 bg-transparent py-2 pr-1 pl-3.5 text-left text-ink hover:bg-bg-2';
+export const VALUE_TILE_CLEAR_BUTTON =
+  'mr-0.5 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-ink-2 hover:bg-bg-2 hover:text-ink';
+/** A custom dose chip (Fix13): the lit chip's box holding its picker body and its 44px "×". */
+export const DOSE_CHIP_BOX = `flex max-w-full items-center rounded-2xl border ${CHIP_SELECTED}`;
+export const DOSE_CHIP_BODY =
+  'flex min-h-[48px] min-w-[44px] cursor-pointer flex-col items-start justify-center gap-px rounded-2xl border-0 bg-transparent py-2 pr-1 pl-3.5 text-left text-cream';
+export const DOSE_CHIP_REMOVE =
+  'mr-0.5 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-cream/80 hover:text-cream';

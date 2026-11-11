@@ -229,6 +229,11 @@ export interface DatePickerPanelProps {
    * is right for viewer-frame fields (timed events, vitals).
    */
   today?: string;
+  /**
+   * The footer's clear button: its label (default "Clear"), or `null` for none (a required day, such as a
+   * simple form's "Starts" tile). "Repeats until" names it "No end date" (owner 2026-11-10, mobile parity).
+   */
+  clearLabel?: string | null;
 }
 
 export function DatePickerPanel({
@@ -242,6 +247,7 @@ export function DatePickerPanel({
   onPick,
   onDismiss,
   today: todayProp,
+  clearLabel,
 }: DatePickerPanelProps): ReactElement | null {
   const { t, i18n } = useTranslation();
   const language = i18n.language || 'en';
@@ -654,10 +660,14 @@ export function DatePickerPanel({
         ))}
       </div>
 
-      <div className="flex items-center justify-between gap-2 border-t border-line-2 pt-1">
-        <Button type="button" variant="ghost" size="sm" onClick={() => commit('')}>
-          {t('common:datePicker.clear')}
-        </Button>
+      <div
+        className={`flex items-center gap-2 border-t border-line-2 pt-1 ${clearLabel === null ? 'justify-end' : 'justify-between'}`}
+      >
+        {clearLabel === null ? null : (
+          <Button type="button" variant="ghost" size="sm" onClick={() => commit('')}>
+            {clearLabel ?? t('common:datePicker.clear')}
+          </Button>
+        )}
         <Button
           type="button"
           variant="ghost"
