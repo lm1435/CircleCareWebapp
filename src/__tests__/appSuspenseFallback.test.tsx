@@ -115,7 +115,7 @@ describe('BootScreen as the Suspense fallback (App.tsx)', () => {
     const status = screen.getByRole('status');
     expect(status.getAttribute('aria-label')?.length).toBeGreaterThan(0);
     expect(screen.getByTestId('boot-lockup')).toBeInTheDocument();
-    expect(screen.getAllByAltText('CircleCare')).toHaveLength(2);
+    expect(screen.getByText('CircleCare')).toBeInTheDocument();
     expect(screen.queryByText('loading')).not.toBeInTheDocument();
   });
 });

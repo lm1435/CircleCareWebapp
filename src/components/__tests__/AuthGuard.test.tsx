@@ -46,7 +46,7 @@ describe('AuthGuard', () => {
 
     expect(screen.getByRole('status', { name: 'Loading...' })).toBeInTheDocument();
     expect(screen.getByTestId('boot-lockup')).toBeInTheDocument();
-    expect(screen.getAllByAltText('CircleCare')).toHaveLength(2);
+    expect(screen.getByText('CircleCare')).toBeInTheDocument();
     // The old bare spinner is gone.
     expect(container.querySelector('.animate-spin')).toBeNull();
     expect(screen.queryByText('protected content')).not.toBeInTheDocument();

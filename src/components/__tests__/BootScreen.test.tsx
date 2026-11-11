@@ -89,16 +89,19 @@ describe('BootScreen accessibility', () => {
     expect(screen.getByRole('status', { name: 'Loading...' })).toBeInTheDocument();
   });
 
-  it('names the wordmark "CircleCare" (never translated) and keeps the mark decorative', () => {
+  it('the wordmark is real text "CircleCare" (never translated), read once; the mark is decorative', () => {
     render(<BootScreen />);
-    // One light + one dark image each; globals.css shows exactly one by data-theme.
-    const wordmarks = screen.getAllByAltText('CircleCare');
-    expect(wordmarks.map((el) => el.getAttribute('src'))).toEqual([
-      '/circlecare-wordmark.png',
-      '/circlecare-wordmark-dark.png',
-    ]);
-    expect(wordmarks[0]).toHaveClass('cc-logo-mark-light');
-    expect(wordmarks[1]).toHaveClass('cc-logo-mark-dark');
+    // Owner decision 2026-11-11: the app's own typeface, not the marketing serif, so it
+    // is text in the UI font stack and no longer an image.
+    expect(screen.getAllByText('CircleCare')).toHaveLength(1);
+    expect(screen.queryByAltText('CircleCare')).not.toBeInTheDocument();
+    const wordmark = screen.getByTestId('boot-wordmark');
+    expect(wordmark).toHaveTextContent('CircleCare');
+    expect(wordmark).not.toHaveAttribute('aria-hidden');
+    // Mobile parity: the type scale's 24, medium, slight positive tracking, primary ink.
+    expect(wordmark).toHaveClass('text-lg', 'font-medium', 'tracking-[0.4px]', 'text-ink');
+    expect(wordmark).toHaveClass('whitespace-nowrap', 'cc-boot-wordmark');
+    expect(wordmark.className).not.toMatch(/font-serif|\bserif\b/);
     const marks = [screen.getByTestId('boot-mark-light'), screen.getByTestId('boot-mark-dark')];
     expect(marks.map((el) => el.getAttribute('src'))).toEqual([
       '/logo-mark-384.png',
@@ -118,7 +121,7 @@ describe('BootScreen lockup', () => {
     });
     expect(container.querySelector('.animate-spin')).toBeNull();
     expect(container.querySelector('[class*="rounded-full"]')).toBeNull();
-    expect(container.querySelectorAll('img')).toHaveLength(4);
+    expect(container.querySelectorAll('img')).toHaveLength(2);
   });
 
   it('draws the mark in a 120px box whose centre is the viewport centre', () => {
@@ -147,11 +150,11 @@ describe('BootScreen lockup', () => {
     );
   });
 
-  it('ships marks of at least 288px and a wordmark of at least 3x', () => {
+  it('ships marks of at least 288px, and no wordmark images', () => {
     expect(pngWidth('logo-mark-384.png')).toBeGreaterThanOrEqual(288);
     expect(pngWidth('logo-mark-dark-384.png')).toBeGreaterThanOrEqual(288);
-    expect(pngWidth('circlecare-wordmark.png')).toBeGreaterThanOrEqual(118 * 3);
-    expect(pngWidth('circlecare-wordmark-dark.png')).toBeGreaterThanOrEqual(118 * 3);
+    expect(fs.existsSync(path.join(ROOT, 'public/circlecare-wordmark.png'))).toBe(false);
+    expect(fs.existsSync(path.join(ROOT, 'public/circlecare-wordmark-dark.png'))).toBe(false);
   });
 });
 
@@ -170,7 +173,7 @@ describe('BootScreen is wired as the only full-page boot state', () => {
  * or restart the 3 s status timer. Same rule as mobile's LoadingScreen.
  */
 describe('BootScreen is continuous across instances', () => {
-  const wordmark = () => screen.getAllByAltText('CircleCare')[0];
+  const wordmark = () => screen.getByTestId('boot-wordmark');
 
   it('first mount: animations start from their beginning', () => {
     render(<BootScreen />);

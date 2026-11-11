@@ -43,9 +43,9 @@ export function __resetBootSessionForTests(): void {
  * `useSuspense: false` is load-bearing, exactly as in `Spinner`: this is a Suspense
  * `fallback`, and a fallback that itself suspends on a locale chunk can never paint.
  *
- * The wordmark is an image of "CircleCare" set in Fraunces (the marketing site's serif),
- * the same file mobile ships, so both platforms show the identical lockup. "CircleCare"
- * is the product name and is never translated.
+ * The wordmark is text in the app's own UI font (owner decision 2026-11-11: match the
+ * app, not the marketing site's serif), at the same size, weight and tracking as mobile.
+ * "CircleCare" is the product name and is never translated.
  *
  * Motion is CSS only (`.cc-boot-*` in globals.css), so the global
  * `prefers-reduced-motion` block stops it; the 3 s rule is the same either way.
@@ -122,27 +122,18 @@ export function BootScreen(): ReactElement {
             data-testid="boot-mark-dark"
           />
         </div>
-        <img
-          src="/circlecare-wordmark.png"
-          alt="CircleCare"
-          width={118}
-          height={21}
-          className="cc-logo-mark-light cc-boot-wordmark mt-[18px] h-[21px] w-[118px]"
+        <p
+          className="cc-boot-wordmark mt-3 whitespace-nowrap text-lg font-medium leading-[30px] tracking-[0.4px] text-ink"
           style={wordmarkStyle}
-        />
-        <img
-          src="/circlecare-wordmark-dark.png"
-          alt="CircleCare"
-          width={118}
-          height={21}
-          className="cc-logo-mark-dark cc-boot-wordmark mt-[18px] h-[21px] w-[118px]"
-          style={wordmarkStyle}
-        />
+          data-testid="boot-wordmark"
+        >
+          CircleCare
+        </p>
         {statusVisible && (
           // The region's aria-label already says this; do not read it twice.
           <p
             aria-hidden="true"
-            className="cc-boot-status mt-[14px] text-center text-md leading-[22px] text-ink-2"
+            className="cc-boot-status mt-2 text-center text-md leading-[22px] text-ink-2"
           >
             {label}
           </p>
