@@ -330,7 +330,6 @@ describe('a saved value behind a disclosure opens it', () => {
     ['location', { location: '1 Main St', description: '' }],
     ['notes', { location: '', description: 'Bring the list' }],
     ['a doctor', { location: '', description: '', provider_id: PATEL_ID }],
-    ['a length other than 30 min', { location: '', description: '', duration_minutes: 45 }],
     ['a repeat end date', { location: '', description: '', duration_minutes: 30, recurrence_rule: 'weekly', recurrence_end_date: '2099-03-31' }],
   ])('appointment: %s opens More details', (_name, over) => {
     renderEdit(appt(over as Partial<CalendarEvent>));
@@ -340,6 +339,23 @@ describe('a saved value behind a disclosure opens it', () => {
   it('appointment: nothing stored behind it keeps More details closed', () => {
     renderEdit(appt({ location: '', description: '', duration_minutes: 30 }));
     expect(moreToggle()).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('appointment edit: Starts | Ends are seeded from the event, on the viewer clock, under the time choice', () => {
+    // 10:00 New York = 8:00 AM Denver (the viewer), 45 minutes long.
+    renderEdit(appt({}));
+    expect(screen.getByTestId('appt-start-tile')).toHaveAccessibleName(/^Starts, 8:00 AM/);
+    expect(screen.getByTestId('appt-end-tile')).toHaveAccessibleName(/^Ends, 8:45 AM/);
+    expect(screen.getByTestId('appt-duration-caption')).toHaveTextContent('45 minutes · Times are for Denver.');
+    for (const name of ['30 min', '1 hr', '2 hrs']) {
+      expect(screen.getByRole('radio', { name })).not.toBeChecked();
+    }
+  });
+
+  it('appointment: a length other than 30 min no longer opens More details (Ends sits under the time)', () => {
+    renderEdit(appt({ location: '', description: '', duration_minutes: 45 }));
+    expect(moreToggle()).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByTestId('appt-end-tile')).toBeVisible();
   });
 
   it('appointment: the stored doctor and location show inside More details', () => {
@@ -353,7 +369,8 @@ describe('a saved value behind a disclosure opens it', () => {
   it("a doctor's address fills the empty location, under the same More details", async () => {
     const user = userEvent.setup();
     renderEdit(appt({ location: '', description: '' }));
-    expect(moreToggle()).toHaveAttribute('aria-expanded', 'true'); // 45 min is not the default length
+    await user.click(moreToggle());
+    expect(moreToggle()).toHaveAttribute('aria-expanded', 'true');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Doctor' }), PATEL_ID);
     expect(screen.getByLabelText(/^Location/)).toHaveValue('1200 Heart Center Dr');
     expect(moreToggle()).toHaveAttribute('aria-expanded', 'true');

@@ -230,19 +230,20 @@ function oldDriver(user: User): Driver {
 function newDriver(user: User): Driver {
   const more = () => openDisclosure(user, 'more-details');
   return {
+    // Starts | Ends sit under the time choice (owner 2026-11-10), each unfolding its field from a tile.
     async time(time) {
-      if (!document.getElementById('scheduled_time')) await user.click(screen.getByTestId('appt-time-tile'));
-      fireEvent.change(timeInput(), { target: { value: time } });
+      if (!screen.queryByTestId('appt-start-tile')) await user.click(screen.getByTestId('appt-time-tile'));
+      if (!document.getElementById('scheduled_time')) await user.click(screen.getByTestId('appt-start-tile'));
+      fireEvent.change(screen.getByLabelText(/^Starts/, { selector: 'input' }), { target: { value: time } });
     },
     async clearTime() {
       await user.click(screen.getByRole('radio', { name: 'Any time' }));
     },
     async endTime(time) {
-      await more();
-      fireEvent.change(screen.getByLabelText(/^End time/), { target: { value: time } });
+      if (!document.getElementById('endTime')) await user.click(screen.getByTestId('appt-end-tile'));
+      fireEvent.change(screen.getByLabelText(/^Ends/, { selector: 'input' }), { target: { value: time } });
     },
     async duration(label) {
-      await more();
       await user.click(screen.getByRole('radio', { name: label }));
     },
     async repeat(choice, extra) {

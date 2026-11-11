@@ -192,7 +192,7 @@ describe('new medication: structure', () => {
     renderMed();
     const toggle = screen.getByRole('button', { name: /More details/ });
     // Mobile's addEvent.moreDetailsHint, word for word.
-    expect(toggle).toHaveTextContent('Refills, pharmacy, prescriber, instructions, reminders');
+    expect(toggle).toHaveTextContent('Refills, pharmacy, prescriber, instructions');
     await user.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByLabelText('Instructions')).toBeVisible();
@@ -687,28 +687,99 @@ describe('new appointment', () => {
     }
     const more = screen.getByRole('button', { name: /^More details/ });
     expect(more).toHaveAttribute('aria-expanded', 'false');
-    expect(more).toHaveTextContent('Doctor, location, length, details, reminders');
+    expect(more).toHaveTextContent('Doctor, location, details');
     expect(screen.getByTestId('add-event-save')).toHaveTextContent('Add appointment');
     expect(screen.queryByLabelText('Type')).toBeNull();
   });
 
-  it('the Time tile opens the time field; length lives in More details; Any time clears both', async () => {
+  // Owner 2026-11-10 (mobile parity): Starts | Ends sit directly under the time choice, built like the shift
+  // form's tiles, the length chips set Ends, one caption names the length (and the zone when it differs).
+  // More details keeps Doctor, Location and Details.
+  it('Pick a time shows Starts | Ends, the length chips and the caption; Any time hides them all', async () => {
+    const user = userEvent.setup();
+    renderAppt();
+    expect(screen.queryByTestId('appt-start-end-tiles')).toBeNull();
+    await user.click(screen.getByTestId('appt-time-tile'));
+    expect(screen.getByTestId('appt-start-tile')).toHaveAccessibleName('Starts, Choose a time');
+    expect(screen.getByTestId('appt-end-tile')).toHaveAccessibleName('Ends, Choose a time');
+    const start = screen.getByLabelText(/^Starts/, { selector: 'input' });
+    fireEvent.change(start, { target: { value: '09:00' } });
+    expect(screen.getByTestId('appt-time-tile')).toHaveAccessibleName('Time, 9:00 AM');
+    expect(screen.getByTestId('appt-start-tile')).toHaveAccessibleName(/^Starts, 9:00 AM/);
+    expect(screen.getByTestId('appt-end-tile')).toHaveAccessibleName(/^Ends, 9:30 AM/);
+    // Not folded: visible with More details closed.
+    expect(screen.getByRole('button', { name: /^More details/ })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('radio', { name: '30 min' })).toBeChecked();
+    // Viewer Denver, recipient New York: the zone the tiles speak (the viewer's) is named.
+    expect(screen.getByTestId('appt-duration-caption')).toHaveTextContent('30 minutes · Times are for Denver.');
+    await user.click(screen.getByRole('button', { name: /^More details/ }));
+    const panel = document.getElementById('more-details-panel') as HTMLElement;
+    expect(within(panel).queryByRole('radio', { name: '1 hr' })).toBeNull();
+    expect(panel.querySelector('#endTime')).toBeNull();
+    expect(within(panel).getByLabelText(/^Location/)).toBeVisible();
+    expect(within(panel).getByLabelText(/^Details/)).toBeVisible();
+    expect(within(panel).getByRole('combobox', { name: 'Doctor' })).toBeVisible();
+    await user.click(screen.getByRole('radio', { name: 'Any time' }));
+    expect(screen.queryByTestId('appt-start-end-tiles')).toBeNull();
+    expect(screen.queryByRole('radio', { name: '30 min' })).toBeNull();
+    expect(screen.queryByTestId('appt-duration-caption')).toBeNull();
+    expect(document.getElementById('endTime')).toBeNull();
+  });
+
+  it('a length chip sets Ends; typing an Ends no chip matches deselects the chip', async () => {
     const user = userEvent.setup();
     renderAppt();
     await user.click(screen.getByTestId('appt-time-tile'));
-    const time = screen.getByLabelText(/^Time/, { selector: 'input' });
-    fireEvent.change(time, { target: { value: '09:00' } });
-    expect(screen.getByTestId('appt-time-tile')).toHaveAccessibleName('Time, 9:00 AM');
-    expect(screen.queryByRole('radio', { name: '1 hr' })).toBeNull(); // folded in More details
-    await user.click(screen.getByRole('button', { name: /^More details/ }));
-    expect(screen.getByRole('radio', { name: '30 min' })).toBeChecked();
-    expect(screen.getByLabelText(/^End time/)).toHaveValue('09:30');
-    expect(screen.getByLabelText(/^Location/)).toBeVisible();
-    expect(screen.getByLabelText(/^Details/)).toBeVisible();
-    expect(screen.getByRole('combobox', { name: 'Doctor' })).toBeVisible();
-    await user.click(screen.getByRole('radio', { name: 'Any time' }));
-    expect(screen.queryByLabelText(/^Time/, { selector: 'input' })).toBeNull();
-    expect(screen.queryByLabelText(/^End time/)).toBeNull();
+    fireEvent.change(screen.getByLabelText(/^Starts/, { selector: 'input' }), { target: { value: '09:00' } });
+    await user.click(screen.getByRole('radio', { name: '2 hrs' }));
+    expect(screen.getByTestId('appt-end-tile')).toHaveAccessibleName(/^Ends, 11:00 AM/);
+    expect(screen.getByTestId('appt-duration-caption')).toHaveTextContent(/^2 hours/);
+    await user.click(screen.getByTestId('appt-end-tile'));
+    const ends = screen.getByLabelText(/^Ends/, { selector: 'input' });
+    expect(ends).toHaveValue('11:00');
+    fireEvent.change(ends, { target: { value: '10:45' } });
+    for (const name of ['30 min', '1 hr', '2 hrs']) {
+      expect(screen.getByRole('radio', { name })).not.toBeChecked();
+    }
+    expect(screen.getByTestId('appt-duration-caption')).toHaveTextContent(/^1 h 45 min/);
+    // An end at or before the start is the next day (the save's PK21 rule): the tile says so.
+    fireEvent.change(ends, { target: { value: '08:00' } });
+    expect(screen.getByTestId('appt-end-tile')).toHaveAccessibleName(/^Ends, 8:00 AM next day/);
+    expect(screen.getByTestId('appt-duration-caption')).toHaveTextContent(/^23 hours/);
+  });
+
+  it('the caption names no zone when the viewer and the recipient share one', async () => {
+    const saved = useCircleResult.timezone;
+    useCircleResult.timezone = 'America/Denver';
+    try {
+      const user = userEvent.setup();
+      renderAppt();
+      await user.click(screen.getByTestId('appt-time-tile'));
+      fireEvent.change(screen.getByLabelText(/^Starts/, { selector: 'input' }), { target: { value: '09:00' } });
+      expect(screen.getByTestId('appt-duration-caption')).toHaveTextContent(/^30 minutes$/);
+    } finally {
+      useCircleResult.timezone = saved;
+    }
+  });
+
+  it('a missing end errors AT the Ends tile (unfolded, invalid), not in More details', async () => {
+    const user = userEvent.setup();
+    renderAppt();
+    await user.type(title(), 'Checkup');
+    await user.click(screen.getByTestId('appt-time-tile'));
+    fireEvent.change(screen.getByLabelText(/^Starts/, { selector: 'input' }), { target: { value: '09:00' } });
+    await user.click(screen.getByTestId('appt-end-tile'));
+    fireEvent.change(screen.getByLabelText(/^Ends/, { selector: 'input' }), { target: { value: '' } });
+    await user.click(screen.getByTestId('appt-end-tile')); // fold it again: the error must unfold it
+    expect(document.getElementById('endTime')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Add appointment' }));
+    const ends = await screen.findByLabelText(/^Ends/, { selector: 'input' });
+    expect(ends).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText('Please add an end time.')).toBeVisible();
+    await waitFor(() => expect(ends).toHaveFocus());
+    expect(screen.getByTestId('appt-end-tile')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('button', { name: /^More details/ })).toHaveAttribute('aria-expanded', 'false');
+    expect(mutateCreate).not.toHaveBeenCalled();
   });
 
   it("Who's going? offers Anyone first, then every member", () => {
@@ -742,7 +813,7 @@ describe('new appointment', () => {
       await user.clear(date);
       await user.type(date, '2026-10-29');
       if (!full) await user.click(screen.getByTestId('appt-time-tile'));
-      const time = screen.getByLabelText(/^Time/, { selector: 'input' });
+      const time = screen.getByLabelText(full ? /^Time/ : /^Starts/, { selector: 'input' });
       await user.clear(time);
       await user.type(time, '14:30');
       if (full) {

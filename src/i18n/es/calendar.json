@@ -263,6 +263,23 @@
         "escalationTitle": "Alertas de escalamiento",
         "earlyTitle": "Recordatorios anticipados",
         "earlyBody": "Si quieres, recibe recordatorios 24 horas, 1 hora, 30 minutos o 15 minutos antes de la hora programada."
+      },
+      "summary": {
+        "label": "Recordatorios: {{value}}",
+        "off": "desactivados",
+        "none": "ninguno",
+        "atTime": "a la hora programada",
+        "h24": "24 horas antes",
+        "h1": "1 hora antes",
+        "m30": "30 minutos antes",
+        "m15": "15 minutos antes",
+        "followUpsOn": "seguimientos activados",
+        "followUpsOnly": "solo seguimientos",
+        "nothingAtTime": "nada a la hora programada",
+        "change": "Cambiar",
+        "hint": "Muestra la configuración de recordatorios.",
+        "pickTime": "Elige una hora para recibir recordatorios",
+        "pickTimeLabel": "Recordatorios: elige una hora para recibir recordatorios. Lleva a la elección de hora."
       }
     },
     "validation": {
@@ -346,7 +363,7 @@
       "howOften": "¿Con qué frecuencia?",
       "whoIsGoing": "¿Quién va?",
       "moreDetails": "Más detalles",
-      "moreDetailsSummary": "Recargas, farmacia, quien receta, instrucciones, recordatorios",
+      "moreDetailsSummary": "Recargas, farmacia, quien receta, instrucciones",
       "startDate": "Fecha de inicio",
       "starts": "Empieza",
       "addMedication": "Agregar medicamento",
@@ -371,8 +388,8 @@
       "everyWeek": "Cada semana",
       "whoDoingIt": "¿Quién lo hace?",
       "me": "Yo",
-      "taskMoreHint": "Detalles, recordatorios, fecha de fin",
-      "apptMoreHint": "Médico, ubicación, duración, detalles, recordatorios",
+      "taskMoreHint": "Detalles, fecha de fin",
+      "apptMoreHint": "Médico, ubicación, detalles",
       "custom": "Personalizado…",
       "customHeading": "Personalizado",
       "everyOtherDay": "Cada dos días",

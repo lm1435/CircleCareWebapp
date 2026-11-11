@@ -126,6 +126,17 @@ vi.mock('@/components/ui', async (importOriginal) => {
   return { ...actual, useToast: () => ({ showToast }) };
 });
 
+/**
+ * The simple appointment form's Starts | Ends live under the time choice as tiles that unfold their fields
+ * (owner 2026-11-10); unfold both so a test can read / type the times. A no-op on the full layout.
+ */
+function unfoldApptTimes(): void {
+  for (const id of ['appt-start-tile', 'appt-end-tile']) {
+    const tile = screen.queryByTestId(id);
+    if (tile && tile.getAttribute('aria-expanded') !== 'true') fireEvent.click(tile);
+  }
+}
+
 function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   return {
     id: 'ev-1',
@@ -567,11 +578,12 @@ describe('AddEventModal', () => {
       });
 
       render(<AddEventModal circleId={CIRCLE_ID} event={stored} onClose={vi.fn()} />);
+      unfoldApptTimes();
 
       // Denver device, New York recipient: 22:00 NY hydrates to 20:00 MT, and
       // 20:00 + 180 rolls to 23:00 — still same-day, so this one SAVES and must
       // round-trip its duration exactly.
-      expect((screen.getByLabelText(/^End time/) as HTMLInputElement).value).toBe('23:00');
+      expect((screen.getByLabelText(/^Ends/, { selector: 'input' }) as HTMLInputElement).value).toBe('23:00');
 
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
       await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
@@ -592,12 +604,13 @@ describe('AddEventModal', () => {
       });
 
       render(<AddEventModal circleId={CIRCLE_ID} event={stored} onClose={vi.fn()} />);
-      expect((screen.getByLabelText(/^End time/) as HTMLInputElement).value).toBe('01:00');
+      unfoldApptTimes();
+      expect((screen.getByLabelText(/^Ends/, { selector: 'input' }) as HTMLInputElement).value).toBe('01:00');
 
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
       await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
       expect(mutateUpdate.mock.calls[0][0].data.duration_minutes).toBe(240);
-      expect(screen.getByLabelText(/^End time/)).not.toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByLabelText(/^Ends/, { selector: 'input' })).not.toHaveAttribute('aria-invalid', 'true');
     });
 
     it('keeps scheduled_date and recurrence_end_date in the SAME frame', async () => {
@@ -2771,13 +2784,17 @@ describe('AddEventModal — days of the week', () => {
 
 // ── B9b: PK21 start/end + PK23 zone note ─────────────────────────────────────
 describe('PK21: moving the start moves the end', () => {
-  const timeInput = () => screen.getByLabelText(/^Time/, { selector: 'input' }) as HTMLInputElement;
-  const endInput = () => screen.getByLabelText(/^End time/) as HTMLInputElement;
+  // The full layout's "Time" / "End time"; the simple appointment's "Starts" / "Ends".
+  const timeInput = () =>
+    screen.getByLabelText(/^(Time|Starts)/, { selector: 'input' }) as HTMLInputElement;
+  const endInput = () =>
+    screen.getByLabelText(/^(End time|Ends)/, { selector: 'input' }) as HTMLInputElement;
 
   it('keeps the duration when the start changes (edit: 14:00 NY = 12:00 MT, 60 min)', async () => {
     const user = userEvent.setup();
     const stored = makeEvent({ scheduled_time: '14:00:00', duration_minutes: 60 });
     render(<AddEventModal circleId={CIRCLE_ID} event={stored} onClose={vi.fn()} />);
+    unfoldApptTimes();
     expect(timeInput().value).toBe('12:00');
     expect(endInput().value).toBe('13:00');
 
@@ -2826,7 +2843,8 @@ describe('PK21: editing a row stored without a duration', () => {
     const user = userEvent.setup();
     const stored = makeEvent({ scheduled_time: '14:00:00' }); // no duration_minutes
     render(<AddEventModal circleId={CIRCLE_ID} event={stored} onClose={vi.fn()} />);
-    const end = screen.getByLabelText(/^End time/) as HTMLInputElement;
+    unfoldApptTimes();
+    const end = screen.getByLabelText(/^Ends/, { selector: 'input' }) as HTMLInputElement;
     expect(end.value).toBe('');
     expect(end).not.toBeRequired();
 
@@ -2839,8 +2857,9 @@ describe('PK21: editing a row stored without a duration', () => {
   it('moving its start does not invent an end', async () => {
     const stored = makeEvent({ scheduled_time: '14:00:00' });
     render(<AddEventModal circleId={CIRCLE_ID} event={stored} onClose={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/^Time/, { selector: 'input' }), { target: { value: '16:00' } });
-    expect((screen.getByLabelText(/^End time/) as HTMLInputElement).value).toBe('');
+    unfoldApptTimes();
+    fireEvent.change(screen.getByLabelText(/^Starts/, { selector: 'input' }), { target: { value: '16:00' } });
+    expect((screen.getByLabelText(/^Ends/, { selector: 'input' }) as HTMLInputElement).value).toBe('');
   });
 });
 

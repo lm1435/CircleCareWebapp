@@ -3,7 +3,7 @@ import { test, expect, uniqueLabel } from '../../fixtures';
 import { dbQuery, sqlStr } from '../../unhappy';
 import { localDate, purgeEventsTitled } from './_helpers';
 import { gotoCalendarSettled } from '../../notesFirstClassShared';
-import { fillSimpleTime, openCalendarNew } from '../../helpers';
+import { fillSimpleTime, openCalendarNew, unfoldSimpleEnd } from '../../helpers';
 
 // THE "15 MINUTES BEFORE" DEFAULT IS OFF — checked against the SAVED ROW.
 //
@@ -22,10 +22,11 @@ async function fillTimedEvent(page: Page, circleId: string, type: 'task' | 'appo
   const dialog = await openCalendarNew(page, type);
   await dialog.locator('#title').fill(title);
   await dialog.locator('#scheduled_date').fill(localDate(3));
-  // Reminders only render once a time is set; they (and the end time) sit under "More details".
+  // Reminders only render once a time is set; they sit under "More details" (the task's end time too; the
+  // appointment's Ends is a tile under the time choice).
   await fillSimpleTime(dialog, '10:00');
   await dialog.locator('#more-details').click();
-  await dialog.locator('#endTime').fill('10:30');
+  await (await unfoldSimpleEnd(dialog)).fill('10:30');
   return dialog;
 }
 

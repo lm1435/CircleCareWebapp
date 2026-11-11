@@ -4,7 +4,7 @@ import { sqlExec } from '../db';
 import { countRequests, dbQuery, sqlStr } from '../unhappy';
 import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from '../unhappy/auth-invites/_helpers';
 import { dateInTz, uniqueSuffix } from '../notesFirstClassShared';
-import { checkA11y } from '../helpers';
+import { checkA11y, unfoldSimpleEnd } from '../helpers';
 
 // THE ADD MENU AND THE TWO SIMPLE FORMS (docs/plans/simple-ui-1-3-1.md).
 //
@@ -493,8 +493,9 @@ test.describe('New appointment (simple form)', () => {
     await dialog.locator('#scheduled_date').fill(dateInTz(tz, 3));
     await dialog.getByTestId('appt-time-tile').click();
     await dialog.locator('#scheduled_time').fill('14:30');
-    await dialog.locator('#more-details').click();
-    await dialog.locator('#endTime').fill('15:30');
+    // Ends sits beside Starts under the time choice (owner 2026-11-10), not in More details.
+    await expect(dialog.locator('#more-details')).toHaveAttribute('aria-expanded', 'false');
+    await (await unfoldSimpleEnd(dialog)).fill('15:30');
     const posts = countRequests(page, 'POST', EVENTS_POST);
     await dialog.getByRole('button', { name: 'Add appointment' }).click();
     await expect(dialog).toBeHidden({ timeout: 20_000 });

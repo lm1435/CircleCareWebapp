@@ -799,6 +799,21 @@ export const Analytics = {
    * Same name as mobile.
    */
   reminderRoutingNoticeDismissed: () => capture('reminder_routing_notice_dismissed'),
+  /**
+   * The simple form's "Reminders" summary row (outside More details) was tapped. Enums and a
+   * boolean only (never circle_id): which form, what the summary said, and whether More details
+   * was already open. Same name and props as mobile.
+   */
+  remindersSummaryOpened: (
+    eventType: 'medication' | 'appointment' | 'task',
+    summaryState: 'off' | 'none' | 'follow_ups_only' | 'set',
+    moreWasOpen: boolean
+  ) =>
+    capture('reminders_summary_opened', {
+      event_type: pickEnum(eventType, ['medication', 'appointment', 'task'], 'medication'),
+      summary_state: pickEnum(summaryState, ['off', 'none', 'follow_ups_only', 'set'], 'set'),
+      more_was_open: moreWasOpen === true,
+    }),
   /** A tappable row on the card or the full page. Enums only: which row, and where. */
   dailyUpdateRowTapped: (row: DailyUpdateRow, source: 'card' | 'page') =>
     capture('daily_update_row_tapped', {

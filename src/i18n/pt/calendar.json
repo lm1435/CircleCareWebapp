@@ -263,6 +263,23 @@
         "escalationTitle": "Alertas de escalonamento",
         "earlyTitle": "Lembretes antecipados",
         "earlyBody": "Se quiser, receba um lembrete 24 horas, 1 hora, 30 minutos ou 15 minutos antes do horário agendado."
+      },
+      "summary": {
+        "label": "Lembretes: {{value}}",
+        "off": "desativados",
+        "none": "nenhum",
+        "atTime": "no horário agendado",
+        "h24": "24 horas antes",
+        "h1": "1 hora antes",
+        "m30": "30 minutos antes",
+        "m15": "15 minutos antes",
+        "followUpsOn": "acompanhamento ativado",
+        "followUpsOnly": "só acompanhamento",
+        "nothingAtTime": "nada no horário agendado",
+        "change": "Alterar",
+        "hint": "Mostra as configurações de lembretes.",
+        "pickTime": "Escolha um horário para receber lembretes",
+        "pickTimeLabel": "Lembretes: escolha um horário para receber lembretes. Leva à escolha do horário."
       }
     },
     "validation": {
@@ -346,7 +363,7 @@
       "howOften": "Com que frequência?",
       "whoIsGoing": "Quem vai?",
       "moreDetails": "Mais detalhes",
-      "moreDetailsSummary": "Reposição, farmácia, médico que receitou, instruções, lembretes",
+      "moreDetailsSummary": "Reposição, farmácia, médico que receitou, instruções",
       "startDate": "Data de início",
       "starts": "Começa",
       "addMedication": "Adicionar medicamento",
@@ -371,8 +388,8 @@
       "everyWeek": "Toda semana",
       "whoDoingIt": "Quem vai fazer?",
       "me": "Eu",
-      "taskMoreHint": "Detalhes, lembretes, data de término",
-      "apptMoreHint": "Médico, local, duração, detalhes, lembretes",
+      "taskMoreHint": "Detalhes, data de término",
+      "apptMoreHint": "Médico, local, detalhes",
       "custom": "Personalizado…",
       "customHeading": "Personalizado",
       "everyOtherDay": "Em dias alternados",

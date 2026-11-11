@@ -153,6 +153,12 @@ async function openEditor(page: Page, k: Scene, date: string, title: string, dia
   const editor = page.getByRole('dialog', { name: dialogName });
   await expect(editor).toBeVisible({ timeout: 10_000 });
   await expect(editor.locator('#title')).toHaveValue(title, { timeout: 15_000 });
+  // The simple appointment folds its start behind a Starts tile (owner 2026-11-10); unfold it once hydrated.
+  const startTile = editor.getByTestId('appt-start-tile');
+  await expect(editor.locator('#scheduled_time').or(startTile)).toBeVisible({ timeout: 15_000 });
+  if (await startTile.isVisible() && (await startTile.getAttribute('aria-expanded')) !== 'true') {
+    await startTile.click();
+  }
   await expect(editor.locator('#scheduled_time')).toHaveValue('09:00', { timeout: 15_000 });
   return editor;
 }

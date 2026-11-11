@@ -172,7 +172,7 @@ describe('layout: the mockup, top to bottom', () => {
     for (let i = 1; i < order.length; i += 1) {
       expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
-    expect(moreToggle()).toHaveTextContent('Details, reminders, end date');
+    expect(moreToggle()).toHaveTextContent('Details, end date');
     expect(screen.getByTestId('add-event-save')).toHaveTextContent('Add task');
     // No type switch, no Assigned-to select, no Repeat select in sight.
     expect(screen.queryByLabelText('Type')).toBeNull();
@@ -794,7 +794,7 @@ describe('accessibility', () => {
 
   it('the More details hint wraps rather than truncating', () => {
     renderNew();
-    const hint = within(moreToggle()).getByText('Details, reminders, end date');
+    const hint = within(moreToggle()).getByText('Details, end date');
     expect(hint).not.toHaveClass('truncate');
   });
 });

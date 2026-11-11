@@ -66,6 +66,10 @@ import { useAuthStore } from '@/store/authStore';
 import { useLargeTextLayoutEvent } from '@/lib/largeText';
 import { TimeChips } from './TimeChips';
 import { DisclosureRow } from './DisclosureRow';
+import { RemindersSummaryRow } from './RemindersSummaryRow';
+import { formatShiftDuration } from '@/components/shifts/shiftUtils';
+import { prefersReducedMotion } from '@/components/ui/motion';
+import { reminderSummary } from '@/lib/reminderSummary';
 import { APPOINTMENT_TITLE_KEYS, MED_SCHEDULE_PRESETS, TASK_TITLE_KEYS } from '@/lib/quickPicks';
 import { deriveTitleSuggestions } from '@/lib/titleSuggestions';
 import {
@@ -308,6 +312,8 @@ function parseRecurrence(
 
 // Static ids — one AddEventModal is mounted at a time, and the earlier-reminders
 // group needs stable targets for aria-labelledby / aria-describedby.
+/** The Reminders fieldset the summary row scrolls to (stable for tests and the e2e spec). */
+const REMINDERS_FIELDSET_ID = 'reminders-fieldset';
 const EARLIER_REMINDERS_LABEL_ID = 'reminders-earlier-label';
 const EARLIER_REMINDERS_WARNING_ID = 'reminders-earlier-warning';
 const FOLLOW_UP_ONLY_TITLE_ID = 'reminders-follow-up-only-title';
@@ -1031,10 +1037,34 @@ function AddEventForm({
         (simpleKind === 'appointment' && simpleAppointmentMoreOpen(event, DEFAULT_DURATION_MINUTES)) ||
         (simpleKind === 'task' && simpleTaskMoreOpen(event, DEFAULT_DURATION_MINUTES)))
   );
+  // The "Reminders" summary row's tap (above More details): a counter, so the scroll + focus runs in an
+  // effect AFTER the commit that unhides the panel (a hidden fieldset has no box to scroll to).
+  // `time` is the pick-time variant's target (a task / appointment with no time yet): the form's Time tile.
+  const [remindersJump, setRemindersJump] = useState<{ n: number; target: 'reminders' | 'time' } | null>(
+    null
+  );
+  useEffect(() => {
+    if (!remindersJump) return;
+    if (remindersJump.target === 'reminders') {
+      document
+        .getElementById(REMINDERS_FIELDSET_ID)
+        ?.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+      // The fieldset's first control, the master switch, so a keyboard / screen-reader user lands IN it.
+      document.getElementById('notifications_enabled')?.focus({ preventScroll: true });
+      return;
+    }
+    const tile = document.querySelector<HTMLElement>(
+      '[data-testid="task-time-tile"], [data-testid="appt-time-tile"]'
+    );
+    tile?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    tile?.focus({ preventScroll: true });
+  }, [remindersJump]);
   const [otherTimeOpen, setOtherTimeOpen] = useState(false);
   // The task / appointment forms' "Time" tile (reveals the time field) and every simple form's "Custom…"
   // (reveals the rarer repeat rules). One form is mounted at a time, so they share the state.
   const [pickTimeOpen, setPickTimeOpen] = useState(false);
+  // The simple appointment's Starts / Ends tiles (the shift form's pattern): which time field is unfolded.
+  const [apptTimeOpen, setApptTimeOpen] = useState({ start: false, end: false });
   const [taskCustomOpen, setTaskCustomOpen] = useState(false);
   // "+ Another dose" (NEW medication only): extra dose times, viewer-frame HH:MM. Each one is saved
   // as its OWN medication row after the primary (the same sequence as mobile's AddEventScreen and
@@ -2081,13 +2111,22 @@ function AddEventForm({
         revealed = true;
       }
     } else {
-      const hidden = ['provider_id', 'location', 'description', 'endTime', 'recurrence_end_date'];
+      // Ends lives with Starts under the time choice now (not in More details).
+      const hidden = ['provider_id', 'location', 'description', 'recurrence_end_date'];
       if (hidden.some((k) => fieldErrors[k]) && !moreOpen) {
         setMoreOpen(true);
         revealed = true;
       }
       if (fieldErrors.scheduled_time && !showTaskTimeField) {
         setPickTimeOpen(true);
+        revealed = true;
+      }
+      if (fieldErrors.scheduled_time && !apptTimeOpen.start) {
+        setApptTimeOpen((prev) => ({ ...prev, start: true }));
+        revealed = true;
+      }
+      if (fieldErrors.endTime && !apptTimeOpen.end) {
+        setApptTimeOpen((prev) => ({ ...prev, end: true }));
         revealed = true;
       }
     }
@@ -2443,6 +2482,38 @@ function AddEventForm({
     </>
   );
 
+  // ── The "Reminders" summary row (owner 2026-11-10, mobile parity) ──────────────────────────────────
+  // Directly ABOVE each simple form's More details, always visible, live from the card's own state.
+  // As-needed medications have no reminders at all: no row. A task / appointment without a time cannot
+  // remind yet: the muted pick-time row, which goes to the time choice instead of More details.
+  const simpleReminderSummary = reminderSummary({
+    eventType,
+    notificationsEnabled,
+    reminderAtDue,
+    reminder24h,
+    reminder1h,
+    reminder30m,
+    reminder15m,
+  });
+  const remindersSummaryRow =
+    simpleKind === null || isAsNeeded ? null : remindersApply(eventType, timeStr) ? (
+      <RemindersSummaryRow
+        variant="summary"
+        summary={simpleReminderSummary}
+        onPress={() => {
+          Analytics.remindersSummaryOpened(simpleKind, simpleReminderSummary.state, moreOpen);
+          // Opens More details if closed; NEVER closes it.
+          if (!moreOpen) setMoreOpen(true);
+          setRemindersJump((prev) => ({ n: (prev?.n ?? 0) + 1, target: 'reminders' }));
+        }}
+      />
+    ) : (
+      <RemindersSummaryRow
+        variant="pickTime"
+        onPress={() => setRemindersJump((prev) => ({ n: (prev?.n ?? 0) + 1, target: 'time' }))}
+      />
+    );
+
   const reminderBlock = (
     <>
         {/* Reminders — only once there is a time to fire against. */}
@@ -2452,7 +2523,12 @@ function AddEventForm({
           </p>
         )}
         {remindersApply(eventType, timeStr) && !isAsNeeded && (
-        <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
+        <fieldset
+          id={REMINDERS_FIELDSET_ID}
+          data-testid="reminders-fieldset"
+          // Clear of the dialog's sticky header when the summary row scrolls it to the top.
+          className="m-0 flex scroll-mt-4 flex-col gap-3 border-0 p-0"
+        >
           <Text variant="sectionTitle" as="legend" className="p-0 text-base!">
             {t('addEvent.reminders.section')}
           </Text>
@@ -3216,6 +3292,7 @@ function AddEventForm({
         {asNeededReasonBlock}
       </section>
 
+      {remindersSummaryRow}
       <DisclosureRow
         id="more-details"
         title={t('addEvent.simple.moreDetails')}
@@ -3237,6 +3314,127 @@ function AddEventForm({
     const [h, m] = timeStr.split(':').map(Number);
     return timeStr && Number.isFinite(h) && Number.isFinite(m) ? formatTimeOfDay(h, m, hourCycle) : undefined;
   })();
+  // ── The simple appointment's Starts | Ends (owner 2026-11-10, mobile parity) ─────────────────────────
+  // Built like the shift form's: two value tiles that unfold their time field, the length chips as quick
+  // setters for Ends, then one caption ("1 hour · Times are for Chicago."). The SAME state and handlers the
+  // length / end-time fields had inside More details (timeStr / endTimeStr, matchingDurationIndex,
+  // presetEndFor), so the save is unchanged (apptPayloadEquality pins it). The times are the VIEWER's clock
+  // (this form's frame), so the zone the caption names is the viewer's, and only when it differs.
+  const apptEndClock = (() => {
+    const [h, m] = endTimeStr.split(':').map(Number);
+    return endTimeStr && Number.isFinite(h) && Number.isFinite(m) ? formatTimeOfDay(h, m, hourCycle) : undefined;
+  })();
+  const apptStartError = errors.scheduled_time ?? missingErrorFor('time');
+  const apptStartOpen = apptTimeOpen.start || !!apptStartError;
+  const apptEndOpen = apptTimeOpen.end || !!errors.endTime;
+  const apptSpan = timeStr && endTimeStr ? spanMinutes(timeStr, endTimeStr) : null;
+  const apptCaption = [
+    apptSpan !== null && apptSpan > 0 ? formatShiftDuration(apptSpan, t) : '',
+    showDualTimezone
+      ? t('shifts:form.timezoneNote', { zone: getTimezoneLabel(deviceTimezone) || deviceTimezone })
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const toggleApptTime = (which: 'start' | 'end'): void => {
+    const open = which === 'start' ? apptStartOpen : apptEndOpen;
+    setApptTimeOpen((prev) => ({ ...prev, [which]: !open }));
+    if (!open) {
+      const id = which === 'start' ? 'scheduled_time' : 'endTime';
+      requestAnimationFrame(() => document.getElementById(id)?.focus());
+    }
+  };
+  const apptStartsEnds = (
+    <>
+      <div className="flex flex-wrap gap-2" data-testid="appt-start-end-tiles">
+        <ChoiceTileButton
+          id="appt-start-tile"
+          testId="appt-start-tile"
+          hierarchy="value"
+          label={t('addEvent.simple.starts')}
+          sub={viewerTimeClock ?? t('shifts:form.chooseTime')}
+          expanded={apptStartOpen}
+          invalid={!!apptStartError}
+          describedBy="appt-duration-caption"
+          onClick={() => toggleApptTime('start')}
+        />
+        <ChoiceTileButton
+          id="appt-end-tile"
+          testId="appt-end-tile"
+          hierarchy="value"
+          label={t('shifts:form.ends')}
+          sub={
+            apptEndClock
+              ? // At or before the start is the next day (the save's PK21 rule), as the shift tile says it.
+                `${apptEndClock}${timeStr && endTimeStr <= timeStr ? ` ${t('shifts:nextDay')}` : ''}`
+              : t('shifts:form.chooseTime')
+          }
+          expanded={apptEndOpen}
+          invalid={!!errors.endTime}
+          describedBy="appt-duration-caption"
+          onClick={() => toggleApptTime('end')}
+        />
+      </div>
+      {(apptStartOpen || apptEndOpen) && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {apptStartOpen && (
+            <TimeField
+              id="scheduled_time"
+              label={t('addEvent.simple.starts')}
+              value={timeStr}
+              error={apptStartError}
+              hint={conversionText ?? undefined}
+              onChange={(e) => {
+                changeTime(e.target.value);
+                if (e.target.value) completeStep('when');
+              }}
+            />
+          )}
+          {apptEndOpen && (
+            <TimeField
+              id="endTime"
+              label={t('shifts:form.ends')}
+              required={!isEditingWithoutDuration}
+              value={endTimeStr}
+              error={errors.endTime}
+              onChange={(e) => {
+                setEndTimeStr(e.target.value);
+                clearError('endTime');
+              }}
+            />
+          )}
+        </div>
+      )}
+      {/* Length: quick setters for Ends, only with a start to measure from. */}
+      {timeStr && (
+        <ChipSelect
+          id="duration-presets"
+          label={t('addEvent.fields.duration')}
+          options={durationOptions}
+          value={(() => {
+            const index = matchingDurationIndex(timeStr, endTimeStr);
+            return index === -1 ? null : String(DURATION_PRESETS[index]);
+          })()}
+          onChange={(next) => {
+            if (!next) return;
+            setEndTimeStr(presetEndFor(timeStr, Number(next)));
+            clearError('endTime');
+          }}
+        />
+      )}
+      {/* Always mounted while the tiles show: a live region must exist before its text changes. */}
+      <Text
+        variant="caption"
+        as="p"
+        id="appt-duration-caption"
+        data-testid="appt-duration-caption"
+        aria-live="polite"
+        className={apptCaption ? undefined : 'sr-only'}
+      >
+        {apptCaption}
+      </Text>
+    </>
+  );
   const simpleAppointmentFields = (
     <div className="flex flex-col gap-6" data-testid="simple-appointment-form" data-large-text={largeText}>
       <section
@@ -3291,7 +3489,11 @@ function AddEventForm({
             selected={timeStr !== ''}
             expanded={showTaskTimeField}
             testId="appt-time-tile"
-            onClick={toggleTaskTime}
+            onClick={() => {
+              // "Pick a time" unfolds Starts' field (toggleTaskTime focuses it); a set time stays as it is.
+              if (!showTaskTimeField) setApptTimeOpen((prev) => ({ ...prev, start: true }));
+              toggleTaskTime();
+            }}
           />
           <ChipSelect
             id="appt-time"
@@ -3303,24 +3505,13 @@ function AddEventForm({
             value={timeStr ? null : 'any'}
             onChange={() => {
               setPickTimeOpen(false);
+              setApptTimeOpen({ start: false, end: false });
               changeTime('');
               completeStep('when');
             }}
           />
         </div>
-        {showTaskTimeField && (
-          <TimeField
-            id="scheduled_time"
-            label={t('addEvent.fields.time')}
-            value={timeStr}
-            error={errors.scheduled_time ?? missingErrorFor('time')}
-            hint={conversionText ?? undefined}
-            onChange={(e) => {
-              changeTime(e.target.value);
-              if (e.target.value) completeStep('when');
-            }}
-          />
-        )}
+        {showTaskTimeField && apptStartsEnds}
       </section>
 
       <section aria-labelledby="sf-how-often" className="flex flex-col gap-3">
@@ -3353,6 +3544,7 @@ function AddEventForm({
         />
       </section>
 
+      {remindersSummaryRow}
       <DisclosureRow
         id="more-details"
         title={t('addEvent.simple.moreDetails')}
@@ -3390,36 +3582,6 @@ function AddEventForm({
             clearError('location');
           }}
         />
-        {/* Length: only with a time to measure from. */}
-        {timeStr && (
-          <>
-            <ChipSelect
-              id="duration-presets"
-              label={t('addEvent.fields.duration')}
-              options={durationOptions}
-              value={(() => {
-                const index = matchingDurationIndex(timeStr, endTimeStr);
-                return index === -1 ? null : String(DURATION_PRESETS[index]);
-              })()}
-              onChange={(next) => {
-                if (!next) return;
-                setEndTimeStr(presetEndFor(timeStr, Number(next)));
-                clearError('endTime');
-              }}
-            />
-            <TimeField
-              id="endTime"
-              label={t('addEvent.fields.endTime')}
-              required={!isEditingWithoutDuration}
-              value={endTimeStr}
-              error={errors.endTime}
-              onChange={(e) => {
-                setEndTimeStr(e.target.value);
-                clearError('endTime');
-              }}
-            />
-          </>
-        )}
         {detailsBlock}
         {endDateBlock}
         {reminderBlock}
@@ -3629,6 +3791,7 @@ function AddEventForm({
         />
       </section>
 
+      {remindersSummaryRow}
       <DisclosureRow
         id="more-details"
         title={t('addEvent.simple.moreDetails')}

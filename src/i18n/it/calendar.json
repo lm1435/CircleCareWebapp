@@ -263,6 +263,23 @@
         "escalationTitle": "Avvisi di sollecito",
         "earlyTitle": "Promemoria anticipati",
         "earlyBody": "Se vuoi, puoi ricevere un promemoria 24 ore, 1 ora, 30 minuti o 15 minuti prima dell'orario programmato."
+      },
+      "summary": {
+        "label": "Promemoria: {{value}}",
+        "off": "disattivati",
+        "none": "nessuno",
+        "atTime": "all'orario programmato",
+        "h24": "24 ore prima",
+        "h1": "1 ora prima",
+        "m30": "30 minuti prima",
+        "m15": "15 minuti prima",
+        "followUpsOn": "avvisi di controllo attivi",
+        "followUpsOnly": "solo avvisi di controllo",
+        "nothingAtTime": "niente all'orario programmato",
+        "change": "Cambia",
+        "hint": "Mostra le impostazioni dei promemoria.",
+        "pickTime": "Scegli un orario per ricevere promemoria",
+        "pickTimeLabel": "Promemoria: scegli un orario per ricevere promemoria. Porta alla scelta dell'orario."
       }
     },
     "validation": {
@@ -346,7 +363,7 @@
       "howOften": "Con che frequenza?",
       "whoIsGoing": "Chi va?",
       "moreDetails": "Altri dettagli",
-      "moreDetailsSummary": "Scorte, farmacia, medico prescrittore, istruzioni, promemoria",
+      "moreDetailsSummary": "Scorte, farmacia, medico prescrittore, istruzioni",
       "startDate": "Data di inizio",
       "starts": "Inizia",
       "addMedication": "Aggiungi farmaco",
@@ -371,8 +388,8 @@
       "everyWeek": "Ogni settimana",
       "whoDoingIt": "Chi se ne occupa?",
       "me": "Io",
-      "taskMoreHint": "Dettagli, promemoria, data di fine",
-      "apptMoreHint": "Medico, luogo, durata, dettagli, promemoria",
+      "taskMoreHint": "Dettagli, data di fine",
+      "apptMoreHint": "Medico, luogo, dettagli",
       "custom": "Personalizzato…",
       "customHeading": "Personalizzato",
       "everyOtherDay": "A giorni alterni",

@@ -32,19 +32,20 @@ export interface SimpleAppointmentDisclosureSource extends SimpleEditDisclosureS
 }
 
 /**
- * The simple appointment form's "More details" (doctor, location, length, notes, end date, reminders): opened on
- * an edit by a linked doctor, a location, notes, a length other than the default a new time gets, or a repeat
- * end date. Mobile twin: the same rule in AddEventScreen.
+ * The simple appointment form's "More details" (doctor, location, notes, end date, reminders): opened on an edit
+ * by a linked doctor, a location, notes, or a repeat end date. The length is NOT in it any more (owner
+ * 2026-11-10: Starts | Ends and the length chips sit under the time choice), so a non-default length no longer
+ * opens it. Mobile twin: the same rule in AddEventScreen.
  */
 export function simpleAppointmentMoreOpen(
   source: SimpleAppointmentDisclosureSource,
-  defaultDurationMinutes: number
+  // Kept for the call sites' shape (the task rule still uses its twin); the length no longer opens it.
+  _defaultDurationMinutes?: number
 ): boolean {
   return !!(
     source.provider_id ||
     source.location?.trim() ||
     source.description?.trim() ||
-    (source.scheduled_time && source.duration_minutes && source.duration_minutes !== defaultDurationMinutes) ||
     (source.recurrence_rule && source.recurrence_end_date)
   );
 }

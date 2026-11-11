@@ -83,7 +83,7 @@
       "whatNeedsDoing": "O que é preciso fazer?",
       "pickTime": "Escolher hora",
       "everyWeek": "Todas as semanas",
-      "taskMoreHint": "Detalhes, lembretes, data de fim"
+      "taskMoreHint": "Detalhes, data de fim"
     },
     "refillsManagedOnOwner": "A reposição deste medicamento é acompanhada na dose principal. Abra essa dose para atualizar a embalagem.",
     "refillEstimate": "Stock para ~{{days}} dias. Alerta quando restarem {{alertDays}} dias.",

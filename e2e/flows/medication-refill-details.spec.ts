@@ -57,7 +57,7 @@ test('add a medication with refill tracking + prescriber on the web; the edit fo
     await form.getByRole('radio', { name: /^Evening/ }).click();
 
     const more = form.getByRole('button', { name: /^More details/ });
-    await expect(more).toContainText('Refills, pharmacy, prescriber, instructions, reminders');
+    await expect(more).toContainText('Refills, pharmacy, prescriber, instructions');
     await more.click();
     await expect(form.getByRole('button', { name: 'Add a photo' })).toBeVisible();
     await form.getByRole('checkbox', { name: /Track refills/ }).click();

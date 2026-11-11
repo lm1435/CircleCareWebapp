@@ -263,6 +263,23 @@
         "escalationTitle": "Nachfragen bei fehlender Bestätigung",
         "earlyTitle": "Frühe Erinnerungen",
         "earlyBody": "Auf Wunsch werden Sie 24 Stunden, 1 Stunde, 30 Minuten oder 15 Minuten vor der geplanten Uhrzeit erinnert."
+      },
+      "summary": {
+        "label": "Erinnerungen: {{value}}",
+        "off": "aus",
+        "none": "keine",
+        "atTime": "zur geplanten Zeit",
+        "h24": "24 Stunden vorher",
+        "h1": "1 Stunde vorher",
+        "m30": "30 Minuten vorher",
+        "m15": "15 Minuten vorher",
+        "followUpsOn": "Folgewarnungen an",
+        "followUpsOnly": "nur Folgewarnungen",
+        "nothingAtTime": "nichts zur geplanten Zeit",
+        "change": "Ändern",
+        "hint": "Zeigt die Einstellungen für Erinnerungen.",
+        "pickTime": "Wähle eine Uhrzeit, um Erinnerungen zu erhalten",
+        "pickTimeLabel": "Erinnerungen: Wähle eine Uhrzeit, um Erinnerungen zu erhalten. Führt zur Zeitauswahl."
       }
     },
     "validation": {
@@ -346,7 +363,7 @@
       "howOften": "Wie oft?",
       "whoIsGoing": "Wer geht mit?",
       "moreDetails": "Weitere Details",
-      "moreDetailsSummary": "Nachschub, Apotheke, Ärztin/Arzt, Hinweise, Erinnerungen",
+      "moreDetailsSummary": "Nachschub, Apotheke, Ärztin/Arzt, Hinweise",
       "startDate": "Startdatum",
       "starts": "Beginnt",
       "addMedication": "Medikament hinzufügen",
@@ -371,8 +388,8 @@
       "everyWeek": "Jede Woche",
       "whoDoingIt": "Wer übernimmt das?",
       "me": "Ich",
-      "taskMoreHint": "Details, Erinnerungen, Enddatum",
-      "apptMoreHint": "Ärztin/Arzt, Ort, Dauer, Details, Erinnerungen",
+      "taskMoreHint": "Details, Enddatum",
+      "apptMoreHint": "Ärztin/Arzt, Ort, Details",
       "custom": "Benutzerdefiniert…",
       "customHeading": "Benutzerdefiniert",
       "everyOtherDay": "Jeden zweiten Tag",

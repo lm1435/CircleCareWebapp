@@ -263,6 +263,23 @@
         "escalationTitle": "Alertes progressives",
         "earlyTitle": "Rappels anticipés",
         "earlyBody": "Vous pouvez aussi être rappelé 24 heures, 1 heure, 30 minutes ou 15 minutes avant l’heure prévue."
+      },
+      "summary": {
+        "label": "Rappels : {{value}}",
+        "off": "désactivés",
+        "none": "aucun",
+        "atTime": "à l’heure prévue",
+        "h24": "24 heures avant",
+        "h1": "1 heure avant",
+        "m30": "30 minutes avant",
+        "m15": "15 minutes avant",
+        "followUpsOn": "alertes de suivi activées",
+        "followUpsOnly": "alertes de suivi seulement",
+        "nothingAtTime": "rien à l’heure prévue",
+        "change": "Modifier",
+        "hint": "Affiche les réglages des rappels.",
+        "pickTime": "Choisissez une heure pour recevoir des rappels",
+        "pickTimeLabel": "Rappels : choisissez une heure pour recevoir des rappels. Mène au choix de l’heure."
       }
     },
     "validation": {
@@ -346,7 +363,7 @@
       "howOften": "À quelle fréquence ?",
       "whoIsGoing": "Qui y va ?",
       "moreDetails": "Plus de détails",
-      "moreDetailsSummary": "Renouvellements, pharmacie, prescripteur, instructions, rappels",
+      "moreDetailsSummary": "Renouvellements, pharmacie, prescripteur, instructions",
       "startDate": "Date de début",
       "starts": "Commence",
       "addMedication": "Ajouter un médicament",
@@ -371,8 +388,8 @@
       "everyWeek": "Chaque semaine",
       "whoDoingIt": "Qui s’en occupe ?",
       "me": "Moi",
-      "taskMoreHint": "Détails, rappels, date de fin",
-      "apptMoreHint": "Médecin, lieu, durée, détails, rappels",
+      "taskMoreHint": "Détails, date de fin",
+      "apptMoreHint": "Médecin, lieu, détails",
       "custom": "Personnalisé…",
       "customHeading": "Personnalisé",
       "everyOtherDay": "Un jour sur deux",

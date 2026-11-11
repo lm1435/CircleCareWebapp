@@ -14,6 +14,7 @@ import {
 } from '../notesFirstClassShared';
 import { countRequests, dbQuery, failRequest, sqlStr, type ApiSession } from '../unhappy';
 import { apiCreateEvent, errorToast } from '../unhappy/writes/_helpers';
+import { fillSimpleTime, unfoldSimpleEnd } from '../helpers';
 import {
   captureJson,
   cookieLogin,
@@ -217,11 +218,11 @@ test.describe('recurring appointment: edit + delete scope', () => {
     const rootViewerDate = wallIn(instantOf(k.at(-14), '10:00', k.tz), viewerTz).date;
     const expectedStored = wallIn(instantOf(rootViewerDate, '11:00', viewerTz), k.tz);
     await edit.locator('#title').fill(k.B);
-    await edit.locator('#scheduled_time').fill('11:00');
+    await fillSimpleTime(edit, '11:00');
     // PK21: moving the start moves the end (the 30-minute duration is kept), so
     // the end is NOT touched here. It used to be refused (10:30 < 11:00) and
     // the test had to move both fields by hand.
-    await expect(edit.locator('#endTime')).toHaveValue('11:30');
+    await expect(await unfoldSimpleEnd(edit)).toHaveValue('11:30');
     await edit.getByRole('button', { name: 'Save changes' }).click();
     await expect(edit).toBeHidden({ timeout: 20_000 });
     expect(k.rootRow().duration_minutes, 'the duration survived the move').toBe(30);
@@ -362,10 +363,10 @@ test.describe('recurring appointment: edit + delete scope', () => {
     const edit = page.getByRole('dialog', { name: 'Edit appointment' });
     await expect(edit).toBeVisible();
     await expect(edit.locator('#scheduled_date')).not.toHaveValue('', { timeout: 20_000 });
-    await edit.locator('#scheduled_time').fill('23:45');
+    await fillSimpleTime(edit, '23:45');
     // 30 minutes after 23:45 is 00:15 the next day: the end wraps, it is not
     // clamped to 23:59 (which would silently shorten the appointment to 14 min).
-    await expect(edit.locator('#endTime')).toHaveValue('00:15');
+    await expect(await unfoldSimpleEnd(edit)).toHaveValue('00:15');
     await edit.getByRole('button', { name: 'Save changes' }).click();
     await expect(edit).toBeHidden({ timeout: 20_000 });
     await expect.poll(() => k.rootRow().duration_minutes, { timeout: 15_000 }).toBe(30);
@@ -399,7 +400,7 @@ test.describe('recurring appointment: edit + delete scope', () => {
     await expect(edit).toBeVisible();
     await expect(edit.locator('#scheduled_date')).not.toHaveValue('', { timeout: 20_000 });
     // No end is invented, and none is demanded.
-    await expect(edit.locator('#endTime')).toHaveValue('');
+    await expect(await unfoldSimpleEnd(edit)).toHaveValue('');
     await edit.locator('#title').fill(E);
     await edit.getByRole('button', { name: 'Save changes' }).click();
     await expect(edit).toBeHidden({ timeout: 20_000 });

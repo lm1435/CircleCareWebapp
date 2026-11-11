@@ -421,12 +421,28 @@ export async function openCalendarNew(
 export async function fillSimpleTime(dialog: Locator, time: string): Promise<void> {
   const field = dialog.locator('#scheduled_time');
   if (!(await field.isVisible())) {
-    await dialog
-      .getByTestId('time-chip-other')
-      .or(dialog.getByTestId('appt-time-tile'))
-      .or(dialog.getByTestId('task-time-tile'))
-      .first()
-      .click();
+    // A simple appointment that already has a time shows Starts | Ends tiles (owner 2026-11-10): unfold Starts.
+    const startTile = dialog.getByTestId('appt-start-tile');
+    if (await startTile.isVisible()) await startTile.click();
+    else
+      await dialog
+        .getByTestId('time-chip-other')
+        .or(dialog.getByTestId('appt-time-tile'))
+        .or(dialog.getByTestId('task-time-tile'))
+        .first()
+        .click();
   }
   await field.fill(time);
+}
+
+/**
+ * The simple appointment's Starts | Ends sit under the time choice as tiles that unfold their time fields
+ * (owner 2026-11-10, the shift form's pattern). Unfolds the end field; a no-op where `#endTime` already shows
+ * (the task form's More details, the full layout).
+ */
+export async function unfoldSimpleEnd(dialog: Locator): Promise<Locator> {
+  const field = dialog.locator('#endTime');
+  const tile = dialog.getByTestId('appt-end-tile');
+  if (!(await field.isVisible()) && (await tile.isVisible())) await tile.click();
+  return field;
 }
