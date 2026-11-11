@@ -94,7 +94,12 @@ export function reminderSummaryText(t: Translate, summary: ReminderSummary, loca
     atTime: t('addEvent.reminders.summary.atTime'),
   };
   const list = summary.items.map((item) => label[item]).join(', ');
-  const text = summary.followUps ? `${list} · ${t('addEvent.reminders.summary.followUpsOn')}` : list;
+  // A medication with earlier reminders but nothing AT the time still escalates when late: say both
+  // ("1 hour before · nothing at the scheduled time · follow-ups on"), owner 2026-11-10.
+  const noAtTime = summary.followUps && !summary.items.includes('atTime')
+    ? ` · ${t('addEvent.reminders.summary.nothingAtTime')}`
+    : '';
+  const text = summary.followUps ? `${list}${noAtTime} · ${t('addEvent.reminders.summary.followUpsOn')}` : list;
   return capitalizeFirst(text, locale);
 }
 

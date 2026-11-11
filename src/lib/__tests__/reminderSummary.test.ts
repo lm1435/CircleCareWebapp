@@ -77,7 +77,7 @@ describe('reminder summary text', () => {
 
   it('medication with an earlier reminder but no at-due still names the follow-ups', () => {
     expect(text(base({ reminderAtDue: false, reminder1h: true }))).toBe(
-      '1 hour before · follow-ups on'
+      '1 hour before · nothing at the scheduled time · follow-ups on'
     );
   });
 
