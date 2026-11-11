@@ -80,16 +80,38 @@ export function TimeChipContent({
   time,
   label,
   on,
+  mark = false,
 }: {
   time: string;
   label: string;
   on: boolean;
+  /**
+   * Design B (owner 2026-11-11, mobile parity): an add / added mark at the end of the second line, "+" (muted) until
+   * the time is a dose, a check once it is. The slot is the same 12px box both ways, so choosing never changes the
+   * chip's width or re-wraps the row. aria-hidden: the checkbox state says it.
+   */
+  mark?: boolean;
 }): ReactElement {
   return (
     <>
       <span className={`${CHOICE_TILE_LABEL} tabular-nums`}>{time}</span>
       {/* A space between the lines: the name reads "8:00 AM Morning" in every accessibility tree. */}{' '}
-      <span className={choiceTileSubClass(on)}>{label}</span>
+      {mark ? (
+        <span className="flex items-center justify-between gap-1.5 self-stretch">
+          <span className={choiceTileSubClass(on)}>{label}</span>
+          {/* A fixed 12px box (no line box of its own): the second line keeps the text's height and width. */}
+          <span
+            aria-hidden="true"
+            data-testid="time-chip-mark"
+            data-mark={on ? 'added' : 'add'}
+            className={`flex h-3 w-3 shrink-0 items-center justify-center leading-none ${on ? 'text-cream' : 'text-ink-3'}`}
+          >
+            <Icon name={on ? 'checkmark' : 'add-outline'} size={12} />
+          </span>
+        </span>
+      ) : (
+        <span className={choiceTileSubClass(on)}>{label}</span>
+      )}
     </>
   );
 }
@@ -178,7 +200,7 @@ export function TimeChips({
             }
             className={`${choiceTileClass(on)}${off ? ' cursor-default opacity-50' : ' cursor-pointer'}`}
           >
-            <TimeChipContent time={display(chip.time, hourCycle)} label={chip.label} on={on} />
+            <TimeChipContent time={display(chip.time, hourCycle)} label={chip.label} on={on} mark={multiple} />
           </button>
         );
       })}

@@ -296,8 +296,26 @@ test.describe('dose times are unique (owner 2026-11-11, iOS 1.4.1 screenshot)', 
       await expect(tile).toHaveAttribute('aria-expanded', 'false');
     };
 
+    // Design B (owner 1.4.1 (15)): the hint under the question is the chips group's description, and every
+    // preset shows an add mark until it is a dose.
+    const hint = dialog.getByTestId('dose-times-hint');
+    await expect(hint).toHaveText("Tap every time it's taken.");
+    await expect(chips).toHaveAccessibleDescription(/Tap every time it's taken\./);
+    await expect(chips.getByTestId('time-chip-mark')).toHaveCount(4);
+    await expect(chips.locator('[data-testid="time-chip-mark"][data-mark="add"]')).toHaveCount(4);
+    const summary = dialog.getByTestId('dose-summary');
+    const note = dialog.getByTestId('dose-summary-note');
+
     // The screenshot: Bedtime on, then "Other…" 9:00 AM twice.
-    await chips.getByRole('checkbox', { name: /Bedtime$/ }).click();
+    const bedtime = chips.getByRole('checkbox', { name: /Bedtime$/ });
+    const widthBefore = (await bedtime.boundingBox())?.width;
+    await bedtime.click();
+    // One dose: the mark turns to a check in the same slot (the chip keeps its width); the note invites a second.
+    await expect(bedtime.getByTestId('time-chip-mark')).toHaveAttribute('data-mark', 'added');
+    // Within a pixel (the dialog's open transition leaves sub-pixel noise on the first read; simple-add-flows' "near").
+    expect(Math.abs(((await bedtime.boundingBox())?.width ?? 0) - (widthBefore ?? 0))).toBeLessThanOrEqual(1);
+    await expect(summary).toHaveText(/^1 dose a day · (9:00 PM|21:00)$/);
+    await expect(note).toHaveText('Taken more than once a day? Tap another time.');
     await other('09:00');
     await other('09:00');
     await expect(dialog.getByTestId('time-chip-custom')).toHaveCount(1);
@@ -306,16 +324,15 @@ test.describe('dose times are unique (owner 2026-11-11, iOS 1.4.1 screenshot)', 
     await expect(
       dialog.getByRole('status').filter({ has: page.getByTestId('dose-time-duplicate-note') })
     ).toHaveCount(1);
-    await expect(dialog.getByTestId('dose-summary')).toHaveText(
-      /^2 doses a day · (9:00 AM, 9:00 PM|09:00, 21:00) · Tap a time again to remove it$/
-    );
+    await expect(summary).toHaveText(/^2 doses a day · (9:00 AM, 9:00 PM|09:00, 21:00)$/);
+    await expect(note).toHaveText('Tap a time again to remove it.');
     // A custom time equal to a PRESET: Morning stays the one 8:00 dose.
     await chips.getByRole('checkbox', { name: /Morning$/ }).click();
     await expect(dupe).toHaveCount(0); // the doses changed: the note retires
     await other('08:00');
     await expect(dupe).toHaveText(/^(8:00 AM|08:00) is already a dose time\.$/);
     await expect(dialog.getByTestId('time-chip-custom')).toHaveCount(1);
-    await expect(dialog.getByTestId('dose-summary')).toHaveText(/^3 doses a day · /);
+    await expect(summary).toHaveText(/^3 doses a day · /);
     await submitEventForm(page, dialog);
 
     // The real backend got exactly one row per time.

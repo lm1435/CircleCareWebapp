@@ -190,9 +190,9 @@ describe("the chips are the recipient's clock (mobile parity)", () => {
       await user.click(chip(/Evening/));
       const line = screen.getByTestId('time-zone-caption');
       expect(line).toHaveTextContent(/^New York time · 4:00 PM your time \(Denver\)$/);
-      // Read with the chips: the group is described by the caption.
+      // Read with the chips: the group is described by the hint above them (design B), then the caption.
       expect(screen.getByRole('group', { name: 'Common dose times' })).toHaveAccessibleDescription(
-        'New York time · 4:00 PM your time (Denver)'
+        "Tap every time it's taken. New York time · 4:00 PM your time (Denver)"
       );
       // Switching (un-choose Evening, choose Morning) moves the caption with it.
       await user.click(chip(/Evening/));

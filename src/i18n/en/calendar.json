@@ -412,7 +412,10 @@
       "doseSummaryDaily_other": "{{count}} doses a day · {{times}}",
       "doseSummary_one": "{{count}} dose · {{times}}",
       "doseSummary_other": "{{count}} doses · {{times}}",
-      "doseSummaryRemoveHint": "Tap a time again to remove it",
+      "doseSummaryRemoveHint": "Tap a time again to remove it.",
+      "doseTimesHint": "Tap every time it's taken.",
+      "doseSummaryAddDaily": "Taken more than once a day? Tap another time.",
+      "doseSummaryAdd": "Taken more than once? Tap another time.",
       "doseTimeDuplicate": "{{time}} is already a dose time."
     },
     "timeChips": {

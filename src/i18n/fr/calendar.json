@@ -412,7 +412,10 @@
       "doseSummaryDaily_other": "{{count}} doses par jour · {{times}}",
       "doseSummary_one": "{{count}} dose · {{times}}",
       "doseSummary_other": "{{count}} doses · {{times}}",
-      "doseSummaryRemoveHint": "Touchez de nouveau une heure pour la retirer",
+      "doseSummaryRemoveHint": "Touchez de nouveau une heure pour la retirer.",
+      "doseTimesHint": "Touchez chaque heure de prise.",
+      "doseSummaryAddDaily": "Pris plusieurs fois par jour ? Touchez une autre heure.",
+      "doseSummaryAdd": "Pris plusieurs fois ? Touchez une autre heure.",
       "doseTimeDuplicate": "{{time}} est déjà une heure de dose."
     },
     "timeChips": {

@@ -186,50 +186,76 @@ describe.each([VIEWER_TZ, VIEWER_TZ === 'Asia/Tokyo' ? 'America/Denver' : 'Asia/
   }
 );
 
-describe('the dose summary line (circle New York)', () => {
+describe('the dose summary and its note (design B, circle New York)', () => {
   const summary = () => screen.getByTestId('dose-summary');
+  const note = () => screen.queryByTestId('dose-summary-note');
+  /** The polite live region: what a screen reader is told on a change. */
+  const statusOf = (el: HTMLElement) => el.closest('[role="status"]');
 
-  it('1 dose, every day: "1 dose a day · 8:00 AM", announced politely', async () => {
+  it('1 dose, every day: the summary, then the note inviting a second, both announced', async () => {
     const user = await setup('America/New_York');
     await user.click(chip(/Morning/));
     expect(summary()).toHaveTextContent(/^1 dose a day · 8:00 AM$/);
-    expect(summary().closest('[role="status"]')).not.toBeNull();
+    expect(note()).toHaveTextContent(/^Taken more than once a day\? Tap another time\.$/);
+    expect(statusOf(summary())).not.toBeNull();
+    expect(statusOf(note()!)).toBe(statusOf(summary()));
   });
 
-  it('2 doses: in time order, with the remove hint', async () => {
+  it('1 dose, not daily: the non-daily wording and its own note', async () => {
+    const user = await setup('America/New_York');
+    await user.click(screen.getByRole('radio', { name: 'Every week' }));
+    await user.click(chip(/Bedtime/));
+    expect(summary()).toHaveTextContent(/^1 dose · 9:00 PM$/);
+    expect(note()).toHaveTextContent(/^Taken more than once\? Tap another time\.$/);
+  });
+
+  it('2 doses with a preset: in time order; the note says how to remove one and is never announced', async () => {
     const user = await setup('America/New_York');
     await user.click(chip(/Bedtime/));
     await user.click(chip(/Morning/));
-    expect(summary()).toHaveTextContent(/^2 doses a day · 8:00 AM, 9:00 PM · Tap a time again to remove it$/);
+    expect(summary()).toHaveTextContent(/^2 doses a day · 8:00 AM, 9:00 PM$/);
+    expect(note()).toHaveTextContent(/^Tap a time again to remove it\.$/);
+    expect(statusOf(note()!)).toBeNull();
   });
 
-  it('custom doses only: no "tap again" hint (a custom chip is changed by a click, removed by its ×)', async () => {
+  it('custom doses only: no note (a custom chip is changed by a click, removed by its ×)', async () => {
     const user = await setup('America/New_York');
     await other(user, '19:45');
     await other(user, '07:15');
     expect(summary()).toHaveTextContent(/^2 doses a day · 7:15 AM, 7:45 PM$/);
+    expect(note()).toBeNull();
     // The custom chips are in time order too.
     expect(customChips()).toEqual(['7:15 AM Other', '7:45 PM Other']);
   });
 
-  it('0 doses: no line', async () => {
-    await setup('America/New_York');
-    expect(screen.queryByTestId('dose-summary')).toBeNull();
+  it('4 doses (the limit): no note', async () => {
+    const user = await setup('America/New_York');
+    for (const name of [/Morning/, /Midday/, /Evening/, /Bedtime/]) await user.click(chip(name));
+    expect(summary()).toHaveTextContent(/^4 doses a day · 8:00 AM, 12:00 PM, 6:00 PM, 9:00 PM$/);
+    expect(note()).toBeNull();
   });
 
-  it('not daily: "2 doses · …" (no "a day")', async () => {
+  it('0 doses: no summary and no note (the hint carries it)', async () => {
+    await setup('America/New_York');
+    expect(screen.queryByTestId('dose-summary')).toBeNull();
+    expect(note()).toBeNull();
+  });
+
+  it('not daily, 2 doses: "2 doses · …" (no "a day")', async () => {
     const user = await setup('America/New_York');
     await user.click(screen.getByRole('radio', { name: 'Every week' }));
     await user.click(chip(/Morning/));
     await user.click(chip(/Evening/));
-    expect(summary()).toHaveTextContent(/^2 doses · 8:00 AM, 6:00 PM · Tap a time again to remove it$/);
+    expect(summary()).toHaveTextContent(/^2 doses · 8:00 AM, 6:00 PM$/);
+    expect(note()).toHaveTextContent(/^Tap a time again to remove it\.$/);
   });
 
-  it('When needed: no line', async () => {
+  it('When needed: no summary', async () => {
     const user = await setup('America/New_York');
     await user.click(chip(/Morning/));
     await user.click(screen.getByRole('radio', { name: 'When needed' }));
     expect(screen.queryByTestId('dose-summary')).toBeNull();
+    expect(note()).toBeNull();
   });
 });
 
@@ -260,5 +286,79 @@ describe('ONE past-time note naming the times (circle New York, 12:30 there)', (
     const user = await setup('America/New_York', NOON_NY);
     await user.click(chip(/Evening/));
     expect(screen.queryAllByTestId(/^dose-past-time-note/)).toHaveLength(0);
+  });
+});
+
+describe('the hint under "What time?" and the add / added marks (design B)', () => {
+  const marks = () => within(timeChips()).getAllByTestId('time-chip-mark');
+  const markOf = (name: RegExp) => within(chip(name)).getByTestId('time-chip-mark');
+
+  it('a new scheduled medication shows the hint, as plain text right after the heading', async () => {
+    const user = await setup('America/New_York');
+    const hint = screen.getByTestId('dose-times-hint');
+    expect(hint).toHaveTextContent("Tap every time it's taken.");
+    expect(hint).not.toHaveAttribute('aria-hidden');
+    const heading = screen.getByRole('heading', { name: /What time\?/ });
+    expect(heading.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(hint.compareDocumentPosition(timeChips()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.click(chip(/Morning/));
+    expect(screen.getByTestId('dose-times-hint')).toHaveTextContent("Tap every time it's taken.");
+  });
+
+  it("a11y: the hint (a <p> with an id) joins the chips group's aria-describedby", async () => {
+    await setup('America/New_York');
+    const hint = screen.getByTestId('dose-times-hint');
+    expect(hint.id).toBe('time-chips-hint');
+    expect(timeChips().getAttribute('aria-describedby')?.split(' ')).toContain('time-chips-hint');
+    expect(timeChips()).toHaveAccessibleDescription(/Tap every time it's taken\./);
+  });
+
+  it('each preset carries a mark: "+" (muted) until chosen, a check once chosen, in the same 12px slot', async () => {
+    const user = await setup('America/New_York');
+    expect(marks()).toHaveLength(4);
+    for (const m of marks()) expect(m).toHaveAttribute('data-mark', 'add');
+    const before = markOf(/Bedtime/);
+    expect(before).toHaveClass('text-ink-3');
+    expect(before.firstElementChild).toHaveStyle({ width: '12px', height: '12px' });
+    await user.click(chip(/Bedtime/));
+    const after = markOf(/Bedtime/);
+    expect(after).toHaveAttribute('data-mark', 'added');
+    expect(after).toHaveClass('text-cream');
+    expect(after.firstElementChild).toHaveStyle({ width: '12px', height: '12px' }); // the reserved slot
+    expect(markOf(/Morning/)).toHaveAttribute('data-mark', 'add');
+  });
+
+  it('marks are aria-hidden (the checkbox state says it), chips stay checkboxes; none on custom chips or "Other…"', async () => {
+    const user = await setup('America/New_York');
+    await user.click(chip(/Morning/));
+    await other(user, '14:00');
+    for (const m of marks()) expect(m).toHaveAttribute('aria-hidden', 'true');
+    expect(chip(/Morning/)).toBeChecked();
+    expect(chip(/Morning/)).toHaveAccessibleName(/^8:00 AM\s*Morning$/);
+    expect(within(screen.getByTestId('time-chip-custom-box')).queryByTestId('time-chip-mark')).toBeNull();
+    expect(within(otherTile()).queryByTestId('time-chip-mark')).toBeNull();
+  });
+
+  it('When needed: no hint', async () => {
+    const user = await setup('America/New_York');
+    await user.click(screen.getByRole('radio', { name: 'When needed' }));
+    expect(screen.queryByTestId('dose-times-hint')).toBeNull();
+  });
+});
+
+describe('copy (EN and ES, mobile parity)', () => {
+  it('the hint, the notes and the summary keys', async () => {
+    const en = (await import('@/i18n/en/calendar.json')).default.addEvent.simple;
+    const es = (await import('@/i18n/es/calendar.json')).default.addEvent.simple;
+    expect(en.doseTimesHint).toBe("Tap every time it's taken.");
+    expect(es.doseTimesHint).toBe('Toca cada hora en que se toma.');
+    expect(en.doseSummaryAddDaily).toBe('Taken more than once a day? Tap another time.');
+    expect(es.doseSummaryAddDaily).toBe('¿Se toma más de una vez al día? Toca otra hora.');
+    expect(en.doseSummaryAdd).toBe('Taken more than once? Tap another time.');
+    expect(es.doseSummaryAdd).toBe('¿Se toma más de una vez? Toca otra hora.');
+    expect(en.doseSummaryRemoveHint).toBe('Tap a time again to remove it.');
+    expect(es.doseSummaryRemoveHint).toBe('Toca una hora otra vez para quitarla.');
+    expect(en.doseSummaryDaily_one).toBe('{{count}} dose a day · {{times}}');
+    expect(es.doseSummaryDaily_one).toBe('{{count}} dosis al día · {{times}}');
   });
 });

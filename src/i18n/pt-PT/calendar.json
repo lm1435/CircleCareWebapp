@@ -87,7 +87,10 @@
       "everyWeek": "Todas as semanas",
       "taskMoreHint": "Detalhes",
       "zoneCaption": "Hora de {{circleZone}} · {{times}} a sua hora ({{yourZone}})",
-      "doseSummaryRemoveHint": "Toque novamente numa hora para a remover",
+      "doseSummaryRemoveHint": "Toque novamente numa hora para a remover.",
+      "doseTimesHint": "Toque em cada hora em que é tomado.",
+      "doseSummaryAddDaily": "Tomado mais de uma vez por dia? Toque noutra hora.",
+      "doseSummaryAdd": "Tomado mais de uma vez? Toque noutra hora.",
       "doseTimeDuplicate": "{{time}} já é uma hora de dose."
     },
     "refillsManagedOnOwner": "A reposição deste medicamento é acompanhada na dose principal. Abra essa dose para atualizar a embalagem.",

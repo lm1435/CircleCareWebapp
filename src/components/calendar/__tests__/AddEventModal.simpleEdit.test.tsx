@@ -257,6 +257,15 @@ describe('the time chips light from the stored time', () => {
     expect(screen.queryByTestId('time-chip-other-time')).toBeNull();
   });
 
+  it('an edit holds one time: no "Tap every time it\'s taken." hint and no dose summary (owner 1.4.1 (15))', () => {
+    renderEdit(med());
+    expect(screen.queryByTestId('dose-times-hint')).toBeNull();
+    expect(timeChips()).not.toHaveAccessibleDescription(/Tap every time/);
+    expect(screen.queryByTestId('dose-summary')).toBeNull();
+    // Design B: no add / added marks on an edit's one-answer chips.
+    expect(screen.queryAllByTestId('time-chip-mark')).toHaveLength(0);
+  });
+
   it('a time that is no chip is its own lit chip ("7:30 AM / Other"); the Other… picker holds it', async () => {
     renderEdit(EVENTS.medDays); // 7:30 New York = 5:30 Denver
     for (const name of [/Morning/, /Midday/, /Evening/, /Bedtime/]) expect(chip(name)).not.toBeChecked();

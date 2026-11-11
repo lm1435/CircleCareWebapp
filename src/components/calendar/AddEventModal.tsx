@@ -3148,22 +3148,43 @@ function AddEventForm({
   /**
    * The new medication's dose summary under "What time?" (owner 2026-11-11, mobile parity): what the save creates,
    * in time order ("2 doses a day · 8:00 AM, 9:00 PM"). "a day" only on Every day; any other repeat says "2 doses ·
-   * …", which stays true. "Tap a time again to remove it" once there are two or more doses and a preset among them
-   * (a custom chip is changed by a click and removed by its ×). None with no dose, on When needed, or on an edit (it
-   * holds one row of a medication whose other doses it cannot see).
+   * …", which stays true. Its note is its own line (`doseSummaryNote`, design B). None with no dose, on When needed,
+   * or on an edit (it holds one row of a medication whose other doses it cannot see).
    */
   const summaryClocks = [...new Set(doseRecipientTimes.filter(Boolean).map((time) => time.slice(0, 5)))].sort();
   const doseSummaryText = ((): string | null => {
     if (isEditing || !isMedication || isAsNeeded || summaryClocks.length === 0) return null;
     const count = summaryClocks.length;
     const times = summaryClocks.map(clockText).join(', ');
-    const base =
-      recurrence === 'daily'
-        ? t('addEvent.simple.doseSummaryDaily', { count, times })
-        : t('addEvent.simple.doseSummary', { count, times });
-    const hint = count >= 2 && summaryClocks.some((clock) => chipForTime(clock) !== null);
-    return hint ? `${base} · ${t('addEvent.simple.doseSummaryRemoveHint')}` : base;
+    return recurrence === 'daily'
+      ? t('addEvent.simple.doseSummaryDaily', { count, times })
+      : t('addEvent.simple.doseSummary', { count, times });
   })();
+  /**
+   * The summary's own second line (design B, owner 2026-11-11, mobile parity): one dose invites a second ("Taken more
+   * than once a day? Tap another time."; a non-daily repeat drops "a day"), announced with the summary; two or more
+   * with a preset among them say how to remove one (never announced); at the 4-dose limit, or custom doses only,
+   * nothing.
+   */
+  const doseSummaryNote = ((): { text: string; announce: boolean } | null => {
+    const count = summaryClocks.length;
+    if (!doseSummaryText || count === 0 || count >= 4) return null;
+    if (count === 1) {
+      return {
+        text: recurrence === 'daily' ? t('addEvent.simple.doseSummaryAddDaily') : t('addEvent.simple.doseSummaryAdd'),
+        announce: true,
+      };
+    }
+    return summaryClocks.some((clock) => chipForTime(clock) !== null)
+      ? { text: t('addEvent.simple.doseSummaryRemoveHint'), announce: false }
+      : null;
+  })();
+  /**
+   * "Tap every time it's taken." under "What time?" (owner 1.4.1 (15), design B, mobile parity): the chips are
+   * multi-select on a NEW scheduled medication. The summary's rules minus the dose count (an edit holds one time;
+   * When needed has no chips). Plain text read in order, and the chips group's description (aria-describedby).
+   */
+  const doseTimesHint = isEditing || !isMedication || isAsNeeded ? null : t('addEvent.simple.doseTimesHint');
   /** The doses whose time already passed today (they start with the next dose), as circle clocks in time order. */
   const pastDoseClocks = [
     ...new Set(
@@ -3651,7 +3672,15 @@ function AddEventForm({
 
       {!isAsNeeded && (
         <section aria-labelledby="sf-what-time" className="flex flex-col gap-3">
-          {sectionHeading('sf-what-time', t('addEvent.simple.whatTime'))}
+          {/* Design B: the hint sits 3px under the question (the section's gap follows it). */}
+          <div>
+            {sectionHeading('sf-what-time', t('addEvent.simple.whatTime'))}
+            {doseTimesHint && (
+              <p id="time-chips-hint" data-testid="dose-times-hint" className="m-0 mt-[3px] text-sm leading-[21px] text-ink-3">
+                {doseTimesHint}
+              </p>
+            )}
+          </div>
           <TimeChips
             id="time-chips"
             values={doseRecipientTimes}
@@ -3659,7 +3688,11 @@ function AddEventForm({
             multiple={!isEditing}
             full={doseTimesFull}
             describedBy={
-              [timeErrorText ? 'scheduled_time-error' : '', zoneCaption ? 'time-zone-caption' : '']
+              [
+                doseTimesHint ? 'time-chips-hint' : '',
+                timeErrorText ? 'scheduled_time-error' : '',
+                zoneCaption ? 'time-zone-caption' : '',
+              ]
                 .filter(Boolean)
                 .join(' ') || undefined
             }
@@ -3693,7 +3726,11 @@ function AddEventForm({
               {timeErrorText}
             </p>
           )}
-          <DoseSummaryLine text={doseSummaryText} />
+          <DoseSummaryLine
+            text={doseSummaryText}
+            note={doseSummaryNote?.text ?? null}
+            announceNote={!!doseSummaryNote?.announce}
+          />
           <DoseDuplicateNote time={shownDuplicate ? clockText(shownDuplicate.time) : null} />
           <DoseQuietHoursNote
             applies={isMedication && notificationsEnabled && reminderAtDue}

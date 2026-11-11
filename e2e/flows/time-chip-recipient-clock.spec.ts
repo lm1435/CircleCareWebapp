@@ -146,8 +146,9 @@ test.describe("time chips are the recipient's clock", () => {
     // circle's time first), and the chip group is described by it so a screen reader reads it with the chips.
     const line = dialog.getByTestId('time-zone-caption');
     await expect(line).toHaveText('New York time · 4:00 PM your time (Denver)');
+    // (Design B, owner 2026-11-11: the "Tap every time it's taken." hint above the chips describes the group first.)
     await expect(dialog.getByRole('group', { name: 'Common dose times' })).toHaveAccessibleDescription(
-      'New York time · 4:00 PM your time (Denver)'
+      "Tap every time it's taken. New York time · 4:00 PM your time (Denver)"
     );
     await dialog.getByRole('button', { name: 'Add medication' }).click();
     await expect(dialog).toBeHidden({ timeout: 20_000 });

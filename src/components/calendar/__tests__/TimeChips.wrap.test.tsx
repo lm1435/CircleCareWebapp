@@ -106,8 +106,11 @@ describe('TimeChips row', () => {
     renderChips();
     // The two lines are separated in the name ("8:00 AM Morning"), never run together.
     const morning = screen.getByRole('checkbox', { name: '8:00 AM Morning' });
-    const [time, label] = Array.from(morning.querySelectorAll('span'));
+    // Design B: the day part shares its line with the (aria-hidden) add / added mark on a multi-select row.
+    const time = morning.firstElementChild as HTMLElement;
+    const label = within(morning).getByText('Morning');
     expect([time.textContent, label.textContent]).toEqual(['8:00 AM', 'Morning']);
+    expect(within(morning).getByTestId('time-chip-mark')).toHaveAttribute('aria-hidden', 'true');
     expect(time).toHaveClass(...CHOICE_TILE_LABEL.split(' '), 'tabular-nums');
     expect(label.className).toBe(choiceTileSubClass(false));
     expect(
