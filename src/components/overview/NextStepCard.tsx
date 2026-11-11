@@ -70,7 +70,7 @@ export function NextStepCard({
       data-testid="next-step-card"
       data-step={step}
     >
-      <Eyebrow dot className="mb-2">
+      <Eyebrow dot className="block mb-2">
         {t('today.nextStep.eyebrow', { current: position, total })}
       </Eyebrow>
       <Text variant="h2" as="h2" id="next-step-title">

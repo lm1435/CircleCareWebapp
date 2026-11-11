@@ -47,7 +47,7 @@ export function Hero({ recipientName, isSelfCare = false, recipientTimezone }: H
   return (
     <header className="px-5 pt-5 pb-4" data-testid="overview-hero">
       {eyebrow ? (
-        <Eyebrow dot className="mb-1">
+        <Eyebrow dot className="block mb-1">
           {eyebrow}
         </Eyebrow>
       ) : null}

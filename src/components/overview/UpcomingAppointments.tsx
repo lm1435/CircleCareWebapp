@@ -123,7 +123,7 @@ export function UpcomingAppointments({
   if (isLoading) {
     return (
       <section aria-busy="true">
-        <Eyebrow color="ink-2" className="mb-3">
+        <Eyebrow color="ink-2" className="block mb-3">
           {t('appointments.title')}
         </Eyebrow>
         <span role="status" className="sr-only">

@@ -252,7 +252,7 @@ export function NextUp({
   if (loading) {
     return (
       <section aria-labelledby="next-up-heading" aria-busy="true">
-        <Eyebrow id="next-up-heading" color="ink-2" className="mb-3">
+        <Eyebrow id="next-up-heading" color="ink-2" className="block mb-3">
           {t('today.nextUp.heading')}
         </Eyebrow>
         <Sheet padding="md" className="flex flex-col gap-3">
@@ -480,7 +480,7 @@ export function NextUp({
 
   return (
     <section aria-labelledby="next-up-heading">
-      <Eyebrow id="next-up-heading" color="ink-2" className="mb-3">
+      <Eyebrow id="next-up-heading" color="ink-2" className="block mb-3">
         {t('today.nextUp.heading')}
       </Eyebrow>
       {body}

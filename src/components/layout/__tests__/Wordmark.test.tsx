@@ -42,11 +42,13 @@ describe('Wordmark (spec §5.1)', () => {
     expect(screen.getByTestId('wordmark-mark-dark')).toHaveClass('cc-logo-mark-dark');
   });
 
-  it('globals.css shows exactly one mark per theme', () => {
+  it('globals.css shows exactly one mark per theme, via tokens re-pointed only in the screen dark block', () => {
     const css = readFileSync(join(__dirname, '../../../styles/globals.css'), 'utf8');
-    expect(css).toMatch(/\.cc-logo-mark-dark\s*\{\s*display:\s*none;/);
-    expect(css).toMatch(/:root\[data-theme='dark'\] \.cc-logo-mark-light\s*\{\s*display:\s*none;/);
-    expect(css).toMatch(/:root\[data-theme='dark'\] \.cc-logo-mark-dark\s*\{\s*display:\s*block;/);
+    expect(css).toMatch(/\.cc-logo-mark-light\s*\{\s*display:\s*var\(--logo-mark-light-display\);/);
+    expect(css).toMatch(/\.cc-logo-mark-dark\s*\{\s*display:\s*var\(--logo-mark-dark-display\);/);
+    expect(css).toMatch(/:root\s*\{\s*--logo-mark-light-display:\s*block;\s*--logo-mark-dark-display:\s*none;/);
+    const dark = css.slice(css.indexOf(":root[data-theme='dark'] {"));
+    expect(dark).toMatch(/--logo-mark-light-display:\s*none;\s*--logo-mark-dark-display:\s*block;/);
   });
 
   it('hides the word below the sm breakpoint but keeps the accessible name', () => {

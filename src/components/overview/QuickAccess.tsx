@@ -192,7 +192,7 @@ export function QuickAccess({
 
   return (
     <section aria-labelledby="quick-access-heading">
-      <Eyebrow id="quick-access-heading" color="ink-2" className="mb-3">
+      <Eyebrow id="quick-access-heading" color="ink-2" className="block mb-3">
         {t('quickAccess.title')}
       </Eyebrow>
       <Sheet
