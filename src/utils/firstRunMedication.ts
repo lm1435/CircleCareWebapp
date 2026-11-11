@@ -1,44 +1,20 @@
 import type { CreateEventRequest } from '@/api/calendarEvents';
-import { WEB_ENTRY_SOURCE } from '@/utils/entrySource';
-import { eventDatesForApi, extraDoseForApi } from '@/utils/recipientEventDate';
+import { extraDoseForApi } from '@/utils/recipientEventDate';
 import type { HourCycle } from '@/utils/hourCycle';
 import { formatTimeOfDay, getDateInTimezone, isEventPastDue } from '@/utils/timezone';
 
 /**
- * The first-run wizard's payload contract.
+ * First-run schedule helpers: preset times and sibling-dose rows.
  *
- * PORT of `mobile/src/utils/firstRunMedicationPayload.ts` (+ the three helpers
- * it composes: `medSchedulePresets.ts`, `recurrenceFormat.ts`'s
- * `recurrenceForSave`, and `siblingDosePayload.ts`). MOBILE IS CANONICAL — read
- * those files before changing anything here.
+ * The first-run wizard saves through the real simple medication form
+ * (AddEventModal firstRun); this module keeps only the helpers that path still
+ * uses (`siblingDosePayload`, ...). There is deliberately NO standalone payload
+ * builder: custom times use the CIRCLE's clock, and an earlier builder here
+ * treated them as the viewer's, so it was removed rather than left as a template.
  *
- * WHY THIS IS A PURE MODULE AND NOT PART OF THE MODAL. The whole point of the
- * wizard is that it writes THE SAME medication row the full form would write
- * for the same answers, on both platforms. Kept pure, that is a unit assertion
- * (`__tests__/firstRunMedication.test.ts`) instead of a rendered-screen
- * comparison — and the one case that actually matters, a sibling dose whose
- * instant falls on another VIEWER day than the primary's (it must still start
- * on the primary's circle day), is unreachable from a rendered test whose
- * viewer/recipient pairing sits a couple of hours apart.
- *
- * ── WEB ADAPTATION ────────────────────────────────────────────────────────
- *
- * Mobile's pickers produce `Date` objects, so its helpers take and return
- * Dates. The web form holds STRINGS (`<input type="time">` → `HH:MM`,
- * `<input type="date">` → `YYYY-MM-DD`) and `utils/recipientEventDate` is
- * string-in/string-out to match. So every time here is an `HH:MM` string.
- *
- * ── WHOSE CLOCK (BC-8) ────────────────────────────────────────────────────
- *
- * A schedule PRESET ("Every morning 8:00", "Twice daily 8:00 + 20:00") names
- * the CIRCLE's clock, like the time chips do: 08:00 where the person lives, for
- * every viewer. A preset row is therefore sent VERBATIM — `scheduled_time` is
- * the preset's `HH:MM` and `scheduled_date` is the circle's own today
- * (`circleTodayStr`), never converted through the viewer's zone. Only a CUSTOM
- * time (a hand-picked one) is still the VIEWER's wall clock on the viewer's day
- * and goes through `eventDatesForApi` as before.
- *
- * All rows of one medication start on the SAME circle day (BC-1): the primary's.
+ * Every time here is an `HH:MM` string. A schedule PRESET names the circle's
+ * clock and is sent verbatim on the circle's day. All rows of one medication
+ * start on the SAME circle day (BC-1): the primary's.
  */
 
 export type FirstRunPresetKey =
@@ -142,140 +118,6 @@ export function firstRunAllTimes(
 export function formatFirstRunTime(time: string, cycle: HourCycle): string {
   const [h, m] = time.split(':').map((n) => Number.parseInt(n, 10));
   return formatTimeOfDay(h || 0, m || 0, cycle);
-}
-
-/**
- * The recurrence half of a CREATE payload.
- *
- * BOTH KEYS ARE OMITTED, NEVER NULL, for "no repeat" — and that is not an
- * oversight. Mobile routes this through `recurrenceForSave(rule, null,
- * { clearing: false })`, which returns `{ recurrence_rule: undefined }` rather
- * than null because absent and null are DIFFERENT INSTRUCTIONS to the backend's
- * `eventSchema.partial()`: absent means "leave unchanged", null means "remove
- * it". Only an explicit clearing intent — which a create never has — may send
- * null.
- *
- * `AddEventModal`'s create path already does exactly this, with a bare
- * `let recurrence_rule: string | undefined` that stays undefined for 'none'.
- * This function IS that rule, extracted so the wizard cannot hand-build it
- * differently and so it is assertable without rendering a form. `cycle` is
- * absent on purpose: the wizard offers a deliberate subset of rules (see
- * `requiresFullForm`), and widening it widens what the wizard claims to handle.
- */
-export function recurrenceForCreate(recurrence: FirstRunRecurrence): {
-  recurrence_rule?: string;
-  recurrence_end_date?: string;
-} {
-  if (recurrence === 'none') {
-    return { recurrence_rule: undefined, recurrence_end_date: undefined };
-  }
-  return { recurrence_rule: recurrence, recurrence_end_date: undefined };
-}
-
-export interface FirstRunMedicationInput {
-  name: string;
-  dosage: string;
-  presetKey: FirstRunPresetKey;
-  /** Required when `presetKey === 'custom'`; ignored otherwise. `HH:MM`, viewer frame. */
-  customTime: string | null;
-  recurrence: FirstRunRecurrence;
-  /**
-   * The RxNorm concept id of a drug PICKED from suggestions.
-   *
-   * Always absent on web today: this repo ships no drug autocomplete on any
-   * medication surface, so every name is typed by hand. The parameter exists so
-   * the contract matches mobile's exactly — where a picked drug writes
-   * `data.rxcui` and a hand-edit clears it — and so a future web autocomplete
-   * plugs in without changing the payload shape. Omitted, never null, when
-   * absent: the same shape mobile sends from inside its `if (rxcui)`.
-   */
-  rxcui?: string;
-  /** The CARE RECIPIENT's IANA zone — see the precedence note in the modal. */
-  timezone: string;
-  /** The CIRCLE's own today (`getDateInTimezone(timezone, now)`): the start day of every preset row. */
-  circleTodayStr: string;
-  /** The viewer's calendar day, `YYYY-MM-DD`: the day a CUSTOM time is typed on. Defaults to the viewer's today. */
-  viewerTodayStr?: string;
-}
-
-export interface FirstRunMedicationPayload {
-  primary: CreateEventRequest;
-  /** `HH:MM` times for the extra doses (the circle's clock for a preset); one sibling row per entry. */
-  additionalTimes: string[];
-}
-
-/**
- * Wizard state -> the exact payload AddEventModal would produce for the same
- * answers.
- */
-export function buildFirstRunMedication(input: FirstRunMedicationInput): FirstRunMedicationPayload {
-  const { name, dosage, presetKey, customTime, recurrence, rxcui, timezone, circleTodayStr } = input;
-
-  const { primaryTime, additionalTimes } = firstRunPresetTimes(presetKey, customTime);
-
-  // A PRESET is the circle's clock on the circle's day, verbatim (BC-8). A CUSTOM time is the viewer's wall clock
-  // on the viewer's day and is converted into the circle's frame.
-  const { scheduledDate, scheduledTime } =
-    presetKey === 'custom'
-      ? eventDatesForApi({
-          dateStr: input.viewerTodayStr ?? viewerToday(),
-          timeStr: primaryTime,
-          recurrenceEndDateStr: null,
-          timezone,
-        })
-      : { scheduledDate: circleTodayStr, scheduledTime: primaryTime };
-
-  const trimmedName = name.trim();
-  const trimmedDosage = dosage.trim();
-
-  const primary: CreateEventRequest = {
-    event_type: 'medication',
-    // REQUIRED, by `CreateEventRequest` and by the backend's
-    // `z.string().min(1)`. Mirrors `trimmedTitle` in AddEventModal's submit
-    // path, which assigns the same value to `title` and `medication_name`.
-    title: trimmedName,
-    medication_name: trimmedName,
-    ...(trimmedDosage ? { medication_dosage: trimmedDosage } : {}),
-    ...(rxcui ? { rxcui } : {}),
-    scheduled_date: scheduledDate,
-    scheduled_time: scheduledTime,
-    // EXPLICIT, NEVER OMITTED. `reminder_15m`'s column default is TRUE, so a
-    // payload that left these out would come back with an extra 15-minutes-early
-    // push that an identical form-created medication does not have — a silent
-    // divergence between the two paths, on the flag the DB is opinionated about.
-    // The form reaches the same state through its own defaults — 15m starts OFF
-    // for a medication, whose at-dose push and escalation chain already cover it
-    // — not through `reminderFlagsForSave`, which now saves the selection
-    // verbatim and rewrites nothing.
-    reminder_24h: false,
-    reminder_1h: false,
-    reminder_30m: false,
-    reminder_15m: false,
-    // TRUE while the four above are false, and explicit for the same reason
-    // they are: this path states every reminder flag rather than inheriting a
-    // column default. `reminder_at_due` is the alert AT the dose time — the
-    // entire point of the wizard's medication — so "not asked" means ON here,
-    // matching both the column default and what the form produces for a fresh
-    // medication. The four EARLIER reminders stay off because the wizard never
-    // offered them.
-    reminder_at_due: true,
-    // EXPLICIT, same class of trap: `notifications_enabled` is `BOOLEAN NOT NULL
-    // DEFAULT TRUE` and happens to agree with the wizard's intent today. This
-    // module's job is to match the form's payload, not to coincide with a
-    // default that can change independently.
-    notifications_enabled: true,
-    // How the entry was added: the wizard is typed (the web has no voice add and
-    // no label scan). Sibling dose rows spread this payload, so they carry it too.
-    entry_source: WEB_ENTRY_SOURCE,
-    // `track_refills` is DELIBERATELY ABSENT — the one field leaning on a column
-    // default. The wizard asks nothing about refills and the default (false) is
-    // what "not asked" means; sending `false` would claim the user answered a
-    // question they were never shown. Called out rather than fixed, exactly as
-    // mobile does.
-    ...recurrenceForCreate(recurrence),
-  };
-
-  return { primary, additionalTimes };
 }
 
 /**

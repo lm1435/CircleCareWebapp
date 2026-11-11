@@ -4,7 +4,6 @@
  * Runs the changed pure functions over every clock-change day of the spec's zones, in both directions:
  *   - BC-5  `isEventPastDue` / `isDoseConfirmable` flip exactly at the dose INSTANT;
  *   - BC-1  `extraDoseForApi` keeps the picked clock on the primary's circle day;
- *   - BC-8  preset rows are the preset clocks on the circle's own day;
  *   - BC-2  hydrate -> save returns the stored pair (with `heldStored`, gap rows included);
  *   - BC-4  the caption range, over the spec's viewer != circle pairs.
  *
@@ -15,7 +14,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import { viewerRangeForCaption } from '@/components/calendar/zoneCaptionRange';
-import { buildFirstRunMedication, buildSiblingDoseRequests } from '@/utils/firstRunMedication';
 import { eventDatesForApi, eventDatesFromApi, extraDoseForApi } from '@/utils/recipientEventDate';
 import { isDoseConfirmable, isEventPastDue } from '@/utils/timezone';
 import { wallTimeToInstant } from '@/utils/wallTimeToInstant';
@@ -153,29 +151,7 @@ describe('5. BC-1 extra doses keep the picked clock on the primary circle day', 
   });
 });
 
-describe('6. BC-8 preset rows are the preset clocks on the circle day', () => {
-  const cases = DST_ZONES.flatMap((zone) => discoverTransitions(zone).map((tr) => [zone, tr.day] as const));
-  it.each(cases)('%s on %s: twice daily saves 08:00 and 20:00', (zone, day) => {
-    for (const d of [addDays(day, -1), day, addDays(day, 1)]) {
-      const { primary, additionalTimes } = buildFirstRunMedication({
-        name: 'Metformin',
-        dosage: '',
-        presetKey: 'twiceDaily',
-        customTime: null,
-        recurrence: 'daily',
-        timezone: zone,
-        circleTodayStr: d,
-      });
-      const rows = [primary, ...buildSiblingDoseRequests({ primary, additionalTimes, timezone: zone })];
-      expect(rows.map((r) => [r.scheduled_date, r.scheduled_time])).toEqual([
-        [d, '08:00'],
-        [d, '20:00'],
-      ]);
-    }
-  });
-});
-
-describe('7. BC-4 the caption range over the spec\'s viewer != circle pairs (both zones are arguments)', () => {
+describe('6. BC-4 the caption range over the spec\'s viewer != circle pairs (both zones are arguments)', () => {
   const PAIRS: Array<[viewer: string, circle: string]> = [
     ['America/New_York', 'America/Phoenix'],
     ['America/Phoenix', 'America/Denver'],

@@ -1,12 +1,10 @@
 import type { CreateEventRequest } from '@/api/calendarEvents';
-import { eventDatesForApi, viewerInstant } from '@/utils/recipientEventDate';
+import { eventDatesForApi } from '@/utils/recipientEventDate';
 import {
   FIRST_RUN_SCHEDULE_PRESETS,
-  buildFirstRunMedication,
   buildSiblingDoseRequests,
   firstRunPresetTimes,
   isFirstRunDosePastDue,
-  recurrenceForCreate,
   requiresFullForm,
   viewerToday,
 } from '../firstRunMedication';
@@ -32,294 +30,10 @@ import {
  * recipient zone, where the runner plays no part at all.
  */
 
-const BASE = {
-  name: '  Metformin  ',
-  dosage: '500mg',
-  presetKey: 'twiceDaily' as const,
-  customTime: null,
-  recurrence: 'daily' as const,
-  timezone: 'America/New_York',
-  circleTodayStr: '2026-09-01',
-  viewerTodayStr: '2026-09-01',
-};
-
 /** The wire body the API actually receives — `undefined` keys do not survive. */
 function onTheWire(payload: CreateEventRequest): Record<string, unknown> {
   return JSON.parse(JSON.stringify(payload)) as Record<string, unknown>;
 }
-
-describe('buildFirstRunMedication', () => {
-  // entry_source (1.2.3): the wizard is typed (the web has no voice add and no
-  // label scan), so every row it creates says 'form' — the primary AND each
-  // sibling dose row, which spreads the primary.
-  it('says the entry was typed: entry_source "form" on the primary and on every sibling dose', () => {
-    const { primary, additionalTimes } = buildFirstRunMedication(BASE);
-    expect(primary.entry_source).toBe('form');
-    expect(additionalTimes.length).toBeGreaterThan(0);
-    const siblings = buildSiblingDoseRequests({
-      primary,
-      additionalTimes,
-      timezone: BASE.timezone,
-      refillGroupId: 'primary-id',
-    });
-    expect(siblings.map((s) => s.entry_source)).toEqual(additionalTimes.map(() => 'form'));
-  });
-
-  // ── RULE 3 ────────────────────────────────────────────────────────────────
-  it('sets title from the trimmed name, matching AddEventModal trimmedTitle', () => {
-    const { primary } = buildFirstRunMedication(BASE);
-    expect(primary.title).toBe('Metformin');
-    expect(primary.medication_name).toBe('Metformin');
-  });
-
-  it('sends a non-empty title on the wire, which the backend requires', () => {
-    const { primary } = buildFirstRunMedication(BASE);
-    expect(onTheWire(primary).title).toBe('Metformin');
-  });
-
-  // ── RULE 1 ────────────────────────────────────────────────────────────────
-  /**
-   * THE COLUMN DEFAULT FOR `reminder_15m` IS TRUE. The full form never reaches
-   * it because `reminderFlagsForSave` always sends all four. A payload that
-   * omitted them would come back with `reminder_15m = true` and fire an extra
-   * 15-minutes-early push that an identical form-created medication does not —
-   * a silent divergence between the two paths.
-   */
-  it('sends all four reminder flags explicitly as false', () => {
-    const { primary } = buildFirstRunMedication(BASE);
-    expect(primary.reminder_24h).toBe(false);
-    expect(primary.reminder_1h).toBe(false);
-    expect(primary.reminder_30m).toBe(false);
-    expect(primary.reminder_15m).toBe(false);
-  });
-
-  it('keeps all four reminder flags on the wire, not merely on the object', () => {
-    const wire = onTheWire(buildFirstRunMedication(BASE).primary);
-    expect(wire).toMatchObject({
-      reminder_24h: false,
-      reminder_1h: false,
-      reminder_30m: false,
-      reminder_15m: false,
-    });
-  });
-
-  /**
-   * THE FIFTH FLAG, AND THE ONE THAT POINTS THE OTHER WAY.
-   *
-   * `reminder_at_due` is the alert AT the dose time — the entire point of the
-   * wizard's medication — so it is the one reminder that must be ON while the
-   * four EARLIER ones are off. The source calls it load-bearing and states it
-   * explicitly for exactly the reason the four above are stated: it is a
-   * `NOT NULL DEFAULT TRUE` column, so agreeing with the default today is not
-   * the same as SAYING so, and this module's contract is to match the form's
-   * payload rather than to coincide with a default that can change.
-   *
-   * Asserted here because nothing else did: flipping the literal in
-   * `buildFirstRunMedication` to `false` — silencing every dose the wizard
-   * creates — left the whole suite green.
-   */
-  it('sends reminder_at_due explicitly as true, on the object and on the wire', () => {
-    const { primary } = buildFirstRunMedication(BASE);
-    expect(primary.reminder_at_due).toBe(true);
-    expect(onTheWire(primary).reminder_at_due).toBe(true);
-  });
-
-  // ── RULE 2 ────────────────────────────────────────────────────────────────
-  /**
-   * Same trap as `reminder_15m`: `notifications_enabled` is `BOOLEAN NOT NULL
-   * DEFAULT TRUE` and happens to agree with the wizard's intent today. The full
-   * form sends it explicitly rather than leaning on that default, and this
-   * module's job is to match the form's payload, not to coincide with a default
-   * that could change out from under it.
-   */
-  it('sends notifications_enabled explicitly as true', () => {
-    const { primary } = buildFirstRunMedication(BASE);
-    expect(primary.notifications_enabled).toBe(true);
-    expect(onTheWire(primary).notifications_enabled).toBe(true);
-  });
-
-  /**
-   * The ONE field that leans on a column default, called out rather than fixed:
-   * sending `false` would claim the user answered a refill question they were
-   * never shown. Mobile documents the identical decision.
-   */
-  it('omits track_refills entirely — the wizard never asks about refills', () => {
-    const { primary } = buildFirstRunMedication(BASE);
-    expect('track_refills' in primary).toBe(false);
-  });
-
-  it('omits dosage when blank rather than sending an empty string', () => {
-    const { primary } = buildFirstRunMedication({ ...BASE, dosage: '   ' });
-    expect(primary.medication_dosage).toBeUndefined();
-    expect(onTheWire(primary)).not.toHaveProperty('medication_dosage');
-  });
-
-  it('trims the dosage it does send', () => {
-    const { primary } = buildFirstRunMedication({ ...BASE, dosage: '  500mg  ' });
-    expect(primary.medication_dosage).toBe('500mg');
-  });
-
-  it('omits rxcui entirely when no drug was picked', () => {
-    const { primary } = buildFirstRunMedication(BASE);
-    expect('rxcui' in primary).toBe(false);
-  });
-
-  it('writes rxcui when one is supplied', () => {
-    const { primary } = buildFirstRunMedication({ ...BASE, rxcui: '860975' });
-    expect(primary.rxcui).toBe('860975');
-  });
-
-  it('always creates a medication, never another event type', () => {
-    expect(buildFirstRunMedication(BASE).primary.event_type).toBe('medication');
-  });
-
-  // ── RULE 5 ────────────────────────────────────────────────────────────────
-  /**
-   * ABSENT AND NULL ARE DIFFERENT INSTRUCTIONS to the backend's
-   * `eventSchema.partial()`: absent means "leave unchanged", null means "remove
-   * it". Hand-building `recurrence_rule: null` on a create would diverge from
-   * the form, which leaves a `let recurrence_rule: string | undefined`
-   * undefined for "Never".
-   */
-  it('leaves recurrence_rule undefined for "none", never sending daily or null', () => {
-    const { primary } = buildFirstRunMedication({
-      ...BASE,
-      presetKey: 'everyMorning',
-      recurrence: 'none',
-    });
-    expect(primary.recurrence_rule).toBeUndefined();
-    expect(primary.recurrence_rule).not.toBeNull();
-    // The key is PRESENT with an undefined value (that is what the helper
-    // returns), so absence is asserted where it is observable: the wire.
-    expect(onTheWire(primary)).not.toHaveProperty('recurrence_rule');
-  });
-
-  it('uses the step-4 recurrence, never the preset helper hardcoded daily', () => {
-    const { primary } = buildFirstRunMedication({
-      ...BASE,
-      presetKey: 'everyMorning',
-      recurrence: 'weekly',
-    });
-    expect(primary.recurrence_rule).toBe('weekly');
-  });
-
-  it.each(['daily', 'every_other_day', 'weekly'] as const)(
-    'passes the %s rule through untouched',
-    (recurrence) => {
-      const { primary } = buildFirstRunMedication({
-        ...BASE,
-        presetKey: 'everyMorning',
-        recurrence,
-      });
-      expect(primary.recurrence_rule).toBe(recurrence);
-    }
-  );
-
-  it('never sends a recurrence_end_date — the wizard asks for no end', () => {
-    const { primary } = buildFirstRunMedication({ ...BASE, recurrence: 'weekly' });
-    expect(onTheWire(primary)).not.toHaveProperty('recurrence_end_date');
-  });
-
-  // ── RULE 6 (the dose times half) ─────────────────────────────────────────
-  it.each([
-    ['everyMorning', 0],
-    ['everyEvening', 0],
-    ['twiceDaily', 1],
-    ['threeTimesDaily', 2],
-  ] as const)('reports %s as %i additional dose time(s)', (presetKey, expected) => {
-    const { additionalTimes } = buildFirstRunMedication({ ...BASE, presetKey });
-    expect(additionalTimes).toHaveLength(expected);
-  });
-
-  it('uses the custom time as the primary with no siblings', () => {
-    const { primary, additionalTimes } = buildFirstRunMedication({
-      ...BASE,
-      presetKey: 'custom',
-      customTime: '14:30',
-    });
-    // DERIVED through the same conversion, never hardcoded: '14:30' is a VIEWER
-    // wall clock, and what it becomes in the recipient's zone depends on the
-    // runner. Asserting a bare '14:30' passes only where the two zones happen to
-    // agree.
-    expect(primary.scheduled_time).toBe(
-      eventDatesForApi({
-        dateStr: BASE.viewerTodayStr,
-        timeStr: '14:30',
-        recurrenceEndDateStr: null,
-        timezone: BASE.timezone,
-      }).scheduledTime
-    );
-    expect(additionalTimes).toHaveLength(0);
-  });
-
-  it('keeps the wall clock when the recipient shares the viewer zone', () => {
-    const viewerZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const { primary } = buildFirstRunMedication({
-      ...BASE,
-      presetKey: 'custom',
-      customTime: '14:30',
-      timezone: viewerZone,
-    });
-    expect(primary.scheduled_time).toBe('14:30');
-  });
-
-  it('throws rather than inventing a time when custom has no time', () => {
-    expect(() =>
-      buildFirstRunMedication({ ...BASE, presetKey: 'custom', customTime: null })
-    ).toThrow();
-  });
-
-  // ── RULE 4 (the payload half — the modal owns the precedence chain) ───────
-  /**
-   * `scheduled_date` must be the day the dose falls on in the RECIPIENT's zone,
-   * not the viewer's.
-   *
-   * The pair of zones is DERIVED, for the reason recorded at the top of this
-   * file: "two far-apart zones must disagree" is simply false from some runner
-   * zones. Two zones whose dates genuinely differ for THIS instant cannot both
-   * be satisfied by a single viewer-zone value, in any runner zone.
-   */
-  it('resolves scheduled_date in the recipient timezone, not the viewer’s', () => {
-    const primaryInstant = viewerInstant(BASE.viewerTodayStr, '08:00');
-
-    const dateIn = (timeZone: string): string =>
-      new Intl.DateTimeFormat('en-CA', {
-        timeZone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      }).format(primaryInstant);
-
-    const CANDIDATES = [
-      'Pacific/Kiritimati',
-      'Pacific/Auckland',
-      'Asia/Tokyo',
-      'Europe/Berlin',
-      'UTC',
-      'America/Denver',
-      'Pacific/Honolulu',
-      'Pacific/Midway',
-    ];
-    const pair = CANDIDATES.flatMap((a) => CANDIDATES.map((b) => [a, b] as const)).find(
-      ([a, b]) => dateIn(a) !== dateIn(b)
-    );
-
-    // Across a 26-hour span of offsets two zones always disagree about the date;
-    // if this ever fails the harness is broken, not the code.
-    expect(pair).toBeDefined();
-
-    for (const zone of pair as readonly [string, string]) {
-      const { primary } = buildFirstRunMedication({
-        ...BASE,
-        // A CUSTOM time is the viewer's wall clock (a preset is the circle's, on the circle's own today).
-        presetKey: 'custom',
-        customTime: '08:00',
-        timezone: zone,
-      });
-      expect(primary.scheduled_date).toBe(dateIn(zone));
-    }
-  });
-});
 
 describe('firstRunPresetTimes', () => {
   it('matches mobile’s MED_SCHEDULE_PRESETS clock times exactly', () => {
@@ -338,28 +52,6 @@ describe('firstRunPresetTimes', () => {
     expect(firstRunPresetTimes('threeTimesDaily', null)).toEqual({
       primaryTime: '08:00',
       additionalTimes: ['14:00', '20:00'],
-    });
-  });
-});
-
-describe('recurrenceForCreate', () => {
-  it('omits both keys on the wire for "none"', () => {
-    const wire = JSON.parse(JSON.stringify(recurrenceForCreate('none')));
-    expect(wire).toEqual({});
-  });
-
-  it('never emits an explicit null, which would mean "remove it"', () => {
-    for (const r of ['daily', 'every_other_day', 'weekly', 'none'] as const) {
-      const result = recurrenceForCreate(r);
-      expect(result.recurrence_rule).not.toBeNull();
-      expect(result.recurrence_end_date).not.toBeNull();
-    }
-  });
-
-  it('carries the rule and no end date for a real repeat', () => {
-    expect(recurrenceForCreate('weekly')).toEqual({
-      recurrence_rule: 'weekly',
-      recurrence_end_date: undefined,
     });
   });
 });
@@ -445,13 +137,29 @@ describe('buildSiblingDoseRequests across a day boundary', () => {
 
   const { timezone, early, late } = straddle;
 
-  const primary = buildFirstRunMedication({
-    ...BASE,
-    presetKey: 'custom',
-    customTime: at(early),
+  // A typed, daily medication on a custom (viewer-clock) time: the shape the full form saves.
+  const primaryDates = eventDatesForApi({
+    dateStr: todayStr,
+    timeStr: at(early),
+    recurrenceEndDateStr: null,
     timezone,
-    viewerTodayStr: todayStr,
-  }).primary;
+  });
+  const primary: CreateEventRequest = {
+    event_type: 'medication',
+    title: 'Metformin',
+    medication_name: 'Metformin',
+    medication_dosage: '500mg',
+    scheduled_date: primaryDates.scheduledDate,
+    scheduled_time: primaryDates.scheduledTime,
+    reminder_at_due: true,
+    reminder_24h: false,
+    reminder_1h: false,
+    reminder_30m: false,
+    reminder_15m: false,
+    notifications_enabled: true,
+    entry_source: 'form',
+    recurrence_rule: 'daily',
+  };
 
   it('gives each dose its own recipient-frame time', () => {
     const [sibling] = buildSiblingDoseRequests({
@@ -659,102 +367,5 @@ describe('viewerToday', () => {
   it('reports the viewer’s own calendar day, zero-padded', () => {
     const now = new Date(2026, 8, 3, 4, 5);
     expect(viewerToday(now)).toBe('2026-09-03');
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BC-8: the schedule presets mean the CIRCLE's clock (08:00 where the person
-// lives), on the circle's own today. BC-1: every dose row starts on that same
-// circle day. The viewer is the process zone (TZ); the table is ambient.
-// ─────────────────────────────────────────────────────────────────────────────
-describe('BC-8 / BC-1 presets are the circle clock, rows share the circle day', () => {
-  const AMBIENT = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const dayIn = (timeZone: string, now: Date) =>
-    new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
-  const TABLE: Array<{
-    viewer: string[];
-    circle: string;
-    preset: 'everyMorning' | 'everyEvening' | 'twiceDaily' | 'threeTimesDaily';
-    now: string;
-    day: string;
-    times: string[];
-  }> = [
-    { viewer: ['America/New_York'], circle: 'America/Denver', preset: 'everyMorning', now: '2026-11-12T15:00:00Z', day: '2026-11-12', times: ['08:00'] },
-    { viewer: ['America/Denver'], circle: 'America/New_York', preset: 'everyMorning', now: '2026-11-12T15:00:00Z', day: '2026-11-12', times: ['08:00'] },
-    { viewer: ['UTC', 'Etc/UTC'], circle: 'America/Denver', preset: 'twiceDaily', now: '2026-11-12T15:00:00Z', day: '2026-11-12', times: ['08:00', '20:00'] },
-    { viewer: ['Europe/London'], circle: 'America/Denver', preset: 'threeTimesDaily', now: '2026-11-12T15:00:00Z', day: '2026-11-12', times: ['08:00', '14:00', '20:00'] },
-    { viewer: ['Pacific/Auckland'], circle: 'America/Denver', preset: 'twiceDaily', now: '2026-11-12T03:00:00Z', day: '2026-11-11', times: ['08:00', '20:00'] },
-    { viewer: ['Asia/Kolkata', 'Asia/Calcutta'], circle: 'America/Los_Angeles', preset: 'everyEvening', now: '2026-11-12T15:00:00Z', day: '2026-11-12', times: ['20:00'] },
-  ];
-
-  function rowsFor(preset: (typeof TABLE)[number]['preset'], circle: string, circleTodayStr: string) {
-    const { primary, additionalTimes } = buildFirstRunMedication({
-      ...BASE,
-      presetKey: preset,
-      timezone: circle,
-      circleTodayStr,
-    });
-    const siblings = buildSiblingDoseRequests({
-      primary,
-      additionalTimes,
-      timezone: circle,
-    });
-    return [primary, ...siblings].map((r) => ({ date: r.scheduled_date, time: r.scheduled_time }));
-  }
-
-  it('the ambient zone is in the table', () => {
-    if (!TABLE.some((r) => r.viewer.includes(AMBIENT))) throw new Error(`ambient zone ${AMBIENT} is not in the BC-8 table`);
-  });
-
-  it('New York viewer, Denver circle: Every morning saves 08:00', () => {
-    // Table row, run in whatever zone this process is: the preset never depends on the viewer's zone.
-    const now = new Date('2026-11-12T15:00:00Z');
-    expect(rowsFor('everyMorning', 'America/Denver', dayIn('America/Denver', now))).toEqual([
-      { date: '2026-11-12', time: '08:00' },
-    ]);
-  });
-
-  it('the ambient row: preset rows are the preset clocks on the circle day', () => {
-    const row = TABLE.find((r) => r.viewer.includes(AMBIENT));
-    if (!row) throw new Error(`ambient zone ${AMBIENT} is not in the BC-8 table`);
-    expect(dayIn(row.circle, new Date(row.now))).toBe(row.day);
-    expect(rowsFor(row.preset, row.circle, row.day)).toEqual(row.times.map((time) => ({ date: row.day, time })));
-  });
-
-  it('twice daily: both rows share the circle’s day', () => {
-    const rows = rowsFor('twiceDaily', 'Pacific/Auckland', '2026-09-27');
-    expect(rows).toEqual([
-      { date: '2026-09-27', time: '08:00' },
-      { date: '2026-09-27', time: '20:00' },
-    ]);
-  });
-
-  it('twice daily saves exactly 08:00 and 20:00 on the circle day, on every clock-change day and the days either side', () => {
-    const days = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
-    // Spring-forward and fall-back days of 2026 from the spec's section 3 (discovered + checked in dstMatrix.test.ts).
-    const TRANSITION_DAYS: Record<string, string[]> = {
-      'America/New_York': ['2026-03-08', '2026-11-01'],
-      'America/Denver': ['2026-03-08', '2026-11-01'],
-      'America/Adak': ['2026-03-08', '2026-11-01'],
-      'Europe/London': ['2026-03-29', '2026-10-25'],
-      'Europe/Berlin': ['2026-03-29', '2026-10-25'],
-      'Pacific/Auckland': ['2026-09-27', '2026-04-05'],
-      'Australia/Sydney': ['2026-10-04', '2026-04-05'],
-      'America/Santiago': ['2026-09-06', '2026-04-04'],
-      'America/Havana': ['2026-03-08', '2026-11-01'],
-      'Australia/Lord_Howe': ['2026-10-04', '2026-04-05'],
-      'Pacific/Chatham': ['2026-09-27', '2026-04-05'],
-    };
-    for (const [zone, transitionDays] of Object.entries(TRANSITION_DAYS)) {
-      for (const d of transitionDays) {
-        for (const n of [-1, 0, 1]) {
-          const day = days(d, n);
-          expect(rowsFor('twiceDaily', zone, day)).toEqual([
-            { date: day, time: '08:00' },
-            { date: day, time: '20:00' },
-          ]);
-        }
-      }
-    }
   });
 });
