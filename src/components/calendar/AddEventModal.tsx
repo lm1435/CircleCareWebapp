@@ -2874,9 +2874,16 @@ function AddEventForm({
    * viewer-side span from that day, so it moves by the same days: the "Repeats until" day the user picked (the
    * circle's day) stays put. A no-op when the day does not move (same / near zones, every payload suite case).
    */
-  function moveViewerDay(next: string): void {
+  function moveViewerDay(next: string, nextCircleDay: string | null = recipientStartDate): void {
     if (next !== dateStr && dateStr && next && recurrenceEndDate) {
-      setRecurrenceEndDate(addDays(recurrenceEndDate, daysBetween(dateStr, next)));
+      // The end is held as a viewer-frame day = its circle day + (viewer start day - circle start day). It moves
+      // only by the CHANGE in that offset, never by a start change the user made (`nextCircleDay` is the circle
+      // day the start lands on: unchanged for a time change, the picked day for `chooseTaskDay`).
+      const shift =
+        recipientStartDate && nextCircleDay
+          ? daysBetween(nextCircleDay, next) - daysBetween(recipientStartDate, dateStr)
+          : daysBetween(dateStr, next);
+      if (shift !== 0) setRecurrenceEndDate(addDays(recurrenceEndDate, shift));
     }
     setDateStr(next);
   }
@@ -3017,6 +3024,8 @@ function AddEventForm({
     datesTouched.current = true;
     clearError('scheduled_time');
     if (!next) {
+      // With no time the date IS the circle's day: restore it (a far-zone time had moved the viewer day).
+      if (recipientStartDate) moveViewerDay(recipientStartDate);
       setTimeStr('');
       setChipInstant(null);
       setEndTimeStr('');
@@ -3053,7 +3062,7 @@ function AddEventForm({
     }
     const viewer = eventDatesFromApi({ scheduledDate: day, scheduledTime: recipientClock, timezone });
     if (!viewer.timeStr) return;
-    moveViewerDay(viewer.dateStr);
+    moveViewerDay(viewer.dateStr, day);
     setTimeStr(viewer.timeStr);
     setChipInstant(viewer.instant ?? null);
     followEndTime(timeStr, viewer.timeStr);
