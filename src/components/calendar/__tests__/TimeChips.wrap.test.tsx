@@ -12,6 +12,11 @@ import {
 } from '@/components/ui/inputStyles';
 import { ChipSelect } from '@/components/ui/ChipSelect';
 
+// The lazy TimePickerPanel reads the hour cycle through React Query (useHourCycle -> useQuery). This suite renders
+// without a QueryClientProvider, so under full-suite load the panel's late mount threw "No QueryClient set" as an
+// unhandled error (exit 1 with every test green). The real app always has a client; pin the cycle here.
+vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => '12h' }));
+
 // The medication form's "What time?" row (owner 2026-11-10, build 11 "A2"; layout owner 1.4.0, mobile
 // StackedChoice parity): TIME-FIRST chips ("8:00 AM / Morning"), a custom time as its own chip ("2:30 PM /
 // Other"), then "Other…" drawn as the same tile, in ONE content-sized wrapping row, whatever is selected.
