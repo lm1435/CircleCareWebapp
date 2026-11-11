@@ -4,8 +4,6 @@ import '@/i18n';
 import { Analytics } from '@/lib/analytics';
 import { resetLargeTextReports } from '@/lib/largeText';
 import { queryClient } from '@/lib/queryClient';
-import { queryKeys } from '@/lib/queryKeys';
-import { readFirstMedNote } from '@/lib/firstMedNote';
 import { searchDrugs } from '@/api/drugs';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
 
