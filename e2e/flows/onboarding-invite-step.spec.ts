@@ -46,7 +46,7 @@ async function saveFirstMed(page: Page): Promise<void> {
   await page.getByTestId('first-run-primary').click();
   const form = page.getByRole('dialog').last();
   await form.getByLabel(/Medication name/i).fill('Lisinopril');
-  await form.getByRole('radio', { name: /Morning/ }).click();
+  await form.getByRole('checkbox', { name: /Morning/ }).click();
   await form.getByRole('button', { name: 'Add medication' }).click();
   await expect(wizard(page).getByText('ALL SET')).toBeVisible({ timeout: 20_000 });
 }

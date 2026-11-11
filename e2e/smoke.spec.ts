@@ -73,7 +73,7 @@ test.describe('authenticated route crawl', () => {
     await expectAuthenticatedAt(page, '/circles');
     // And the session can read data: the read-only account's two cloned
     // circles render as cards, which needs a successful authenticated GET.
-    await expect(page.locator('a[href^="/circles/"]')).toHaveCount(2, { timeout: 20_000 });
+    await expect(page.locator('a[href^="/circles/"]:not([href$="/notifications"])')).toHaveCount(2, { timeout: 20_000 });
     await expect(page).not.toHaveURL(/\/login/);
   });
 
