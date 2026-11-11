@@ -9,7 +9,12 @@ import { act, render, screen } from '@testing-library/react';
 import fs from 'node:fs';
 import path from 'node:path';
 import '@/i18n';
-import { BootScreen, BOOT_STATUS_DELAY_MS } from '@/components/BootScreen';
+import {
+  BootScreen,
+  BOOT_STATUS_DELAY_MS,
+  BOOT_SESSION_GAP_MS,
+  __resetBootSessionForTests,
+} from '@/components/BootScreen';
 
 const ROOT = path.join(__dirname, '../../..');
 
@@ -20,6 +25,7 @@ function pngWidth(file: string): number {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  __resetBootSessionForTests();
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -156,3 +162,73 @@ describe('BootScreen is wired as the only full-page boot state', () => {
     expect(app).not.toContain('FullPageSpinner');
   });
 });
+
+/**
+ * Boot can mount TWO instances back to back: AuthGuard's while the session bootstraps,
+ * then the Suspense fallback while the first lazy page chunk loads. They must read as one
+ * screen: the second does not fade the wordmark in again, restart the breath at scale 1,
+ * or restart the 3 s status timer. Same rule as mobile's LoadingScreen.
+ */
+describe('BootScreen is continuous across instances', () => {
+  const wordmark = () => screen.getAllByAltText('CircleCare')[0];
+
+  it('first mount: animations start from their beginning', () => {
+    render(<BootScreen />);
+    expect(wordmark().style.animationDelay).toBe('');
+    expect(screen.getByTestId('boot-mark-wrap').style.animationDelay).toBe('');
+  });
+
+  it('a second mount carries the wordmark fade and the breath on from the first mount', () => {
+    const first = render(<BootScreen />);
+    act(() => {
+      vi.advanceTimersByTime(700);
+    });
+    first.unmount();
+    render(<BootScreen />);
+    // 150 ms delay - 700 ms elapsed: a negative delay puts the 500 ms fade past its end.
+    expect(wordmark().style.animationDelay).toBe('-550ms');
+    expect(screen.getByTestId('boot-mark-wrap').style.animationDelay).toBe('-700ms');
+  });
+
+  it('the status line counts 3 s from the FIRST mount', () => {
+    const first = render(<BootScreen />);
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    first.unmount();
+    render(<BootScreen />);
+    act(() => {
+      vi.advanceTimersByTime(999);
+    });
+    expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+  });
+
+  it('an instance mounted after the 3 s have passed shows the status line at once', () => {
+    const first = render(<BootScreen />);
+    act(() => {
+      vi.advanceTimersByTime(BOOT_STATUS_DELAY_MS + 200);
+    });
+    first.unmount();
+    render(<BootScreen />);
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+  });
+
+  it('a LATER load (no boot screen for over a second) starts fresh', () => {
+    const first = render(<BootScreen />);
+    act(() => {
+      vi.advanceTimersByTime(BOOT_STATUS_DELAY_MS + 200);
+    });
+    first.unmount();
+    act(() => {
+      vi.advanceTimersByTime(BOOT_SESSION_GAP_MS + 1);
+    });
+    render(<BootScreen />);
+    expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+    expect(wordmark().style.animationDelay).toBe('');
+  });
+});
+

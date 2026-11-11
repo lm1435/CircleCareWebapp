@@ -3,6 +3,35 @@ import { useTranslation } from 'react-i18next';
 
 /** The status line ("Loading...") stays hidden this long, so a quick boot never flashes it. */
 export const BOOT_STATUS_DELAY_MS = 3000;
+const BREATH_CYCLE_MS = 5200;
+const WORDMARK_FADE_DELAY_MS = 150;
+
+/*
+ * ONE boot screen, possibly two instances: AuthGuard's while the session bootstraps, then
+ * the Suspense fallback while the first lazy page chunk loads. The state below lives at
+ * module level so both draw the same moment in time: the second does not fade the
+ * wordmark in again, restart the breath, or restart the status timer. A session ends once
+ * no instance has been mounted for BOOT_SESSION_GAP_MS, so a later, unrelated load starts
+ * fresh. Same rule as mobile's LoadingScreen.
+ */
+export const BOOT_SESSION_GAP_MS = 1000;
+let bootSessionStart: number | null = null;
+let bootInstances = 0;
+let bootLastUnmountAt = 0;
+
+/** The start time an instance rendering at `now` belongs to. Pure: safe during render. */
+function peekBootSessionStart(now: number): number {
+  const live =
+    bootSessionStart !== null &&
+    (bootInstances > 0 || now - bootLastUnmountAt <= BOOT_SESSION_GAP_MS);
+  return live ? (bootSessionStart as number) : now;
+}
+
+export function __resetBootSessionForTests(): void {
+  bootSessionStart = null;
+  bootInstances = 0;
+  bootLastUnmountAt = 0;
+}
 
 /**
  * The ONE full-page boot state: `AuthGuard` while the refresh-cookie bootstrap runs, and
@@ -25,12 +54,41 @@ export const BOOT_STATUS_DELAY_MS = 3000;
 export function BootScreen(): ReactElement {
   const { t } = useTranslation('common', { useSuspense: false });
   const label = t('loading');
-  const [statusVisible, setStatusVisible] = useState(false);
+  // Everything is timed from the boot SESSION's start, not this instance's mount.
+  const [boot] = useState(() => {
+    const now = Date.now();
+    const start = peekBootSessionStart(now);
+    return { start, elapsed: now - start };
+  });
+  const [statusVisible, setStatusVisible] = useState(boot.elapsed >= BOOT_STATUS_DELAY_MS);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setStatusVisible(true), BOOT_STATUS_DELAY_MS);
+    if (bootInstances === 0) bootSessionStart = boot.start;
+    bootInstances += 1;
+    return () => {
+      bootInstances = Math.max(0, bootInstances - 1);
+      if (bootInstances === 0) bootLastUnmountAt = Date.now();
+    };
+  }, [boot.start]);
+
+  useEffect(() => {
+    if (statusVisible) return;
+    const remaining = boot.start + BOOT_STATUS_DELAY_MS - Date.now();
+    const timer = window.setTimeout(() => setStatusVisible(true), Math.max(0, remaining));
     return () => window.clearTimeout(timer);
+    // Scheduled once per instance, from the session start.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // A negative animation-delay starts a CSS animation part-way through, so a later
+  // instance carries on where the previous one was instead of starting over.
+  const continued = boot.elapsed > 0;
+  const breathStyle = continued
+    ? { animationDelay: `-${boot.elapsed % BREATH_CYCLE_MS}ms` }
+    : undefined;
+  const wordmarkStyle = continued
+    ? { animationDelay: `${WORDMARK_FADE_DELAY_MS - boot.elapsed}ms` }
+    : undefined;
 
   return (
     <main className="relative min-h-screen bg-bg">
@@ -42,7 +100,11 @@ export function BootScreen(): ReactElement {
         data-testid="boot-lockup"
         className="absolute inset-x-0 top-1/2 -mt-[60px] flex flex-col items-center px-8"
       >
-        <div className="cc-boot-breath h-[120px] w-[120px]" data-testid="boot-mark-wrap">
+        <div
+          className="cc-boot-breath h-[120px] w-[120px]"
+          style={breathStyle}
+          data-testid="boot-mark-wrap"
+        >
           <img
             src="/logo-mark-384.png"
             alt=""
@@ -66,6 +128,7 @@ export function BootScreen(): ReactElement {
           width={118}
           height={21}
           className="cc-logo-mark-light cc-boot-wordmark mt-[18px] h-[21px] w-[118px]"
+          style={wordmarkStyle}
         />
         <img
           src="/circlecare-wordmark-dark.png"
@@ -73,6 +136,7 @@ export function BootScreen(): ReactElement {
           width={118}
           height={21}
           className="cc-logo-mark-dark cc-boot-wordmark mt-[18px] h-[21px] w-[118px]"
+          style={wordmarkStyle}
         />
         {statusVisible && (
           // The region's aria-label already says this; do not read it twice.
