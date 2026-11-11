@@ -24,13 +24,29 @@ describe('Wordmark (spec §5.1)', () => {
     expect(screen.getByRole('link', { name: 'CircleCare' })).toHaveAttribute('href', '/circles/c1');
   });
 
-  it('renders the 28x28 app icon as decorative (the link carries the name)', () => {
+  it('renders the transparent 32x32 brand mark (matches the account avatar) (light + dark) as decorative, never the app-icon tile', () => {
     renderWordmark();
-    const img = screen.getByRole('link', { name: 'CircleCare' }).querySelector('img');
-    expect(img).toHaveAttribute('src', '/icon.png');
-    // alt="" — the icon repeats the link's own accessible name.
-    expect(img).toHaveAttribute('alt', '');
-    expect(img).toHaveClass('h-7', 'w-7');
+    const imgs = screen.getByRole('link', { name: 'CircleCare' }).querySelectorAll('img');
+    expect(Array.from(imgs).map((i) => i.getAttribute('src'))).toEqual([
+      '/logo-mark.png',
+      '/logo-mark-dark.png',
+    ]);
+    imgs.forEach((img) => {
+      // alt="" — the mark repeats the link's own accessible name.
+      expect(img).toHaveAttribute('alt', '');
+      expect(img).toHaveClass('h-8', 'w-8');
+    });
+    // The opaque app icon draws its own dark square on the dark header (owner 2026-11-10).
+    expect(screen.getByRole('link', { name: 'CircleCare' }).innerHTML).not.toContain('icon.png');
+    expect(screen.getByTestId('wordmark-mark-light')).toHaveClass('cc-logo-mark-light');
+    expect(screen.getByTestId('wordmark-mark-dark')).toHaveClass('cc-logo-mark-dark');
+  });
+
+  it('globals.css shows exactly one mark per theme', () => {
+    const css = readFileSync(join(__dirname, '../../../styles/globals.css'), 'utf8');
+    expect(css).toMatch(/\.cc-logo-mark-dark\s*\{\s*display:\s*none;/);
+    expect(css).toMatch(/:root\[data-theme='dark'\] \.cc-logo-mark-light\s*\{\s*display:\s*none;/);
+    expect(css).toMatch(/:root\[data-theme='dark'\] \.cc-logo-mark-dark\s*\{\s*display:\s*block;/);
   });
 
   it('hides the word below the sm breakpoint but keeps the accessible name', () => {

@@ -41,7 +41,22 @@ export function Wordmark({ to = '/circles', className, onClick }: WordmarkProps)
         className ? ` ${className}` : ''
       }`}
     >
-      <img src="/icon.png" alt="" className="h-7 w-7 shrink-0 rounded-lg" />
+      {/* The transparent brand MARK, not the app-icon tile: the tile's own dark square
+          showed as a mismatched box on the dark header. Moss mark in light, cream mark in
+          dark; globals.css shows exactly one by `data-theme` (the app's theme toggle,
+          not just prefers-color-scheme). */}
+      <img
+        src="/logo-mark.png"
+        alt=""
+        className="cc-logo-mark-light h-8 w-8 shrink-0"
+        data-testid="wordmark-mark-light"
+      />
+      <img
+        src="/logo-mark-dark.png"
+        alt=""
+        className="cc-logo-mark-dark h-8 w-8 shrink-0"
+        data-testid="wordmark-mark-dark"
+      />
       <Text variant="h3" as="span" className="hidden sm:inline truncate">
         CircleCare
       </Text>

@@ -290,6 +290,17 @@
  * The `*-soft` washes are low-opacity tint-on-charcoal (rgba), composited by the
  * browser over whichever ground they sit on (bg or cream).
  */
+/* Brand mark (Wordmark.tsx): exactly one of the two transparent marks shows. */
+.cc-logo-mark-dark {
+  display: none;
+}
+:root[data-theme='dark'] .cc-logo-mark-light {
+  display: none;
+}
+:root[data-theme='dark'] .cc-logo-mark-dark {
+  display: block;
+}
+
 @media screen {
   :root[data-theme='dark'] {
     color-scheme: dark;
