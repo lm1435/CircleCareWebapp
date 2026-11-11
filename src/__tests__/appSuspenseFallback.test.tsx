@@ -30,6 +30,7 @@ import type { BackendModule, ReadCallback } from 'i18next';
 import { createInstance } from 'i18next';
 import { I18nextProvider, initReactI18next, useTranslation } from 'react-i18next';
 import { Spinner } from '@/components/ui/Spinner';
+import { BootScreen } from '@/components/BootScreen';
 
 // A locale chunk that never arrives: read() simply never invokes `callback`.
 const neverResolvesBackend: BackendModule = {
@@ -89,6 +90,32 @@ describe('Spinner as a Suspense fallback (App.tsx FullPageSpinner)', () => {
     expect(status.getAttribute('aria-label')?.length).toBeGreaterThan(0);
 
     // The suspended sibling never got to render its own content.
+    expect(screen.queryByText('loading')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * App.tsx's fallback is now the branded `BootScreen` (mark + wordmark), not the bare
+ * Spinner. The same rule applies to it: it reads `common:loading` for its accessible
+ * name, so it must do so with `useSuspense: false` or the fallback itself suspends and
+ * the page is blank for as long as the locale chunk is in flight.
+ */
+describe('BootScreen as the Suspense fallback (App.tsx)', () => {
+  it('paints the lockup with an accessible name while its sibling suspends forever', () => {
+    const stuckI18n = buildStuckI18n();
+
+    render(
+      <I18nextProvider i18n={stuckI18n}>
+        <Suspense fallback={<BootScreen />}>
+          <StuckOnTranslation />
+        </Suspense>
+      </I18nextProvider>
+    );
+
+    const status = screen.getByRole('status');
+    expect(status.getAttribute('aria-label')?.length).toBeGreaterThan(0);
+    expect(screen.getByTestId('boot-lockup')).toBeInTheDocument();
+    expect(screen.getAllByAltText('CircleCare')).toHaveLength(2);
     expect(screen.queryByText('loading')).not.toBeInTheDocument();
   });
 });

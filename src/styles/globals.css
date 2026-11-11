@@ -673,6 +673,38 @@
     }
   }
 
+  /*
+   * Boot screen (BootScreen.tsx), parity with mobile's LoadingScreen: the mark breathes
+   * 1 -> 1.035 over 2600 ms each way (ease-in-out sine), the wordmark and the delayed
+   * status line fade in. The global prefers-reduced-motion block neutralizes all three.
+   */
+  @keyframes cc-boot-breath {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.035);
+    }
+  }
+  @keyframes cc-boot-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  .cc-boot-breath {
+    animation: cc-boot-breath 5200ms cubic-bezier(0.37, 0, 0.63, 1) infinite;
+  }
+  .cc-boot-wordmark {
+    animation: cc-boot-fade 500ms cubic-bezier(0.33, 1, 0.68, 1) 150ms both;
+  }
+  .cc-boot-status {
+    animation: cc-boot-fade 300ms cubic-bezier(0.33, 1, 0.68, 1) both;
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;

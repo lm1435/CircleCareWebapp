@@ -6,34 +6,12 @@ import { queryClient } from '@/lib/queryClient';
 import { queryKeys } from '@/lib/queryKeys';
 import { getCurrentUser } from '@/api/users';
 import { ToastProvider } from '@/components/ui/Toast';
-import { Spinner } from '@/components/ui/Spinner';
+import { BootScreen } from '@/components/BootScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useAuthStore } from '@/store/authStore';
 import { router } from '@/router';
 import i18n from '@/i18n';
 import { DeviceTimezoneSync } from '@/components/DeviceTimezoneSync';
-
-/**
- * Fallback for the single app-wide <Suspense> boundary below. It covers two
- * unrelated-but-compatible suspensions: (1) `src/router.tsx`'s authenticated
- * pages are `React.lazy` — their chunk needs a moment on first visit; (2)
- * `src/i18n/index.ts` loads the `es` locale on demand, so a component calling
- * `useTranslation` before that namespace resolves also suspends here (English
- * never does — it's bundled eagerly). Mirrors AuthGuard's bootstrapping
- * spinner so neither state reads as a different loading style.
- *
- * MUST NOT itself suspend: `Spinner` calls `useSuspense: false` for exactly
- * this reason (see its doc comment) — a `fallback` that suspends leaves
- * React with nothing to paint, i.e. a blank screen for the entire time the
- * `es` chunk (or a lazy page chunk) is in flight.
- */
-function FullPageSpinner(): ReactElement {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-bg">
-      <Spinner size={32} />
-    </main>
-  );
-}
 
 /**
  * Applies the signed-in user's saved language preference to i18n. The detector
@@ -103,8 +81,17 @@ export default function App(): ReactElement {
           (including this boundary) unmounts to nothing — a blank page, not a
           spinner. Keeping everything that can suspend inside this single
           boundary is what makes the fallback actually show.
+
+          The fallback covers two suspensions: `src/router.tsx`'s lazy
+          authenticated pages (their chunk needs a moment on first visit) and
+          a locale loaded on demand by `src/i18n/index.ts`. It is the same
+          `BootScreen` AuthGuard shows while bootstrapping, so neither state
+          reads as a different loading style. It MUST NOT itself suspend:
+          BootScreen reads its label with `useSuspense: false` (see its doc
+          comment) — a fallback that suspends leaves React nothing to paint,
+          i.e. a blank screen while the chunk is in flight.
         */}
-        <Suspense fallback={<FullPageSpinner />}>
+        <Suspense fallback={<BootScreen />}>
           <QueryClientProvider client={queryClient}>
             <LanguageSync />
             <DeviceTimezoneSync />

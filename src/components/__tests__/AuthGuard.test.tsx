@@ -4,7 +4,7 @@ import '@/i18n';
 import { AuthGuard } from '@/components/AuthGuard';
 import { useAuthStore } from '@/store/authStore';
 
-// Task 50 — AuthGuard: spinner while bootstrapping, redirect (preserving the
+// Task 50 — AuthGuard: branded boot screen while bootstrapping, redirect (preserving the
 // intended location) when unauthenticated, children when authenticated.
 // bootstrap() itself is kicked off in App.tsx, not here.
 
@@ -40,11 +40,15 @@ const testUser = {
 };
 
 describe('AuthGuard', () => {
-  it('renders a spinner (and nothing else) while the boot refresh is pending', () => {
+  it('renders the branded boot screen (and nothing else) while the boot refresh is pending', () => {
     useAuthStore.setState({ isBootstrapping: true, isAuthenticated: false, user: null });
-    renderGuarded();
+    const { container } = renderGuarded();
 
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading...' })).toBeInTheDocument();
+    expect(screen.getByTestId('boot-lockup')).toBeInTheDocument();
+    expect(screen.getAllByAltText('CircleCare')).toHaveLength(2);
+    // The old bare spinner is gone.
+    expect(container.querySelector('.animate-spin')).toBeNull();
     expect(screen.queryByText('protected content')).not.toBeInTheDocument();
     expect(screen.queryByText(/login page/)).not.toBeInTheDocument();
   });
