@@ -26,7 +26,8 @@ test('the pill shows five cells and the active one follows the route', async ({
   circleId,
 }) => {
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
+  // The route is up when the view tabs are (below lg it opens on Day, not the Week grid).
+  await expect(page.getByTestId('calendar-view-toggle-wrap')).toBeVisible({ timeout: 15_000 });
 
   const nav = pill(page);
   await expect(nav).toBeVisible({ timeout: 15_000 });

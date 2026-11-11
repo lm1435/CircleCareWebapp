@@ -1,5 +1,5 @@
 import { test, expect, uniqueLabel } from '../fixtures';
-import { expandAllDayOverflow } from '../helpers';
+import { expandAllDayOverflow, showWeekView } from '../helpers';
 
 // Mobile-only create flow. From xl up the create surface is the sidebar's "New"
 // button; below it, it is the NEW cell in the FloatingNavBar pill, which raises
@@ -123,6 +123,7 @@ test('create a task end-to-end from the pill NEW cell', async ({ page, circleId 
 
   // --- Delete (cleanup) via the calendar's EventDetailModal ---
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
+  await showWeekView(page); // below lg the calendar opens on Day
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
   // Task chips are all-day; at the 390px Pixel 5 width the week view collapses
   // today's all-day chips behind a "+N more" toggle well before the desktop

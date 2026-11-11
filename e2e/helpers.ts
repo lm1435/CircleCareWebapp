@@ -455,3 +455,25 @@ export async function unfoldSimpleEnd(dialog: Locator): Promise<Locator> {
   }
   return field;
 }
+
+/**
+ * Below lg the calendar opens on DAY (intended); a spec that needs the Week grid
+ * steps onto it. The tab is picked by position (Day | Week | Month) so it holds in
+ * Spanish too, and it is a no-op where Week is already the default.
+ */
+export async function showWeekView(page: Page): Promise<void> {
+  const weekTab = page.getByTestId('calendar-view-toggle-wrap').getByRole('tab').nth(1);
+  await expect(weekTab).toBeVisible({ timeout: 25_000 });
+  // A DOM click, not Playwright's: at 320x568 the tabs sit below the fold and Playwright's
+  // scroll-into-view would move the page, which the "page left alone on open" specs measure.
+  if ((await weekTab.getAttribute('aria-selected')) === 'true') return;
+  await weekTab.evaluate((el) => (el as HTMLElement).click());
+  await expect(weekTab).toHaveAttribute('aria-selected', 'true');
+  // At 320x568 the tabs sit near the nav pill, and the tab's own focus ring makes the browser
+  // scroll the page ~27px to clear its scroll-padding. That is setup noise, not the page
+  // moving "by itself on open", so put the page back at the top before the spec measures.
+  // The focus scroll is smooth (html scroll-behavior), so let it finish first.
+  await page.waitForTimeout(600);
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+  await page.waitForTimeout(100);
+}

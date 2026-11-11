@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { AUTH_ROUTES, circleRoutes } from './routes';
-import { checkA11y, visitAndCheck } from './helpers';
+import { checkA11y, showWeekView, visitAndCheck } from './helpers';
 import { sqlExec } from './db';
 import { sqlStr } from './unhappy';
 import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from './unhappy/auth-invites/_helpers';
@@ -437,6 +437,8 @@ test.describe('keyboard', () => {
   test('calendar week chips are >= 24px apart at 320px', async ({ page, circleId }) => {
     await page.setViewportSize({ width: 320, height: 800 });
     await open(page, `/circles/${circleId}/calendar`);
+    await showWeekView(page); // below lg the calendar opens on Day
+    await expect(page.locator('[role="gridcell"] button[data-event-type]').first()).toBeVisible({ timeout: 20_000 });
     const widths = await page
       .locator('[role="gridcell"] button[data-event-type]')
       .evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width));

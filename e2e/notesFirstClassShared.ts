@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
-import { clickWeekChip, weekChipCount } from './helpers';
+import { clickWeekChip, showWeekView, weekChipCount } from './helpers';
 import { expect } from './fixtures';
 import { apiSession, type ApiSession } from './unhappy';
 import { sqlExec } from './db';
@@ -174,6 +174,7 @@ export async function gotoCalendarSettled(page: Page, circleId: string): Promise
   // CURRENT week is empty whenever the seeded event sits in the next week
   // (e.g. s.at(1) on a Saturday -> Sunday), so either outcome means "settled"
   // (skeleton shows neither). Callers that need a grid step to the right week.
+  await showWeekView(page);
   await expect(page.getByRole('grid').or(page.getByText('No events this week'))).toBeVisible({
     timeout: 25_000,
   });
