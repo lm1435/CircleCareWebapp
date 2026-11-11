@@ -182,7 +182,14 @@ export default function CalendarPage(): ReactElement {
   // the effect below to scroll to the notes panel once the modal is open.
   const scrollToNotesRef = useRef(false);
 
-  const [view, setView] = useState<CalendarView>('week');
+  // Phones/tablets (below lg) open on Day, like the mobile app's Care calendar; desktop opens on
+  // Week. A note deep link keeps Week (it lands on that date's week). Missing matchMedia (jsdom)
+  // keeps the desktop default. Owner 2026-11-10.
+  const [view, setView] = useState<CalendarView>(() =>
+    pendingNoteLink || typeof window.matchMedia !== 'function' || window.matchMedia('(min-width: 64rem)').matches
+      ? 'week'
+      : 'day'
+  );
   // null = follow "today" in the care recipient's timezone; set on user nav.
   // A note deep link starts the view on ITS date's week (plan: "move the view
   // to that date's week") rather than the default today-week, and does so on

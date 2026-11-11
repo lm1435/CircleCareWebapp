@@ -1209,6 +1209,9 @@ describe('CalendarPage — week "Now" control (below lg)', () => {
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     const user = userEvent.setup();
     renderPage();
+    // Below lg the page opens on Day (owner 2026-11-10); the page must not move either way.
+    await screen.findByRole('tab', { name: 'Day', selected: true });
+    await user.click(screen.getByRole('tab', { name: 'Week' }));
     await screen.findByRole('grid', { name: 'Week view calendar' });
     await user.click(screen.getByRole('tab', { name: 'Day' }));
     await user.click(screen.getByRole('tab', { name: 'Week' }));
@@ -1228,6 +1231,7 @@ describe('CalendarPage — week "Now" control (below lg)', () => {
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     const user = userEvent.setup();
     renderPage();
+    await user.click(await screen.findByRole('tab', { name: 'Week' }));
     await screen.findByRole('grid', { name: 'Week view calendar' });
     const now = screen.getByRole('button', { name: 'Now' });
     expect(now).toHaveClass('lg:hidden', 'min-h-[44px]');
