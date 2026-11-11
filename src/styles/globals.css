@@ -508,6 +508,14 @@
   *:focus:not(:focus-visible) {
     outline: none;
   }
+
+  /* Page titles that RouteFocus / access-lost screens focus programmatically (tabindex="-1")
+     so screen readers announce the new page. They are never Tab stops, so they get no ring:
+     iOS Safari drew it as a box around "Today for …" after every navigation (owner 2026-11-10). */
+  :is(h1, h2)[tabindex='-1']:focus,
+  :is(h1, h2)[tabindex='-1']:focus-visible {
+    outline: none;
+  }
 }
 
 @layer utilities {
