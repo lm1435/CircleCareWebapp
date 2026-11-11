@@ -56,12 +56,17 @@ export function ActivityItem({ activity, timezone }: ActivityItemProps): ReactEl
   const timeText = formatRelativeTime(activity.created_at, t);
   const iconName = getActivityIconName(activity.action_type);
 
-  // "Scheduled for {date}" note when a med was confirmed on a different
-  // viewer-local day than its scheduled date (mirrors mobile's late note).
+  // "Scheduled for {date}" note when a med was confirmed on a later day than its scheduled date.
+  // `scheduled_date` is a naive day in the CIRCLE's zone, so the confirmation instant is read in that
+  // zone too (mirrors mobile's ActivityRow). With no zone yet (circle query in flight) there is no
+  // note: the browser zone is the wrong frame, so it is never used as a fallback.
   const isMedicationActivity = activity.action_type === 'medication_confirmed';
   const scheduledDate = activity.metadata?.scheduled_date;
   const lateScheduledDate =
-    isMedicationActivity && scheduledDate && scheduledDate !== getLocalDateKey(activity.created_at)
+    isMedicationActivity &&
+    scheduledDate &&
+    timezone &&
+    scheduledDate !== getLocalDateKey(activity.created_at, timezone)
       ? scheduledDate
       : null;
 
@@ -97,7 +102,7 @@ export function ActivityItem({ activity, timezone }: ActivityItemProps): ReactEl
         </p>
         {lateScheduledDate && (
           <p className="m-0 mt-1 text-xs text-ink-3">
-            {t('scheduledFor', { date: formatDateShort(lateScheduledDate, t) })}
+            {t('scheduledFor', { date: formatDateShort(lateScheduledDate, t, undefined, timezone ?? undefined) })}
           </p>
         )}
         {/* One-line note preview (plan Decision 1/2 — read live, never
