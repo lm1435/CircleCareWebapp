@@ -145,14 +145,8 @@ describe('5. BC-1 extra doses keep the picked clock on the primary circle day', 
       for (const extra of ['18:00', '21:00']) {
         const p = eventDatesFromApi({ scheduledDate: d, scheduledTime: '08:00', timezone: zone });
         const e = eventDatesFromApi({ scheduledDate: d, scheduledTime: extra, timezone: zone });
-        // The extra's second-reading-of-the-viewer's-repeated-hour limit (see extraDoseForApi.test.ts) is skipped.
-        const inst = oracleInstant(zone, d, extra);
-        const v = wallIn(Intl.DateTimeFormat().resolvedOptions().timeZone, inst);
-        const [y, m, dd] = v.day.split('-').map(Number);
-        const [hh, mm] = v.time.split(':').map(Number);
-        if (new Date(y, m - 1, dd, hh, mm).getTime() !== inst.getTime()) continue;
         expect(
-          extraDoseForApi({ dateStr: p.dateStr, timeStr: p.timeStr, extraTimeStr: e.timeStr, timezone: zone, heldInstant: p.instant })
+          extraDoseForApi({ dateStr: p.dateStr, timeStr: p.timeStr, extraTimeStr: e.timeStr, timezone: zone, heldInstant: p.instant, heldExtraInstant: e.instant })
         ).toEqual({ scheduledDate: d, scheduledTime: extra });
       }
     }

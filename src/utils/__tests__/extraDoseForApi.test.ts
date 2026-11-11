@@ -10,8 +10,6 @@ import {
   EXPECTED_2026,
   assertTableMatchesRuntime,
   discoverTransitions,
-  oracleInstant,
-  wallIn,
 } from './helpers/dstTransitions';
 
 const AMBIENT = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -36,21 +34,8 @@ function rows(circle: string, day: string, primary: string, extra: string) {
     extraTimeStr: e.timeStr,
     timezone: circle,
     heldInstant: p.instant,
+    heldExtraInstant: e.instant,
   });
-}
-
-/**
- * KNOWN LIMIT (documented, not fixed): an extra dose is held as a viewer-frame CLOCK string, which cannot name the
- * SECOND reading of the viewer's own repeated (fall-back) hour; it reads as the first, an hour early. That needs the
- * extra dose's instant carried alongside the string (the primary has `heldInstant`). Such cases are skipped here and
- * counted, so the table below cannot silently shrink.
- */
-function inViewerRepeatedHour(circle: string, day: string, time: string): boolean {
-  const instant = oracleInstant(circle, day, time);
-  const viewer = wallIn(AMBIENT, instant);
-  const [y, m, d] = viewer.day.split('-').map(Number);
-  const [hh, mm] = viewer.time.split(':').map(Number);
-  return new Date(y, m - 1, d, hh, mm).getTime() !== instant.getTime();
 }
 
 describe('BC-1 extraDoseForApi', () => {
@@ -81,6 +66,19 @@ describe('BC-1 extraDoseForApi', () => {
     expect(oldDay).toBe('2026-11-11');
   });
 
+  // The extra's clock is on the SECOND reading of the VIEWER's own repeated (fall-back) hour: the string reads as
+  // the first reading (an hour early) unless the dose's instant rides along. [viewer, circle, day, primary, extra]
+  it.each([
+    ['Europe/London', 'America/New_York', '2026-10-24', '08:00', '21:00'],
+    ['America/Denver', 'Europe/London', '2026-11-01', '08:00', '08:00'],
+    ['America/Los_Angeles', 'Asia/Tokyo', '2026-11-01', '09:00', '18:00'],
+    ['America/New_York', 'Asia/Tokyo', '2026-11-01', '09:00', '15:30'],
+    ['Pacific/Auckland', 'Europe/London', '2026-04-04', '09:00', '15:30'],
+  ] as const)('viewer %s, circle %s, %s: the extra %s keeps its clock', (viewer, circle, day, primary, extra) => {
+    if (AMBIENT !== viewer) return; // the viewer is the process zone
+    expect(rows(circle, day, primary, extra)).toEqual({ scheduledDate: day, scheduledTime: extra });
+  });
+
   it('a primary without a time keeps the viewer day', () => {
     const out = extraDoseForApi({
       dateStr: '2026-11-12',
@@ -98,13 +96,8 @@ describe('BC-1 extraDoseForApi', () => {
       for (const tr of discoverTransitions(zone)) cases.push([zone, tr.day]);
     }
     let checked = 0;
-    let skipped = 0;
     const check = (zone: string, day: string) => {
       for (const extra of ['18:00', '21:00']) {
-        if (inViewerRepeatedHour(zone, day, extra) || inViewerRepeatedHour(zone, day, '08:00')) {
-          skipped++;
-          continue;
-        }
         expect(rows(zone, day, '08:00', extra)).toEqual({ scheduledDate: day, scheduledTime: extra });
         checked++;
       }
@@ -115,9 +108,8 @@ describe('BC-1 extraDoseForApi', () => {
     it.each(cases)('%s on %s: the day before and after', (zone, day) => {
       for (const n of [-1, 1]) check(zone, new Date(Date.parse(`${day}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10));
     });
-    it('almost every case was exercised (only the viewer repeated hour is skipped)', () => {
+    it('every case was exercised (the viewer repeated hour included)', () => {
       expect(checked).toBeGreaterThan(100);
-      expect(skipped).toBeLessThan(6);
     });
   });
 });

@@ -368,6 +368,12 @@ export interface ExtraDoseForApiInput {
   timezone: string;
   /** The primary's held instant (a chip / the picker), as for `eventDatesForApi`. */
   heldInstant?: Date | null;
+  /**
+   * The exact instant the extra dose was made from (a chip / the picker). The clock string alone reads the FIRST
+   * reading of the viewer's repeated (fall-back) hour; while the held instant's day and clock match a candidate
+   * it wins (`viewerInstant`), so the second reading saves its own clock.
+   */
+  heldExtraInstant?: Date | null;
 }
 
 /**
@@ -385,7 +391,7 @@ export function extraDoseForApi(input: ExtraDoseForApiInput): {
   scheduledDate: string;
   scheduledTime: string;
 } {
-  const { dateStr, timeStr, extraTimeStr, timezone, heldInstant } = input;
+  const { dateStr, timeStr, extraTimeStr, timezone, heldInstant, heldExtraInstant } = input;
   const { scheduledDate } = eventDatesForApi({
     dateStr,
     timeStr: timeStr || null,
@@ -393,7 +399,9 @@ export function extraDoseForApi(input: ExtraDoseForApiInput): {
     timezone,
     heldInstant,
   });
-  const candidates = [0, 1, -1].map((k) => viewerInstant(addDaysToIsoDay(dateStr, k), extraTimeStr));
+  const candidates = [0, 1, -1].map((k) =>
+    viewerInstant(addDaysToIsoDay(dateStr, k), extraTimeStr, heldExtraInstant)
+  );
   const chosen = candidates.find((c) => dayInZone(c, timezone) === scheduledDate) ?? candidates[0];
   return { scheduledDate, scheduledTime: clockInZone(chosen, timezone) };
 }

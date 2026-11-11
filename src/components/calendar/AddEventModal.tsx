@@ -1119,7 +1119,11 @@ function AddEventForm({
   // "+ Another dose" (NEW medication only): extra dose times, viewer-frame HH:MM. Each one is saved
   // as its OWN medication row after the primary (the same sequence as mobile's AddEventScreen and
   // the first-run wizard), pointing at the primary's bottle through `refill_group_id`.
-  const [extraTimes, setExtraTimes] = useState<string[]>([]);
+  // The extra doses of a NEW medication: the viewer-frame clock the save converts, and the exact INSTANT it was
+  // made from (a chip / the picker) when known. The clock alone cannot name the SECOND reading of the viewer's
+  // repeated (fall-back) hour; `instant` rides alongside so the save does (see `extraDoseForApi`).
+  const [extraDoses, setExtraDoses] = useState<Array<{ time: string; instant: Date | null }>>([]);
+  const extraTimes = useMemo(() => extraDoses.map((d) => d.time), [extraDoses]);
   /** The medication has NO schedule: no date, time, repeat, end date or reminders. */
   const isAsNeeded = isMedication && recurrence === 'as_needed';
   const isPending = createEvent.isPending || updateEvent.isPending;
@@ -1588,7 +1592,7 @@ function AddEventForm({
   function chooseRecurrence(next: RecurrenceChoice): void {
     touchRecurrence();
     setRecurrence(next);
-    if (next === 'as_needed') setExtraTimes([]);
+    if (next === 'as_needed') setExtraDoses([]);
     clearError('recurrence_rule', RECURRENCE_DAYS_ID);
     if (isMedication) completeStep('how_often');
     if (next === 'days_of_week' && recurrenceDays.length === 0) {
@@ -1932,15 +1936,16 @@ function AddEventForm({
       timezone: tz,
       heldInstant,
     });
-    return extraTimes
-      .filter((time) => time !== '')
-      .map((time) => {
+    return extraDoses
+      .filter((d) => d.time !== '')
+      .map(({ time, instant }) => {
         const dose = extraDoseForApi({
           dateStr,
           timeStr,
           extraTimeStr: time,
           timezone: tz,
           heldInstant,
+          heldExtraInstant: instant,
         });
         let rowDate = dose.scheduledDate;
         if (recurrence === 'days_of_week' && selectedDays.length > 0 && selectedDays.length < 7) {
@@ -2843,7 +2848,7 @@ function AddEventForm({
       if (recipientStartDate) moveViewerDay(recipientStartDate);
       setTimeStr('');
       setChipInstant(null);
-      setExtraTimes([]);
+      setExtraDoses([]);
       return;
     }
     if (!timezone) return;
@@ -2879,11 +2884,18 @@ function AddEventForm({
    * An EXTRA dose's viewer-frame HH:MM on the RECIPIENT's clock: the clock the save sends for it, on the primary's
    * circle day (`extraDoseForApi`: the extra's own viewer day is found, never assumed to be the primary's).
    */
-  function viewerToRecipient(time: string): string {
+  function viewerToRecipient(time: string, extraInstant?: Date | null): string {
     if (!timezone || !dateStr || !time) return time;
     try {
       return timeStr
-        ? extraDoseForApi({ dateStr, timeStr, extraTimeStr: time, timezone, heldInstant }).scheduledTime
+        ? extraDoseForApi({
+            dateStr,
+            timeStr,
+            extraTimeStr: time,
+            timezone,
+            heldInstant,
+            heldExtraInstant: extraInstant ?? extraDoses.find((d) => d.time === time)?.instant ?? null,
+          }).scheduledTime
         : (eventDatesForApi({ dateStr, timeStr: time, recurrenceEndDateStr: null, timezone }).scheduledTime ?? time);
     } catch {
       return time;
@@ -2893,15 +2905,17 @@ function AddEventForm({
    * A recipient HH:MM as an EXTRA dose's viewer-frame clock: the conversion "+ Another dose" made (the day is
    * the recipient's start day), so a chip picked as a second time saves exactly what that tile saved.
    */
-  function recipientToExtraViewer(time: string): string {
-    if (!timezone || !recipientStartDate) return time;
-    return eventDatesFromApi({ scheduledDate: recipientStartDate, scheduledTime: time, timezone }).timeStr || time;
+  /** The same, with the exact instant the dose names (kept so the viewer's repeated hour survives the save). */
+  function recipientToExtraDose(time: string): { time: string; instant: Date | null } {
+    if (!timezone || !recipientStartDate) return { time, instant: null };
+    const viewer = eventDatesFromApi({ scheduledDate: recipientStartDate, scheduledTime: time, timezone });
+    return { time: viewer.timeStr || time, instant: viewer.instant ?? null };
   }
   /**
    * Every dose time the medication form holds, on the RECIPIENT's clock, one per SLOT: index 0 the primary, then the
    * extras ('' while there is no time). The chips address a custom dose by its slot.
    */
-  const doseRecipientTimes = [recipientClock, ...extraTimes.map(viewerToRecipient)];
+  const doseRecipientTimes = [recipientClock, ...extraDoses.map((d) => viewerToRecipient(d.time, d.instant))];
   /** A custom dose chip's picker (Fix13): change THAT dose's time in place. */
   function changeDoseTime(slot: number, next: string): void {
     setOtherTarget(null);
@@ -2909,8 +2923,8 @@ function AddEventForm({
       chooseRecipientTime(next);
       return;
     }
-    const viewer = recipientToExtraViewer(next);
-    setExtraTimes((prev) => prev.map((time, i) => (i === slot - 1 ? viewer : time)));
+    const dose = recipientToExtraDose(next);
+    setExtraDoses((prev) => prev.map((d, i) => (i === slot - 1 ? dose : d)));
   }
   /** A custom dose chip's "×": remove that dose (the medication's own time hands over to the next, as untapping). */
   function removeDose(slot: number, time: string): void {
@@ -2919,7 +2933,7 @@ function AddEventForm({
       return;
     }
     setOtherTarget(null);
-    setExtraTimes((prev) => prev.filter((_, i) => i !== slot - 1));
+    setExtraDoses((prev) => prev.filter((_, i) => i !== slot - 1));
   }
   /** One medication row per time (create only): the primary plus at most three extras. */
   const doseTimesFull = !isEditing && timeStr !== '' && extraTimes.length >= 3;
@@ -2942,7 +2956,7 @@ function AddEventForm({
       return;
     }
     if (!wasOn) {
-      if (extraTimes.length < 3) setExtraTimes((prev) => [...prev, recipientToExtraViewer(time)]);
+      if (extraTimes.length < 3) setExtraDoses((prev) => [...prev, recipientToExtraDose(time)]);
       return;
     }
     if (time === recipientClock) {
@@ -2950,13 +2964,13 @@ function AddEventForm({
         chooseTimeChip(null, '');
         return;
       }
-      const [next, ...rest] = extraTimes;
-      chooseRecipientTime(viewerToRecipient(next));
-      setExtraTimes(rest);
+      const [next, ...rest] = extraDoses;
+      chooseRecipientTime(viewerToRecipient(next.time, next.instant));
+      setExtraDoses(rest);
       return;
     }
     const index = extraTimes.findIndex((extra) => viewerToRecipient(extra) === time);
-    if (index !== -1) setExtraTimes((prev) => prev.filter((_, i) => i !== index));
+    if (index !== -1) setExtraDoses((prev) => prev.filter((_, i) => i !== index));
   }
 
   /** "Other…" opened: it sets the form's own time (an edit, or no time yet), else the next extra dose. */
@@ -2981,13 +2995,13 @@ function AddEventForm({
       return;
     }
     if (!next) {
-      setExtraTimes((prev) => prev.filter((_, i) => i !== target));
+      setExtraDoses((prev) => prev.filter((_, i) => i !== target));
       setOtherTarget(null);
       return;
     }
-    const viewer = recipientToExtraViewer(next);
-    setExtraTimes((prev) =>
-      target < prev.length ? prev.map((t, i) => (i === target ? viewer : t)) : prev.length < 3 ? [...prev, viewer] : prev
+    const dose = recipientToExtraDose(next);
+    setExtraDoses((prev) =>
+      target < prev.length ? prev.map((d, i) => (i === target ? dose : d)) : prev.length < 3 ? [...prev, dose] : prev
     );
   }
 

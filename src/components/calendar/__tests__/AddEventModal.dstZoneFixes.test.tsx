@@ -320,3 +320,23 @@ describe('preset untap and dose promotion keep the circle day', () => {
     expect(bodies[0]).toMatchObject({ scheduled_date: '2026-11-12', scheduled_time: '21:00' });
   });
 });
+
+// ── An extra dose on the second reading of the viewer's repeated hour ────────────────────────────────────────────
+describe('an extra dose in the viewer repeated hour keeps its clock', () => {
+  it('London viewer, New York circle, 2026-10-24: Morning + Bedtime saves 08:00 and 21:00', async () => {
+    if (AMBIENT !== 'Europe/London') return; // the repeated hour is the viewer's: 21:00 EDT = 01:00 GMT, the second 01:00
+    vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
+    useCircleResult.timezone = 'America/New_York';
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+    await nameIt(user);
+    fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: '2026-10-24' } });
+    await user.click(chipBox(/Morning$/));
+    await user.click(chipBox(/Bedtime$/));
+    const bodies = await saveAll(user);
+    expect(bodies.map((b) => [b.scheduled_date, b.scheduled_time])).toEqual([
+      ['2026-10-24', '08:00'],
+      ['2026-10-24', '21:00'],
+    ]);
+  });
+});
