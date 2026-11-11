@@ -256,6 +256,26 @@ async function assertInlineError(page: Page, alert: Locator, fieldSelector: stri
   await expect(page.locator('[data-toast-region] > [data-toast]'), 'no toast over the page').toHaveCount(0);
 }
 
+/**
+ * Expanding the Notes composer centres it with a SMOOTH scrollIntoView (NotesPage,
+ * 372ad2a; the app's intent, reduced-motion aside). That animation is still in
+ * flight when openNoteComposer returns, so a "reveal, then act" measurement taken
+ * straight away reads the open animation as the action's scroll (3-13px). Wait for
+ * scrollY to hold still, then measure.
+ */
+async function scrollSettled(page: Page): Promise<void> {
+  let last = -1;
+  let stable = 0;
+  await expect
+    .poll(async () => {
+      const y = await page.evaluate(() => Math.round(scrollY));
+      stable = y === last ? stable + 1 : 0;
+      last = y;
+      return stable;
+    }, { timeout: 5_000, intervals: [100] })
+    .toBeGreaterThanOrEqual(3);
+}
+
 async function pageSettled(page: Page): Promise<void> {
   await expect(page.locator('main h1').first()).toBeVisible({ timeout: 20_000 });
   await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => undefined);
@@ -314,11 +334,18 @@ test.describe('save failures', () => {
         await page.goto(`/circles/${circleId}/notes`, { waitUntil: 'domcontentloaded' });
         await pageSettled(page);
         const composer = await openNoteComposer(page);
+        await scrollSettled(page);
         await actInPlace(page, composer, () => composer.fill(uniqueLabel('TPO')));
         const injected = await failRequest(page, 'POST', '/api/circles/:id/care-notes', { status: 500, times: 1 });
         const post = page.getByRole('button', { name: 'Post', exact: true });
-        await actInPlace(page, post, () => post.click());
+        // Not actInPlace: Post optimistically COLLAPSES the composer (NotesPage handlePost) and a
+        // failure re-opens it, so the page legitimately reflows (scrollY clamps, then the alert's
+        // smooth scrollIntoView brings it back). What must hold is the settled state, asserted next.
+        await revealLikeAUser(page, post);
+        await post.click();
         await injected.expectHits(1);
+        await expect(errorToast(page, "Couldn't post your note. Your note is still here — try again.")).toBeVisible({ timeout: 15_000 });
+        await scrollSettled(page);
         await assertInlineError(page, errorToast(page, "Couldn't post your note. Your note is still here — try again."), 'textarea', `${vp.label}] [NotesPage`);
       });
     });
