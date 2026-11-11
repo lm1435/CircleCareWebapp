@@ -483,6 +483,7 @@
   },
   "permissionDenied": "No tienes permiso para hacer cambios en este círculo.",
   "today": "Hoy",
+  "jumpToNow": "Ahora",
   "yesterday": "Ayer",
   "tomorrow": "Mañana",
   "daySummary": {

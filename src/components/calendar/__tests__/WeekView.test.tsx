@@ -2,7 +2,8 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { WeekView } from '../WeekView';
+import { createRef } from 'react';
+import { WeekView, type WeekViewControl } from '../WeekView';
 
 function makeAllDayTask(id: string, title: string, scheduled_date: string): CalendarEvent {
   return {
@@ -382,9 +383,8 @@ describe('WeekView: one vertical scroll (the page) below lg', () => {
     expect(grid.className).toMatch(/(^|\s)overflow-clip(\s|$)/);
   });
 
-  it('phone: the opening scroll moves the PAGE (window.scrollTo), never the grid box', () => {
-    viewportIsWide(false);
-    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+  /** Fake layout: grid at page offset 300, head stuck at `top: 60px` and 100px tall. */
+  function fakeLayout(): void {
     const realStyle = window.getComputedStyle.bind(window);
     vi.spyOn(window, 'getComputedStyle').mockImplementation((el: Element) =>
       (el as HTMLElement).dataset?.testid === 'week-pinned-head'
@@ -397,11 +397,86 @@ describe('WeekView: one vertical scroll (the page) below lg', () => {
       if (id === 'week-scroller') return { top: 300, height: 1920 } as DOMRect;
       return { top: 0, height: 0 } as DOMRect;
     });
-    const { container } = renderWeek();
-    const scroller = container.querySelector('[data-testid="week-scroller"]') as HTMLElement;
-    // grid's page offset 300 + lead-in (8 - 1) * 80 - stuck head bottom (60 + 100).
-    expect(scrollTo).toHaveBeenCalledWith({ top: 300 + 7 * 80 - 160, behavior: 'instant' });
-    expect(scroller.scrollTop).toBe(0);
+  }
+
+  // Owner follow-up 2026-11-10: below lg the page is LEFT ALONE — opening the
+  // week, a week change and a re-render with new events never scroll it.
+  it('phone: opening, changing week and new events never move the page (no window.scrollTo) or the grid box', () => {
+    viewportIsWide(false);
+    fakeLayout();
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const scrollIntoView = vi.fn();
+    const realScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    onTestFinished(() => {
+      Element.prototype.scrollIntoView = realScrollIntoView;
+    });
+    const props = {
+      careRecipientTimezone: 'America/Chicago',
+      todayStr: TODAY,
+      onEventClick: vi.fn(),
+    };
+    const { container, rerender } = render(<WeekView days={DAYS} eventsByDay={new Map()} {...props} />);
+    // Events arrive (earliest hour changes) ...
+    rerender(<WeekView days={DAYS} eventsByDay={eightAm} {...props} />);
+    // ... then the next week.
+    const nextWeek = DAYS.map((d) => d.replace(/-(\d\d)$/, (_, dd: string) => `-${String(Number(dd) + 7).padStart(2, '0')}`));
+    rerender(<WeekView days={nextWeek} eventsByDay={eightAm} {...props} />);
+    expect(scrollTo).not.toHaveBeenCalled();
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect((container.querySelector('[data-testid="week-scroller"]') as HTMLElement).scrollTop).toBe(0);
+  });
+
+  describe('jumpToNow (the page\'s "Now" control)', () => {
+    afterEach(() => vi.useRealTimers());
+
+    function renderWithControl() {
+      const control = createRef<WeekViewControl>();
+      render(
+        <WeekView
+          days={DAYS}
+          eventsByDay={eightAm}
+          careRecipientTimezone="America/Chicago"
+          todayStr={TODAY}
+          onEventClick={vi.fn()}
+          controlRef={control}
+        />
+      );
+      return control;
+    }
+
+    it('scrolls the PAGE so the now-line sits one hour below the stuck head', () => {
+      viewportIsWide(false);
+      fakeLayout();
+      // 2026-03-16 14:30 in Chicago (CDT, UTC-5) -> 14.5h.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-03-16T19:30:00Z'));
+      const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+      const control = renderWithControl();
+      expect(scrollTo).not.toHaveBeenCalled();
+      control.current?.jumpToNow();
+      // grid's page offset 300 + lead-in (14.5 - 1) * 80 - stuck head bottom (60 + 100).
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+      expect(scrollTo).toHaveBeenCalledWith({ top: 300 + 13.5 * 80 - 160, behavior: 'smooth' });
+    });
+
+    it('honours reduced motion with an instant jump', () => {
+      vi.stubGlobal(
+        'matchMedia',
+        vi.fn((query: string) => ({
+          matches: query === '(prefers-reduced-motion: reduce)',
+          media: query,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        }))
+      );
+      fakeLayout();
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-03-16T19:30:00Z'));
+      const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+      renderWithControl().current?.jumpToNow();
+      expect(scrollTo).toHaveBeenCalledWith({ top: 300 + 13.5 * 80 - 160, behavior: 'instant' });
+    });
   });
 
   it('lg+: the opening scroll stays inside the grid box and leaves the page alone', () => {

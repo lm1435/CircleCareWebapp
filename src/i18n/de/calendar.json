@@ -483,6 +483,7 @@
   },
   "permissionDenied": "Sie haben keine Berechtigung, in diesem Kreis Änderungen vorzunehmen.",
   "today": "Heute",
+  "jumpToNow": "Jetzt",
   "yesterday": "Gestern",
   "tomorrow": "Morgen",
   "daySummary": {

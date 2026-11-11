@@ -194,20 +194,24 @@ async function assertLeadIn(page: Page, label: string, ex: Expectation): Promise
   const c = first as Rect;
   const note = `head bottom ${g.head.bottom.toFixed(1)}, chip ${c.top.toFixed(1)}-${c.bottom.toFixed(1)}, scroller ${g.scroller.top.toFixed(1)}-${g.scroller.bottom.toFixed(1)}, scrollTop ${g.scrollTop}/${g.maxScrollTop}`;
 
-  // 0. The head really is pinned (otherwise "below the head" would be
-  //    measuring nothing): at lg+ it sits directly on top of the grid's own
-  //    scroller; below lg the PAGE scrolled and the head is stuck under the
-  //    60px app header.
-  if (inner) {
-    expect(g.head.bottom, `${label}: the head is not on top of the grid scroller (${note})`).toBeCloseTo(
-      g.scroller.top,
-      0
-    );
-  } else {
-    expect(g.head.top, `${label}: the head is not stuck under the app header (${note})`).toBeCloseTo(60, 0);
+  // Below lg there is NO opening lead-in (owner follow-up 2026-11-10): the
+  // page is left alone and the grid box has no vertical scroll of its own.
+  // The lead-in there is the "Now" control (see the iPhone test below).
+  if (!inner) {
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(scrollY, `${label}: the page moved by itself on open (${note})`).toBe(0);
     expect(g.scrollTop, `${label}: the grid box scrolled on a phone (${note})`).toBe(0);
     expect(g.maxScrollTop, `${label}: the grid box has its own vertical scroll (${note})`).toBe(0);
+    return;
   }
+
+  // 0. The head really is pinned (otherwise "below the head" would be
+  //    measuring nothing): at lg+ it sits directly on top of the grid's own
+  //    scroller.
+  expect(g.head.bottom, `${label}: the head is not on top of the grid scroller (${note})`).toBeCloseTo(
+    g.scroller.top,
+    0
+  );
 
   // 1. Entirely below the pinned head, entirely inside the scroller.
   expect(c.top, `${label}: first chip is UNDER the pinned head (${note})`).toBeGreaterThanOrEqual(
@@ -413,9 +417,10 @@ test.describe('Week view at iPhone width: the page is the only vertical scroll',
       });
       // No inner vertical scroll: the grid box is exactly as tall as its content.
       expect(g.innerScrollHeight, JSON.stringify(g)).toBe(g.innerClientHeight);
-      // The opening scroll moved the PAGE (13:00 is far below the fold), and the page has room to scroll.
+      // The page has room to scroll, and opening the week did NOT move it
+      // (owner follow-up 2026-11-10: the page is never scrolled by itself).
       expect(g.docScrollHeight, JSON.stringify(g)).toBeGreaterThan(g.docClientHeight);
-      expect(g.docScrollTop, JSON.stringify(g)).toBeGreaterThan(0);
+      expect(g.docScrollTop, JSON.stringify(g)).toBe(0);
       // The week pans sideways inside the card; the page never scrolls sideways.
       expect(g.innerScrollWidth, JSON.stringify(g)).toBeGreaterThan(g.innerClientWidth);
       expect(g.docScrollWidth, JSON.stringify(g)).toBeLessThanOrEqual(g.docClientWidth);
@@ -471,6 +476,93 @@ test.describe('Week view at iPhone width: the page is the only vertical scroll',
         return { gridBottom: grid.getBoundingClientRect().bottom, navTop: nav ? nav.getBoundingClientRect().top : window.innerHeight };
       });
       expect(bottom.gridBottom, JSON.stringify(bottom)).toBeLessThanOrEqual(bottom.navTop);
+    } finally {
+      await archiveCircle(session, circleId);
+    }
+  });
+});
+
+// THE PAGE IS LEFT ALONE; "NOW" IS THE JUMP (owner follow-up 2026-11-10).
+// Switching Day -> Week or changing week used to scroll the page down to the
+// lead-in hour, taking the week controls off screen. Now nothing moves the
+// page by itself; the toolbar's "Now" control (below lg, only when the week
+// holds today) scrolls it so the now-line sits an hour under the pinned head.
+test.describe('Week view at iPhone width: the page never scrolls by itself; "Now" does', () => {
+  test('390x844: Day -> Week and next/previous week keep scrollY; Now puts the now-line under the head', async ({
+    page,
+    request,
+    account,
+  }) => {
+    test.slow();
+    const session = await apiSession(request, account);
+    const circleId = await createCircle(session, `now ${uniqueSuffix()}`);
+    try {
+      const tz = await circleTimezone(session, circleId);
+      const today = dateInTz(tz, 0);
+      const tag = uniqueSuffix();
+      // An early event, so the old opening lead-in (earliest event) would have scrolled.
+      await appointment(session, circleId, `${PREFIX}early_${tag}`, today, '07:00');
+      await allDayTask(session, circleId, `${PREFIX}task_${tag}`, today);
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await gotoCalendarSettled(page, circleId);
+      await waitForScrollSettled(page);
+      const scrollY = (): Promise<number> => page.evaluate(() => window.scrollY);
+      expect(await scrollY(), 'opening Week moved the page').toBe(0);
+
+      const nowButton = page.getByRole('button', { name: 'Now', exact: true });
+      await expect(nowButton).toBeVisible();
+
+      // Day -> Week.
+      await page.getByRole('tab', { name: 'Day' }).click();
+      await expect(nowButton).toHaveCount(0);
+      await page.getByRole('tab', { name: 'Week' }).click();
+      await expect(page.getByRole('grid', { name: 'Week view calendar' })).toBeVisible();
+      await waitForScrollSettled(page);
+      expect(await scrollY(), 'Day -> Week moved the page').toBe(0);
+
+      // Next week: no today -> no Now; previous week: back, and still no page move.
+      const range = page.getByRole('heading', { level: 2 }).filter({ hasText: /\d{4}$/ });
+      const from = (await range.textContent())?.trim() ?? '';
+      await page.getByRole('button', { name: 'Next week' }).click();
+      await expect(range).not.toHaveText(from);
+      await waitForScrollSettled(page);
+      expect(await scrollY(), 'Next week moved the page').toBe(0);
+      await expect(nowButton).toHaveCount(0);
+      await page.getByRole('button', { name: 'Previous week' }).click();
+      await expect(range).toHaveText(from);
+      await expect(page.getByRole('grid', { name: 'Week view calendar' })).toBeVisible();
+      await waitForScrollSettled(page);
+      expect(await scrollY(), 'Previous week moved the page').toBe(0);
+
+      // Now: the now-line ends up visible, under the stuck head, an hour of lead-in above it.
+      await nowButton.click();
+      await waitForScrollSettled(page);
+      const g = await page.evaluate(() => {
+        const head = document.querySelector('[data-testid="week-pinned-head"]') as HTMLElement;
+        const line = document.querySelector('[data-testid="current-time-indicator"]') as HTMLElement;
+        const nav = document.querySelector('[data-testid="floating-nav"]') as HTMLElement | null;
+        const doc = document.scrollingElement as HTMLElement;
+        return {
+          headTop: head.getBoundingClientRect().top,
+          headBottom: head.getBoundingClientRect().bottom,
+          lineTop: line.getBoundingClientRect().top,
+          gridTop: (document.querySelector('[data-testid="week-scroller"]') as HTMLElement).getBoundingClientRect().top,
+          navTop: nav ? nav.getBoundingClientRect().top : window.innerHeight,
+          scrollY: window.scrollY,
+          maxScrollY: doc.scrollHeight - doc.clientHeight,
+        };
+      });
+      const note = JSON.stringify(g);
+      expect(g.lineTop, `now-line hidden under the head (${note})`).toBeGreaterThanOrEqual(g.headBottom - EPS);
+      expect(g.lineTop, `now-line below the nav pill (${note})`).toBeLessThanOrEqual(g.navTop);
+      if (g.scrollY > 0 && g.scrollY < g.maxScrollY - EPS) {
+        // Not clamped at either end: the head is stuck and the lead-in is exactly one hour.
+        expect(g.headTop, note).toBeCloseTo(60, 0);
+        // Within the day's first hour the lead-in is the line's own offset.
+        const want = Math.min(g.lineTop - g.gridTop, 80);
+        expect(g.lineTop - g.headBottom, `lead-in is not one hour (${note})`).toBeCloseTo(want, 0);
+      }
     } finally {
       await archiveCircle(session, circleId);
     }

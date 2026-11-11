@@ -561,6 +561,12 @@ describe('analytics wrapper — active path (key set)', () => {
       view: 'week',
     });
   });
+
+  it('calendar_jump_to_now carries no properties (no circle_id)', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.calendarJumpToNow();
+    expect(capture).toHaveBeenCalledWith('calendar_jump_to_now', {});
+  });
 });
 
 /**

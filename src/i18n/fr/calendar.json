@@ -483,6 +483,7 @@
   },
   "permissionDenied": "Vous n’avez pas l’autorisation de faire des modifications dans ce cercle.",
   "today": "Aujourd’hui",
+  "jumpToNow": "Maintenant",
   "yesterday": "Hier",
   "tomorrow": "Demain",
   "daySummary": {

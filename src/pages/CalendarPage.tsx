@@ -27,7 +27,7 @@ import { ConfirmMedDialog } from '@/components/meds/ConfirmMedDialog';
 import { ReminderRoutingNotice } from '@/components/calendar/ReminderRoutingNotice';
 import { useCircle } from '@/hooks/useCircle';
 import { MonthView } from '@/components/calendar/MonthView';
-import { WeekView } from '@/components/calendar/WeekView';
+import { WeekView, type WeekViewControl } from '@/components/calendar/WeekView';
 import { DayView } from '@/components/calendar/DayView';
 import {
   addDays,
@@ -453,6 +453,22 @@ export default function CalendarPage(): ReactElement {
   const isError =
     tzQuery.isError || (shiftsMode ? shiftsQuery.isError && !shiftsQuery.data : eventsQuery.isError);
 
+  // "Now" (owner 2026-11-10): below lg the page never scrolls by itself, so the
+  // week grid's lead-in jump is this control instead. Only when the timed week
+  // grid is actually on screen AND its week contains today (there is no
+  // now-line otherwise). Hidden at lg+ by CSS, where the grid opens on its own.
+  const weekViewControl = useRef<WeekViewControl>(null);
+  const showJumpToNow =
+    view === 'week' &&
+    !shiftsMode &&
+    !isLoading &&
+    !isError &&
+    !!range &&
+    !!timezone &&
+    !!todayStr &&
+    (events.length > 0 || asNeededByDay.size > 0) &&
+    getWeekDays(range.start).includes(todayStr);
+
   const handleRetry = (): void => {
     if (tzQuery.isError) void tzQuery.refetch();
     if (activeQuery.isError) void activeQuery.refetch();
@@ -645,6 +661,24 @@ export default function CalendarPage(): ReactElement {
                 {t('common:today')}
               </span>
             </button>
+
+            {showJumpToNow && (
+              <button
+                type="button"
+                data-testid="calendar-jump-to-now"
+                onClick={() => {
+                  weekViewControl.current?.jumpToNow();
+                  Analytics.calendarJumpToNow();
+                }}
+                // Same 44px hit area / 32px pill as Today; the moss outline
+                // marks it as the one action here (one accent).
+                className="flex min-h-[44px] shrink-0 items-center justify-center lg:hidden"
+              >
+                <span className="min-h-[32px] rounded-[6px] border border-moss-line px-3 py-[5px] text-xs font-semibold text-moss-deep">
+                  {t('calendar:jumpToNow')}
+                </span>
+              </button>
+            )}
 
             <div className="flex min-w-0 flex-1 items-center justify-center gap-2 px-3">
               <CircleButton
@@ -850,6 +884,7 @@ export default function CalendarPage(): ReactElement {
                 asNeededByDay={asNeededByDay}
                 onAsNeededOpen={setDoseHistoryFor}
                 onDayOpen={handleOpenDay}
+                controlRef={weekViewControl}
               />
               {/* "Add event" AFTER the week (owner 2026-11-08), OUTLINE: the timeline is the
                   user's content; the header "+" is the other way in. Same flow as the header. */}

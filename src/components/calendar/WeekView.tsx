@@ -1,9 +1,20 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
+import {
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactElement,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { shiftTaskMeta } from '@/components/shifts/shiftTasks';
 import type { TFunction } from 'i18next';
 import type { CalendarEvent, EventType } from '@/api/calendarEvents';
 import { Card, Icon, Modal, Text } from '@/components/ui';
+import { prefersReducedMotion } from '@/components/ui/motion';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import {
   formatEventTimeCompact,
@@ -39,6 +50,13 @@ export interface WeekViewProps {
   onAsNeededOpen?: (entry: AsNeededDayEntry) => void;
   /** When provided, a day header is a button that opens that day (Day view). */
   onDayOpen?: (day: string) => void;
+  /** Imperative handle for the page's "Now" control (below lg only). */
+  controlRef?: Ref<WeekViewControl>;
+}
+
+export interface WeekViewControl {
+  /** Below lg: scroll the PAGE so the now-line sits one hour below the pinned head. */
+  jumpToNow: () => void;
 }
 
 // px per hour — matches mobile's WeekTimelineView HOUR_HEIGHT exactly. Also
@@ -128,6 +146,7 @@ export function WeekView({
   asNeededByDay,
   onAsNeededOpen,
   onDayOpen,
+  controlRef,
 }: WeekViewProps): ReactElement {
   const { t } = useTranslation(['calendar', 'common', 'meds', 'shifts']);
   // Viewer's 12h/24h clock — every rendered time goes through it, the hour axis included
@@ -211,31 +230,46 @@ export function WeekView({
   //
   // BELOW lg THE PAGE IS THE ONLY VERTICAL SCROLL (owner 2026-11-10, iPhone):
   // the timed grid lays out at its full 24h height and the head is sticky to
-  // the PAGE, under the 60px app header. So the same lead-in is a window
-  // scroll: put the target row right under the head's stuck bottom edge
-  // (sticky `top` + head height). The grid's document offset is its flow
-  // position, which sticky never changes. The browser clamps at the page end.
+  // the PAGE, under the 60px app header. There the page is NEVER moved by
+  // itself (owner follow-up 2026-11-10: opening Week, switching Day -> Week or
+  // changing week used to jump the page down to the lead-in, taking the week
+  // controls off screen). The page's "Now" control calls `jumpToNow` instead.
   const scrollRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
   const headScrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el || !gridScrollsInside()) return;
     const targetHour = earliestHour ?? getCurrentHoursInTimezone(careRecipientTimezone);
-    const leadIn = Math.max(0, (targetHour - 1) * HOUR_HEIGHT);
-    if (gridScrollsInside()) {
-      el.scrollTop = leadIn;
-      return;
-    }
-    const head = headRef.current;
-    const headBottom = head
-      ? (parseFloat(getComputedStyle(head).top) || 0) + head.getBoundingClientRect().height
-      : 0;
-    const gridTop = el.getBoundingClientRect().top + window.scrollY;
-    // `instant`: html has `scroll-behavior: smooth`, and an animated jump on
-    // open would read as the page drifting on its own.
-    window.scrollTo({ top: Math.max(0, gridTop + leadIn - headBottom), behavior: 'instant' });
+    el.scrollTop = Math.max(0, (targetHour - 1) * HOUR_HEIGHT);
   }, [earliestHour, careRecipientTimezone, days]);
+
+  // "Now" (below lg): the same one-hour lead-in, as a window scroll, so the
+  // now-line sits an hour below the head's STUCK bottom edge (sticky `top` +
+  // head height). The grid's document offset is its flow position, which
+  // sticky never changes; the browser clamps at the page end. A tap, so it
+  // animates — unless the user asked for reduced motion (WCAG 2.3.3; html's
+  // CSS `scroll-behavior` cannot reach a JS scroll's explicit behavior).
+  useImperativeHandle(
+    controlRef,
+    () => ({
+      jumpToNow: () => {
+        const el = scrollRef.current;
+        if (!el) return;
+        const leadIn = Math.max(0, (getCurrentHoursInTimezone(careRecipientTimezone) - 1) * HOUR_HEIGHT);
+        const head = headRef.current;
+        const headBottom = head
+          ? (parseFloat(getComputedStyle(head).top) || 0) + head.getBoundingClientRect().height
+          : 0;
+        const gridTop = el.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({
+          top: Math.max(0, gridTop + leadIn - headBottom),
+          behavior: prefersReducedMotion() ? 'instant' : 'smooth',
+        });
+      },
+    }),
+    [careRecipientTimezone]
+  );
 
   // The head and the timed grid are two horizontal scrollers (the head has to
   // sit OUTSIDE the grid's scroller to pin to the page — a sticky element pins

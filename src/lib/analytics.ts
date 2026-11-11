@@ -1551,6 +1551,8 @@ export const Analytics = {
     capture('appointment_completed', { circle_id: circleId }),
   calendarViewed: (circleId: string, view: string) =>
     capture('calendar_viewed', { circle_id: circleId, view }),
+  /** Week view "Now" control (below lg only; web-only, mobile's timeline scrolls itself). No properties. */
+  calendarJumpToNow: () => capture('calendar_jump_to_now', {}),
 
   // --- Care shifts (docs/plans/care-shifts.md) — SAME names and props as mobile.
   // Enums / booleans / counts ONLY, each coerced through a whitelist so nothing

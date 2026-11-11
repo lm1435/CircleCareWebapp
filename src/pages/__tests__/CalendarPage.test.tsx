@@ -1177,3 +1177,89 @@ describe('CalendarPage — in-page "Add event"', () => {
     expect(screen.queryByTestId('calendar-week-add-event')).not.toBeInTheDocument();
   });
 });
+
+// Owner follow-up 2026-11-10: below lg the page is never scrolled by itself
+// (opening Week, Day -> Week and week changes used to jump it to the lead-in
+// hour). A compact "Now" control in the week toolbar does that jump instead,
+// only while the visible week contains today. lg+ hides it (CSS) — there the
+// grid's own box opens on the lead-in.
+describe('CalendarPage — week "Now" control (below lg)', () => {
+  /** Phone width: the lg query (and reduced motion) answer false. */
+  function phoneViewport(): void {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: false,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+      }))
+    );
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('opening Week, Day -> Week and next/previous week never call window.scrollTo', async () => {
+    phoneViewport();
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+    await user.click(screen.getByRole('tab', { name: 'Day' }));
+    await user.click(screen.getByRole('tab', { name: 'Week' }));
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+    await user.click(screen.getByRole('button', { name: 'Next week' }));
+    expect(await screen.findByRole('heading', { name: 'Jun 14 – Jun 20, 2026' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Previous week' }));
+    expect(await screen.findByRole('heading', { name: 'Jun 7 – Jun 13, 2026' })).toBeInTheDocument();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('"Now" is a named, lg-hidden button; tapping it scrolls the page once and fires calendar_jump_to_now', async () => {
+    phoneViewport();
+    const { Analytics } = await import('@/lib/analytics');
+    const track = vi.spyOn(Analytics, 'calendarJumpToNow').mockImplementation(() => {});
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+    const now = screen.getByRole('button', { name: 'Now' });
+    expect(now).toHaveClass('lg:hidden', 'min-h-[44px]');
+    expect(scrollTo).not.toHaveBeenCalled();
+    await user.click(now);
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    // jsdom has no layout (all rects 0, no sticky top): the offset is the bare
+    // lead-in — 10:30 AM in Chicago -> (10.5 - 1) * 80. The full arithmetic
+    // with a real head/grid offset is pinned in WeekView.test.tsx.
+    expect(scrollTo).toHaveBeenCalledWith({ top: 9.5 * 80, behavior: 'smooth' });
+    expect(track).toHaveBeenCalledTimes(1);
+  });
+
+  it('"Now" shows only while the visible week holds today, and never in Day or Month', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+    expect(screen.getByRole('button', { name: 'Now' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Next week' }));
+    expect(await screen.findByRole('heading', { name: 'Jun 14 – Jun 20, 2026' })).toBeInTheDocument();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+    expect(screen.queryByRole('button', { name: 'Now' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Today' }));
+    expect(await screen.findByRole('button', { name: 'Now' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Month' }));
+    await screen.findByRole('grid', { name: /month/i });
+    expect(screen.queryByRole('button', { name: 'Now' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Day' }));
+    expect(screen.queryByRole('button', { name: 'Now' })).not.toBeInTheDocument();
+  });
+});
