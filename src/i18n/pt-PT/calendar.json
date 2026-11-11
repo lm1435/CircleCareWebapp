@@ -61,6 +61,8 @@
     "dualTimezoneHintGeneric": "O seu horário / horário da pessoa ({{timezone}})",
     "quietHoursDoseWarning": "Este horário está dentro do horário de silêncio, então nenhum lembrete será enviado nele. Pode alterar o horário de silêncio em Definições, na secção Horário de silêncio.",
     "pastTimeInline": "Começa na próxima dose. Esta hora já passou hoje.",
+    "pastTimesInline_one": "Começa na próxima dose. A hora de {{times}} já passou hoje.",
+    "pastTimesInline_other": "Começa na próxima dose. As horas de {{times}} já passaram hoje.",
     "timezoneUnresolvedNotice": "A carregar o fuso horário deste círculo. A gravação está em pausa para que as datas não sejam guardadas no fuso errado.",
     "drugSearch": {
       "searching": "A pesquisar medicamentos"
@@ -84,7 +86,9 @@
       "pickTime": "Escolher hora",
       "everyWeek": "Todas as semanas",
       "taskMoreHint": "Detalhes",
-      "zoneCaption": "Hora de {{circleZone}} · {{times}} a sua hora ({{yourZone}})"
+      "zoneCaption": "Hora de {{circleZone}} · {{times}} a sua hora ({{yourZone}})",
+      "doseSummaryRemoveHint": "Toque novamente numa hora para a remover",
+      "doseTimeDuplicate": "{{time}} já é uma hora de dose."
     },
     "refillsManagedOnOwner": "A reposição deste medicamento é acompanhada na dose principal. Abra essa dose para atualizar a embalagem.",
     "refillEstimate": "Stock para ~{{days}} dias. Alerta quando restarem {{alertDays}} dias.",

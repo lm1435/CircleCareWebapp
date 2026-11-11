@@ -42,6 +42,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Sugestões: 1",
     "2 sugestões",
   ],
+  "pt calendar:addEvent.pastTimesInline": [
+    "Começa na próxima dose. O horário de 08:00 já passou hoje.",
+    "Começa na próxima dose. O horário de 08:00 já passou hoje.",
+    "Começa na próxima dose. Os horários de 08:00 já passaram hoje.",
+  ],
+  "pt calendar:addEvent.simple.doseSummary": [
+    "0 dose · 08:00",
+    "1 dose · 08:00",
+    "2 doses · 08:00",
+  ],
+  "pt calendar:addEvent.simple.doseSummaryDaily": [
+    "0 dose por dia · 08:00",
+    "1 dose por dia · 08:00",
+    "2 doses por dia · 08:00",
+  ],
   "pt calendar:allDayMoreLabel": [
     "Mais eventos de dia inteiro em seg.: 0",
     "Mais eventos de dia inteiro em seg.: 1",
@@ -471,6 +486,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Sugestões: 0",
     "Sugestões: 1",
     "2 sugestões",
+  ],
+  "pt-PT calendar:addEvent.pastTimesInline": [
+    "Começa na próxima dose. As horas de 08:00 já passaram hoje.",
+    "Começa na próxima dose. A hora de 08:00 já passou hoje.",
+    "Começa na próxima dose. As horas de 08:00 já passaram hoje.",
+  ],
+  "pt-PT calendar:addEvent.simple.doseSummary": [
+    "0 dose · 08:00",
+    "1 dose · 08:00",
+    "2 doses · 08:00",
+  ],
+  "pt-PT calendar:addEvent.simple.doseSummaryDaily": [
+    "0 dose por dia · 08:00",
+    "1 dose por dia · 08:00",
+    "2 doses por dia · 08:00",
   ],
   "pt-PT calendar:allDayMoreLabel": [
     "Mais eventos de dia inteiro em seg.: 0",

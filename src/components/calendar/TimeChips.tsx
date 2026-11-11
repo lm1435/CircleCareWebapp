@@ -51,6 +51,11 @@ export interface TimeChipsProps {
   onChangeCustom?: (slot: number, next: string) => void;
   /** A custom chip's "×": remove that dose. */
   onRemoveCustom?: (slot: number, time: string) => void;
+  /**
+   * A custom chip's picker tried `time` and the form refused it (another dose has that time): the chip keeps its own
+   * time, its picker shows the one dialled, so the next column click builds on it.
+   */
+  heldValue?: { slot: number; time: string };
 }
 
 /** Literal keys (no template) so the translation audit can see every one. */
@@ -105,6 +110,7 @@ export function TimeChips({
   other,
   onChangeCustom,
   onRemoveCustom,
+  heldValue,
 }: TimeChipsProps): ReactElement {
   const { t } = useTranslation('calendar');
   const chosen = values.filter(Boolean).map((v) => v.slice(0, 5));
@@ -192,7 +198,7 @@ export function TimeChips({
           inputId={`${id}-custom-${slot}`}
           inputLabel={t('addEvent.simple.changeDoseTime', { time: shown })}
           testId="time-chip-custom"
-          value={time}
+          value={heldValue?.slot === slot ? heldValue.time : time}
           onChange={(next) => {
             if (next) onChangeCustom?.(slot, next);
           }}

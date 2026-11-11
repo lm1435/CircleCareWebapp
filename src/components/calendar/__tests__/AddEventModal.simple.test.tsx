@@ -353,8 +353,9 @@ describe('new medication: structure', () => {
     renderMed();
     expect(screen.queryByTestId('dose-past-time-note')).toBeNull();
     await user.click(chip(/Morning/)); // 8:00 New York (the recipient's clock): already passed today
+    // The simple form's one note names the time(s) that passed (owner 2026-11-11).
     expect(screen.getByTestId('dose-past-time-note')).toHaveTextContent(
-      'Starts with the next dose. This time has already passed today.'
+      'Starts with the next dose. 8:00 AM has already passed today.'
     );
     await user.click(chip(/Morning/)); // un-chosen: no time, no note
     await user.click(chip(/Evening/)); // 18:00 New York: still ahead
@@ -673,24 +674,25 @@ describe('new medication: more than one time (mobile AddEventScreen / first-run 
     expect(screen.getByLabelText('Change 7:15 AM dose time', { selector: 'input' })).toHaveValue('07:15');
   });
 
-  it('each extra dose gets its own inline past-time note', async () => {
+  it('ONE past-time note covers every dose, naming the times that passed (owner 2026-11-11)', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-06-15T18:00:00Z')); // 12:00 Denver / 14:00 New York
     const user = userEvent.setup();
     renderMed();
     await user.click(chip(/Bedtime/)); // 9 PM New York: still ahead
     await user.click(chip(/Morning/)); // a second time: 8:00 New York, already passed today
-    expect(screen.getByTestId('dose-past-time-note-1')).toHaveTextContent(
-      'Starts with the next dose. This time has already passed today.'
+    await user.click(chip(/Midday/)); // a third: 12:00 New York, passed too
+    expect(screen.getAllByTestId(/^dose-past-time-note/)).toHaveLength(1);
+    expect(screen.getByTestId('dose-past-time-note')).toHaveTextContent(
+      'Starts with the next dose. 8:00 AM and 12:00 PM have already passed today.'
     );
-    // The primary (9 PM) is still ahead, so ITS note stays hidden.
-    expect(screen.queryByTestId('dose-past-time-note')).toBeNull();
-    // Swap the second time for one still ahead (7 PM New York, through Other…): its note goes.
+    // Swap the past times for one still ahead (7 PM New York, through Other…): the note goes.
     await user.click(chip(/Morning/));
+    await user.click(chip(/Midday/));
     await user.click(otherTile());
     fireEvent.change(otherInput(), { target: { value: '19:00' } });
     expect(screen.getByTestId('extra-dose-1')).toBeInTheDocument();
-    expect(screen.queryByTestId('dose-past-time-note-1')).toBeNull();
+    expect(screen.queryAllByTestId(/^dose-past-time-note/)).toHaveLength(0);
   });
 
   it('When needed removes the extra doses (no schedule to attach them to)', async () => {

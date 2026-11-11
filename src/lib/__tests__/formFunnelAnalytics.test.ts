@@ -71,6 +71,16 @@ describe('form funnel events', () => {
     expect(capture).toHaveBeenLastCalledWith('time_chip_selected', { chip: 'other' });
   });
 
+  it('dose_time_duplicate_blocked {source}: an enum only, a stray string collapses to "other"', async () => {
+    const A = await load();
+    A.doseTimeDuplicateBlocked({ source: 'custom_chip' });
+    expect(capture).toHaveBeenLastCalledWith('dose_time_duplicate_blocked', { source: 'custom_chip' });
+    A.doseTimeDuplicateBlocked({ source: 'other' });
+    expect(capture).toHaveBeenLastCalledWith('dose_time_duplicate_blocked', { source: 'other' });
+    A.doseTimeDuplicateBlocked({ source: '9:00 AM' as never });
+    expect(capture).toHaveBeenLastCalledWith('dose_time_duplicate_blocked', { source: 'other' });
+  });
+
   it('appointment_form_abandoned {last_field, entry_source, seconds_open} buckets like the medication twin', async () => {
     const A = await load();
     A.appointmentFormAbandoned({ lastField: 'who', entrySource: 'next_step', secondsOpen: 12 });
@@ -130,6 +140,7 @@ describe('form funnel events', () => {
     A.entryFormOpened({ type: 'task', entry: 'other' });
     A.entryFormStepCompleted({ type: 'medication', step: 'what' });
     A.timeChipSelected({ chip: 'morning' });
+    A.doseTimeDuplicateBlocked({ source: 'other' });
     A.appointmentFormAbandoned({ lastField: 'title', entrySource: 'other', secondsOpen: 1 });
     A.largeTextLayout('meds', false);
     for (const call of capture.mock.calls) expect(call[1]).not.toHaveProperty('circle_id');

@@ -318,6 +318,8 @@
     "dualTimezoneHintGeneric": "Your time / their time ({{timezone}})",
     "quietHoursDoseWarning": "This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Settings, under Quiet hours.",
     "pastTimeInline": "Starts with the next dose. This time has already passed today.",
+    "pastTimesInline_one": "Starts with the next dose. {{times}} has already passed today.",
+    "pastTimesInline_other": "Starts with the next dose. {{times}} have already passed today.",
     "conversion": {
       "sameDay_one": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} for you ({{viewerZone}})",
       "sameDay_other": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} for you ({{viewerZone}})",
@@ -405,7 +407,13 @@
       "clearRepeatEnd": "Clear repeat end",
       "clearEndTime": "Clear end time",
       "changeDoseTime": "Change {{time}} dose time",
-      "removeDoseTime": "Remove {{time}} dose"
+      "removeDoseTime": "Remove {{time}} dose",
+      "doseSummaryDaily_one": "{{count}} dose a day · {{times}}",
+      "doseSummaryDaily_other": "{{count}} doses a day · {{times}}",
+      "doseSummary_one": "{{count}} dose · {{times}}",
+      "doseSummary_other": "{{count}} doses · {{times}}",
+      "doseSummaryRemoveHint": "Tap a time again to remove it",
+      "doseTimeDuplicate": "{{time}} is already a dose time."
     },
     "timeChips": {
       "label": "Common dose times",

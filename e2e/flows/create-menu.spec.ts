@@ -262,7 +262,8 @@ test('create a medication end-to-end via the global create menu', async ({ page,
   const pastNote = dialog.getByTestId('dose-past-time-note');
   const noticeShown = await pastNote.isVisible();
   if (noticeShown) {
-    await expect(pastNote).toHaveText('Starts with the next dose. This time has already passed today.');
+    // ONE note naming the time(s) that passed (owner 2026-11-11).
+    await expect(pastNote).toHaveText(/^Starts with the next dose\. .+ (has|have) already passed today\.$/);
   }
   await dialog.getByRole('button', { name: 'Add medication' }).click();
   await expect(page.getByRole('dialog', { name: /^(Time already passed|Starts with the next dose)$/ })).toHaveCount(0);

@@ -533,6 +533,7 @@ export type EntryFormOrigin =
   | 'other';
 export type EntryFormStep = 'what' | 'when' | 'how_often' | 'who';
 export type TimeChipId = 'morning' | 'midday' | 'evening' | 'bedtime' | 'other';
+export type DoseDuplicateSource = 'other' | 'custom_chip';
 export type AppointmentAbandonField =
   | 'title'
   | 'date'
@@ -1295,6 +1296,15 @@ export const Analytics = {
   /** A time chip (or "Other time") was chosen on the new-medication form. */
   timeChipSelected: (props: { chip: TimeChipId }) =>
     capture('time_chip_selected', { chip: props.chip }),
+
+  /**
+   * A new medication's custom time landed on a time it already has, so no second dose was added (mobile parity).
+   * `source`: 'other' (the "Other…" picker) or 'custom_chip' (a custom chip changed in place). Enum only.
+   */
+  doseTimeDuplicateBlocked: (props: { source: DoseDuplicateSource }) =>
+    capture('dose_time_duplicate_blocked', {
+      source: props.source === 'custom_chip' ? 'custom_chip' : 'other',
+    }),
 
   /**
    * The add-appointment form was closed without saving (create only). Once per

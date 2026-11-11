@@ -13,10 +13,19 @@ import { useTranslation } from 'react-i18next';
 export function DosePastTimeNote({
   visible,
   testId = 'dose-past-time-note',
+  times,
+  count,
 }: {
   visible: boolean;
   /** Per-dose notes under "+ Another dose" rows carry their own id (mobile: `dose-past-time-note-N`). */
   testId?: string;
+  /**
+   * The simple form's ONE note for every dose (owner 2026-11-11, mobile parity): the time(s) that already passed,
+   * already joined ("8:00 AM and 9:00 AM"), with `count` for the plural. Without them: "This time has already
+   * passed today." (the full form's note under its one time).
+   */
+  times?: string;
+  count?: number;
 }) {
   const { t } = useTranslation('calendar');
   // The live region stays mounted (sr-only, out of the layout flow, while empty) so the text is
@@ -25,7 +34,7 @@ export function DosePastTimeNote({
     <div role="status" className={visible ? undefined : 'sr-only'}>
       {visible && (
         <p data-testid={testId} className="m-0 text-sm text-amber-deep text-balance">
-          {t('addEvent.pastTimeInline')}
+          {times && count ? t('addEvent.pastTimesInline', { count, times }) : t('addEvent.pastTimeInline')}
         </p>
       )}
     </div>

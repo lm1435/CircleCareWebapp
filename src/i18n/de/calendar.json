@@ -318,6 +318,8 @@
     "dualTimezoneHintGeneric": "Ihre Zeit / Zeit der umsorgten Person ({{timezone}})",
     "quietHoursDoseWarning": "Diese Uhrzeit liegt in den Ruhezeiten, daher wird dann keine Erinnerung gesendet. Sie können die Ruhezeiten unter Einstellungen im Bereich Ruhezeiten ändern.",
     "pastTimeInline": "Beginnt mit der nächsten Dosis. Diese Uhrzeit ist heute bereits vorbei.",
+    "pastTimesInline_one": "Beginnt mit der nächsten Dosis. {{times}} ist heute bereits vorbei.",
+    "pastTimesInline_other": "Beginnt mit der nächsten Dosis. {{times}} sind heute bereits vorbei.",
     "conversion": {
       "sameDay_one": "{{recipientTime}} in {{recipientZone}} ist für Sie {{viewerTime}} ({{viewerZone}})",
       "sameDay_other": "{{recipientTime}} in {{recipientZone}} ist für Sie {{viewerTime}} ({{viewerZone}})",
@@ -405,7 +407,13 @@
       "clearRepeatEnd": "Wiederholungsende löschen",
       "clearEndTime": "Endzeit löschen",
       "changeDoseTime": "Uhrzeit der Dosis ändern: {{time}}",
-      "removeDoseTime": "Dosis entfernen: {{time}}"
+      "removeDoseTime": "Dosis entfernen: {{time}}",
+      "doseSummaryDaily_one": "{{count}} Dosis pro Tag · {{times}}",
+      "doseSummaryDaily_other": "{{count}} Dosen pro Tag · {{times}}",
+      "doseSummary_one": "{{count}} Dosis · {{times}}",
+      "doseSummary_other": "{{count}} Dosen · {{times}}",
+      "doseSummaryRemoveHint": "Zum Entfernen erneut auf eine Uhrzeit tippen",
+      "doseTimeDuplicate": "{{time}} ist bereits eine Dosiszeit."
     },
     "timeChips": {
       "label": "Übliche Einnahmezeiten",

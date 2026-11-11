@@ -318,6 +318,8 @@
     "dualTimezoneHintGeneric": "Il tuo orario / il suo orario ({{timezone}})",
     "quietHoursDoseWarning": "Questo orario rientra nelle ore di silenzio, quindi in quel momento non verrà inviato alcun promemoria. Puoi modificare le ore di silenzio in Impostazioni, nella sezione Ore di silenzio.",
     "pastTimeInline": "Inizia dalla prossima dose. Questo orario è già passato oggi.",
+    "pastTimesInline_one": "Inizia dalla prossima dose. L’orario {{times}} è già passato oggi.",
+    "pastTimesInline_other": "Inizia dalla prossima dose. Gli orari {{times}} sono già passati oggi.",
     "conversion": {
       "sameDay_one": "{{recipientTime}} a {{recipientZone}}: per te è l'{{viewerTime}} ({{viewerZone}})",
       "sameDay_other": "{{recipientTime}} a {{recipientZone}}: per te sono le {{viewerTime}} ({{viewerZone}})",
@@ -405,7 +407,13 @@
       "clearRepeatEnd": "Cancella la fine della ripetizione",
       "clearEndTime": "Cancella l’ora di fine",
       "changeDoseTime": "Cambia l’orario della dose: {{time}}",
-      "removeDoseTime": "Rimuovi la dose: {{time}}"
+      "removeDoseTime": "Rimuovi la dose: {{time}}",
+      "doseSummaryDaily_one": "{{count}} dose al giorno · {{times}}",
+      "doseSummaryDaily_other": "{{count}} dosi al giorno · {{times}}",
+      "doseSummary_one": "{{count}} dose · {{times}}",
+      "doseSummary_other": "{{count}} dosi · {{times}}",
+      "doseSummaryRemoveHint": "Tocca di nuovo un orario per rimuoverlo",
+      "doseTimeDuplicate": "{{time}} è già un orario di dose."
     },
     "timeChips": {
       "label": "Orari comuni",

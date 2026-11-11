@@ -254,7 +254,8 @@ test.describe('past time on create', () => {
     await dialog.locator('#scheduled_date').fill(todayISO());
     await fillSimpleTime(dialog, '00:00');
     const note = dialog.getByTestId('dose-past-time-note');
-    await expect(note).toHaveText('Starts with the next dose. This time has already passed today.');
+    // ONE note naming the time(s) that passed (owner 2026-11-11), on the account's hour cycle.
+    await expect(note).toHaveText(/^Starts with the next dose\. (12:00 AM|00:00) has already passed today\.$/);
     await expect(dialog.getByRole('status').filter({ has: page.getByTestId('dose-past-time-note') })).toHaveCount(1);
 
     // Live: a time still ahead removes it.
@@ -265,6 +266,82 @@ test.describe('past time on create', () => {
     await dialog.locator('#scheduled_time').fill('00:00');
     await expect(note).toBeVisible();
     await submitEventForm(page, dialog);
+  });
+});
+
+test.describe('dose times are unique (owner 2026-11-11, iOS 1.4.1 screenshot)', () => {
+  test.afterEach(async ({ circleId, account }) => {
+    await sweepCreatedMeds(circleId, account);
+  });
+
+  test('"Other…" on a time the medication has is refused and said; the summary line says what saves; one row per time', async ({
+    page,
+    circleId,
+    account,
+  }) => {
+    await pinRecipientZoneToBrowser(page, account, circleId);
+    await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
+    const dialog = await openCalendarNew(page, 'medication');
+    const name = uniqueMedName('dupetime');
+    await dialog.locator('#medication_name').fill(name);
+    const chips = dialog.getByRole('group', { name: 'Common dose times' });
+    // "Other…": open its picker (a NEW dose once a time exists), set the time, close the picker with its own tile
+    // (Escape would also close the form).
+    const other = async (hhmm: string) => {
+      const tile = dialog.getByTestId('time-chip-other');
+      await tile.click();
+      await dialog.locator('#scheduled_time').fill(hhmm);
+      if ((await tile.getAttribute('aria-expanded')) === 'true') await tile.click();
+      await expect(tile).toHaveAttribute('aria-expanded', 'false');
+    };
+
+    // The screenshot: Bedtime on, then "Other…" 9:00 AM twice.
+    await chips.getByRole('checkbox', { name: /Bedtime$/ }).click();
+    await other('09:00');
+    await other('09:00');
+    await expect(dialog.getByTestId('time-chip-custom')).toHaveCount(1);
+    const dupe = dialog.getByTestId('dose-time-duplicate-note');
+    await expect(dupe).toHaveText(/^(9:00 AM|09:00) is already a dose time\.$/);
+    await expect(
+      dialog.getByRole('status').filter({ has: page.getByTestId('dose-time-duplicate-note') })
+    ).toHaveCount(1);
+    await expect(dialog.getByTestId('dose-summary')).toHaveText(
+      /^2 doses a day · (9:00 AM, 9:00 PM|09:00, 21:00) · Tap a time again to remove it$/
+    );
+    // A custom time equal to a PRESET: Morning stays the one 8:00 dose.
+    await chips.getByRole('checkbox', { name: /Morning$/ }).click();
+    await expect(dupe).toHaveCount(0); // the doses changed: the note retires
+    await other('08:00');
+    await expect(dupe).toHaveText(/^(8:00 AM|08:00) is already a dose time\.$/);
+    await expect(dialog.getByTestId('time-chip-custom')).toHaveCount(1);
+    await expect(dialog.getByTestId('dose-summary')).toHaveText(/^3 doses a day · /);
+    await submitEventForm(page, dialog);
+
+    // The real backend got exactly one row per time.
+    const ctx = await apiRequest.newContext({ baseURL: ORIGIN });
+    try {
+      const token = await getSweepToken(ctx, account);
+      expect(token).toBeTruthy();
+      const res = await ctx.get(`/api/circles/${circleId}/events?event_type=medication`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      expect(res.ok()).toBe(true);
+      const events = ((await res.json())?.data?.events ?? []) as Array<{
+        id: string;
+        parent_event_id: string | null;
+        medication_name: string | null;
+        scheduled_time: string | null;
+      }>;
+      // One series per dose time: group the rows (roots and their occurrences) by series root.
+      const seriesTime = new Map<string, string>();
+      for (const e of events) {
+        if (e.medication_name === name) seriesTime.set(e.parent_event_id ?? e.id, String(e.scheduled_time).slice(0, 5));
+      }
+      expect([...seriesTime.values()].sort()).toEqual(['08:00', '09:00', '21:00']);
+    } finally {
+      await ctx.dispose();
+    }
   });
 });
 

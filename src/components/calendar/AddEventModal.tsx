@@ -6,6 +6,7 @@ import { DoctorField } from './DoctorField';
 import { NotificationInfoModal } from './NotificationInfoModal';
 import { DoseQuietHoursNote } from './DoseQuietHoursNote';
 import { DosePastTimeNote } from './DosePastTimeNote';
+import { DoseDuplicateNote, DoseSummaryLine } from './DoseSummaryLine';
 import { MedicationPhotoField, MedicationRefillFields } from './MedicationMoreDetails';
 import {
   deleteMedicationPhoto,
@@ -51,6 +52,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import {
   Analytics,
   type AppointmentAbandonField,
+  type DoseDuplicateSource,
   type EntryFormOrigin,
   type EntryFormStep,
   type TimeChipId,
@@ -1112,6 +1114,15 @@ function AddEventForm({
   // a new medication with no time yet); a number = that extra dose (a new medication's next time). Set when the
   // picker opens; `null` = decide on the first pick.
   const [otherTarget, setOtherTarget] = useState<'primary' | number | null>(null);
+  /**
+   * "9:00 AM is already a dose time" (owner 2026-11-11, mobile parity): a custom pick on dose `slot` (0 = the form's
+   * own time; `extraTimes.length + 1` = a new one) landed on `time` (the circle's clock), which the medication already
+   * has, so nothing changed. Kept only while the doses are the ones it was said about (`signature`); the picker that
+   * tried it shows `time`, so the next column click builds on what was dialled.
+   */
+  const [doseDuplicate, setDoseDuplicate] = useState<{ slot: number; time: string; signature: string } | null>(
+    null
+  );
   // The task / appointment forms' "Pick a time" (reveals the time tiles) and every simple form's "Custom…"
   // (reveals the rarer repeat rules). One form is mounted at a time, so they share the state.
   const [pickTimeOpen, setPickTimeOpen] = useState(false);
@@ -1936,17 +1947,27 @@ function AddEventForm({
       timezone: tz,
       heldInstant,
     });
+    // One row per circle clock, never the primary's own (a payload-time guard: two rows at one time would be double
+    // reminders and two doses to mark; the chips refuse a repeat, this keeps any other path from sending one).
+    const seenClocks = new Set([primaryDates.scheduledTime ?? '']);
     return extraDoses
       .filter((d) => d.time !== '')
-      .map(({ time, instant }) => {
-        const dose = extraDoseForApi({
+      .map(({ time, instant }) =>
+        extraDoseForApi({
           dateStr,
           timeStr,
           extraTimeStr: time,
           timezone: tz,
           heldInstant,
           heldExtraInstant: instant,
-        });
+        })
+      )
+      .filter((dose) => {
+        if (seenClocks.has(dose.scheduledTime)) return false;
+        seenClocks.add(dose.scheduledTime);
+        return true;
+      })
+      .map((dose) => {
         let rowDate = dose.scheduledDate;
         if (recurrence === 'days_of_week' && selectedDays.length > 0 && selectedDays.length < 7) {
           rowDate = nextDateOnWeekdays(rowDate, selectedDays) ?? rowDate;
@@ -2923,14 +2944,36 @@ function AddEventForm({
    * extras ('' while there is no time). The chips address a custom dose by its slot.
    */
   const doseRecipientTimes = [recipientClock, ...extraDoses.map((d) => viewerToRecipient(d.time, d.instant))];
+  const doseSignature = doseRecipientTimes.join(',');
+  // A duplicate note is about the doses it was said for: the first change to them retires it (React's
+  // "adjust state while rendering" pattern, so it can never come back when the doses later return to that set).
+  if (doseDuplicate && doseDuplicate.signature !== doseSignature) setDoseDuplicate(null);
+  const shownDuplicate = doseDuplicate && doseDuplicate.signature === doseSignature ? doseDuplicate : null;
+  /**
+   * Dose times are UNIQUE: a custom pick for `slot` on circle clock `clock` that another dose already has (a preset,
+   * the first time, another custom) is refused, said, and counted. True = refused; the caller changes nothing.
+   */
+  function refuseDuplicateDose(slot: number, clock: string, source: DoseDuplicateSource): boolean {
+    if (isEditing || !clock) return false;
+    const hhmm = clock.slice(0, 5);
+    if (!doseRecipientTimes.some((other, i) => i !== slot && other !== '' && other.slice(0, 5) === hhmm)) return false;
+    // Once per attempt: the column picker commits on every click, so dwelling on the same time counts once.
+    if (!(doseDuplicate && doseDuplicate.slot === slot && doseDuplicate.time === hhmm)) {
+      Analytics.doseTimeDuplicateBlocked({ source });
+    }
+    setDoseDuplicate({ slot, time: hhmm, signature: doseSignature });
+    return true;
+  }
   /** A custom dose chip's picker (Fix13): change THAT dose's time in place. */
   function changeDoseTime(slot: number, next: string): void {
     setOtherTarget(null);
     if (slot === 0) {
+      if (refuseDuplicateDose(0, next, 'custom_chip')) return;
       chooseRecipientTime(next);
       return;
     }
     const dose = recipientToExtraDose(next);
+    if (refuseDuplicateDose(slot, viewerToRecipient(dose.time, dose.instant), 'custom_chip')) return;
     setExtraDoses((prev) => prev.map((d, i) => (i === slot - 1 ? dose : d)));
   }
   /** A custom dose chip's "×": remove that dose (the medication's own time hands over to the next, as untapping). */
@@ -2982,16 +3025,20 @@ function AddEventForm({
 
   /** "Other…" opened: it sets the form's own time (an edit, or no time yet), else the next extra dose. */
   function openOtherTime(): void {
+    setDoseDuplicate(null);
     if (!isEditing) Analytics.timeChipSelected({ chip: 'other' });
     setOtherTarget(isEditing || !timeStr ? 'primary' : extraTimes.length);
   }
   const otherTargetResolved: 'primary' | number =
     otherTarget ?? (isEditing || !timeStr ? 'primary' : extraTimes.length);
   /** What the "Other…" picker shows: its target's time on the RECIPIENT's clock ('' for a new extra). */
+  const otherTargetSlot = otherTargetResolved === 'primary' ? 0 : otherTargetResolved + 1;
   const otherTimeValue =
-    otherTargetResolved === 'primary'
-      ? recipientClock
-      : viewerToRecipient(extraTimes[otherTargetResolved] ?? '');
+    shownDuplicate && shownDuplicate.slot === otherTargetSlot
+      ? shownDuplicate.time
+      : otherTargetResolved === 'primary'
+        ? recipientClock
+        : viewerToRecipient(extraTimes[otherTargetResolved] ?? '');
   /** A time from "Other…" (the RECIPIENT's clock): it becomes its own chip ("2:30 PM / Other"). */
   function chooseOtherTime(next: string): void {
     const target = otherTargetResolved;
@@ -3007,6 +3054,7 @@ function AddEventForm({
       return;
     }
     const dose = recipientToExtraDose(next);
+    if (refuseDuplicateDose(target + 1, viewerToRecipient(dose.time, dose.instant), 'other')) return;
     setExtraDoses((prev) =>
       target < prev.length ? prev.map((d, i) => (i === target ? dose : d)) : prev.length < 3 ? [...prev, dose] : prev
     );
@@ -3097,6 +3145,33 @@ function AddEventForm({
     items.length <= 1
       ? (items[0] ?? '')
       : `${items.slice(0, -1).join(', ')} ${t('addEvent.simple.listAnd')} ${items[items.length - 1]}`;
+  /**
+   * The new medication's dose summary under "What time?" (owner 2026-11-11, mobile parity): what the save creates,
+   * in time order ("2 doses a day · 8:00 AM, 9:00 PM"). "a day" only on Every day; any other repeat says "2 doses ·
+   * …", which stays true. "Tap a time again to remove it" once there are two or more doses and a preset among them
+   * (a custom chip is changed by a click and removed by its ×). None with no dose, on When needed, or on an edit (it
+   * holds one row of a medication whose other doses it cannot see).
+   */
+  const summaryClocks = [...new Set(doseRecipientTimes.filter(Boolean).map((time) => time.slice(0, 5)))].sort();
+  const doseSummaryText = ((): string | null => {
+    if (isEditing || !isMedication || isAsNeeded || summaryClocks.length === 0) return null;
+    const count = summaryClocks.length;
+    const times = summaryClocks.map(clockText).join(', ');
+    const base =
+      recurrence === 'daily'
+        ? t('addEvent.simple.doseSummaryDaily', { count, times })
+        : t('addEvent.simple.doseSummary', { count, times });
+    const hint = count >= 2 && summaryClocks.some((clock) => chipForTime(clock) !== null);
+    return hint ? `${base} · ${t('addEvent.simple.doseSummaryRemoveHint')}` : base;
+  })();
+  /** The doses whose time already passed today (they start with the next dose), as circle clocks in time order. */
+  const pastDoseClocks = [
+    ...new Set(
+      doseRecipientTimes.flatMap((clock, slot) =>
+        clock && (slot === 0 ? startsNextDose : doseStartsNext(extraTimes[slot - 1] ?? '')) ? [clock.slice(0, 5)] : []
+      )
+    ),
+  ].sort();
   /**
    * THE ZONE CAPTION under "What time?" (owner 2026-11-10, build 11), ONLY when the viewer's zone differs from
    * the circle's: the circle's time first (the tiles and chips are on its clock), then the same instant on the
@@ -3591,6 +3666,7 @@ function AddEventForm({
             onToggle={toggleDoseChip}
             onChangeCustom={changeDoseTime}
             onRemoveCustom={removeDose}
+            heldValue={shownDuplicate ?? undefined}
             other={
               <PickerTile
                 kind="time"
@@ -3617,6 +3693,8 @@ function AddEventForm({
               {timeErrorText}
             </p>
           )}
+          <DoseSummaryLine text={doseSummaryText} />
+          <DoseDuplicateNote time={shownDuplicate ? clockText(shownDuplicate.time) : null} />
           <DoseQuietHoursNote
             applies={isMedication && notificationsEnabled && reminderAtDue}
             dateStr={dateStr}
@@ -3625,8 +3703,7 @@ function AddEventForm({
             members={members}
             ownerId={circle?.owner_id}
           />
-          <DosePastTimeNote visible={startsNextDose} />
-          {/* The extra doses' own notes (each is its own medication row, saved after the primary). */}
+          {/* The extra doses' own quiet-hours notes (each is its own medication row, saved after the primary). */}
           {extraTimes.map((time, index) => (
             <div key={index} data-testid={`extra-dose-${index + 1}`} className="contents">
               <DoseQuietHoursNote
@@ -3636,12 +3713,14 @@ function AddEventForm({
                 members={members}
                 ownerId={circle?.owner_id}
               />
-              <DosePastTimeNote
-                visible={doseStartsNext(time)}
-                testId={`dose-past-time-note-${index + 1}`}
-              />
             </div>
           ))}
+          {/* ONE past-time note for all the doses, naming the times (owner 2026-11-11: it was repeated per dose). */}
+          <DosePastTimeNote
+            visible={pastDoseClocks.length > 0}
+            times={listText(pastDoseClocks.map(clockText))}
+            count={pastDoseClocks.length}
+          />
           {zoneCaptionLine}
         </section>
       )}

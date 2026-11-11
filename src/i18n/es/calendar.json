@@ -318,6 +318,8 @@
     "dualTimezoneHintGeneric": "Tu hora / Su hora ({{timezone}})",
     "quietHoursDoseWarning": "Esta hora cae dentro de tus horas de silencio, así que no se enviará ningún recordatorio. Puedes cambiar las horas de silencio en Configuración, en la sección Horas de silencio.",
     "pastTimeInline": "Comienza con la próxima dosis. Esta hora ya pasó hoy.",
+    "pastTimesInline_one": "Comienza con la próxima dosis. La hora de {{times}} ya pasó hoy.",
+    "pastTimesInline_other": "Comienza con la próxima dosis. Las horas de {{times}} ya pasaron hoy.",
     "conversion": {
       "sameDay_one": "{{recipientTime}} en {{recipientZone}} es la {{viewerTime}} para ti ({{viewerZone}})",
       "sameDay_other": "{{recipientTime}} en {{recipientZone}} son las {{viewerTime}} para ti ({{viewerZone}})",
@@ -405,7 +407,13 @@
       "clearRepeatEnd": "Borrar fin de repetición",
       "clearEndTime": "Borrar hora de fin",
       "changeDoseTime": "Cambiar la hora de la dosis de {{time}}",
-      "removeDoseTime": "Quitar la dosis de {{time}}"
+      "removeDoseTime": "Quitar la dosis de {{time}}",
+      "doseSummaryDaily_one": "{{count}} dosis al día · {{times}}",
+      "doseSummaryDaily_other": "{{count}} dosis al día · {{times}}",
+      "doseSummary_one": "{{count}} dosis · {{times}}",
+      "doseSummary_other": "{{count}} dosis · {{times}}",
+      "doseSummaryRemoveHint": "Toca una hora otra vez para quitarla",
+      "doseTimeDuplicate": "{{time}} ya es una hora de dosis."
     },
     "timeChips": {
       "label": "Horarios comunes",

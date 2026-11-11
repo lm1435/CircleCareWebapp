@@ -48,6 +48,11 @@ const RENDERED_ONLY_ABOVE_ZERO: Record<string, string> = {
   'common:inbox.countNew': 'CircleCard renders the count only when unread > 0',
   'common:inbox.circleUnreadA11y': 'CircleCard renders the count control only when unread > 0',
   'common:inbox.scopedSubtitle': 'NotificationsPage shows just the circle name at 0 unread',
+  // The medication form's dose summary and its one past-time note (owner 2026-11-11): AddEventModal builds the
+  // summary only with >= 1 dose (null at 0) and shows the note only when >= 1 dose time has passed.
+  'calendar:addEvent.simple.doseSummary': 'doseSummaryText is null with no dose',
+  'calendar:addEvent.simple.doseSummaryDaily': 'doseSummaryText is null with no dose',
+  'calendar:addEvent.pastTimesInline': 'the past-time note renders only when a dose time has passed',
 };
 /**
  * Whole namespaces whose count lines are NEVER rendered at 0: the daily update omits a line
