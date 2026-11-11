@@ -67,6 +67,17 @@ export const LANE_MIN_PX = 25;
 // choosing the stacked vs inline layout, so nothing is ever clipped mid-line.
 const CHIP_LINE_HEIGHT = 14;
 const CHIP_PADDING_Y = 8;
+/**
+ * The width (Tailwind `lg`, 64rem) from which the timed grid keeps its own
+ * capped vertical scroller. Below it the grid lays out at full height and the
+ * page is the only vertical scroll (a scroller inside a scrolling page on a
+ * phone was a double scroll — owner 2026-11-10).
+ */
+export const INNER_SCROLL_QUERY = '(min-width: 64rem)';
+/** Missing `matchMedia` (jsdom) keeps the inner scroller — the desktop contract. */
+function gridScrollsInside(): boolean {
+  return typeof window.matchMedia !== 'function' || window.matchMedia(INNER_SCROLL_QUERY).matches;
+}
 
 /** The collapsed chip's plural label ("5 meds"). Literal keys on purpose: the dynamic-key pin stays put. */
 function slotLabel(t: TFunction, type: EventType, count: number): string {
@@ -186,25 +197,55 @@ export function WeekView({
   // Auto-scroll the timed grid to that anchor on mount / week change. Mirrors
   // mobile's scrollToCurrentTime — keeps one hour of lead-in above the target.
   //
-  // WHY NOTHING IS ADDED FOR THE PINNED HEAD. The head (day headers + all-day
-  // row) is `sticky top-0` INSIDE this scroller, and the timed grid starts right
-  // below it in the content. So the head covers viewport rows [0, headHeight)
-  // at every scrollTop >= 0, and timed-grid offset `t` sits at viewport row
-  // `headHeight + t - scrollTop`. The head height cancels: the first row visible
-  // under the head is timed offset `scrollTop`, whatever the head's height. To
-  // put the hour (target - 1) on that row, scrollTop is simply its offset.
+  // WHY NOTHING IS ADDED FOR THE PINNED HEAD (lg+). The head (day headers +
+  // all-day row) sits directly ABOVE this scroller, which holds only the timed
+  // grid (until 2026-11-10 it was `sticky top-0` inside it — same arithmetic).
+  // The first row visible under the head is timed offset `scrollTop`, whatever
+  // the head's height. To put the hour (target - 1) on that row, scrollTop is
+  // simply its offset.
   // This used to be `timedRef.offsetTop + ...`, i.e. the head height ADDED —
   // which hid that many pixels of the lead-in under the head. With an all-day
   // row the head is ~110-210px against an 80px lead-in, so the first timed
   // chips (and the target hour itself) slid under it, leaving slivers and
   // target-size failures. The browser clamps this at the bottom of the grid.
+  //
+  // BELOW lg THE PAGE IS THE ONLY VERTICAL SCROLL (owner 2026-11-10, iPhone):
+  // the timed grid lays out at its full 24h height and the head is sticky to
+  // the PAGE, under the 60px app header. So the same lead-in is a window
+  // scroll: put the target row right under the head's stuck bottom edge
+  // (sticky `top` + head height). The grid's document offset is its flow
+  // position, which sticky never changes. The browser clamps at the page end.
   const scrollRef = useRef<HTMLDivElement>(null);
+  const headRef = useRef<HTMLDivElement>(null);
+  const headScrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const targetHour = earliestHour ?? getCurrentHoursInTimezone(careRecipientTimezone);
-    el.scrollTop = Math.max(0, (targetHour - 1) * HOUR_HEIGHT);
+    const leadIn = Math.max(0, (targetHour - 1) * HOUR_HEIGHT);
+    if (gridScrollsInside()) {
+      el.scrollTop = leadIn;
+      return;
+    }
+    const head = headRef.current;
+    const headBottom = head
+      ? (parseFloat(getComputedStyle(head).top) || 0) + head.getBoundingClientRect().height
+      : 0;
+    const gridTop = el.getBoundingClientRect().top + window.scrollY;
+    // `instant`: html has `scroll-behavior: smooth`, and an animated jump on
+    // open would read as the page drifting on its own.
+    window.scrollTo({ top: Math.max(0, gridTop + leadIn - headBottom), behavior: 'instant' });
   }, [earliestHour, careRecipientTimezone, days]);
+
+  // The head and the timed grid are two horizontal scrollers (the head has to
+  // sit OUTSIDE the grid's scroller to pin to the page — a sticky element pins
+  // to its nearest scroll container). Panning either one pans the other, so
+  // the day headers always sit over their columns (the grid by swipe, the head
+  // when keyboard focus scrolls a header button into view). The equality guard
+  // stops the echo.
+  const syncPan = (from: HTMLDivElement | null, to: HTMLDivElement | null): void => {
+    if (from && to && to.scrollLeft !== from.scrollLeft) to.scrollLeft = from.scrollLeft;
+  };
 
   /** Everything a chip prints or speaks about one event (shared by the chip and the same-slot list). */
   const describeEvent = (event: CalendarEvent) => {
@@ -476,34 +517,50 @@ export function WeekView({
       padding="none"
       role="grid"
       aria-label={t('calendar:weekViewLabel')}
-      className="overflow-hidden tabular-nums"
+      // `overflow-clip`, not `-hidden` (rounded corners still clip): hidden
+      // makes the card a scroll container, and the head below would then pin
+      // to the card instead of the page.
+      className="overflow-clip tabular-nums"
     >
-      {/* Single 2D scroller: pans horizontally (day columns, ~2 fit a phone via
-          --dc + scroll-snap) AND scrolls vertically through the timed grid. The
-          day-headers/all-day head is sticky-top and the hour rail is sticky-left,
-          so both stay pinned to THIS scroller (the earlier split — a separate
-          vertical scroller for the timed grid — made the rail pin to the wrong
-          element and slide away on horizontal scroll). Reverts to a 7-across fit
-          at lg. */}
+      {/* ONE VERTICAL SCROLL PER WIDTH (owner 2026-11-10, iPhone Safari: the
+          old single 2D scroller was `max-h-[70vh] overflow-auto`, a scroll box
+          inside the scrolling page — scroll the card, then scroll the page).
+          Now the head and the timed grid are two horizontal pans kept in step
+          (syncPan); the hour rail is sticky-left inside the grid's pan, the
+          head's corner cell sticky-left inside the head's.
+            < lg: the grid lays out at its full 24h height (no vertical
+                  scroller at all) and the head is sticky to the PAGE under the
+                  60px app header — mobile's WeekTimelineView keeps its day
+                  headers fixed over a single vertical scroll the same way. ~2
+                  (md: 3) day columns fit; the week pans sideways INSIDE the
+                  card (scroll-snap), never the page.
+            >= lg: 7 columns fit; the grid keeps its own 70vh scroller under
+                  the head (a 1920px day on a desktop page would push
+                  everything below the calendar out of reach). Both reserve
+                  the same scrollbar gutter so header and grid columns line up
+                  with classic (non-overlay) scrollbars. */}
       <div
-        ref={scrollRef}
         role="presentation"
-        data-testid="week-scroller"
-        className="snap-x snap-mandatory overflow-auto max-h-[70vh] scroll-pl-14 lg:snap-none"
+        data-day-column-floor={dayColumnFloorPx}
+        style={{ '--dc-floor': `${dayColumnFloorPx}px` } as CSSProperties}
+        className="[--dc:max(var(--dc-floor),calc((100vw_-_2rem_-_3.5rem)/2))] md:[--dc:max(var(--dc-floor),calc((100vw_-_3rem_-_3.5rem)/3))] lg:[--dc:minmax(var(--dc-floor),1fr)]"
       >
-        <div
-          role="rowgroup"
-          data-day-column-floor={dayColumnFloorPx}
-          style={{ '--dc-floor': `${dayColumnFloorPx}px` } as CSSProperties}
-          className="relative w-max [--dc:max(var(--dc-floor),calc((100vw_-_2rem_-_3.5rem)/2))] md:[--dc:max(var(--dc-floor),calc((100vw_-_3rem_-_3.5rem)/3))] lg:w-auto lg:min-w-0 lg:[--dc:minmax(var(--dc-floor),1fr)]"
-        >
           {/* Pinned head — day headers + all-day stay at the top while the timed
               grid scrolls under them; their left cells also pin left. */}
           <div
+            ref={headRef}
             role="presentation"
             data-testid="week-pinned-head"
-            className="sticky top-0 z-[6] bg-cream"
+            className="sticky top-[60px] z-[6] bg-cream"
           >
+          <div
+            ref={headScrollRef}
+            role="presentation"
+            data-testid="week-head-scroller"
+            onScroll={() => syncPan(headScrollRef.current, scrollRef.current)}
+            className="overflow-hidden lg:[scrollbar-gutter:stable]"
+          >
+          <div role="rowgroup" className="w-max lg:w-auto lg:min-w-0">
           {/* Day headers */}
           <div
             role="row"
@@ -645,9 +702,20 @@ export function WeekView({
             </div>
           )}
           </div>
+          </div>
+          </div>
 
-          {/* Timed grid — scrolls vertically under the pinned head; the hour rail
-              pins left to the 2D scroller above. */}
+          {/* Timed grid — its own horizontal pan (snap, in step with the head).
+              Vertically: full height below lg (the page scrolls), a 70vh
+              scroller at lg+. The hour rail pins left inside it. */}
+          <div
+            ref={scrollRef}
+            role="presentation"
+            data-testid="week-scroller"
+            onScroll={() => syncPan(scrollRef.current, headScrollRef.current)}
+            className="snap-x snap-mandatory overflow-x-auto scroll-pl-14 lg:max-h-[70vh] lg:overflow-y-auto lg:snap-none lg:[scrollbar-gutter:stable]"
+          >
+          <div role="rowgroup" className="w-max lg:w-auto lg:min-w-0">
           <div role="row" className="grid grid-cols-[3.5rem_repeat(7,var(--dc))]">
               {/* Hour axis — pinned so the labels stay visible while days scroll. */}
               <div
@@ -727,7 +795,8 @@ export function WeekView({
                 );
               })}
           </div>
-        </div>
+          </div>
+          </div>
       </div>
       {openSlot && (
         <Modal

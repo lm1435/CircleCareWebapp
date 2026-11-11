@@ -114,10 +114,11 @@ async function waitForScrollSettled(page: Page): Promise<void> {
     () =>
       new Promise<void>((resolve) => {
         const el = document.querySelector('[data-testid="week-scroller"]') as HTMLElement | null;
-        let last = Number.NaN;
+        let last = '';
         let stable = 0;
         const tick = (): void => {
-          const now = el ? el.scrollTop : Number.NaN;
+          // Below lg the opening scroll moves the PAGE; at lg+ the grid box.
+          const now = `${el ? el.scrollTop : 'none'}/${window.scrollY}`;
           stable = now === last ? stable + 1 : 0;
           last = now;
           if (stable >= 8) resolve();
@@ -140,10 +141,16 @@ async function measure(page: Page, titles: string[]): Promise<Geometry> {
     const head = document.querySelector('[data-testid="week-pinned-head"]') as HTMLElement;
     const sr = scroller.getBoundingClientRect();
     // clientTop/clientLeft = the border; clientWidth/clientHeight exclude scrollbars.
+    // Below lg (64rem) the grid is full height and the page scrolls, so what
+    // is visible vertically is the scroller box clipped to the window. At lg+
+    // the grid's own 70vh box is the frame (as before 2026-11-10).
+    const pageScrolls = !window.matchMedia('(min-width: 64rem)').matches;
     const box = {
-      top: sr.top + scroller.clientTop,
+      top: pageScrolls ? Math.max(0, sr.top + scroller.clientTop) : sr.top + scroller.clientTop,
       left: sr.left + scroller.clientLeft,
-      bottom: sr.top + scroller.clientTop + scroller.clientHeight,
+      bottom: pageScrolls
+        ? Math.min(window.innerHeight, sr.top + scroller.clientTop + scroller.clientHeight)
+        : sr.top + scroller.clientTop + scroller.clientHeight,
       right: sr.left + scroller.clientLeft + scroller.clientWidth,
     };
     const buttons = Array.from(scroller.querySelectorAll('button'));
@@ -181,17 +188,26 @@ async function assertLeadIn(page: Page, label: string, ex: Expectation): Promise
   }
   const titles = [ex.first, ...(ex.anHourLater ? [ex.anHourLater] : [])];
   const g = await measure(page, titles);
+  const inner = (page.viewportSize()?.width ?? 0) >= 1024;
   const first = g.chips[ex.first];
   expect(first, `${label}: first timed chip "${ex.first}" is not rendered`).toBeTruthy();
   const c = first as Rect;
   const note = `head bottom ${g.head.bottom.toFixed(1)}, chip ${c.top.toFixed(1)}-${c.bottom.toFixed(1)}, scroller ${g.scroller.top.toFixed(1)}-${g.scroller.bottom.toFixed(1)}, scrollTop ${g.scrollTop}/${g.maxScrollTop}`;
 
-  // 0. The head really is pinned at the top of the scroller (otherwise "below
-  //    the head" would be measuring nothing).
-  expect(g.head.top, `${label}: the head is not pinned at the scroller's top (${note})`).toBeCloseTo(
-    g.scroller.top,
-    0
-  );
+  // 0. The head really is pinned (otherwise "below the head" would be
+  //    measuring nothing): at lg+ it sits directly on top of the grid's own
+  //    scroller; below lg the PAGE scrolled and the head is stuck under the
+  //    60px app header.
+  if (inner) {
+    expect(g.head.bottom, `${label}: the head is not on top of the grid scroller (${note})`).toBeCloseTo(
+      g.scroller.top,
+      0
+    );
+  } else {
+    expect(g.head.top, `${label}: the head is not stuck under the app header (${note})`).toBeCloseTo(60, 0);
+    expect(g.scrollTop, `${label}: the grid box scrolled on a phone (${note})`).toBe(0);
+    expect(g.maxScrollTop, `${label}: the grid box has its own vertical scroll (${note})`).toBe(0);
+  }
 
   // 1. Entirely below the pinned head, entirely inside the scroller.
   expect(c.top, `${label}: first chip is UNDER the pinned head (${note})`).toBeGreaterThanOrEqual(
@@ -350,4 +366,113 @@ test.describe('Week view: initial auto-scroll leaves the lead-in visible below t
       }
     });
   }
+});
+
+// ONE VERTICAL SCROLL ON A PHONE (owner 2026-11-10, iPhone Safari dark): the
+// timed grid used to be a `max-h-[70vh]` scroll box inside the scrolling page,
+// so the user scrolled the card AND the page. Below lg the grid now lays out at
+// full height, the page is the only vertical scroll, the head (day headers +
+// all-day row) stays stuck under the app header, and the week still pans
+// sideways INSIDE the card (~2 day columns fit), never the page.
+test.describe('Week view at iPhone width: the page is the only vertical scroll', () => {
+  test('390x844: no inner vertical scroll, page scrolls, head pinned and aligned, last row clears the nav pill', async ({
+    page,
+    request,
+    account,
+  }) => {
+    test.slow();
+    const session = await apiSession(request, account);
+    const circleId = await createCircle(session, `one scroll ${uniqueSuffix()}`);
+    try {
+      const tz = await circleTimezone(session, circleId);
+      const today = dateInTz(tz, 0);
+      const sunday = addDaysISO(today, -dayOfWeek(today));
+      const tag = uniqueSuffix();
+      await appointment(session, circleId, `${PREFIX}bathe_${tag}`, sunday, '13:00');
+      await appointment(session, circleId, `${PREFIX}late_${tag}`, addDaysISO(sunday, 1), '23:00');
+      await allDayTask(session, circleId, `${PREFIX}task_${tag}`, sunday);
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await gotoCalendarSettled(page, circleId);
+      await waitForScrollSettled(page);
+
+      const g = await page.evaluate(() => {
+        const scroller = document.querySelector('[data-testid="week-scroller"]') as HTMLElement;
+        const doc = document.scrollingElement as HTMLElement;
+        return {
+          innerScrollHeight: scroller.scrollHeight,
+          innerClientHeight: scroller.clientHeight,
+          innerScrollWidth: scroller.scrollWidth,
+          innerClientWidth: scroller.clientWidth,
+          docScrollHeight: doc.scrollHeight,
+          docClientHeight: doc.clientHeight,
+          docScrollWidth: doc.scrollWidth,
+          docClientWidth: doc.clientWidth,
+          docScrollTop: doc.scrollTop,
+        };
+      });
+      // No inner vertical scroll: the grid box is exactly as tall as its content.
+      expect(g.innerScrollHeight, JSON.stringify(g)).toBe(g.innerClientHeight);
+      // The opening scroll moved the PAGE (13:00 is far below the fold), and the page has room to scroll.
+      expect(g.docScrollHeight, JSON.stringify(g)).toBeGreaterThan(g.docClientHeight);
+      expect(g.docScrollTop, JSON.stringify(g)).toBeGreaterThan(0);
+      // The week pans sideways inside the card; the page never scrolls sideways.
+      expect(g.innerScrollWidth, JSON.stringify(g)).toBeGreaterThan(g.innerClientWidth);
+      expect(g.docScrollWidth, JSON.stringify(g)).toBeLessThanOrEqual(g.docClientWidth);
+
+      // document.scrollingElement really scrolls (not just "is tall").
+      const moved = await page.evaluate(() => {
+        const doc = document.scrollingElement as HTMLElement;
+        doc.scrollTo({ top: 0, behavior: 'instant' });
+        const before = doc.scrollTop;
+        doc.scrollTo({ top: 600, behavior: 'instant' });
+        return { before, after: doc.scrollTop };
+      });
+      expect(moved.before).toBe(0);
+      expect(moved.after).toBe(600);
+
+      // Mid-page the head is stuck under the 60px app header.
+      const headTop = await page.getByTestId('week-pinned-head').evaluate((el) => el.getBoundingClientRect().top);
+      expect(headTop).toBeCloseTo(60, 0);
+
+      // Pan the grid one column: the head pans with it, so Monday's header sits over Monday's column.
+      const monday = addDaysISO(sunday, 1);
+      await page.getByTestId('week-scroller').evaluate((el) => {
+        el.scrollTo({ left: 400, behavior: 'instant' });
+      });
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const head = document.querySelector('[data-testid="week-head-scroller"]') as HTMLElement;
+            const grid = document.querySelector('[data-testid="week-scroller"]') as HTMLElement;
+            return grid.scrollLeft > 0 && head.scrollLeft === grid.scrollLeft;
+          })
+        )
+        .toBe(true);
+      const align = await page.evaluate((day) => {
+        const heads = Array.from(
+          document.querySelectorAll('[data-testid="week-pinned-head"] [role="columnheader"]')
+        ) as HTMLElement[];
+        // Header 0 is the time-rail corner; day columns follow in order.
+        const cols = Array.from(
+          document.querySelectorAll('[data-testid="week-scroller"] [role="gridcell"]')
+        ) as HTMLElement[];
+        const i = cols.findIndex((c) => c.dataset.date === day);
+        return { head: heads[i + 1].getBoundingClientRect().left, col: cols[i].getBoundingClientRect().left };
+      }, monday);
+      expect(align.head).toBeCloseTo(align.col, 0);
+
+      // At the page's end the grid's last row clears the floating nav pill.
+      const bottom = await page.evaluate(() => {
+        const doc = document.scrollingElement as HTMLElement;
+        doc.scrollTo({ top: doc.scrollHeight, behavior: 'instant' });
+        const grid = document.querySelector('[data-testid="week-scroller"]') as HTMLElement;
+        const nav = document.querySelector('[data-testid="floating-nav"]') as HTMLElement | null;
+        return { gridBottom: grid.getBoundingClientRect().bottom, navTop: nav ? nav.getBoundingClientRect().top : window.innerHeight };
+      });
+      expect(bottom.gridBottom, JSON.stringify(bottom)).toBeLessThanOrEqual(bottom.navTop);
+    } finally {
+      await archiveCircle(session, circleId);
+    }
+  });
 });

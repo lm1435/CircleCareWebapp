@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
@@ -305,6 +305,124 @@ describe('WeekView opening scroll offset', () => {
   it('has nothing to scroll to when the earliest event is within the first hour', () => {
     headIsTall(111);
     expect(openScrollTop(['00:30'])).toBe(0);
+  });
+});
+
+// Owner 2026-11-10 (iPhone Safari): the timed grid was a `max-h-[70vh]
+// overflow-auto` box inside the scrolling page — a double vertical scroll.
+// Below lg the grid now lays out at full height and the PAGE is the only
+// vertical scroll; the head pins to the page under the 60px app header. jsdom
+// has no layout, so this pins the class contract and the scroll arithmetic;
+// the real geometry is proved by e2e/flows/calendar-initial-scroll.spec.ts.
+describe('WeekView: one vertical scroll (the page) below lg', () => {
+  const eightAm = new Map([
+    [
+      '2026-03-16',
+      [{ ...makeAllDayTask('m1', 'Med', '2026-03-16'), event_type: 'medication' as const, scheduled_time: '08:00' }],
+    ],
+  ]);
+
+  function renderWeek() {
+    return render(
+      <WeekView
+        days={DAYS}
+        eventsByDay={eightAm}
+        careRecipientTimezone="America/Chicago"
+        todayStr={TODAY}
+        onEventClick={vi.fn()}
+      />
+    );
+  }
+
+  /** Stub `matchMedia` so the lg (64rem) query answers `wide`. */
+  function viewportIsWide(wide: boolean): void {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(min-width: 64rem)' ? wide : false,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }))
+    );
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('the grid has no unprefixed fixed height or vertical scroller; both are lg-only', () => {
+    const { container } = renderWeek();
+    const scroller = container.querySelector('[data-testid="week-scroller"]') as HTMLElement;
+    const classes = scroller.className.split(/\s+/);
+    // Base (phone) classes: horizontal pan only.
+    expect(classes).toContain('overflow-x-auto');
+    for (const banned of ['overflow-auto', 'overflow-y-auto', 'overflow-y-scroll', 'overflow-scroll']) {
+      expect(classes).not.toContain(banned);
+    }
+    expect(classes.filter((c) => /^(max-h|h)-/.test(c))).toEqual([]);
+    expect(scroller.getAttribute('style') ?? '').not.toMatch(/height/);
+    // Desktop keeps its capped scroller.
+    expect(classes).toEqual(expect.arrayContaining(['lg:max-h-[70vh]', 'lg:overflow-y-auto']));
+  });
+
+  it('the head pins to the PAGE: sticky under the app header, outside the grid scroller, in an overflow-clip card', () => {
+    const { container } = renderWeek();
+    const scroller = container.querySelector('[data-testid="week-scroller"]') as HTMLElement;
+    const head = container.querySelector('[data-testid="week-pinned-head"]') as HTMLElement;
+    expect(head.className.split(/\s+/)).toEqual(expect.arrayContaining(['sticky', 'top-[60px]']));
+    expect(scroller.contains(head)).toBe(false);
+    // `overflow-hidden` on ANY ancestor up to the card would make that the
+    // sticky head's scroll container and pin it to the card instead.
+    const grid = screen.getByRole('grid');
+    for (let el: HTMLElement | null = head.parentElement; el && el !== grid.parentElement; el = el.parentElement) {
+      expect(el.className).not.toMatch(/(^|\s)overflow-(hidden|auto|scroll)(\s|$)/);
+    }
+    expect(grid.className).toMatch(/(^|\s)overflow-clip(\s|$)/);
+  });
+
+  it('phone: the opening scroll moves the PAGE (window.scrollTo), never the grid box', () => {
+    viewportIsWide(false);
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const realStyle = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((el: Element) =>
+      (el as HTMLElement).dataset?.testid === 'week-pinned-head'
+        ? ({ top: '60px' } as CSSStyleDeclaration)
+        : realStyle(el)
+    );
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const id = this.dataset.testid;
+      if (id === 'week-pinned-head') return { top: 200, height: 100 } as DOMRect;
+      if (id === 'week-scroller') return { top: 300, height: 1920 } as DOMRect;
+      return { top: 0, height: 0 } as DOMRect;
+    });
+    const { container } = renderWeek();
+    const scroller = container.querySelector('[data-testid="week-scroller"]') as HTMLElement;
+    // grid's page offset 300 + lead-in (8 - 1) * 80 - stuck head bottom (60 + 100).
+    expect(scrollTo).toHaveBeenCalledWith({ top: 300 + 7 * 80 - 160, behavior: 'instant' });
+    expect(scroller.scrollTop).toBe(0);
+  });
+
+  it('lg+: the opening scroll stays inside the grid box and leaves the page alone', () => {
+    viewportIsWide(true);
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const { container } = renderWeek();
+    const scroller = container.querySelector('[data-testid="week-scroller"]') as HTMLElement;
+    expect(scroller.scrollTop).toBe(7 * 80);
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('panning the grid sideways pans the head with it (and back)', () => {
+    const { container } = renderWeek();
+    const scroller = container.querySelector('[data-testid="week-scroller"]') as HTMLElement;
+    const headScroller = container.querySelector('[data-testid="week-head-scroller"]') as HTMLElement;
+    scroller.scrollLeft = 240;
+    fireEvent.scroll(scroller);
+    expect(headScroller.scrollLeft).toBe(240);
+    headScroller.scrollLeft = 480;
+    fireEvent.scroll(headScroller);
+    expect(scroller.scrollLeft).toBe(480);
   });
 });
 
