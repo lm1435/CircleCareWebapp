@@ -1,6 +1,7 @@
+import { PageMasthead } from '@/components/layout/PageMasthead';
 import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
-import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -771,7 +772,7 @@ export default function ProfilePage(): ReactElement {
               {t('settingsList.title')}
             </Eyebrow>
             <div className="flex items-center gap-1">
-              <Text variant="heroName" className="min-w-0 break-words">
+              <Text variant="sheetTitle" as="h1" className="min-w-0">
                 {fullName || t('account.namePlaceholder')}
               </Text>
               <button
@@ -805,21 +806,17 @@ export default function ProfilePage(): ReactElement {
   // ── One settings page ──────────────────────────────────────────────────
   return (
     <section
-      className="mx-auto w-full max-w-2xl p-6 md:p-8"
+      className="mx-auto w-full max-w-2xl pb-6 md:pb-8"
       data-testid={`settings-page-${section}`}
     >
-      <Link
-        to="/profile"
-        className="-ml-2 inline-flex min-h-11 items-center gap-1 rounded-full px-2 text-sm font-medium text-ink-2 transition-colors duration-fast hover:bg-bg-2 hover:text-ink"
-      >
-        <Icon name="chevron-back" size="inline" />
-        {t('settingsList.title')}
-      </Link>
-      <Text variant="h1" as="h1" className="mt-1">
-        {pageTitles[section]}
-      </Text>
+      <PageMasthead
+        section={t('settingsList.title')}
+        tone="ink-3"
+        title={pageTitles[section]}
+        backTo="/profile"
+      />
 
-      <div className="mt-6">
+      <div className="px-5">
         {/* ── Subscription ──────────────────────────────────────────────── */}
         {section === 'subscription' ? <SubscriptionSection hideTitle /> : null}
 

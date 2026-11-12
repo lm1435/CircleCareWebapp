@@ -1,10 +1,10 @@
 import { type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eyebrow, Text } from '@/components/ui';
+import { PageMasthead } from '@/components/layout/PageMasthead';
 import { getDateInTimezone } from '@/utils/timezone';
 
 // The Today header (docs/plans/simple-ui-1-3-1.md; hi-fi HiToday): a
-// "● WEDNESDAY, OCTOBER 28" eyebrow over "Today for {{name}}". It replaces the
+// "WEDNESDAY, OCTOBER 28" eyebrow over "Today for {{name}}". It replaces the
 // old avatar / DOB / "Cared for by" hero: Today is for doing, and the circle's
 // people live on Members.
 
@@ -45,17 +45,11 @@ export function Hero({ recipientName, isSelfCare = false, recipientTimezone }: H
   const title = isSelfCare || !recipientName ? t('today.titleSelf') : t('today.title', { name: recipientName });
 
   return (
-    <header className="px-5 pt-5 pb-4" data-testid="overview-hero">
-      {eyebrow ? (
-        <Eyebrow dot className="block mb-1">
-          {eyebrow}
-        </Eyebrow>
-      ) : null}
-      {/* NEVER truncated: a long name wraps onto a second line. */}
-      <Text variant="heroName" className="break-words">
-        {title}
-      </Text>
-    </header>
+    // The same masthead every page wears: muted date eyebrow over the 32/600 title.
+    // NEVER truncated: a long name wraps onto a second line.
+    <div data-testid="overview-hero">
+      <PageMasthead section={eyebrow ?? ''} tone="ink-3" title={title} />
+    </div>
   );
 }
 

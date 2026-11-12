@@ -96,7 +96,7 @@ export function PreviewActivityStep({ headingId }: PreviewActivityStepProps): Re
 
   return (
     <div>
-      <Text variant="authTitle" id={headingId} tabIndex={-1} className="outline-none">
+      <Text variant="pageTitle" id={headingId} tabIndex={-1} className="outline-none">
         {t('activity:title')}
       </Text>
       <Text variant="bodyMedium" className="mt-2.5 text-ink-2!">

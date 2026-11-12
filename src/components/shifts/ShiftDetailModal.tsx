@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Avatar, Button, Card, Eyebrow, Modal } from '@/components/ui';
+import { Avatar, Button, Card, Eyebrow, Modal, Text } from '@/components/ui';
 import { useCircle } from '@/hooks/useCircle';
 import { canWriteShifts, resolveShiftsEntry } from '@/lib/shiftsAccess';
 import { useHourCycle } from '@/hooks/useHourCycle';
@@ -26,7 +26,6 @@ import { holdsOnlyThisDay,
 } from './shiftUtils';
 
 /** Titles longer than this step down from the large title size (the approved mock's rule, mobile's too). */
-const LONG_TITLE_CHARS = 14;
 
 export type ShiftDetailAction = 'take' | 'drop' | 'assign' | 'edit' | 'delete' | 'addTask';
 
@@ -99,7 +98,6 @@ export function ShiftDetailModal({
 
   // ONE filled button per screen: on an open shift that is Take, so the list fills no Done.
   const showTake = canWrite && open && !ended && canCoverShifts(members, viewerId);
-  const longTitle = shift.title.length > LONG_TITLE_CHARS;
   const whenDate = formatDateForDisplay(shift.scheduled_date, {
     weekday: 'short',
     month: 'short',
@@ -147,13 +145,15 @@ export function ShiftDetailModal({
       data-testid="shift-detail-header"
       className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5"
     >
-      <p
+      <Text
+        variant="sheetTitle"
+        as="p"
         aria-hidden="true"
         data-testid="shift-detail-title"
-        className={`m-0 min-w-0 break-words font-semibold leading-tight text-ink ${longTitle ? 'text-lg' : 'text-xl'}`}
+        className="min-w-0"
       >
         {shift.title}
-      </p>
+      </Text>
       {chip}
     </div>
   );

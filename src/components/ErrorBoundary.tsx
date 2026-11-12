@@ -64,11 +64,11 @@ function ErrorFallback({ onRetry }: { onRetry: () => void }): ReactNode {
     >
       <span
         aria-hidden="true"
-        className="flex h-16 w-16 items-center justify-center rounded-full bg-terracotta-soft text-2xl font-bold text-terracotta-deep"
+        className="flex h-16 w-16 items-center justify-center rounded-full bg-terracotta-soft text-lg font-bold text-terracotta-deep"
       >
         !
       </span>
-      <Text variant="h1">{t('errorBoundary.title')}</Text>
+      <Text variant="pageTitle">{t('errorBoundary.title')}</Text>
       <p className="m-0 max-w-md text-ink-3">{t('errorBoundary.message')}</p>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
         <Button variant="primary" onClick={onRetry}>

@@ -175,12 +175,10 @@ describe.each([
     const cls = span.className.split(/\s+/);
     expect(cls).toContain('text-coral');
     expect(cls).toContain('block');
-    expect(cls).toContain('font-semibold');
-    expect(cls).toContain('text-[length:32px]');
-    // Mobile's proportion: accent 24 / lead 32 = 0.75. Lead is editorialTitle 42px.
-    expect(h1.className).toContain('text-[42px]');
-    expect(32 / 42).toBeGreaterThanOrEqual(0.7);
-    expect(32 / 42).toBeLessThanOrEqual(0.8);
+    // The accent inherits the ONE page title (32/600) from the h1: no size or weight of its own.
+    expect(cls.some((c) => c.startsWith('text-[') || c === 'text-xl' || c === 'text-2xl')).toBe(false);
+    expect(h1.className).toContain('text-xl');
+    expect(h1.className).toContain('font-semibold');
     expect(h1.className.split(/\s+/)).toContain('text-balance');
     expect(h1.className.split(/\s+/)).toContain('text-ink');
   });

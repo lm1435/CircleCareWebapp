@@ -289,7 +289,7 @@ describe('ProfilePage settings list', () => {
     expect(screen.queryByTestId('settings-group-you')).toBeNull();
     expect(screen.queryByTestId('profile-header')).toBeNull();
 
-    await user.click(screen.getByRole('link', { name: 'Settings' }));
+    await user.click(screen.getByRole('link', { name: 'Back' }));
     expect(screen.getByTestId('location')).toHaveTextContent(/^\/profile$/);
     expect(await screen.findByTestId('settings-group-you')).toBeInTheDocument();
   });

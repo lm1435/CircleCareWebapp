@@ -2,12 +2,9 @@ import { render, screen } from '@testing-library/react';
 import { Text, TEXT_CLASS, type TextVariant } from '../Text';
 
 const EXPECTED_TAG: Record<TextVariant, string> = {
-  editorialTitle: 'H1',
-  editorialTitleCompact: 'H1',
-  display: 'H1',
-  h1: 'H1',
-  heroName: 'H1',
-  authTitle: 'H1',
+  pageTitle: 'H1',
+  sheetTitle: 'H2',
+  pageSubtitle: 'P',
   h2: 'H2',
   sectionTitle: 'H2',
   h3: 'H3',
@@ -29,7 +26,7 @@ const VARIANTS = Object.keys(TEXT_CLASS) as TextVariant[];
 
 // Audit 2026-11-07 #16: headings wrap balanced (no one-word last line).
 describe('Text heading balance', () => {
-  const HEADINGS: TextVariant[] = ['editorialTitle', 'editorialTitleCompact', 'display', 'h1', 'authTitle', 'h2', 'sectionTitle', 'h3', 'h4'];
+  const HEADINGS: TextVariant[] = ['pageTitle', 'sheetTitle', 'h2', 'sectionTitle', 'h3', 'h4'];
   for (const variant of HEADINGS) {
     it(`${variant} wraps balanced`, () => {
       expect(TEXT_CLASS[variant].split(' ')).toContain('text-balance');
@@ -42,7 +39,7 @@ describe('Text heading balance', () => {
 
 describe('Text', () => {
   it('covers every variant in the scale (spec §4.2)', () => {
-    expect(VARIANTS).toHaveLength(21);
+    expect(VARIANTS).toHaveLength(18);
     expect(Object.keys(EXPECTED_TAG).sort()).toEqual([...VARIANTS].sort());
   });
 
@@ -110,24 +107,30 @@ describe('Text', () => {
     expect(TEXT_CLASS.eyebrow).toContain('tracking-[1.2px]');
   });
 
-  it('editorialTitle is the 42px / -1.2px editorial head', () => {
-    expect(TEXT_CLASS.editorialTitle).toContain('text-[42px]');
-    expect(TEXT_CLASS.editorialTitle).toContain('leading-[46px]');
-    expect(TEXT_CLASS.editorialTitle).toContain('tracking-[-1.2px]');
-    expect(TEXT_CLASS.editorialTitle).toContain('font-semibold');
+  it('pageTitle is the ONE 32/600/38 title with -0.6px tracking, wrapping not truncating', () => {
+    const cls = TEXT_CLASS.pageTitle.split(' ');
+    expect(cls).toEqual(
+      expect.arrayContaining(['text-xl', 'font-semibold', 'leading-[38px]', 'tracking-[-0.6px]', 'text-ink', 'break-words'])
+    );
+    expect(TEXT_CLASS.pageTitle).not.toMatch(/truncate|line-clamp|overflow-hidden/);
   });
 
-  // L3: `PageMasthead`'s `compact` prop selects this variant instead of
-  // layering an override className onto `editorialTitle` — the override
-  // approach silently lost to the base variant's own classes in the compiled
-  // stylesheet's cascade order.
-  it('editorialTitleCompact is the 32px / -1.2px compact editorial head, distinct from editorialTitle', () => {
-    expect(TEXT_CLASS.editorialTitleCompact).toContain('text-[32px]');
-    expect(TEXT_CLASS.editorialTitleCompact).toContain('leading-[35px]');
-    expect(TEXT_CLASS.editorialTitleCompact).toContain('tracking-[-1.2px]');
-    expect(TEXT_CLASS.editorialTitleCompact).toContain('font-semibold');
-    expect(TEXT_CLASS.editorialTitleCompact).not.toContain('text-[42px]');
-    expect(TEXT_CLASS.editorialTitleCompact).not.toContain('leading-[46px]');
+  it('sheetTitle is the 24/600/30 second level', () => {
+    const cls = TEXT_CLASS.sheetTitle.split(' ');
+    expect(cls).toEqual(
+      expect.arrayContaining(['text-lg', 'font-semibold', 'leading-[30px]', 'tracking-[-0.3px]', 'break-words'])
+    );
+  });
+
+  it('pageSubtitle is 16/500/22 in secondary ink', () => {
+    const cls = TEXT_CLASS.pageSubtitle.split(' ');
+    expect(cls).toEqual(expect.arrayContaining(['text-md', 'font-medium', 'leading-[22px]', 'text-ink-2']));
+  });
+
+  it('the retired title variants are gone', () => {
+    for (const name of ['editorialTitle', 'editorialTitleCompact', 'display', 'h1', 'heroName', 'authTitle']) {
+      expect(Object.keys(TEXT_CLASS)).not.toContain(name);
+    }
   });
 
   it('carries no serif face on any variant', () => {

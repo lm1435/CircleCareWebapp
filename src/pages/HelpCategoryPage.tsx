@@ -48,7 +48,7 @@ export default function HelpCategoryPage(): ReactElement {
         <title>{`${group.label} · CircleCare`}</title>
       </Helmet>
       {backLink}
-      <Text variant="editorialTitle" as="h1">
+      <Text variant="pageTitle" as="h1">
         {group.label}
       </Text>
       <div className="mt-6">

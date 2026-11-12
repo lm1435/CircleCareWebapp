@@ -61,7 +61,7 @@ function useActionGuard(): (action: MastheadAction) => {
 }
 
 export interface PageMastheadProps {
-  /** Translated section name for the eyebrow (e.g. "Care", "Health"). */
+  /** Translated section name for the eyebrow (e.g. "Care", "Health"). Empty renders no eyebrow. */
   section: string;
   tone: MastheadTone;
   title: string;
@@ -76,10 +76,8 @@ export interface PageMastheadProps {
    * a `rightAction` — a lone secondary action is just the right action.
    */
   secondaryAction?: MastheadAction;
-  /** Calendar header density: subtitle 4 under the title, 18 above what follows; reserves its lines so swapping text never moves the controls. */
+  /** Calendar header density: reserves the subtitle's lines so swapping text never moves the controls. */
   tight?: boolean;
-  /** 32/600 title instead of 42/600, for titles that would wrap to three lines. */
-  compact?: boolean;
   /**
    * Rendered LEFT of the title, in the same row — the person's avatar on a
    * page that is about one person (Circle settings, Profile). The title wraps
@@ -107,7 +105,7 @@ const SPACER_WIDE = 'flex h-11 w-[96px] shrink-0 items-center gap-2';
  * bar plus its editorial header).
  *
  * Row 1 is the 44-tall chrome strip: back · section eyebrow · right action.
- * Row 2 is the editorial block: 42/600 title, then the subtitle.
+ * Row 2 is the editorial block: 32/600 `pageTitle`, then the 16/500 `pageSubtitle`.
  *
  * The right action renders TWICE by design. Below xl it is mobile's icon-only
  * `CircleButton` in the chrome strip; from xl up that same action reappears on
@@ -123,7 +121,6 @@ export function PageMasthead({
   backTo,
   rightAction,
   secondaryAction: secondaryActionProp,
-  compact = false,
   tight = false,
   leading,
   children,
@@ -154,9 +151,13 @@ export function PageMasthead({
         {/* One accent (owner 2026-11-07): the eyebrow is decoration, so it is muted ink in every
             section; `tone` no longer paints it (kept on the API so callers name their section).
             Left-aligned (flex-1) so it sits over the left-aligned title; no dot. */}
-        <Eyebrow as="p" data-tone={tone} className="min-w-0 flex-1 text-left">
-          {section}
-        </Eyebrow>
+        {section ? (
+          <Eyebrow as="p" data-tone={tone} className="min-w-0 flex-1 text-left">
+            {section}
+          </Eyebrow>
+        ) : (
+          <span className="flex-1" />
+        )}
 
         {/* `data-print-hide`: actions are chrome, never part of a printed
             sheet (spec §6.6) — print.css hides the whole header anyway, the
@@ -197,20 +198,17 @@ export function PageMasthead({
           separates the two — the full 28 read as a hole between them.
           px-5, the gutter every masthead page pads its content with: at px-7
           the title and the labelled action sat 8px inside the content edges. */}
-      <div className={`px-5 pt-4 ${tight ? 'pb-[18px]' : 'pb-5'}`}>
+      <div className="px-5 pt-2 pb-4">
         <div className="flex items-start justify-between gap-4">
           {leading ? (
             <div className="flex min-w-0 items-center gap-4">
               <span className="shrink-0">{leading}</span>
-              <Text
-                variant={compact ? 'editorialTitleCompact' : 'editorialTitle'}
-                className="min-w-0 break-words"
-              >
+              <Text variant="pageTitle" className="min-w-0">
                 {title}
               </Text>
             </div>
           ) : (
-            <Text variant={compact ? 'editorialTitleCompact' : 'editorialTitle'}>{title}</Text>
+            <Text variant="pageTitle">{title}</Text>
           )}
           {/* Labelled desktop action. The `hidden` lives on a WRAPPER: on the Button
               itself it lost the cascade to Button's own `inline-flex` (Tailwind emits
@@ -272,14 +270,13 @@ export function PageMasthead({
           )}
         </div>
         {subtitle && (
-          <p
+          <Text
+            variant="pageSubtitle"
             data-testid="page-subtitle"
-            className={`text-md font-medium leading-[22.5px] text-ink ${
-              tight ? 'mt-1 min-h-[45px] min-[560px]:min-h-[22.5px]' : 'mt-3.5'
-            }`}
+            className={`mt-1 ${tight ? 'min-h-[44px] min-[560px]:min-h-[22px]' : ''}`}
           >
             {subtitle}
-          </p>
+          </Text>
         )}
       </div>
 

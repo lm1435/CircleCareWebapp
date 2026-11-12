@@ -32,7 +32,7 @@ export default function HelpPage(): ReactElement {
 
   return (
     <section className="mx-auto w-full max-w-2xl p-6 md:p-8">
-      <Text variant="editorialTitle">{t('title')}</Text>
+      <Text variant="pageTitle">{t('title')}</Text>
       <p className="mt-3.5 text-md font-medium text-ink">{t('subtitle')}</p>
 
       {/* In-app help center: search, Popular and categories over the bundled

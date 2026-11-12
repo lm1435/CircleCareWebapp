@@ -178,7 +178,7 @@ describe('CirclePickerPage', () => {
 
   // The greeting used to be an uppercase-tracked eyebrow with a leading dot
   // (spec §6.2 removes both) — it is now a plain small label paragraph, and
-  // the name renders in the shared `editorialTitle` type variant.
+  // the name renders in the shared `pageTitle` type variant.
   it('renders the greeting as a plain label, not an eyebrow, above the editorial name', async () => {
     useAuthStore.setState({
       user: { id: 'user-1', email: 'u@example.com', first_name: 'Rose' } as never,
@@ -198,7 +198,7 @@ describe('CirclePickerPage', () => {
     expect(greeting.className).toContain('text-ink-3');
 
     const name = screen.getByRole('heading', { name: 'Rose' });
-    expect(name.className).toContain('text-[42px]');
+    expect(name.className).toContain('text-xl');
   });
 
   // Two circles never auto-skip — the grid is the landing state.

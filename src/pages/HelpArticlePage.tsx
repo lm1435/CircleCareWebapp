@@ -71,10 +71,12 @@ export default function HelpArticlePage(): ReactElement {
         <title>{`${article.title} · CircleCare`}</title>
       </Helmet>
       {backLink}
-      <Text variant="editorialTitleCompact" as="h1">
+      <Text variant="pageTitle" as="h1">
         {article.title}
       </Text>
-      <p className="m-0 mt-3 text-md font-medium text-ink">{article.summary}</p>
+      <Text variant="pageSubtitle" className="mt-1">
+        {article.summary}
+      </Text>
 
       {article.video && (
         <div className="mt-5">

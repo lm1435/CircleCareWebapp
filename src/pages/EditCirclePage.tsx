@@ -243,7 +243,6 @@ export default function EditCirclePage(): ReactElement {
         section={t('common:nav.settings')}
         tone="moss"
         title={t('edit.titleNamed', { name: circle.recipient_name })}
-        compact
         leading={
           <span className="inline-flex rounded-full ring-4 ring-cream" data-testid="edit-circle-photo">
             <Avatar size="lg" name={circle.recipient_name} photoUrl={circle.recipient_photo_url} />

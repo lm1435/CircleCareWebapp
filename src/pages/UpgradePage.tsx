@@ -681,9 +681,9 @@ function PlansView({
           Accent = coral #C65D54 on the #FBF9F5 page = 3.9:1; allowed ONLY
           because it is >= 24px semibold (WCAG large text, >= 3:1); 32px = 0.75 x the 42px lead (mobile 24/32) at every
           breakpoint -- never shrink it (ADA rule: coral is not small text). */}
-      <Text variant="editorialTitle" as="h1" className="mt-5 text-balance">
+      <Text variant="pageTitle" as="h1" className="mt-5">
         {headline.lead}{' '}
-        <span data-headline-accent="" className="block text-[length:32px] font-semibold leading-[36px] text-coral">
+        <span data-headline-accent="" className="block text-coral">
           {headline.accent}
         </span>
       </Text>
@@ -969,7 +969,7 @@ function PlanOption({
       </div>
 
       <p className="m-0 mt-4 flex items-baseline gap-1.5">
-        <Text variant="editorialTitle" as="span">
+        <Text variant="pageTitle" as="span">
           {price}
         </Text>
         <Text variant="caption" as="span" className="text-ink-2!">

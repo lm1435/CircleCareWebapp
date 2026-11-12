@@ -11,7 +11,7 @@ export interface AuthHeaderProps {
 export function AuthHeader({ title, subtitle }: AuthHeaderProps): ReactElement {
   return (
     <div className="mb-7">
-      <Text variant="authTitle">{title}</Text>
+      <Text variant="pageTitle">{title}</Text>
       {subtitle ? (
         <Text variant="body" className="mt-3 text-ink-2!">
           {subtitle}

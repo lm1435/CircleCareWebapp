@@ -152,7 +152,6 @@ export default function DailyUpdatePage(): ReactElement {
         tone="moss"
         title={title}
         backTo={`/circles/${circleId}`}
-        compact
       />
       {nav && !viewerIsRecipient ? (
         <div className="px-5 pb-1">

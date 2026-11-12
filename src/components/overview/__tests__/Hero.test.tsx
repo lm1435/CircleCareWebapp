@@ -35,7 +35,7 @@ describe('Hero (Today header)', () => {
 
   it('waits for the recipient zone before drawing the date eyebrow', () => {
     render(<Hero recipientName="Mom" recipientTimezone={null} />);
-    expect(screen.getByTestId('overview-hero').querySelectorAll('p,span').length).toBe(0);
+    expect(screen.getByTestId('overview-hero').querySelectorAll('p').length).toBe(0);
   });
 
   describe('formatTodayEyebrow', () => {

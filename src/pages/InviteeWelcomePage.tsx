@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, Eyebrow } from '@/components/ui';
+import { TEXT_CLASS } from '@/components/ui/Text';
 import { useAuth } from '@/hooks/useAuth';
 import { Analytics } from '@/lib/analytics';
 import {
@@ -85,11 +86,11 @@ export default function InviteeWelcomePage(): ReactElement {
         <Eyebrow dot>
           {t('welcome.eyebrow')}
         </Eyebrow>
-        {/* Plain h1 (the display style) so the ref + tabIndex reach the DOM node. */}
+        {/* Plain h1 (the pageTitle style) so the ref + tabIndex reach the DOM node. */}
         <h1
           ref={headingRef}
           tabIndex={-1}
-          className="m-0 text-balance text-2xl font-bold leading-tight tracking-tight text-ink outline-none"
+          className={`${TEXT_CLASS.pageTitle} m-0 outline-none`}
         >
           {title}
         </h1>

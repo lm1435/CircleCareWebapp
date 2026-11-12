@@ -1,7 +1,7 @@
 import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Avatar, Button, Card } from '@/components/ui';
+import { Avatar, Button, Card, Text } from '@/components/ui';
 
 export interface ShiftsEmptyStateProps {
   /** Present only for editors; read-only viewers see the copy without the button. */
@@ -19,7 +19,7 @@ export function ShiftsEmptyState({ onAdd }: ShiftsEmptyStateProps): ReactElement
           <Avatar name="B" size="md" bordered />
           <Avatar name="C" size="md" bordered />
         </div>
-        <h2 className="m-0 font-display text-xl font-medium text-ink">{t('empty.title')}</h2>
+        <Text variant="sheetTitle">{t('empty.title')}</Text>
         <p className="m-0 max-w-md text-sm text-ink-2">
           {t('empty.description')}
         </p>

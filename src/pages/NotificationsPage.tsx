@@ -356,7 +356,7 @@ export function InboxPage({ circleId }: InboxPageProps = {}): ReactElement {
                 <Icon name="arrow-back" size="chrome" />
               </Link>
               <div className="min-w-0 flex-1">
-                <Text variant="editorialTitleCompact" as={TitleTag}>
+                <Text variant="pageTitle" as={TitleTag}>
                   {t('inbox.title')}
                 </Text>
                 {headerFit.stacked ? markAllButton : null}
@@ -376,7 +376,7 @@ export function InboxPage({ circleId }: InboxPageProps = {}): ReactElement {
             </div>
           ) : (
             <>
-              <Text variant="editorialTitleCompact" as={TitleTag} className="-mt-1">
+              <Text variant="pageTitle" as={TitleTag} className="-mt-1">
                 {t('inbox.title')}
               </Text>
               {headerFit.stacked ? markAllButton : null}

@@ -41,37 +41,52 @@ describe('PageMasthead', () => {
   it('pads the title row on the same 20px gutter as the page content', () => {
     renderMasthead();
 
-    const row = screen.getByRole('heading', { level: 1, name: 'Calendar' }).closest('div.pb-5');
+    const row = screen.getByRole('heading', { level: 1, name: 'Calendar' }).closest('div.pb-4');
     expect(row).toHaveClass('px-5');
     expect(row).not.toHaveClass('px-7');
   });
 
-  it('renders the title as the editorial h1', () => {
+  it('renders the title as the pageTitle h1 (32/600/38)', () => {
     renderMasthead();
 
     const title = screen.getByRole('heading', { level: 1, name: 'Calendar' });
-    expect(title).toHaveClass('text-[42px]', 'font-semibold', 'leading-[46px]');
+    expect(title).toHaveClass('text-xl', 'font-semibold', 'leading-[38px]', 'tracking-[-0.6px]');
+    expect(title).not.toHaveClass('text-[42px]');
   });
 
-  // L3: `compact` used to APPEND `text-xl leading-[35px]` onto
-  // `editorialTitle`'s own `text-[42px] leading-[46px]` on the same element —
-  // Tailwind's compiled stylesheet ordered the 42px rule after the override,
-  // so it always won and `compact` silently did nothing. It now selects a
-  // dedicated `editorialTitleCompact` variant instead of layering classes, so
-  // there is no cascade for the bigger rule to win.
-  it('drops the title to the compact 32/600 size when asked', () => {
-    renderMasthead({ compact: true, title: 'Emergency Information' });
+  it('is one h1 whatever the title length: a long title wraps, never truncates', () => {
+    renderMasthead({ title: 'Emergency Information for Maria Guadalupe Hernandez', subtitle: 'x' });
 
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     const title = screen.getByRole('heading', { level: 1 });
-    expect(title).toHaveClass('text-[32px]', 'font-semibold', 'leading-[35px]');
-    expect(title).not.toHaveClass('text-[42px]');
-    expect(title).not.toHaveClass('leading-[46px]');
+    expect(title.className).toMatch(/break-words/);
+    expect(title.className).not.toMatch(/truncate|line-clamp/);
+  });
+
+  it('has no compact variant: the PageMasthead prop is gone', () => {
+    renderMasthead({ title: 'Emergency Information' });
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveClass('text-xl');
+  });
+
+  it('keeps the eyebrow out of the heading outline', () => {
+    renderMasthead();
+
+    expect(screen.getByText('Care').tagName).toBe('P');
+    expect(screen.queryByRole('heading', { name: 'Care' })).not.toBeInTheDocument();
+  });
+
+  it('renders no eyebrow element when the section is empty', () => {
+    renderMasthead({ section: '' });
+
+    expect(screen.queryByText('Care')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 
   it('renders the subtitle under the title', () => {
     renderMasthead({ subtitle: 'Rosa · 12 upcoming' });
 
-    expect(screen.getByText('Rosa · 12 upcoming')).toHaveClass('text-md', 'font-medium', 'text-ink');
+    expect(screen.getByText('Rosa · 12 upcoming')).toHaveClass('text-md', 'font-medium', 'text-ink-2', 'mt-1');
   });
 
   it('left-aligns the eyebrow over the left-aligned title: no leading spacer without backTo', () => {

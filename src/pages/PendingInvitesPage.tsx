@@ -179,10 +179,12 @@ export default function PendingInvitesPage(): ReactElement {
 
   return (
     <section className="mx-auto w-full max-w-4xl p-8">
-      <Text variant="h1">
+      <Text variant="pageTitle">
         {t('pending.heading')}
       </Text>
-      <p className="mt-2 text-ink-3">{t('pending.subheading')}</p>
+      <Text variant="pageSubtitle" className="mt-1">
+        {t('pending.subheading')}
+      </Text>
       {content}
       {hasInvites ? <p className="mt-6 text-sm text-ink-3">{t('pending.ignoreHint')}</p> : null}
     </section>

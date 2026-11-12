@@ -6,7 +6,7 @@ import type { CircleMember } from '@/api/circleMembers';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { isPlainLeftClick, readFromProviderId } from '@/lib/stackLoop';
 import { MapsLink } from '@/components/MapsLink';
-import { Badge, Card, Eyebrow, Modal } from '@/components/ui';
+import { Badge, Card, Eyebrow, Modal, Text } from '@/components/ui';
 import { DetailCard, DetailField, DetailSection, PersonChip } from '@/components/ui/DetailCard';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
@@ -37,7 +37,6 @@ function memberDisplayName(member: CircleMember): string {
 }
 
 /** Titles longer than this step down from the large title size (the shift detail's rule). */
-const LONG_TITLE_CHARS = 14;
 
 type RuleSource = Pick<CalendarEvent, 'recurrence_rule' | 'recurrence_days'>;
 
@@ -466,7 +465,6 @@ export function EventDetailModal({
   // and the person chip on ONE row when they fit; the chip wraps under a title that leaves no
   // room. The visible title is presentational: the dialog's sr-only <h2> (Modal `title`) names it.
   const dialogName = dosage ? `${title} ${dosage}` : title;
-  const longTitle = title.length > LONG_TITLE_CHARS;
   const header = (
     <div className="flex min-w-0 flex-col gap-1.5" data-testid="event-detail-header">
       <div className="flex flex-wrap items-center gap-2">
@@ -480,16 +478,18 @@ export function EventDetailModal({
         )}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5">
-        <p
+        <Text
+          variant="sheetTitle"
+          as="p"
           aria-hidden="true"
           data-testid="event-detail-title"
-          className={`m-0 min-w-0 break-words font-semibold leading-tight text-ink ${longTitle ? 'text-lg' : 'text-xl'}`}
+          className="min-w-0"
         >
           {title}
           {dosage ? (
             <span className="ml-2 align-baseline text-base font-normal text-ink-3">{dosage}</span>
           ) : null}
-        </p>
+        </Text>
         {chip}
       </div>
     </div>

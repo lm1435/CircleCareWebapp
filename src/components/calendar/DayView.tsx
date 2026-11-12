@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from 
 import { useTranslation } from 'react-i18next';
 import { shiftTaskMeta } from '@/components/shifts/shiftTasks';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Button, Card, CircleButton, EmptyState, Icon } from '@/components/ui';
+import { Button, Card, CircleButton, EmptyState, Icon, Text } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import {
   formatEventTimeCompact,
@@ -147,12 +147,9 @@ export function DayView({
     <section aria-label={t('calendar:dayViewLabel')} data-testid="day-view" className="tabular-nums">
       <div className="flex items-center gap-2 pb-4">
         <div className="min-w-0 flex-1">
-          <h2
-            data-testid="day-view-title"
-            className="m-0 font-display text-2xl font-medium tracking-[-0.3px] text-ink"
-          >
+          <Text variant="sheetTitle" as="h2" data-testid="day-view-title">
             {title}
-          </h2>
+          </Text>
           {subtitle && <p className="m-0 mt-0.5 text-sm text-ink-3">{subtitle}</p>}
           {summary && (
             <p data-testid="day-view-summary" className="m-0 mt-1 text-sm text-ink-2">

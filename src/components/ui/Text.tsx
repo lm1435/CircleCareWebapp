@@ -1,12 +1,9 @@
 import { createElement, type ElementType, type HTMLAttributes, type ReactNode } from 'react';
 
 export type TextVariant =
-  | 'editorialTitle'
-  | 'editorialTitleCompact'
-  | 'display'
-  | 'h1'
-  | 'heroName'
-  | 'authTitle'
+  | 'pageTitle'
+  | 'sheetTitle'
+  | 'pageSubtitle'
   | 'h2'
   | 'sectionTitle'
   | 'h3'
@@ -25,21 +22,13 @@ export type TextVariant =
 
 /** Spec §4.2. Values are mobile's Text.tsx StyleSheet, verbatim. */
 export const TEXT_CLASS: Record<TextVariant, string> = {
-  editorialTitle: 'text-[42px] font-semibold leading-[46px] tracking-[-1.2px] text-ink text-balance',
-  // L3: `compact` (a title long enough to wrap to three lines at 42px) used to
-  // render as `editorialTitle` PLUS an appended override className
-  // (`text-xl leading-[35px]`). Both class lists land on the same element, and
-  // Tailwind's compiled stylesheet orders utilities by declaration order in
-  // the SOURCE FILES it scanned — `editorialTitle`'s `text-[42px]` here is
-  // declared after `compact`'s override was ever authored elsewhere, so it
-  // always won the cascade and `compact` was a silent no-op. A distinct
-  // variant is a single class list, so there is no cascade to lose.
-  editorialTitleCompact: 'text-[32px] font-semibold leading-[35px] tracking-[-1.2px] text-ink text-balance',
-  display: 'text-2xl font-bold leading-tight tracking-tight text-ink text-balance',
-  h1: 'text-xl font-bold leading-tight tracking-tight text-ink text-balance',
-  // The compact Home hero (avatar LEFT of the name): 26/600, left-aligned.
-  heroName: 'text-[26px] font-semibold leading-[31px] tracking-[-0.6px] text-ink',
-  authTitle: 'text-[34px] font-semibold leading-[38px] tracking-tight text-ink text-balance',
+  // The ONE page title (owner 2026-11-11): 32/600/38, tracking -0.6. Every page's h1 renders it,
+  // through PageMasthead. Wraps (text-balance + break-words), never truncates.
+  pageTitle: 'text-xl font-semibold leading-[38px] tracking-[-0.6px] text-ink text-balance break-words',
+  // The second level: 24/600/30. Sheet and modal titles, the web day heading, the Profile name.
+  sheetTitle: 'text-lg font-semibold leading-[30px] tracking-[-0.3px] text-ink text-balance break-words',
+  // The line under a page title: 16/500/22, secondary ink.
+  pageSubtitle: 'text-md font-medium leading-[22px] text-ink-2',
   h2: 'text-lg font-semibold leading-tight text-ink text-balance',
   sectionTitle: 'text-lg font-semibold leading-[28px] text-ink text-balance',
   h3: 'text-base font-semibold leading-tight text-ink text-balance',
@@ -59,12 +48,9 @@ export const TEXT_CLASS: Record<TextVariant, string> = {
 };
 
 const DEFAULT_TAG: Record<TextVariant, ElementType> = {
-  editorialTitle: 'h1',
-  editorialTitleCompact: 'h1',
-  display: 'h1',
-  h1: 'h1',
-  heroName: 'h1',
-  authTitle: 'h1',
+  pageTitle: 'h1',
+  sheetTitle: 'h2',
+  pageSubtitle: 'p',
   h2: 'h2',
   sectionTitle: 'h2',
   h3: 'h3',

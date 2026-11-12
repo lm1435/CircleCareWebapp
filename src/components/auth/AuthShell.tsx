@@ -60,8 +60,8 @@ export function AuthShell({ children }: AuthShellProps): ReactElement {
           {/* A <p>, not <h2> — the form column's <h1> (the actual page
               heading) renders after this in the DOM, so an <h2> here would
               put an h2 before the page's h1 and break heading order. Sans
-              type scale (`editorialTitle`), not the serif face. */}
-          <Text variant="editorialTitle" as="p" className="mt-6 max-w-md text-on-photo!">
+              type scale (`pageTitle`), not the serif face. */}
+          <Text variant="pageTitle" as="p" className="mt-6 max-w-md text-on-photo!">
             {t('authHero.headline')}
           </Text>
           <Text variant="caption" className="m-0 mt-3 max-w-md text-on-photo/90!">

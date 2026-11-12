@@ -243,7 +243,7 @@ export default function CirclePickerPage(): ReactElement {
               {t(`picker.greeting.${greetingKey()}`)}
             </p>
           )}
-          <Text variant="editorialTitle">{firstName ?? t('picker.heading')}</Text>
+          <Text variant="pageTitle">{firstName ?? t('picker.heading')}</Text>
           {showHeaderActions && (
             <p className="mt-2 text-sm font-medium text-ink-3">
               {t('picker.careCircleCount', { count: circleCount })}

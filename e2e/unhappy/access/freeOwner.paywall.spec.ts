@@ -173,8 +173,9 @@ for (const hl of HEADLINES) {
         await page.setViewportSize({ width: vp.width, height: vp.height });
         const m = await measure();
         expect(m.size, `accent font-size @${vp.width}`).toBeGreaterThanOrEqual(24);
-        expect(m.size / m.lead, `accent/lead ratio @${vp.width}`).toBeGreaterThanOrEqual(0.7);
-        expect(m.size / m.lead, `accent/lead ratio @${vp.width}`).toBeLessThanOrEqual(0.8);
+        // One page title (32/600): the coral accent line inherits the lead's size.
+        expect(m.size, `accent == lead size @${vp.width}`).toBe(m.lead);
+        expect(m.size).toBe(32);
         expect(m.weight).toBeGreaterThanOrEqual(600);
         expect(m.color).toBe('rgb(198, 93, 84)');
         expect(m.block).toBe(true);

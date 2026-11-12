@@ -107,14 +107,14 @@ describe('shift detail header', () => {
     expect(screen.getAllByRole('heading', { name: 'Night' })).toHaveLength(1);
   });
 
-  it('a short title is the large size; a long one (over 14 characters) steps down', () => {
+  it('short and long titles are the same sheetTitle size (24/600): long ones wrap, no step-down', () => {
     renderDetail(shift());
-    expect(screen.getByTestId('shift-detail-title')).toHaveClass('text-xl');
+    expect(screen.getByTestId('shift-detail-title')).toHaveClass('text-lg', 'font-semibold');
     cleanup();
     renderDetail(shift({ title: 'Overnight with Mom at Rosa’s house' }));
     const long = screen.getByTestId('shift-detail-title');
-    expect(long).toHaveClass('text-lg');
-    expect(long).not.toHaveClass('text-xl');
+    expect(long).toHaveClass('text-lg', 'break-words');
+    expect(long).not.toHaveClass('truncate');
   });
 
   it('open: "Open · nobody yet", read as "Open, nobody on this shift yet"', () => {

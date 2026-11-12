@@ -303,9 +303,9 @@ describe('Shifts mode', () => {
     renderPage();
     const sub = await screen.findByTestId('page-subtitle');
     await waitFor(() => expect(sub).toHaveTextContent(/this week$/)); // live summary of the shown week (owner 2026-11-07)
-    expect(sub).toHaveClass('mt-1', 'min-h-[45px]');
+    expect(sub).toHaveClass('mt-1', 'min-h-[44px]');
     await openShifts(user);
-    expect(screen.getByTestId('page-subtitle')).toHaveClass('mt-1', 'min-h-[45px]');
+    expect(screen.getByTestId('page-subtitle')).toHaveClass('mt-1', 'min-h-[44px]');
   });
 
   it('the Schedule | Shifts toggle is the compact 40px track with a 44px hit area', async () => {

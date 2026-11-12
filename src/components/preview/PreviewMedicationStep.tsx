@@ -117,7 +117,7 @@ export function PreviewMedicationStep({ headingId }: PreviewMedicationStepProps)
     <div>
       <Eyebrow>{`${t('auth:preview.demo.today')} · ${todayLabel}`}</Eyebrow>
       <Text
-        variant="authTitle"
+        variant="pageTitle"
         id={headingId}
         tabIndex={-1}
         className="mt-1.5 outline-none"

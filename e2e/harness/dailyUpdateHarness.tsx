@@ -160,7 +160,7 @@ function App(): ReactElement {
   const title = capitalizeFirst(formatDailyUpdateDate(data.date, lang), lang);
   return (
     <main className="mx-auto max-w-3xl pb-10" data-testid="daily-update-page">
-      <PageMasthead section={i18n.t('dailyUpdate:eyebrow')} tone="moss" title={title} backTo="/circles/c1" compact />
+      <PageMasthead section={i18n.t('dailyUpdate:eyebrow')} tone="moss" title={title} backTo="/circles/c1" />
       <div className="px-5 pb-1">
         <DailyUpdateDayArrows
           circleId="c1"
