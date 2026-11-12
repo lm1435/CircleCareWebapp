@@ -315,7 +315,8 @@ export function WeekView({
       title,
       t(`calendar:eventTypes.${event.event_type}`),
       timeLabel,
-      status ? t(`calendar:status.${status}`) : null,
+      // Owner 2026-11-12: an unanswered dose has no status word ("Pending" said nothing).
+      status && status !== 'pending' ? t(`calendar:status.${status}`) : null,
       inactive ? inactiveLabel : null,
       assigneeName,
       noteLabel,
@@ -863,7 +864,7 @@ export function WeekView({
                     }}
                   >
                     <span className="min-w-0 break-words">{title}</span>
-                    {status && (
+                    {status && status !== 'pending' && (
                       <span className="shrink-0 text-sm text-ink-2">{statusLabel(t, status)}</span>
                     )}
                   </button>

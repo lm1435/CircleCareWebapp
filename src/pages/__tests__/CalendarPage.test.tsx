@@ -620,7 +620,8 @@ describe('CalendarPage', () => {
 
       expect(screen.getByRole('tab', { name: 'Day' })).toHaveAttribute('aria-selected', 'true');
       await waitFor(() =>
-        expect(screen.getByTestId('day-view-title')).toHaveTextContent('Wednesday, June 10')
+        // Short month since 67655c1 (mobile formatDayTitle parity).
+        expect(screen.getByTestId('day-view-title')).toHaveTextContent('Wednesday, Jun 10')
       );
       expect(mockGetEvents).toHaveBeenCalledWith('circle-1', {
         start_date: '2026-06-10',

@@ -224,7 +224,8 @@ export function DayView({
                 const assignee = shiftTaskMeta(event, (t as unknown as (k: string, o?: Record<string, unknown>) => string)) ?? eventAssigneeName(event);
                 const noteCount = eventNoteCount(event);
                 const typeLabel = typeLabels[event.event_type];
-                const statusLabel = status ? statusLabels[status] : null;
+                // Owner 2026-11-12: "Pending" says nothing on a dose not due yet; no label (mobile parity).
+                const statusLabel = status && status !== 'pending' ? statusLabels[status] : null;
                 const inactiveLabel = t('calendar:discontinueMed.inactiveBadge');
                 const noteLabel =
                   noteCount > 0 ? t('calendar:notes.noteCount', { count: noteCount }) : null;

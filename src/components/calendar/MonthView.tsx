@@ -241,7 +241,7 @@ export function MonthView({
                           title,
                           t(`calendar:eventTypes.${event.event_type}`),
                           timeLabel,
-                          status ? t(`calendar:status.${status}`) : null,
+                          status && status !== 'pending' ? t(`calendar:status.${status}`) : null,
                           inactive ? inactiveLabel : null,
                           noteCount > 0
                             ? t('calendar:notes.noteCount', { count: noteCount })
