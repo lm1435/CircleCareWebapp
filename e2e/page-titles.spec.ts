@@ -52,7 +52,7 @@ test.describe('page titles are one style', () => {
     });
   }
 
-  test('Calendar: the day heading is the 24/600 second level, h1 and heading one line at 390px', async ({
+  test('Calendar: the day heading is the 24/600 second level, h1 one line at 390px and the heading wraps without clipping', async ({
     page,
     circleId,
   }) => {
@@ -69,9 +69,11 @@ test.describe('page titles are one style', () => {
         size: parseFloat(cs.fontSize),
         weight: Number(cs.fontWeight),
         tag: el.tagName,
-        oneLine: el.getBoundingClientRect().height <= parseFloat(cs.lineHeight) + 1,
+        clipped: el.scrollWidth > el.clientWidth + 1,
       };
     });
-    expect(d).toMatchObject({ size: 24, weight: 600, tag: 'H2', oneLine: true });
+    // The day heading shares its row with Today and the arrows, so on a phone it WRAPS (owner:
+    // wrap, never truncate): it must not clip.
+    expect(d).toMatchObject({ size: 24, weight: 600, tag: 'H2', clipped: false });
   });
 });

@@ -65,8 +65,8 @@ for (const viewport of [
       const fontSize = await name.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
       expect(fontSize).toBeGreaterThanOrEqual(24);
 
-      // "● WEDNESDAY, OCTOBER 28" eyebrow, directly above the title and left-aligned with it.
-      const eyebrow = hero.locator('span').first();
+      // "WEDNESDAY, OCTOBER 28" eyebrow, directly above the title and left-aligned with it.
+      const eyebrow = hero.locator('p').first();
       await expect(eyebrow).toBeVisible();
       const n = await box(name);
       const e = await box(eyebrow);
@@ -74,7 +74,8 @@ for (const viewport of [
       expect(Math.abs(e.x - n.x), 'and is left-aligned with it').toBeLessThanOrEqual(2);
       // No avatar / "Cared for by" stack any more: the whole header stays compact.
       await expect(hero.getByText('Cared for by')).toHaveCount(0);
-      expect((await box(hero)).height).toBeLessThanOrEqual(140);
+      // The shared masthead: 44px chrome strip + a 32/38 title that may wrap to two lines on a phone.
+      expect((await box(hero)).height).toBeLessThanOrEqual(170);
     });
 
     test('Profile: avatar left; name with its pencil beside it; email under; tight list; no page overflow', async ({
