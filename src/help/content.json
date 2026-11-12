@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-11",
+  "generated": "2026-11-12",
   "categories": [
     {
       "id": "getting-started",
@@ -237,7 +237,7 @@
           "Under What is it?, type the medication name and, if you like, the dose (for example, 100mg or 1 tablet).",
           "Under When?, Starts shows the first day. Tap it to start on another day. Then choose how often: Every day, Every week or When needed. Tap Custom… for Once, Every other day, Days on / off, Some days, Monthly or Yearly.",
           "Optional: if it stops on a known date, tap Repeats until, next to Starts, and pick the last day. Leave it on Never to keep it going.",
-          "Under What time?, tap a time: Morning (8:00 AM), Midday (12:00 PM), Evening (6:00 PM) or Bedtime (9:00 PM), or tap Other… to pick your own. Each time you tap adds a dose, up to 4 a day. Tap a time again to remove it.",
+          "Under What time?, tap every time it's taken: Morning (8:00 AM), Midday (12:00 PM), Evening (6:00 PM) or Bedtime (9:00 PM), or tap Other… to pick your own. Each time you tap adds a dose, up to 4 a day. Tap a time again to remove it. A time you picked with Other… has an × to remove it.",
           "Check the Reminders row. It says what will be sent, for example At the scheduled time · follow-ups on. Tap it to open the reminders right there: Enable notifications is on, with At the scheduled time checked, and you can add Earlier reminders.",
           "Optional: tap More details for a photo, refills, pharmacy, prescriber and instructions.",
           "Tap Add medication."
@@ -260,7 +260,7 @@
         ],
         "video": {
           "file": "add-a-medication-en.mp4",
-          "durationSec": 89
+          "durationSec": 93
         },
         "poster": "add-a-medication-en.jpg"
       },
@@ -297,7 +297,7 @@
         ],
         "video": {
           "file": "medication-schedules-en.mp4",
-          "durationSec": 96
+          "durationSec": 90
         },
         "poster": "medication-schedules-en.jpg"
       },
@@ -339,7 +339,7 @@
         "category": "medications",
         "title": "How reminders and dose alerts work",
         "summary": "At dose time the care recipient (or the person chosen to handle their reminders) gets a push. If nobody marks the dose, CircleCare follows up at 15 minutes, 30 minutes and 1 hour, reaching more of the circle each time.",
-        "body": "## The reminder\n\nAt the scheduled time, a push notification goes to **one person**:\n\n1. the member the owner chose for **Medication reminders**, if there is one,\n2. otherwise the care recipient,\n3. otherwise the circle owner.\n\nTo choose that member, the owner opens **Today**, taps the person under **Care team**, and taps **Medication reminders** (then **Switch**, if someone else already gets them). A **Med reminders** label next to their name shows who gets them; tap **Medication reminders** again to send them back to the care recipient.\n\nIn the medication form, tap the **Reminders** row, above **More details**, to open it. There you can also turn on **Earlier reminders**: **24 hours before**, **1 hour before**, **30 minutes before** or **15 minutes before**.\n\n## If nobody marks the dose\n\n| Time after the dose | Who is told |\n|---|---|\n| 15 minutes | The person who gets the reminders |\n| 30 minutes | The caregivers in the circle |\n| 1 hour | Everyone in the circle |\n\nThe alerts stop as soon as someone marks the dose **Taken** or **Skipped**. CircleCare never decides by itself that a dose was not taken: the dose stays **Not marked** until someone marks it. These follow-ups are included on the free plan. People with view-only access don't get reminders or these alerts.\n\n## Quiet hours\n\nDuring your [quiet hours](/help/quiet-hours/), reminders and earlier reminders are not sent. The alerts for unmarked doses wait and arrive when quiet hours end, unless the dose was marked in the meantime. If several alerts waited for the same dose, only the latest one arrives.\n\n## Good to know\n\n- **Push only works on phones.** The web app does not send notifications, so install the app on your phone and allow notifications. See [Not getting notifications](/help/notifications-not-arriving/).\n- **Turning reminders off for a medication** stops both the reminder and the follow-up alerts for it.\n- **To stop dose updates and alerts for unmarked doses just for you**, open Settings (the person icon on your list of circles), tap **Alerts** and turn off **Medications**. This does not stop the dose reminders sent to you.\n- **The bell at the top of Today** lists the circle's notifications from the last 3 days. Older ones are in Activity.",
+        "body": "## The reminder\n\nAt the scheduled time, a push notification goes to **one person**:\n\n1. the member the owner chose for **Medication reminders**, if there is one,\n2. otherwise the care recipient,\n3. otherwise the circle owner.\n\nTo choose that member, the owner opens **Today**, taps the person under **Care team**, and taps **Medication reminders** (then **Switch**, if someone else already gets them). A small bell on their initial, next to their name, shows who gets them; tap **Medication reminders** again to send them back to the care recipient.\n\nIn the medication form, tap the **Reminders** row, above **More details**, to open it. There you can also turn on **Earlier reminders**: **24 hours before**, **1 hour before**, **30 minutes before** or **15 minutes before**.\n\n## If nobody marks the dose\n\n| Time after the dose | Who is told |\n|---|---|\n| 15 minutes | The person who gets the reminders |\n| 30 minutes | The caregivers in the circle |\n| 1 hour | Everyone in the circle |\n\nThe alerts stop as soon as someone marks the dose **Taken** or **Skipped**. CircleCare never decides by itself that a dose was not taken: the dose stays **Not marked** until someone marks it. These follow-ups are included on the free plan. People with view-only access don't get reminders or these alerts.\n\n## Quiet hours\n\nDuring your [quiet hours](/help/quiet-hours/), reminders and earlier reminders are not sent. The alerts for unmarked doses wait and arrive when quiet hours end, unless the dose was marked in the meantime. If several alerts waited for the same dose, only the latest one arrives.\n\n## Good to know\n\n- **Push only works on phones.** The web app does not send notifications, so install the app on your phone and allow notifications. See [Not getting notifications](/help/notifications-not-arriving/).\n- **Turning reminders off for a medication** stops both the reminder and the follow-up alerts for it.\n- **To stop dose updates and alerts for unmarked doses just for you**, open Settings (the person icon on your list of circles), tap **Alerts** and turn off **Medications**. This does not stop the dose reminders sent to you.\n- **The bell at the top of Today** lists the circle's notifications from the last 3 days. Older ones are in Activity.",
         "related": [
           "confirm-a-dose",
           "quiet-hours",
@@ -357,7 +357,7 @@
         ],
         "video": {
           "file": "reminders-and-alerts-en.mp4",
-          "durationSec": 116
+          "durationSec": 87
         },
         "poster": "reminders-and-alerts-en.jpg"
       },
@@ -421,7 +421,7 @@
         ],
         "video": {
           "file": "as-needed-medications-en.mp4",
-          "durationSec": 128
+          "durationSec": 117
         },
         "poster": "as-needed-medications-en.jpg"
       },
@@ -455,7 +455,7 @@
         ],
         "video": {
           "file": "routine-reminders-en.mp4",
-          "durationSec": 84
+          "durationSec": 80
         },
         "poster": "routine-reminders-en.jpg"
       },
@@ -491,7 +491,7 @@
         ],
         "video": {
           "file": "appointments-en.mp4",
-          "durationSec": 105
+          "durationSec": 102
         },
         "poster": "appointments-en.jpg"
       },
@@ -504,7 +504,7 @@
           "Tap New, then Task. The New task form opens.",
           "Under What needs doing?, type a name, or tap a suggestion such as Grocery run.",
           "Under When?, Starts shows the day. Tap it to pick another day. Below it, leave Once, or choose Every day or Every week. Tap Custom… for Every other day, Days on / off, Some days, Monthly or Yearly. To end a repeat, tap Repeats until.",
-          "Under What time?, leave Any time, or tap Pick a time and set the time. From and To then show. To is optional: it says No end until you pick an end time.",
+          "Under What time?, leave Any time, or tap Pick a time and set the time. From and To then show. To starts 30 minutes after From. Tap it to change it, or tap the × on it to leave the task with No end.",
           "Under Who's doing it?, choose Anyone, Me or someone in the circle.",
           "Optional: tap the Reminders row to change the reminders, or More details to add details. Then tap Add task.",
           "When it's done, open Care, then Tasks (or tap Tasks on Today), and tap Done on it. Tap Undo if you marked the wrong one. Tasks due today also show on Today under Next up, with a Done button."
@@ -527,7 +527,7 @@
         ],
         "video": {
           "file": "tasks-en.mp4",
-          "durationSec": 95
+          "durationSec": 79
         },
         "poster": "tasks-en.jpg"
       },
@@ -599,7 +599,7 @@
         ],
         "video": {
           "file": "doctor-visits-and-notes-en.mp4",
-          "durationSec": 97
+          "durationSec": 109
         },
         "poster": "doctor-visits-and-notes-en.jpg"
       },
@@ -950,7 +950,7 @@
         ],
         "video": {
           "file": "quiet-hours-en.mp4",
-          "durationSec": 93
+          "durationSec": 127
         },
         "poster": "quiet-hours-en.jpg"
       },
@@ -1276,7 +1276,7 @@
           "En ¿Qué es?, escribe el nombre del medicamento y, si quieres, la dosis (por ejemplo, 100mg o 1 tableta).",
           "En ¿Cuándo?, Empieza muestra el primer día. Tócalo para empezar otro día. Luego elige con qué frecuencia: Todos los días, Cada semana o Cuando se necesite. Toca Personalizado… para Una vez, Cada 2 días, Días sí / días no, Algunos días, Mensual o Anual.",
           "Opcional: si termina en una fecha conocida, toca Se repite hasta, junto a Empieza, y elige el último día. Déjalo en Nunca para que siga.",
-          "En ¿A qué hora?, toca una hora: Mañana (8:00 a. m.), Mediodía (12:00 p. m.), Tarde (6:00 p. m.) o Al acostarse (9:00 p. m.), o toca Otra… para elegir la tuya. Cada hora que tocas agrega una dosis, hasta 4 al día. Toca una hora otra vez para quitarla.",
+          "En ¿A qué hora?, toca cada hora en que se toma: Mañana (8:00 a. m.), Mediodía (12:00 p. m.), Tarde (6:00 p. m.) o Al acostarse (9:00 p. m.), o toca Otra… para elegir la tuya. Cada hora que tocas agrega una dosis, hasta 4 al día. Toca una hora otra vez para quitarla. Una hora que elegiste con Otra… tiene una × para quitarla.",
           "Revisa la fila Recordatorios. Dice lo que se enviará, por ejemplo A la hora programada · seguimientos activados. Tócala para abrir los recordatorios ahí mismo: Activar notificaciones viene encendido, con A la hora programada marcado, y puedes sumar Recordatorios anticipados.",
           "Opcional: toca Más detalles para una foto, las recargas, la farmacia, quien receta y las instrucciones.",
           "Toca Agregar medicamento."
@@ -1299,7 +1299,7 @@
         ],
         "video": {
           "file": "add-a-medication-es.mp4",
-          "durationSec": 90
+          "durationSec": 100
         },
         "poster": "add-a-medication-es.jpg"
       },
@@ -1336,7 +1336,7 @@
         ],
         "video": {
           "file": "medication-schedules-es.mp4",
-          "durationSec": 102
+          "durationSec": 96
         },
         "poster": "medication-schedules-es.jpg"
       },
@@ -1378,7 +1378,7 @@
         "category": "medications",
         "title": "Cómo funcionan los recordatorios y las alertas de dosis",
         "summary": "A la hora de la dosis, la persona que recibe el cuidado (o quien se encarga de sus recordatorios) recibe una notificación. Si nadie marca la dosis, CircleCare avisa de nuevo a los 15 minutos, a los 30 minutos y a la hora, cada vez a más personas del círculo.",
-        "body": "## El recordatorio\n\nA la hora programada, la notificación push le llega a **una sola persona**:\n\n1. el miembro que el propietario eligió para **Recordatorios de medicamentos**, si hay uno,\n2. si no, la persona que recibe el cuidado,\n3. si no, el propietario del círculo.\n\nPara elegir a ese miembro, el propietario abre **Hoy**, toca a la persona en **Equipo de cuidado** y toca **Recordatorios de medicamentos** (y luego **Cambiar**, si otra persona ya los recibe). Una etiqueta **Recordatorios** junto a su nombre indica quién los recibe; toca **Recordatorios de medicamentos** otra vez para devolverlos a la persona que recibe el cuidado.\n\nEn el formulario del medicamento, toca la fila **Recordatorios**, arriba de **Más detalles**, para abrirla. Ahí también puedes activar **Recordatorios anticipados**: **24 horas antes**, **1 hora antes**, **30 minutos antes** o **15 minutos antes**.\n\n## Si nadie marca la dosis\n\n| Tiempo después de la dosis | A quién se avisa |\n|---|---|\n| 15 minutos | A quien recibe los recordatorios |\n| 30 minutos | A los cuidadores del círculo |\n| 1 hora | A todos en el círculo |\n\nLas alertas se detienen en cuanto alguien marca la dosis como **Tomado** u **Omitido**. CircleCare nunca decide por su cuenta que una dosis no se tomó: la dosis sigue **Sin marcar** hasta que alguien la marque. Estos avisos están incluidos en el plan gratuito. Quienes tienen acceso de solo lectura no reciben los recordatorios ni estas alertas.\n\n## Horas de silencio\n\nDurante tus [horas de silencio](/help/quiet-hours/) no se envían los recordatorios ni los recordatorios anticipados. Las alertas de dosis sin marcar esperan y llegan cuando terminan las horas de silencio, a menos que la dosis se haya marcado mientras tanto. Si varias alertas de la misma dosis esperaron, solo llega la más reciente.\n\n## Lo que conviene saber\n\n- **Las notificaciones push solo funcionan en el celular.** La app web no envía notificaciones, así que instala la app en tu celular y permite las notificaciones. Consulta [No me llegan las notificaciones](/help/notifications-not-arriving/).\n- **Si desactivas los recordatorios de un medicamento**, se detienen tanto el recordatorio como las alertas de ese medicamento.\n- **Para dejar de recibir solo tú los avisos de dosis y las alertas de dosis sin marcar**, abre Configuración (el ícono de persona en tu lista de círculos), toca **Alertas** y apaga **Medicamentos**. Esto no detiene los recordatorios de dosis que te llegan.\n- **La campana arriba en Hoy** muestra las notificaciones del círculo de los últimos 3 días. Las anteriores están en Actividad.",
+        "body": "## El recordatorio\n\nA la hora programada, la notificación push le llega a **una sola persona**:\n\n1. el miembro que el propietario eligió para **Recordatorios de medicamentos**, si hay uno,\n2. si no, la persona que recibe el cuidado,\n3. si no, el propietario del círculo.\n\nPara elegir a ese miembro, el propietario abre **Hoy**, toca a la persona en **Equipo de cuidado** y toca **Recordatorios de medicamentos** (y luego **Cambiar**, si otra persona ya los recibe). Una pequeña campana sobre su inicial, junto a su nombre, indica quién los recibe; toca **Recordatorios de medicamentos** otra vez para devolverlos a la persona que recibe el cuidado.\n\nEn el formulario del medicamento, toca la fila **Recordatorios**, arriba de **Más detalles**, para abrirla. Ahí también puedes activar **Recordatorios anticipados**: **24 horas antes**, **1 hora antes**, **30 minutos antes** o **15 minutos antes**.\n\n## Si nadie marca la dosis\n\n| Tiempo después de la dosis | A quién se avisa |\n|---|---|\n| 15 minutos | A quien recibe los recordatorios |\n| 30 minutos | A los cuidadores del círculo |\n| 1 hora | A todos en el círculo |\n\nLas alertas se detienen en cuanto alguien marca la dosis como **Tomado** u **Omitido**. CircleCare nunca decide por su cuenta que una dosis no se tomó: la dosis sigue **Sin marcar** hasta que alguien la marque. Estos avisos están incluidos en el plan gratuito. Quienes tienen acceso de solo lectura no reciben los recordatorios ni estas alertas.\n\n## Horas de silencio\n\nDurante tus [horas de silencio](/help/quiet-hours/) no se envían los recordatorios ni los recordatorios anticipados. Las alertas de dosis sin marcar esperan y llegan cuando terminan las horas de silencio, a menos que la dosis se haya marcado mientras tanto. Si varias alertas de la misma dosis esperaron, solo llega la más reciente.\n\n## Lo que conviene saber\n\n- **Las notificaciones push solo funcionan en el celular.** La app web no envía notificaciones, así que instala la app en tu celular y permite las notificaciones. Consulta [No me llegan las notificaciones](/help/notifications-not-arriving/).\n- **Si desactivas los recordatorios de un medicamento**, se detienen tanto el recordatorio como las alertas de ese medicamento.\n- **Para dejar de recibir solo tú los avisos de dosis y las alertas de dosis sin marcar**, abre Configuración (el ícono de persona en tu lista de círculos), toca **Alertas** y apaga **Medicamentos**. Esto no detiene los recordatorios de dosis que te llegan.\n- **La campana arriba en Hoy** muestra las notificaciones del círculo de los últimos 3 días. Las anteriores están en Actividad.",
         "related": [
           "confirm-a-dose",
           "quiet-hours",
@@ -1396,7 +1396,7 @@
         ],
         "video": {
           "file": "reminders-and-alerts-es.mp4",
-          "durationSec": 119
+          "durationSec": 90
         },
         "poster": "reminders-and-alerts-es.jpg"
       },
@@ -1460,7 +1460,7 @@
         ],
         "video": {
           "file": "as-needed-medications-es.mp4",
-          "durationSec": 136
+          "durationSec": 123
         },
         "poster": "as-needed-medications-es.jpg"
       },
@@ -1494,7 +1494,7 @@
         ],
         "video": {
           "file": "routine-reminders-es.mp4",
-          "durationSec": 85
+          "durationSec": 91
         },
         "poster": "routine-reminders-es.jpg"
       },
@@ -1530,7 +1530,7 @@
         ],
         "video": {
           "file": "appointments-es.mp4",
-          "durationSec": 106
+          "durationSec": 102
         },
         "poster": "appointments-es.jpg"
       },
@@ -1543,7 +1543,7 @@
           "Toca Nuevo y luego Tarea. Se abre el formulario Nueva tarea.",
           "En ¿Qué hay que hacer?, escribe un nombre o toca una sugerencia como Hacer las compras.",
           "En ¿Cuándo?, Empieza muestra el día. Tócalo para elegir otro día. Debajo, deja Una vez, o elige Todos los días o Cada semana. Toca Personalizado… para Cada 2 días, Días sí / días no, Algunos días, Mensual o Anual. Para terminar una repetición, toca Se repite hasta.",
-          "En ¿A qué hora?, deja Cualquier hora, o toca Elegir hora y pon la hora. Luego aparecen Desde y Hasta. Hasta es opcional: dice Sin fin hasta que eliges una hora de fin.",
+          "En ¿A qué hora?, deja Cualquier hora, o toca Elegir hora y pon la hora. Luego aparecen Desde y Hasta. Hasta empieza 30 minutos después de Desde. Tócalo para cambiarlo, o toca la × para dejar la tarea Sin fin.",
           "En ¿Quién lo hace?, elige Cualquiera, Yo o a alguien del círculo.",
           "Opcional: toca la fila Recordatorios para cambiar los recordatorios, o Más detalles para agregar detalles. Luego toca Agregar tarea.",
           "Cuando esté hecha, abre Cuidado, luego Tareas (o toca Tareas en Hoy), y toca Listo en ella. Toca Deshacer si marcaste la equivocada. Las tareas para hoy también aparecen en Hoy, en Lo próximo, con el botón Listo."
@@ -1566,7 +1566,7 @@
         ],
         "video": {
           "file": "tasks-es.mp4",
-          "durationSec": 96
+          "durationSec": 85
         },
         "poster": "tasks-es.jpg"
       },
@@ -1638,7 +1638,7 @@
         ],
         "video": {
           "file": "doctor-visits-and-notes-es.mp4",
-          "durationSec": 100
+          "durationSec": 119
         },
         "poster": "doctor-visits-and-notes-es.jpg"
       },
@@ -1989,7 +1989,7 @@
         ],
         "video": {
           "file": "quiet-hours-es.mp4",
-          "durationSec": 93
+          "durationSec": 117
         },
         "poster": "quiet-hours-es.jpg"
       },
