@@ -778,13 +778,16 @@ export function WeekView({
                   <div
                     key={day}
                     role="gridcell"
+                    // The timed grid's one tab stop (axe scrollable-region-focusable, WCAG 2.1.1): a week with no
+                    // timed entries has nothing else focusable in the scroller. Today, else the first day shown.
+                    tabIndex={day === (days.includes(todayStr) ? todayStr : days[0]) ? 0 : -1}
                     data-date={day}
                     aria-label={`${formatDateForDisplay(day, {
                       weekday: 'long',
                       month: 'long',
                       day: 'numeric',
                     })}, ${t('calendar:eventCount', { count: events.length })}`}
-                    className={`relative snap-start border-l border-line-2 ${isToday ? 'bg-bg-2/50' : ''}`}
+                    className={`relative snap-start border-l border-line-2 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${isToday ? 'bg-bg-2/50' : ''}`}
                     style={{ height: 24 * HOUR_HEIGHT }}
                   >
                     {/* Hour gridlines */}

@@ -499,6 +499,16 @@ describe('WeekView: one vertical scroll (the page) below lg', () => {
     fireEvent.scroll(headScroller);
     expect(scroller.scrollLeft).toBe(480);
   });
+
+  it('the timed grid has exactly one tab stop, a day cell, so an empty week is still keyboard reachable (axe scrollable-region-focusable)', () => {
+    const { container } = renderWeek();
+    const scroller = container.querySelector('[data-testid="week-scroller"]') as HTMLElement;
+    // the scroller stays presentational: the grid -> rowgroup ownership needs it (aria-required-children)
+    expect(scroller.getAttribute('role')).toBe('presentation');
+    expect(scroller.hasAttribute('tabindex')).toBe(false);
+    const stops = Array.from(scroller.querySelectorAll<HTMLElement>('[role="gridcell"]')).filter((c) => c.tabIndex === 0);
+    expect(stops).toHaveLength(1);
+  });
 });
 
 
