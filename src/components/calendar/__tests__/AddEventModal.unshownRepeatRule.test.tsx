@@ -8,7 +8,7 @@ import { AddEventModal } from '../AddEventModal';
 
 // A STORED RULE THE REPEAT CONTROL HAS NO OPTION FOR (sweep 2026-11-08). A phone-calendar import writes
 // `custom:N` (mobile's `mapExpoRecurrenceToCircleCare`: a fortnightly appointment arrives as `custom:14`). The
-// web form parsed it to "none", so the edit form LIT "Once" (and the full layout's Repeat select read "Never")
+// web form parsed it to "none", so the edit form LIT "Once"
 // on a series that repeats every 14 days. Mobile lights no tile and names the rule under the grid
 // (AddEventScreen `how-often-summary`); web does the same now. What is SAVED is unchanged: an untouched save
 // still leaves the rule alone (the payload-equality suites pin that too).
@@ -163,24 +163,11 @@ describe('an imported custom:14 series in the edit form', () => {
     expect(checkedRepeatTiles()).toEqual(['Every week']);
   });
 
-  it('full layout: the Repeat select names the stored rule instead of reading "Never"', async () => {
+  it('picking a tile is saved as that option', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} event={ROWS[0][1]} layout="full" onClose={vi.fn()} />);
-    const select = (await screen.findByLabelText(/^Repeat/)) as HTMLSelectElement;
-    expect(select.selectedOptions[0]?.textContent).toBe('Every 14 days');
-    // Untouched save: the rule is left alone.
-    await user.click(screen.getByTestId('add-event-save'));
-    await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
-    const body = JSON.parse(JSON.stringify(mutateUpdate.mock.calls[0][0]));
-    expect(body.data ?? body).not.toHaveProperty('recurrence_rule');
-  });
-
-  it('full layout: picking another option is saved as that option', async () => {
-    const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} event={ROWS[0][1]} layout="full" onClose={vi.fn()} />);
-    const select = (await screen.findByLabelText(/^Repeat/)) as HTMLSelectElement;
-    await user.selectOptions(select, 'weekly');
-    expect(select.value).toBe('weekly');
+    render(<AddEventModal circleId={CIRCLE_ID} event={ROWS[0][1]} onClose={vi.fn()} />);
+    await screen.findByTestId('how-often-summary');
+    await user.click(screen.getByRole('radio', { name: 'Every week' }));
     await user.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
     const body = JSON.parse(JSON.stringify(mutateUpdate.mock.calls[0][0]));

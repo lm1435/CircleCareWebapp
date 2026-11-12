@@ -122,7 +122,6 @@
     "close": "Formular schließen",
     "create": "Erstellen",
     "saveChanges": "Änderungen speichern",
-    "creating": "Wird gespeichert …",
     "created": "Eintrag erstellt",
     "createdMedication": "Medikament hinzugefügt",
     "createdAppointment": "Termin hinzugefügt",
@@ -132,29 +131,15 @@
     "seriesEditNote": "Gilt nur für kommende Aufgaben.",
     "seriesEditNoteMedication": "Gilt nur für kommende Dosen.",
     "seriesEditNoteAppointment": "Gilt nur für kommende Termine.",
-    "viewOnly": "Nur Ansicht",
-    "types": {
-      "medication": "Medikament",
-      "appointment": "Termin",
-      "task": "Aufgabe"
-    },
     "fields": {
-      "type": "Art",
       "title": "Titel",
       "medicationName": "Name des Medikaments",
       "dosage": "Dosierung",
-      "date": "Datum",
-      "time": "Uhrzeit",
-      "endTime": "Ende",
       "location": "Ort",
       "details": "Details",
       "instructions": "Hinweise zur Einnahme",
-      "repeat": "Wiederholung",
       "daysOn": "Einnahmetage",
       "daysOff": "Pausentage",
-      "endDate": "Enddatum",
-      "assignedTo": "Zugewiesen an",
-      "duration": "Dauer",
       "pillsRemaining": "Verbleibende Tabletten",
       "quantityOnHand": "Vorrat",
       "pillsPerDose": "Tabletten pro Dosis",
@@ -175,21 +160,6 @@
       "details": "Details hinzufügen …",
       "instructions": "z. B. mit dem Essen einnehmen"
     },
-    "timePresets": {
-      "label": "Häufige Uhrzeiten",
-      "morning": "Morgens (8:00)",
-      "noon": "Mittags (12:00)",
-      "evening": "Abends (18:00)",
-      "bedtime": "Zur Schlafenszeit (21:00)"
-    },
-    "schedulePresets": {
-      "label": "Häufige Zeitpläne",
-      "onceDaily": "Einmal täglich (8:00)",
-      "everyMorning": "Jeden Morgen (8:00)",
-      "everyEvening": "Jeden Abend (20:00)",
-      "twiceDaily": "Zweimal täglich (8:00, 20:00)",
-      "threeTimesDaily": "Dreimal täglich (8:00, 14:00, 20:00)"
-    },
     "titleSuggestions": {
       "label": "Titelvorschläge",
       "appointment": {
@@ -208,9 +178,7 @@
       }
     },
     "hints": {
-      "timeOptional": "Leer lassen für einen ganztägigen Eintrag.",
-      "endDate": "Leer lassen, um sich unbefristet zu wiederholen.",
-      "timesShownIn": "Uhrzeiten werden in {{timezone}} gespeichert."
+      "endDate": "Leer lassen, um sich unbefristet zu wiederholen."
     },
     "anyone": "Beliebige Person",
     "recurrence": {
@@ -222,8 +190,7 @@
       "yearly": "Jährlich",
       "cycle": "Tage an / aus",
       "daysOfWeek": "An bestimmten Tagen",
-      "asNeeded": "Bei Bedarf",
-      "asNeededHint": "Keine festen Zeiten. Tragen Sie jede Dosis ein, wenn sie gegeben wird."
+      "asNeeded": "Bei Bedarf"
     },
     "daysOfWeek": {
       "title": "Wiederholen am",
@@ -309,26 +276,10 @@
       "photoUploadFailed": "Der Eintrag wurde gespeichert, aber das Foto konnte nicht hochgeladen werden. Sie können es später hinzufügen.",
       "photoRemoveFailed": "Die Änderungen wurden gespeichert, aber das Foto konnte nicht entfernt werden. Versuchen Sie es später erneut."
     },
-    "durations": {
-      "30": "30 Min.",
-      "60": "1 Std.",
-      "120": "2 Std."
-    },
-    "dualTimezoneHint": "Ihre Zeit / Zeit von {{name}} ({{timezone}})",
-    "dualTimezoneHintGeneric": "Ihre Zeit / Zeit der umsorgten Person ({{timezone}})",
     "quietHoursDoseWarning": "Diese Uhrzeit liegt in den Ruhezeiten, daher wird dann keine Erinnerung gesendet. Sie können die Ruhezeiten unter Einstellungen im Bereich Ruhezeiten ändern.",
     "pastTimeInline": "Beginnt mit der nächsten Dosis. Diese Uhrzeit ist heute bereits vorbei.",
     "pastTimesInline_one": "Beginnt mit der nächsten Dosis. {{times}} ist heute bereits vorbei.",
     "pastTimesInline_other": "Beginnt mit der nächsten Dosis. {{times}} sind heute bereits vorbei.",
-    "conversion": {
-      "sameDay_one": "{{recipientTime}} in {{recipientZone}} ist für Sie {{viewerTime}} ({{viewerZone}})",
-      "sameDay_other": "{{recipientTime}} in {{recipientZone}} ist für Sie {{viewerTime}} ({{viewerZone}})",
-      "nextDay_one": "{{recipientTime}} in {{recipientZone}} ist für Sie {{viewerTime}} am nächsten Tag ({{viewerZone}})",
-      "nextDay_other": "{{recipientTime}} in {{recipientZone}} ist für Sie {{viewerTime}} am nächsten Tag ({{viewerZone}})",
-      "previousDay_one": "{{recipientTime}} in {{recipientZone}} ist für Sie {{viewerTime}} am Vortag ({{viewerZone}})",
-      "previousDay_other": "{{recipientTime}} in {{recipientZone}} ist für Sie {{viewerTime}} am Vortag ({{viewerZone}})"
-    },
-    "timezoneUnresolvedNotice": "Die Zeitzone dieses Kreises wird noch geladen. Das Speichern ist pausiert, damit Daten nicht in der falschen Zeitzone gespeichert werden.",
     "drugSearch": {
       "searching": "Medikamente werden gesucht",
       "clear": "Namen löschen",

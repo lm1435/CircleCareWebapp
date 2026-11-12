@@ -237,13 +237,6 @@ export function shiftEndTimeStr(oldStart: string, newStart: string, endStr: stri
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-/** Index of the preset matching the span, or -1 for a custom duration. */
-export function matchingDurationIndex(startStr: string, endStr: string): number {
-  const mins = spanMinutes(startStr, endStr);
-  if (mins === null) return -1;
-  return DURATION_PRESETS.indexOf(mins as (typeof DURATION_PRESETS)[number]);
-}
-
 // ─── The "15 minutes before" default ─────────────────────────────────────────
 
 /**

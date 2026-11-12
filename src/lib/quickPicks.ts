@@ -30,48 +30,6 @@ export const SPECIALTY_KEYS = [
   'specialties.dentist',
 ] as const;
 
-export interface MedSchedulePreset {
-  /** Stable preset id — the ChipSelect value (labels stay i18n-only). */
-  id: string;
-  /** HH:mm primary time the preset sets. */
-  time: string;
-  /** Recurrence rule the preset sets. */
-  recurrence: 'daily';
-  /** `calendar` namespace label key. */
-  labelKey: string;
-}
-
-/**
- * `calendar` namespace — medication SCHEDULE presets (Round 6 R6-2: the ONE
- * med chip strip; every chip sets a COMPLETE daily schedule — time + daily
- * recurrence together; untap clears both).
- *
- * `time` is the CIRCLE's clock ("Every morning 8:00" is 08:00 where the person lives, for
- * every viewer), like the time chips: the form applies it through its circle-clock setter and
- * matches it against the circle clock, never the viewer's.
- *
- * SUBSET NOTE: mobile's full set adds twiceDaily/threeTimesDaily, which need
- * ADDITIONAL dose times per day. The web form (like the API's calendar_events
- * shape it mirrors) has exactly ONE scheduled_time per event, so only the
- * single-time presets are faithfully representable here — the multi-dose
- * presets are deliberately omitted rather than approximated. Key names mirror
- * mobile (addEvent.schedulePresets.everyMorning / everyEvening).
- */
-export const MED_SCHEDULE_PRESETS: readonly MedSchedulePreset[] = [
-  {
-    id: 'everyMorning',
-    time: '08:00',
-    recurrence: 'daily',
-    labelKey: 'addEvent.schedulePresets.everyMorning',
-  },
-  {
-    id: 'everyEvening',
-    time: '20:00',
-    recurrence: 'daily',
-    labelKey: 'addEvent.schedulePresets.everyEvening',
-  },
-] as const;
-
 /** `calendar` namespace — generic appointment title fallbacks (QP6). */
 export const APPOINTMENT_TITLE_KEYS = [
   'addEvent.titleSuggestions.appointment.doctorVisit',

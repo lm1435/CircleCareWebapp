@@ -47,15 +47,6 @@ export interface FirstRunSchedulePreset {
 /**
  * VERBATIM from `mobile/src/utils/medSchedulePresets.ts` — same keys, same
  * order, same clock times, only expressed as `HH:MM` strings.
- *
- * DELIBERATELY NOT `lib/quickPicks.ts`'s `MED_SCHEDULE_PRESETS`. That constant
- * is the AddEventModal chip strip's, and its docstring states the reason it
- * carries only the two single-time presets: the full form has exactly one time
- * field, so twiceDaily/threeTimesDaily are "deliberately omitted rather than
- * approximated" there. The wizard CAN represent them, because it creates one
- * sibling row per extra dose (see `buildSiblingDoseRequests`). Widening the
- * form's constant to serve the wizard would silently add two chips to the form
- * that it cannot honour.
  */
 export const FIRST_RUN_SCHEDULE_PRESETS: readonly FirstRunSchedulePreset[] = [
   { key: 'everyMorning', times: ['08:00'] },

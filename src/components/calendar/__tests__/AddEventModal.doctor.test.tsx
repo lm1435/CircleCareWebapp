@@ -149,9 +149,8 @@ function appt(over: Partial<CalendarEvent> = {}): CalendarEvent {
   };
 }
 
-// An EDIT uses the simple layout (owner 1.4.0): the Doctor select and Location sit in "More details"
-// (owner 2026-11-08, the task / shift pattern), open when a doctor is stored. The create tests here pin
-// the full layout.
+// Create and edit share the one simple form: the Doctor select and Location sit in "More details"
+// (owner 2026-11-08, the task / shift pattern), open when a doctor is stored.
 function openRow(rowId: string): void {
   const row = document.getElementById(rowId);
   if (row && row.getAttribute('aria-expanded') === 'false') fireEvent.click(row);
@@ -175,7 +174,7 @@ beforeEach(() => {
 
 describe('Doctor field: the picker', () => {
   it('lists None first, then the ACTIVE doctors (primary first, specialty shown); a removed doctor is not offered', () => {
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
     const labels = Array.from(doctorSelect().options).map((o) => o.textContent);
     expect(labels).toEqual(['None', 'Dr. Patel · Cardiology · Primary', 'Dr. Kim · Family medicine']);
     expect(doctorSelect().value).toBe('');
@@ -183,16 +182,17 @@ describe('Doctor field: the picker', () => {
 
   it('is an appointment-only field: medications and tasks have no Doctor row', () => {
     const { rerender } = render(
-      <AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />
+      <AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />
     );
     expect(screen.queryByLabelText('Doctor')).toBeNull();
-    rerender(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+    rerender(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
     expect(screen.queryByLabelText('Doctor')).toBeNull();
   });
 
   it('sits before Location, and is reachable by keyboard with a visible label', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+    openRow('more-details');
     const order = screen
       .getAllByRole('combobox')
       .map((el) => el.id)
@@ -208,7 +208,7 @@ describe('Doctor field: the picker', () => {
 describe('Doctor field: location prefill', () => {
   it('fills an EMPTY location from the doctor address (one line) and says where it came from', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
     await user.selectOptions(doctorSelect(), '11111111-1111-4111-8111-111111111111');
     expect(locationInput()).toHaveValue('1200 Heart Center Dr, Suite 300');
     expect(screen.getByText("Filled in from Dr. Patel's address")).toBeInTheDocument();
@@ -217,7 +217,7 @@ describe('Doctor field: location prefill', () => {
 
   it('typing in the location drops the hint and keeps what was typed', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
     await user.selectOptions(doctorSelect(), '11111111-1111-4111-8111-111111111111');
     await user.type(locationInput(), ' (north entrance)');
     expect(locationInput()).toHaveValue('1200 Heart Center Dr, Suite 300 (north entrance)');
@@ -226,7 +226,7 @@ describe('Doctor field: location prefill', () => {
 
   it('never overwrites a location the user already typed', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
     await user.type(locationInput(), 'Home visit');
     await user.selectOptions(doctorSelect(), '11111111-1111-4111-8111-111111111111');
     expect(locationInput()).toHaveValue('Home visit');
@@ -235,7 +235,7 @@ describe('Doctor field: location prefill', () => {
 
   it('a doctor without an address, and None, leave the location alone', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
     await user.selectOptions(doctorSelect(), '22222222-2222-4222-8222-222222222222');
     expect(locationInput()).toHaveValue('');
     await user.selectOptions(doctorSelect(), '');
@@ -246,7 +246,7 @@ describe('Doctor field: location prefill', () => {
   it('skips an address longer than the field instead of cutting it mid-word', async () => {
     providersMock = [doctor({ id: '55555555-5555-4555-8555-555555555555', name: 'Dr. Long', address: 'x'.repeat(251) })];
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
     await user.selectOptions(doctorSelect(), '55555555-5555-4555-8555-555555555555');
     expect(locationInput()).toHaveValue('');
   });
@@ -255,7 +255,7 @@ describe('Doctor field: location prefill', () => {
     render(
       <AddEventModal
         circleId={CIRCLE_ID}
-        initialType="appointment" layout="full"
+        initialType="appointment"
         initialProviderId="11111111-1111-4111-8111-111111111111"
         onClose={vi.fn()}
       />
@@ -271,14 +271,14 @@ describe('Doctor field: location prefill', () => {
 describe('Doctor field: saving a NEW appointment', () => {
   async function fillAndSave(user: ReturnType<typeof userEvent.setup>) {
     await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Follow-up');
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     return mutateCreate.mock.calls[0][0] as Record<string, unknown>;
   }
 
   it('sends the picked doctor and counts provider_linked{source:add}', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
     await user.selectOptions(doctorSelect(), '22222222-2222-4222-8222-222222222222');
     const body = await fillAndSave(user);
     expect(body.provider_id).toBe('22222222-2222-4222-8222-222222222222');
@@ -289,7 +289,7 @@ describe('Doctor field: saving a NEW appointment', () => {
 
   it('with None, names no doctor at all and fires nothing', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
     const body = await fillAndSave(user);
     expect('provider_id' in body).toBe(false);
     expect(Analytics.providerLinked).not.toHaveBeenCalled();
@@ -298,10 +298,10 @@ describe('Doctor field: saving a NEW appointment', () => {
   it('a failed save fires no analytics', async () => {
     mutateCreate.mockRejectedValue(new Error('boom'));
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
     await user.selectOptions(doctorSelect(), '22222222-2222-4222-8222-222222222222');
     await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Follow-up');
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalled());
     expect(Analytics.providerLinked).not.toHaveBeenCalled();
   });
@@ -460,7 +460,7 @@ describe('Doctor field: series', () => {
     const { unmount } = render(<AddEventModal circleId={CIRCLE_ID} event={appt()} onClose={vi.fn()} />);
     expect(screen.queryByText('Applies to the whole series')).toBeNull();
     unmount();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
     expect(screen.queryByText('Applies to the whole series')).toBeNull();
   });
 });
@@ -469,7 +469,8 @@ describe('Doctor field: Add a doctor', () => {
   it('opens the add-doctor dialog and comes back to the form: the new doctor is listed but NOT selected, and the location is untouched', async () => {
     savedFromDialog = doctor({ id: '44444444-4444-4444-8444-444444444444', name: 'Dr. New', address: '9 Elm St' });
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+    openRow('more-details');
     await user.click(screen.getByRole('button', { name: 'Add a doctor' }));
     expect(screen.getByRole('dialog', { name: 'add-doctor-stub' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'save-stub' }));
@@ -487,7 +488,8 @@ describe('Doctor field: Add a doctor', () => {
   it('cancelling the dialog changes nothing', async () => {
     savedFromDialog = null;
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+    openRow('more-details');
     await user.click(screen.getByRole('button', { name: 'Add a doctor' }));
     await user.click(screen.getByRole('button', { name: 'save-stub' }));
     expect(doctorSelect().value).toBe('');

@@ -9,8 +9,7 @@ import { AddEventModal } from '../AddEventModal';
 // EDITING A MEDICATION / APPOINTMENT USES THE SIMPLE LAYOUT (owner decision, 1.4.0): editing looks
 // exactly like adding, prefilled from the saved event. Only the title ("Edit medication") and the
 // Save label ("Save changes") differ. Pinned here:
-//   - the PATCH body: the same event and the same edits through the simple layout and the full one
-//     (`layout="full"`, the layout every edit used before) must be identical;
+//   - the PATCH body: the exact body saved for an untouched save and for a few edits, pinned as literals;
 //   - the prefill of every "How often?" kind and of the time chips, "Other time" included;
 //   - the locks an edit keeps (no "When needed" on a scheduled med, no "+ Another dose");
 //   - "More details" stays collapsed on an edit even with stored values behind it (build 11, owner 2026-11-10:
@@ -126,17 +125,16 @@ const EVENTS: Record<string, CalendarEvent> = {
   apptWeekly: appt({ location: '', description: '', recurrence_rule: 'weekly', recurrence_days: [1, 4], recurrence_end_date: '2099-03-31', provider_id: PATEL_ID } as Partial<CalendarEvent>),
 };
 
-function renderEdit(event: CalendarEvent, layout?: 'full') {
-  return render(<AddEventModal circleId={CIRCLE_ID} event={event} layout={layout} onClose={vi.fn()} />);
+function renderEdit(event: CalendarEvent) {
+  return render(<AddEventModal circleId={CIRCLE_ID} event={event} onClose={vi.fn()} />);
 }
 async function patchBody(
   event: CalendarEvent,
-  layout: 'full' | undefined,
   act?: (user: ReturnType<typeof userEvent.setup>) => Promise<void>
 ): Promise<unknown> {
   mutateUpdate.mockClear();
   const user = userEvent.setup();
-  const view = renderEdit(event, layout);
+  const view = renderEdit(event);
   if (act) await act(user);
   await user.click(screen.getByRole('button', { name: 'Save changes' }));
   await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
@@ -150,12 +148,89 @@ const howOften = () => screen.getByRole('radiogroup', { name: 'How often?' });
 const moreToggle = () => document.getElementById('more-details') as HTMLElement;
 const row = (id: string) => document.getElementById(id) as HTMLElement;
 
-describe('the PATCH is the one the full edit layout sends', () => {
+const REMINDERS = {
+  notifications_enabled: true,
+  reminder_at_due: true,
+  reminder_24h: false,
+  reminder_1h: false,
+  reminder_30m: false,
+  reminder_15m: false,
+};
+const MED_DATA = {
+  event_type: 'medication',
+  title: 'Metformin',
+  scheduled_date: '2099-01-05',
+  ...REMINDERS,
+  medication_name: 'Metformin',
+};
+const APPT_DATA = {
+  event_type: 'appointment',
+  title: 'Cardiology',
+  scheduled_date: '2099-01-20',
+  scheduled_time: '10:00',
+  duration_minutes: 45,
+  ...REMINDERS,
+  recurrence_rule: null,
+  recurrence_end_date: null,
+  assigned_to: null,
+  provider_id: null,
+};
+const APPT_WEEKLY_DATA = {
+  ...APPT_DATA,
+  scheduled_date: '2099-01-22',
+  recurrence_rule: 'weekly',
+  recurrence_end_date: '2099-03-31',
+  recurrence_days: [1, 4],
+  provider_id: PATEL_ID,
+};
+// What an untouched save of each saved event PATCHes.
+const UNTOUCHED: Record<string, { eventId: string; data: Record<string, unknown> }> = {
+  medDaily: {
+    eventId: 'med-1',
+    data: { ...MED_DATA, scheduled_time: '08:00', recurrence_rule: 'daily', recurrence_end_date: '2099-12-31' },
+  },
+  medDays: {
+    eventId: 'med-1',
+    data: {
+      ...MED_DATA,
+      scheduled_time: '07:30',
+      recurrence_rule: 'weekly',
+      recurrence_end_date: null,
+      recurrence_days: [1, 3, 5],
+    },
+  },
+  medMonthly: {
+    eventId: 'med-1',
+    data: { ...MED_DATA, scheduled_time: '21:00', recurrence_rule: 'monthly', recurrence_end_date: null },
+  },
+  medCycle: {
+    eventId: 'med-1',
+    data: { ...MED_DATA, scheduled_time: '12:00', recurrence_rule: 'cycle:21:7', recurrence_end_date: null },
+  },
+  medPrn: {
+    eventId: 'med-1',
+    data: {
+      event_type: 'medication',
+      title: 'Metformin',
+      scheduled_date: '2026-11-11', // an as-needed med has no schedule: the save stamps "today"
+      notifications_enabled: true,
+      as_needed_reason: 'pain',
+      medication_name: 'Metformin',
+    },
+  },
+  appt: { eventId: 'appt-1', data: APPT_DATA },
+  apptWeekly: { eventId: 'appt-1', data: APPT_WEEKLY_DATA },
+};
+
+describe('the PATCH body', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-11T17:00:00Z'));
+  });
+
   it.each(Object.keys(EVENTS))('untouched save of %s', async (key) => {
-    const simple = await patchBody(EVENTS[key], undefined);
-    const full = await patchBody(EVENTS[key], 'full');
-    expect(simple).toEqual(full);
-    expect(simple).toMatchObject({ eventId: EVENTS[key].id });
+    const body = await patchBody(EVENTS[key]);
+    expect(body).toEqual(UNTOUCHED[key]);
   });
 
   it.each(['medDaily', 'medDays', 'medPrn'])('a dosage edit of %s', async (key) => {
@@ -164,10 +239,11 @@ describe('the PATCH is the one the full edit layout sends', () => {
       await user.clear(dose);
       await user.type(dose, '1000 mg');
     };
-    const simple = await patchBody(EVENTS[key], undefined, edit);
-    const full = await patchBody(EVENTS[key], 'full', edit);
-    expect(simple).toEqual(full);
-    expect(simple).toMatchObject({ data: { medication_dosage: '1000 mg' } });
+    const body = await patchBody(EVENTS[key], edit);
+    expect(body).toEqual({
+      eventId: 'med-1',
+      data: { ...UNTOUCHED[key].data, medication_dosage: '1000 mg' },
+    });
   });
 
   it.each(['appt', 'apptWeekly'])('a title edit of %s', async (key) => {
@@ -176,22 +252,21 @@ describe('the PATCH is the one the full edit layout sends', () => {
       await user.clear(field);
       await user.type(field, 'Follow-up');
     };
-    const simple = await patchBody(EVENTS[key], undefined, edit);
-    const full = await patchBody(EVENTS[key], 'full', edit);
-    expect(simple).toEqual(full);
+    const body = await patchBody(EVENTS[key], edit);
+    expect(body).toEqual({
+      eventId: 'appt-1',
+      data: { ...UNTOUCHED[key].data, title: 'Follow-up' },
+    });
   });
 
-  it('a time chip == typing that time in the full form', async () => {
-    const simple = await patchBody(EVENTS.medDaily, undefined, async (user) => {
+  it('the Evening chip saves 18:00 (6:00 PM New York on a Denver viewer)', async () => {
+    const body = await patchBody(EVENTS.medDaily, async (user) => {
       await user.click(chip(/Evening/));
     });
-    const full = await patchBody(EVENTS.medDaily, 'full', async (user) => {
-      const time = screen.getByLabelText(/^Time/);
-      await user.clear(time);
-      await user.type(time, '16:00'); // 6:00 PM New York on a Denver viewer
+    expect(body).toEqual({
+      eventId: 'med-1',
+      data: { ...UNTOUCHED.medDaily.data, scheduled_time: '18:00' },
     });
-    expect(simple).toEqual(full);
-    expect(simple).toMatchObject({ data: { scheduled_time: '18:00' } });
   });
 });
 
@@ -231,16 +306,12 @@ describe('it looks like the add form', () => {
     expect(screen.queryByRole('radiogroup', { name: 'Title suggestions' })).toBeNull();
   });
 
-  it('a task edit gets the simple task form too (owner 1.4.0); layout="full" keeps the old one', () => {
-    const view = renderEdit({ ...appt(), id: 't-1', event_type: 'task', title: 'Pick up' } as CalendarEvent);
+  it('a task edit gets the simple task form too (owner 1.4.0)', () => {
+    renderEdit({ ...appt(), id: 't-1', event_type: 'task', title: 'Pick up' } as CalendarEvent);
     expect(screen.queryByTestId('simple-medication-form')).toBeNull();
     expect(screen.queryByTestId('simple-appointment-form')).toBeNull();
     expect(screen.getByTestId('simple-task-form')).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Edit task' })).toBeInTheDocument();
-    view.unmount();
-    renderEdit({ ...appt(), id: 't-1', event_type: 'task', title: 'Pick up' } as CalendarEvent, 'full');
-    expect(screen.queryByTestId('simple-task-form')).toBeNull();
-    expect(screen.getByRole('dialog', { name: 'Edit event' })).toBeInTheDocument();
   });
 });
 
@@ -439,12 +510,7 @@ describe('analytics', () => {
     ['medDaily', 'medication'],
     ['appt', 'appointment'],
   ])('entry_save_tapped on an edit of %s says is_editing and layout simple', async (key, type) => {
-    await patchBody(EVENTS[key], undefined);
+    await patchBody(EVENTS[key]);
     expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, type, 'form', true, 'simple');
-  });
-
-  it('the full layout says layout full', async () => {
-    await patchBody(EVENTS.medDaily, 'full');
-    expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, 'medication', 'form', true, 'full');
   });
 });

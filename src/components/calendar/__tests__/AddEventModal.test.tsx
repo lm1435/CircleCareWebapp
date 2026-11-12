@@ -142,6 +142,44 @@ function unfoldApptTimes(): void {
   if (pick && pick.getAttribute('aria-checked') !== 'true') fireEvent.click(pick);
 }
 
+type NewType = 'medication' | 'appointment' | 'task';
+
+/** A NEW entry: one simple form per type (`initialType` is required; no type switch). */
+function renderNew(type: NewType, props: Partial<React.ComponentProps<typeof AddEventModal>> = {}) {
+  return render(<AddEventModal circleId={CIRCLE_ID} initialType={type} onClose={vi.fn()} {...props} />);
+}
+function renderEdit(event: CalendarEvent, props: Partial<React.ComponentProps<typeof AddEventModal>> = {}) {
+  return render(<AddEventModal circleId={CIRCLE_ID} event={event} onClose={vi.fn()} {...props} />);
+}
+/** The pinned footer's primary button ("Add medication" / "Add appointment" / "Add task"). */
+const createBtn = (): HTMLElement => screen.getByTestId('add-event-save');
+const titleField = (): HTMLInputElement =>
+  screen.getByLabelText(/^Title( \*)?( \(required\))?$/) as HTMLInputElement;
+/** The "Starts" tile's hidden input (the tile is the date picker; the input carries the value). */
+const startsInput = (): HTMLInputElement =>
+  screen.getByLabelText(/^Starts/, { selector: 'input' }) as HTMLInputElement;
+/** A new medication's TIME-FIRST dose chips (multi-select checkboxes, the circle's clock). */
+const doseChip = (name: RegExp): HTMLElement =>
+  within(screen.getByRole('group', { name: 'Common dose times' })).getByRole('checkbox', { name });
+/** "Other…": the time picker itself, over the hidden input named "Other time" (the circle's clock). */
+const otherTime = (): HTMLInputElement =>
+  screen.getByLabelText('Other time', { selector: 'input' }) as HTMLInputElement;
+/** "Pick a time" on a task / appointment (a no-op once the From | To tiles show). */
+async function pickTime(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  const radio = screen.getByRole('radio', { name: 'Pick a time' });
+  if (radio.getAttribute('aria-checked') !== 'true') await user.click(radio);
+}
+/** The From tile's hidden input (the circle's clock, "From") / the To tile's ("To"). */
+const fromInput = (): HTMLInputElement =>
+  screen.getByLabelText('From', { selector: 'input' }) as HTMLInputElement;
+const toInput = (): HTMLInputElement =>
+  screen.getByLabelText('To', { selector: 'input' }) as HTMLInputElement;
+/** Give a new task / appointment a time (the circle's clock), then the Reminders row applies. */
+async function setTime(user: ReturnType<typeof userEvent.setup>, time: string): Promise<void> {
+  await pickTime(user);
+  fireEvent.change(fromInput(), { target: { value: time } });
+}
+
 function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   return {
     id: 'ev-1',
@@ -204,8 +242,9 @@ describe('AddEventModal', () => {
   // button. With a required field missing a press does not save: it focuses the
   // field and shows its inline error (title; date; a medication's time).
   describe('Save with a required field missing', () => {
-    const save = (name = 'Create'): HTMLElement => screen.getByRole('button', { name });
-    const titleInput = () => screen.getByLabelText(/^Title( \*)?( \(required\))?$/);
+    const save = (name?: string): HTMLElement =>
+      name ? screen.getByRole('button', { name }) : createBtn();
+    const titleInput = titleField;
     const solid = (el: HTMLElement): void => {
       expect(el).not.toHaveAttribute('aria-disabled');
       expect(el).toBeEnabled();
@@ -216,22 +255,23 @@ describe('AddEventModal', () => {
     };
 
     it('appointment: solid and not aria-disabled with the title missing, in the footer', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+      renderNew('appointment');
       solid(save());
       expect(save()).toHaveAttribute('data-testid', 'add-event-save');
+      expect(save()).toHaveTextContent('Add appointment');
       expect(save().closest('[data-modal-footer]')).not.toBeNull();
       expect(save().closest('form')).toBeNull();
     });
 
     it('medication: solid with the time missing too', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
       await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
       solid(save());
     });
 
     it('shows no hint line and no field error before a click', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+      renderNew('appointment');
       expect(screen.queryByTestId('add-event-save-missing')).toBeNull();
       expect(screen.queryByText('Please enter a title.')).toBeNull();
       expect(save()).not.toHaveAttribute('aria-describedby');
@@ -240,7 +280,7 @@ describe('AddEventModal', () => {
 
     it('click with the title missing: focuses it, shows the error linked by aria-describedby, never saves', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+      renderNew('appointment');
       await user.click(save());
       expect(titleInput()).toHaveFocus();
       expect(titleInput()).toHaveAttribute('aria-invalid', 'true');
@@ -256,7 +296,7 @@ describe('AddEventModal', () => {
 
     it('the error clears as soon as the title is filled, and the next missing field shows nothing until the next click', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
       await user.click(save());
       const name = screen.getByRole('combobox', { name: /Medication name/ });
       expect(name).toHaveAttribute('aria-invalid', 'true');
@@ -266,25 +306,22 @@ describe('AddEventModal', () => {
       expect(name).not.toHaveAttribute('aria-invalid');
       expect(screen.queryByText('Please enter a medication name.')).toBeNull();
       // The time is still missing, but no error appears for it yet.
-      expect(screen.getByLabelText(/^Time/)).not.toHaveAttribute('aria-invalid');
       expect(screen.queryByText('Medications need a scheduled time.')).toBeNull();
 
       await user.click(save());
-      const time = screen.getByLabelText(/^Time/);
-      expect(time).toHaveFocus();
-      expect(time).toHaveAttribute('aria-invalid', 'true');
+      // The first dose chip takes focus and the message names the missing time.
+      expect(doseChip(/Morning/)).toHaveFocus();
       expect(screen.getByText('Medications need a scheduled time.')).toBeInTheDocument();
       expect(mutateCreate).not.toHaveBeenCalled();
 
-      fireEvent.change(time, { target: { value: '09:00' } });
-      expect(time).not.toHaveAttribute('aria-invalid');
+      await user.click(doseChip(/Morning/));
       expect(screen.queryByText('Medications need a scheduled time.')).toBeNull();
       solid(save());
     });
 
     it('clearing the field again after fixing it does not resurrect the old error', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+      renderNew('appointment');
       await user.click(save());
       await user.type(titleInput(), 'A');
       await user.clear(titleInput());
@@ -292,7 +329,7 @@ describe('AddEventModal', () => {
     });
 
     it('does not submit the form (the click default is cancelled)', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+      renderNew('appointment');
       const onSubmit = vi.fn();
       document.getElementById('add-event-form')?.addEventListener('submit', onSubmit);
       // fireEvent.click returns false when preventDefault was called.
@@ -303,7 +340,7 @@ describe('AddEventModal', () => {
 
     it('a title of only spaces still counts as missing', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
       await user.type(titleInput(), '   ');
       await user.click(save());
       expect(titleInput()).toHaveAttribute('aria-invalid', 'true');
@@ -312,19 +349,21 @@ describe('AddEventModal', () => {
 
     it('focuses the date when it is the empty one, and shows its error', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
       await user.type(titleInput(), 'Call pharmacy');
-      const date = screen.getByLabelText(/^Date/) as HTMLInputElement;
-      await user.clear(date);
+      fireEvent.change(startsInput(), { target: { value: '' } });
       await user.click(save());
-      expect(date).toHaveFocus();
-      expect(date).toHaveAttribute('aria-invalid', 'true');
+      // The Starts tile is the picker; its hidden input is out of the tab order.
+      const tile = screen.getByTestId('starts-tile');
+      await waitFor(() => expect(tile).toHaveFocus());
+      expect(tile).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByText('Please choose a date.')).toBeInTheDocument();
       expect(mutateCreate).not.toHaveBeenCalled();
     });
 
     it('is reachable by keyboard and Enter does the same as a click', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+      renderNew('appointment');
       save().focus();
       expect(save()).toHaveFocus();
       await user.keyboard('{Enter}');
@@ -335,7 +374,7 @@ describe('AddEventModal', () => {
 
     it('filled: the same solid button saves', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+      renderNew('appointment');
       await user.type(titleInput(), 'Cardiology');
       solid(save());
       await user.click(save());
@@ -345,7 +384,7 @@ describe('AddEventModal', () => {
     // Owner 2026-11-08: the footer pair is the standard <Button> md (44px floor), no ad-hoc
     // padding / height overrides.
     it('the footer pair is the standard md Button, no padding or height override', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+      renderNew('appointment');
       for (const button of [save(), screen.getByRole('button', { name: 'Cancel' })]) {
         expect(button.className).toContain('min-h-[44px]');
         expect(button.className).toContain('rounded-lg');
@@ -359,7 +398,7 @@ describe('AddEventModal', () => {
         const zone = useCircleResult.timezone;
         (useCircleResult as { timezone: string | null }).timezone = null;
         try {
-          render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+          renderNew('appointment');
           expect(save()).toBeDisabled();
           await user.click(save());
           expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -372,15 +411,13 @@ describe('AddEventModal', () => {
     });
 
     it('edit: an existing entry opens with Save enabled', () => {
-      render(
-        <AddEventModal circleId={CIRCLE_ID} event={makeEvent()} onClose={vi.fn()} />
-      );
+      renderEdit(makeEvent());
       expect(save('Save changes')).toBeEnabled();
     });
   });
 
   it('blocks submit and shows + focuses the title error when title is empty', async () => {
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    renderNew('appointment');
 
     // Save is disabled with the title empty, so this is the submit that does
     // not go through the button (a programmatic `requestSubmit`).
@@ -388,35 +425,28 @@ describe('AddEventModal', () => {
     await waitFor(() => expect(screen.getAllByText('Please enter a title.')).toHaveLength(1));
 
     expect(mutateCreate).not.toHaveBeenCalled();
-    const titleInput = screen.getByLabelText(/^Title( \*)?( \(required\))?$/);
+    const titleInput = titleField();
     expect(titleInput).toHaveAttribute('aria-invalid', 'true');
     expect(titleInput).toHaveFocus();
   });
 
-  it('builds a TZ-correct payload (recipient TZ differs → crosses midnight)', async () => {
+  it('builds the payload in the RECIPIENT frame, a late time stays on its own date', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    renderNew('appointment');
 
-    await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Eye exam');
-    // Date pickers take a YYYY-MM-DD value; type controls take HH:MM.
-    const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
-    await user.clear(dateInput);
-    await user.type(dateInput, '2026-06-15');
-    const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-    await user.clear(timeInput);
-    await user.type(timeInput, '23:00');
-    const endInput = screen.getByLabelText(/^End time/) as HTMLInputElement;
-    await user.clear(endInput);
-    await user.type(endInput, '23:30');
+    await user.type(titleField(), 'Eye exam');
+    // The simple form's tiles ARE the circle's clock (New York): nothing is converted on the way
+    // out, so 11:00 PM typed is 23:00 stored on the date typed (the viewer is in Denver).
+    fireEvent.change(startsInput(), { target: { value: '2026-06-15' } });
+    await setTime(user, '23:00');
+    fireEvent.change(toInput(), { target: { value: '23:30' } });
 
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(createBtn());
 
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     const payload = mutateCreate.mock.calls[0][0];
-    // 11:00 PM Denver === 1:00 AM the NEXT DAY in New York. The caregiver
-    // typed their own clock; the recipient's frame is what gets stored.
-    expect(payload.scheduled_date).toBe('2026-06-16');
-    expect(payload.scheduled_time).toBe('01:00');
+    expect(payload.scheduled_date).toBe('2026-06-15');
+    expect(payload.scheduled_time).toBe('23:00');
     expect(payload.event_type).toBe('appointment');
     expect(payload.title).toBe('Eye exam');
     // 30-minute appointment → duration carried through.
@@ -488,73 +518,15 @@ describe('AddEventModal', () => {
       }
     });
 
-    it('a TYPE switch never checks 15m — the task that used to arrive pre-armed', async () => {
-      // The global Create menu opens with NO initialType, so eventType starts
-      // 'medication'. Switching to Task used to re-apply a task-specific
-      // default and tick "15 minutes before" on the user's behalf, on the
-      // (since falsified) grounds that a task had no at-time push. It has one:
-      // reminder_at_due is a real column and process_task_reminders() reads it
-      // for task/appointment. So the entry speaks once, when it is due, and the
-      // early push nobody asked for is gone.
-      const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
-
-      await user.selectOptions(screen.getByLabelText('Type'), 'task');
-      await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Pick up prescription');
-      // A time is required for reminders to apply at all: the cron filters
-      // `scheduled_time IS NOT NULL`, so a timeless task shows no reminder
-      // controls (remindersApply) — its stored flags are inert rather than
-      // rewritten. Set one so this test exercises a reminder that can fire.
-      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeInput);
-      await user.type(timeInput, '09:00');
-
-      expect(screen.getByRole('checkbox', { name: '15 minutes before' })).toHaveAttribute(
-        'aria-checked',
-        'false'
-      );
-
-      await user.click(screen.getByRole('button', { name: 'Create' }));
-      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
-
-      const payload = mutateCreate.mock.calls[0][0];
-      expect(payload.event_type).toBe('task');
-      expect(payload.notifications_enabled).toBe(true);
-      expect(payload.reminder_15m).toBe(false);
-      // Not silent: this is the flag that carries a task now.
-      expect(payload.reminder_at_due).toBe(true);
-    });
-
-    it('does not re-apply the default over a choice the user made', async () => {
-      const user = userEvent.setup();
-      // Type-less open: the only entry that still has the type switch.
-      render(<AddEventModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
-      await user.selectOptions(screen.getByLabelText('Type'), 'task');
-      await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Pick up prescription');
-      const timeField = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeField);
-      await user.type(timeField, '09:00');
-
-      // Explicitly turn 15m ON, then switch type and back. The switcher must not
-      // reset it: `remindersTouched` records that the user has spoken.
-      await user.click(screen.getByLabelText('15 minutes before'));
-      await user.selectOptions(screen.getByLabelText('Type'), 'appointment');
-
-      await user.click(screen.getByRole('button', { name: 'Create' }));
-      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
-      expect(mutateCreate.mock.calls[0][0].reminder_15m).toBe(true);
-    });
-
     it('tells the user reminders are delivered by the mobile app', async () => {
       // The web app has no push and never registers a token; the backend's
       // notificationService returns `no_token` and stops, with no email
       // fallback. Without this line the section is configuration for something
       // a web-only caregiver will never receive.
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
-      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeInput);
-      await user.type(timeInput, '09:00');
+      renderNew('medication');
+      await user.click(doseChip(/Morning/));
+      expandRemindersRow();
 
       expect(
         screen.getByText(
@@ -701,21 +673,16 @@ describe('AddEventModal', () => {
     it('does NOT clobber a date the user already picked', async () => {
       try {
         useCircleResult.timezone = 'America/New_York';
-        const user = userEvent.setup();
-        const { rerender } = render(
-          <AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />
-        );
+        const { rerender } = renderNew('medication');
 
-        const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
-        await user.clear(dateInput);
-        await user.type(dateInput, '2026-07-04');
+        fireEvent.change(startsInput(), { target: { value: '2026-07-04' } });
 
         useCircleResult.timezone = 'Pacific/Kiritimati';
         rerender(
-          <AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />
+          <AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />
         );
 
-        expect((screen.getByLabelText(/^Date/) as HTMLInputElement).value).toBe('2026-07-04');
+        expect(startsInput().value).toBe('2026-07-04');
       } finally {
         useCircleResult.timezone = RECIPIENT_TZ;
       }
@@ -730,9 +697,9 @@ describe('AddEventModal', () => {
   describe('entry_source', () => {
     it.each(['appointment', 'task'] as const)('a new %s sends entry_source "form"', async (type) => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType={type} layout="full" onClose={vi.fn()} />);
-      await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Eye exam');
-      await user.click(screen.getByRole('button', { name: 'Create' }));
+      renderNew(type);
+      await user.type(titleField(), 'Eye exam');
+      await user.click(createBtn());
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       expect(mutateCreate.mock.calls[0][0].entry_source).toBe('form');
     });
@@ -770,7 +737,7 @@ describe('AddEventModal', () => {
     );
 
     // Prefilled title from the instance.
-    expect(screen.getByLabelText(/^Title( \*)?( \(required\))?$/)).toHaveValue('Refill Rx');
+    expect(titleField()).toHaveValue('Refill Rx');
 
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
@@ -785,7 +752,7 @@ describe('AddEventModal', () => {
   it('renders nothing when the user cannot edit', () => {
     useCircleResult.canEdit = false;
     const { container } = render(
-      <AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />
+      <AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />
     );
     expect(container).toBeEmptyDOMElement();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -798,7 +765,6 @@ describe('AddEventModal', () => {
   // row stays on today and only today's reminder is lost.
   const CREATE_PAST_TIME_MESSAGE =
     'This time has already passed today, so nothing will be recorded for today. This medication will start with its next scheduled dose.';
-  const CREATE_PAST_TIME_INLINE = 'Starts with the next dose. This time has already passed today.';
   const EDIT_PAST_TIME_MESSAGE =
     "This time has already passed today — no reminder will be sent for today's dose.";
 
@@ -814,30 +780,29 @@ describe('AddEventModal', () => {
       vi.useRealTimers();
     });
 
-    async function fillMedication(time: string, submit = true): Promise<void> {
+    // Only Date is faked; the Starts date defaults to the recipient's today (2026-06-15).
+    // The simple form's times are the CIRCLE's clock (New York): "Other…" 12:00 is 2h past.
+    async function fillMedication(time: string, submit = true): Promise<ReturnType<typeof userEvent.setup>> {
       const user = userEvent.setup();
       await user.type(screen.getByLabelText(/^Medication name/), 'Metformin');
-      const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
-      await user.clear(dateInput);
-      await user.type(dateInput, '2026-06-15');
-      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeInput);
-      await user.type(timeInput, time);
-      if (submit) await user.click(screen.getByRole('button', { name: 'Create' }));
+      fireEvent.change(startsInput(), { target: { value: '2026-06-15' } });
+      await user.click(screen.getByTestId('time-chip-other'));
+      fireEvent.change(otherTime(), { target: { value: time } });
+      if (submit) await user.click(createBtn());
+      return user;
     }
 
     it('CREATE: a passed time shows the inline note, raises NO dialog, and Save proceeds', async () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
 
-      await fillMedication('10:00', false); // 12:00 New York — 2h in the past there.
+      const user = await fillMedication('12:00', false); // 12:00 New York — 2h in the past there.
 
       // Live, before any save: an announced status region carries the note.
       const note = screen.getByTestId('dose-past-time-note');
-      expect(note).toHaveTextContent(CREATE_PAST_TIME_INLINE);
+      expect(note).toHaveTextContent('Starts with the next dose. 12:00 PM has already passed today.');
       expect(note.closest('[role="status"]')).not.toBeNull();
 
-      const user = userEvent.setup();
-      await user.click(screen.getByRole('button', { name: 'Create' }));
+      await user.click(createBtn());
 
       // No prompt of any kind; the save goes straight through.
       expect(screen.queryByRole('dialog', { name: 'Starts with the next dose' })).not.toBeInTheDocument();
@@ -846,20 +811,16 @@ describe('AddEventModal', () => {
       const payload = mutateCreate.mock.calls[0][0];
       expect(payload.event_type).toBe('medication');
       expect(payload.scheduled_date).toBe('2026-06-15');
-      // 10:00 Denver === 12:00 New York.
       expect(payload.scheduled_time).toBe('12:00');
     });
 
     it('CREATE: the note is live — it disappears when the time moves to the future', async () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
 
-      await fillMedication('10:00', false);
+      await fillMedication('12:00', false);
       expect(screen.getByTestId('dose-past-time-note')).toBeInTheDocument();
 
-      const user = userEvent.setup();
-      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeInput);
-      await user.type(timeInput, '20:00'); // 22:00 New York — upcoming.
+      fireEvent.change(otherTime(), { target: { value: '20:00' } }); // 8 PM New York — upcoming.
       expect(screen.queryByTestId('dose-past-time-note')).not.toBeInTheDocument();
     });
 
@@ -905,9 +866,9 @@ describe('AddEventModal', () => {
     });
 
     it('saves a still-upcoming med time directly, with no notice', async () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
 
-      await fillMedication('20:00'); // 22:00 New York — still upcoming there.
+      await fillMedication('20:00'); // 8 PM New York — still upcoming there.
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       expect(screen.queryByText(CREATE_PAST_TIME_MESSAGE)).not.toBeInTheDocument();
@@ -916,20 +877,15 @@ describe('AddEventModal', () => {
   });
 
   describe('quick-pick chips (Round 3)', () => {
-    it('appointment title chip fills the title, shows selected, and untaps to clear', async () => {
+    it('appointment title chip fills the title, and the chips go once it has one', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+      renderNew('appointment');
 
       await user.click(screen.getByRole('radio', { name: 'Doctor visit' }));
 
-      expect(screen.getByLabelText(/^Title( \*)?( \(required\))?$/)).toHaveValue('Doctor visit');
-      // Row stays visible with the matching chip checked (accidental-tap undo).
-      const chip = screen.getByRole('radio', { name: 'Doctor visit' });
-      expect(chip).toBeChecked();
-
-      await user.click(chip);
-      expect(screen.getByLabelText(/^Title( \*)?( \(required\))?$/)).toHaveValue('');
-      expect(screen.getByRole('radio', { name: 'Doctor visit' })).not.toBeChecked();
+      expect(titleField()).toHaveValue('Doctor visit');
+      // The simple form drops the suggestions once the title has text.
+      expect(screen.queryByRole('radiogroup', { name: 'Title suggestions' })).not.toBeInTheDocument();
     });
 
     it('title chips surface the circle history (cached events) ahead of generics', () => {
@@ -937,158 +893,78 @@ describe('AddEventModal', () => {
         makeEvent({ id: 'h1', title: 'Cardiology follow-up', scheduled_date: '2026-06-10' }),
         makeEvent({ id: 'h2', title: 'cardiology follow-up', scheduled_date: '2026-06-20' }),
       ];
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+      renderNew('appointment');
 
       const group = screen.getByRole('radiogroup', { name: 'Title suggestions' });
       const chips = within(group).getAllByRole('radio');
-      // History first (deduped case-insensitively, most recent casing), then
-      // generics padding to 6.
+      // History first (deduped case-insensitively, most recent casing), then generics, at most 3.
       expect(chips[0]).toHaveTextContent('cardiology follow-up');
-      expect(chips).toHaveLength(6);
+      expect(chips).toHaveLength(3);
     });
 
-    it('title chip prefill via initialTitle (R4-3 starter chips) fills the field', () => {
-      render(
-        <AddEventModal
-          circleId={CIRCLE_ID}
-          initialType="task" layout="full"
-          initialTitle="Grocery run"
-          onClose={vi.fn()}
-        />
-      );
-      expect(screen.getByLabelText(/^Title( \*)?( \(required\))?$/)).toHaveValue('Grocery run');
-      // The matching suggestion chip reads as selected (exact match).
-      expect(screen.getByRole('radio', { name: 'Grocery run' })).toBeChecked();
-    });
-
-    it('scopes the chip rows: presets are medication-only, title chips are appt/task-only', () => {
-      const { unmount } = render(
-        <AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />
-      );
+    it('scopes the chip rows: dose-time chips are medication-only, title chips are appt/task-only', () => {
+      const { unmount } = renderNew('medication');
       expect(
         screen.queryByRole('radiogroup', { name: 'Title suggestions' })
       ).not.toBeInTheDocument();
-      expect(screen.getByRole('radiogroup', { name: 'Common schedules' })).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Common dose times' })).toBeInTheDocument();
       unmount();
 
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
-      expect(screen.queryByRole('radiogroup', { name: 'Common schedules' })).not.toBeInTheDocument();
-      expect(screen.getByRole('radiogroup', { name: 'Title suggestions' })).toBeInTheDocument();
+      for (const type of ['appointment', 'task'] as const) {
+        const view = renderNew(type);
+        expect(screen.queryByRole('group', { name: 'Common dose times' })).not.toBeInTheDocument();
+        expect(screen.getByRole('radiogroup', { name: 'Title suggestions' })).toBeInTheDocument();
+        view.unmount();
+      }
     });
   });
 
-  // ── Round 6 (R6-2): consolidated medication schedule presets ──────────────
-  // ONE chip strip for the med flow; every chip sets a COMPLETE daily schedule
-  // (time + daily recurrence) in one tap; untap returns both to unset. Web
-  // subset: single time field → everyMorning + everyEvening only.
-  describe('schedule presets (R6-2)', () => {
-    const MORNING_CHIP = 'Every morning (8:00 AM)';
-    const EVENING_CHIP = 'Every evening (8:00 PM)';
-    // The presets are the CIRCLE's clock (BC-8): 08:00 / 20:00 New York is 06:00 / 18:00 on the Denver viewer's field.
-    const VIEWER_08_NY = '06:00';
-    const VIEWER_20_NY = '18:00';
-
-    it('tapping a preset sets the time AND daily recurrence in one gesture', async () => {
+  // ── Medication dose-time chips (replace the old schedule-preset strip) ────
+  // A chip is the CIRCLE's clock: 8:00 AM Morning stores 08:00 for a New York recipient whatever the
+  // caregiver's zone, and the default How often? (Every day) supplies the daily rule.
+  describe('dose-time chips', () => {
+    it('tapping a chip sets the time and the default daily recurrence in one gesture', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
 
-      const group = screen.getByRole('radiogroup', { name: 'Common schedules' });
-      const chip = within(group).getByRole('radio', { name: MORNING_CHIP });
-      expect(chip).not.toBeChecked();
+      expect(doseChip(/Morning/)).not.toBeChecked();
+      await user.click(doseChip(/Morning/));
 
-      await user.click(chip);
-
-      // BC-8: the preset is the CIRCLE's 08:00 (New York); this field is the viewer's clock (Denver).
-      expect(screen.getByLabelText(/^Time/)).toHaveValue(VIEWER_08_NY);
-      expect(screen.getByLabelText('Repeat')).toHaveValue('daily');
-      expect(within(group).getByRole('radio', { name: MORNING_CHIP })).toBeChecked();
+      expect(doseChip(/Morning/)).toBeChecked();
+      expect(screen.getByRole('radio', { name: 'Every day' })).toBeChecked();
     });
 
-    it('the evening preset sets 20:00 + daily; switching chips swaps the time', async () => {
+    it('untapping the selected chip returns the time to unset', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
-      const group = screen.getByRole('radiogroup', { name: 'Common schedules' });
+      renderNew('medication');
 
-      await user.click(within(group).getByRole('radio', { name: 'Every evening (8:00 PM)' }));
-      expect(screen.getByLabelText(/^Time/)).toHaveValue(VIEWER_20_NY);
-      expect(screen.getByLabelText('Repeat')).toHaveValue('daily');
-      expect(within(group).getByRole('radio', { name: EVENING_CHIP })).toBeChecked();
-      expect(within(group).getByRole('radio', { name: MORNING_CHIP })).not.toBeChecked();
+      await user.click(doseChip(/Morning/));
+      await user.click(doseChip(/Morning/));
 
-      // Switching to the morning chip moves the whole schedule.
-      await user.click(within(group).getByRole('radio', { name: MORNING_CHIP }));
-      expect(screen.getByLabelText(/^Time/)).toHaveValue(VIEWER_08_NY);
-      expect(screen.getByLabelText('Repeat')).toHaveValue('daily');
-      expect(within(group).getByRole('radio', { name: EVENING_CHIP })).not.toBeChecked();
+      expect(doseChip(/Morning/)).not.toBeChecked();
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
+      await user.click(createBtn());
+      expect(screen.getByText('Medications need a scheduled time.')).toBeInTheDocument();
+      expect(mutateCreate).not.toHaveBeenCalled();
     });
 
-    it('untapping the selected preset returns time and recurrence to unset', async () => {
+    it('the saved payload carries the chip time (circle clock) + daily rule', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
-      const group = screen.getByRole('radiogroup', { name: 'Common schedules' });
-
-      await user.click(within(group).getByRole('radio', { name: MORNING_CHIP }));
-      expect(screen.getByLabelText(/^Time/)).toHaveValue(VIEWER_08_NY);
-
-      await user.click(within(group).getByRole('radio', { name: MORNING_CHIP }));
-
-      expect(screen.getByLabelText(/^Time/)).toHaveValue('');
-      expect(screen.getByLabelText('Repeat')).toHaveValue('none');
-      expect(within(group).getByRole('radio', { name: MORNING_CHIP })).not.toBeChecked();
-    });
-
-    it('selected state requires the EXACT time + recurrence pair', async () => {
-      const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
-      const group = screen.getByRole('radiogroup', { name: 'Common schedules' });
-
-      // The circle's 08:00 typed alone (06:00 on the viewer's field; no recurrence) is NOT the schedule preset.
-      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeInput);
-      await user.type(timeInput, VIEWER_08_NY);
-      expect(within(group).getByRole('radio', { name: MORNING_CHIP })).not.toBeChecked();
-
-      // Adding daily recurrence completes the exact match.
-      await user.selectOptions(screen.getByLabelText('Repeat'), 'daily');
-      expect(within(group).getByRole('radio', { name: MORNING_CHIP })).toBeChecked();
-    });
-
-    it('is prefill-only: the saved payload carries the preset time + daily rule', async () => {
-      const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
 
       await user.type(screen.getByLabelText(/^Medication name/), 'Metformin');
-      // A future date so the past-time notice can't interpose.
-      const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
-      await user.clear(dateInput);
-      await user.type(dateInput, '2027-01-05');
-      const group = screen.getByRole('radiogroup', { name: 'Common schedules' });
-      await user.click(within(group).getByRole('radio', { name: MORNING_CHIP }));
+      // A future date so the past-time note can't interpose.
+      fireEvent.change(startsInput(), { target: { value: '2027-01-05' } });
+      await user.click(doseChip(/Morning/));
 
-      await user.click(screen.getByRole('button', { name: 'Create' }));
+      await user.click(createBtn());
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       const payload = mutateCreate.mock.calls[0][0];
       expect(payload.recurrence_rule).toBe('daily');
-      // The "8:00 AM" preset means 8 AM on the CIRCLE's clock (BC-8, owner decision), exactly as the time chips
-      // do: it stores 08:00 for a New York recipient whatever the caregiver's zone. (It used to be the caregiver's
-      // clock and stored 10:00.)
+      // "8:00 AM" is 8 AM on the CIRCLE's clock (BC-8, owner decision): 08:00 for New York.
       expect(payload.scheduled_time).toBe('08:00');
       expect(payload.scheduled_date).toBe('2027-01-05');
-    });
-
-    it('only renders for medications', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
-      expect(screen.queryByRole('radiogroup', { name: 'Common schedules' })).not.toBeInTheDocument();
-    });
-
-    it('the old "Common times" strip is gone — one chip strip in the med flow', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
-      expect(screen.queryByRole('radiogroup', { name: 'Common times' })).not.toBeInTheDocument();
-      expect(screen.getByRole('radiogroup', { name: 'Common schedules' })).toBeInTheDocument();
-      // And that consolidated strip carries both complete-schedule chips.
-      const group = screen.getByRole('radiogroup', { name: 'Common schedules' });
-      expect(within(group).getAllByRole('radio')).toHaveLength(2);
     });
   });
 
@@ -1096,24 +972,24 @@ describe('AddEventModal', () => {
 
   describe('reminders', () => {
     it('hides the reminders section for a task with no time', async () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
       // Nothing to fire against: the cron filters scheduled_time IS NOT NULL.
       expect(screen.queryByText('Enable notifications')).not.toBeInTheDocument();
     });
 
     it('shows the reminders section once a time is set', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
 
-      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeInput);
-      await user.type(timeInput, '14:00');
+      await setTime(user, '14:00');
+      expandRemindersRow();
 
       expect(screen.getByText('Enable notifications')).toBeInTheDocument();
     });
 
     it('always shows reminders for a medication', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
+      expandRemindersRow();
       expect(screen.getByText('Enable notifications')).toBeInTheDocument();
     });
 
@@ -1125,10 +1001,10 @@ describe('AddEventModal', () => {
       // Persisting the type's own defaults instead means adding a time later
       // behaves exactly like creating the task with one.
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
 
-      await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Refill this week');
-      await user.click(screen.getByRole('button', { name: 'Create' }));
+      await user.type(titleField(), 'Refill this week');
+      await user.click(createBtn());
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       const payload = mutateCreate.mock.calls[0][0];
@@ -1156,13 +1032,13 @@ describe('AddEventModal', () => {
   describe('reminder messaging', () => {
     /** Give a task a time so the reminders fieldset renders at all. */
     async function setTaskTime(user: ReturnType<typeof userEvent.setup>): Promise<void> {
-      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeInput);
-      await user.type(timeInput, '14:00');
+      await setTime(user, '14:00');
+      expandRemindersRow();
     }
 
     it('shows the at-time anchor as a real checkbox, on, + escalation for a medication', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
+      expandRemindersRow();
 
       // It used to be a locked statement of fact ("Always on for medications.").
       // `reminder_at_due` makes that sentence false — it is a control now, and a
@@ -1182,7 +1058,8 @@ describe('AddEventModal', () => {
       // The one place in the webapp that was still blind to `is_self_care`.
       // Mobile has branched this line since the escalation chain shipped.
       useCircleResult.circle = { is_self_care: true };
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
+      expandRemindersRow();
 
       expect(screen.getByText(/we follow up: you after 15 minutes/)).toBeInTheDocument();
       expect(
@@ -1193,7 +1070,8 @@ describe('AddEventModal', () => {
     it('keeps "the care recipient" when the circle is not self-care', () => {
       // FALSIFY BY: dropping the ternary and always rendering `escalationSelf`.
       useCircleResult.circle = { is_self_care: false };
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
+      expandRemindersRow();
 
       expect(
         screen.getByText(/we follow up: a follow-up reminder after 15 minutes/)
@@ -1202,7 +1080,8 @@ describe('AddEventModal', () => {
 
     it('tells a medication with the anchor off and nothing earlier that the first alert is the LATE one', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
+      expandRemindersRow();
 
       const anchor = screen.getByRole('checkbox', { name: 'At the scheduled time' });
       await user.click(anchor);
@@ -1267,7 +1146,8 @@ describe('AddEventModal', () => {
 
       it('appears when the user reaches the state on a new medication', async () => {
         const user = userEvent.setup();
-        render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+        renderNew('medication');
+      expandRemindersRow();
         expect(warning()).toBeNull();
         await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
         expect(warning()).not.toBeNull();
@@ -1309,7 +1189,8 @@ describe('AddEventModal', () => {
 
     it('reverts to the ordinary off-notice once an earlier reminder is picked', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
+      expandRemindersRow();
 
       await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
       await user.click(screen.getByRole('checkbox', { name: '1 hour before' }));
@@ -1324,7 +1205,7 @@ describe('AddEventModal', () => {
 
     it('shows the same at-time anchor for a task, without the medication escalation', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
       await setTaskTime(user);
 
       // A task DOES get an at-time alert now — that is the whole feature. What
@@ -1337,7 +1218,7 @@ describe('AddEventModal', () => {
 
     it('warns only once the at-due anchor is switched OFF — the genuinely silent state', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
       await setTaskTime(user);
 
       const anchor = screen.getByRole('checkbox', { name: 'At the scheduled time' });
@@ -1365,7 +1246,8 @@ describe('AddEventModal', () => {
 
     it('warns about the missed-dose alert when a medication has reminders off', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
+      expandRemindersRow();
 
       const master = screen.getByRole('switch', { name: 'Enable notifications' });
       await user.click(master);
@@ -1382,7 +1264,8 @@ describe('AddEventModal', () => {
     });
 
     it('keeps the legend naming the fieldset, with the explainer trigger outside it', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
+      expandRemindersRow();
 
       // FALSIFY BY: wrapping the `<legend>` in a flex row with the button. A
       // legend that is not the fieldset's first child stops naming the group,
@@ -1396,7 +1279,8 @@ describe('AddEventModal', () => {
 
     it('opens the "How notifications work" explainer, escalation section included', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
+      expandRemindersRow();
 
       await user.click(screen.getByRole('button', { name: 'How notifications work' }));
 
@@ -1414,7 +1298,7 @@ describe('AddEventModal', () => {
 
     it('omits the escalation section of the explainer for a task', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
       await setTaskTime(user);
 
       await user.click(screen.getByRole('button', { name: 'How notifications work' }));
@@ -1431,7 +1315,8 @@ describe('AddEventModal', () => {
       // mobile's now-dead `escalationInfo` drifted to 15 min / 1 hr / 2 hrs.
       useCircleResult.circle = { is_self_care: true };
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
+      expandRemindersRow();
 
       await user.click(screen.getByRole('button', { name: 'How notifications work' }));
 
@@ -1443,7 +1328,7 @@ describe('AddEventModal', () => {
 
     it('shows the neutral off note for a task with reminders off', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
       await setTaskTime(user);
 
       await user.click(screen.getByRole('switch', { name: 'Enable notifications' }));
@@ -1461,7 +1346,7 @@ describe('AddEventModal', () => {
 
     it('rule 2 does NOT fire while the at-due anchor is armed', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
       await setTaskTime(user);
 
       const master = screen.getByRole('switch', { name: 'Enable notifications' });
@@ -1493,7 +1378,7 @@ describe('AddEventModal', () => {
 
     it('rule 2 — unchecking the LAST earlier reminder with the anchor OFF switches the master off', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
       await setTaskTime(user);
 
       const master = screen.getByRole('switch', { name: 'Enable notifications' });
@@ -1514,7 +1399,7 @@ describe('AddEventModal', () => {
 
     it('rule 2 does NOT fire while another earlier reminder is still checked', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
       await setTaskTime(user);
 
       // Two boxes on, then one back off: the master must not follow it down
@@ -1541,7 +1426,7 @@ describe('AddEventModal', () => {
       // already the only thing standing behind the same state on the edit form,
       // which must not auto-correct a hydrated row.
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
       await setTaskTime(user);
 
       // Reach real silence: 15m armed, the anchor off, THEN the only box
@@ -1589,7 +1474,7 @@ describe('AddEventModal', () => {
      */
     it('a master off→on cycle invents nothing', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
       await setTaskTime(user);
 
       // The fresh state, untouched: the anchor carries the task and no earlier
@@ -1626,14 +1511,14 @@ describe('AddEventModal', () => {
       // The wire half of the test above. `reminderFlagsForSave` is verbatim now,
       // so anything the sync rules invent is persisted.
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
 
-      await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Refill the water jug');
+      await user.type(titleField(), 'Refill the water jug');
       await setTaskTime(user);
       const master = screen.getByRole('switch', { name: 'Enable notifications' });
       await user.click(master);
       await user.click(master);
-      await user.click(screen.getByRole('button', { name: 'Create' }));
+      await user.click(createBtn());
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       const payload = mutateCreate.mock.calls[0][0];
@@ -1650,8 +1535,7 @@ describe('AddEventModal', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
-          // The full task form (layout-agnostic logic; the simple one has its own suite).
-          layout="full"
+         
           event={makeReminderEvent(
             { event_type: 'task', duration_minutes: 30 },
             { notifications_enabled: true, reminder_24h: true, reminder_15m: false }
@@ -1660,6 +1544,7 @@ describe('AddEventModal', () => {
         />
       );
 
+      expandRemindersRow();
       const master = screen.getByRole('switch', { name: 'Enable notifications' });
       await user.click(master);
       expect(master).toHaveAttribute('aria-checked', 'false');
@@ -1685,11 +1570,11 @@ describe('AddEventModal', () => {
       // partial-patch UPDATE. Only an explicit `true` proves the control is
       // actually wired through to the API.
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
 
-      await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Pick up prescription');
+      await user.type(titleField(), 'Pick up prescription');
       await setTaskTime(user);
-      await user.click(screen.getByRole('button', { name: 'Create' }));
+      await user.click(createBtn());
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       const payload = mutateCreate.mock.calls[0][0];
@@ -1716,16 +1601,16 @@ describe('AddEventModal', () => {
      */
     it('saves the anchor OFF while the rest of the entry stays on', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
 
-      await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Call the pharmacy');
+      await user.type(titleField(), 'Call the pharmacy');
       await setTaskTime(user);
       // 15m is no longer on by default, so the user arms it here — it is what
       // keeps the master up while the anchor comes down (rule 2 needs REAL
       // silence), and it makes the anchor the only thing that changed.
       await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
       await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
-      await user.click(screen.getByRole('button', { name: 'Create' }));
+      await user.click(createBtn());
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       const payload = mutateCreate.mock.calls[0][0];
@@ -1738,16 +1623,16 @@ describe('AddEventModal', () => {
 
     it('a task turned fully off saves nothing on — the sync never re-arms a flag', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
 
-      await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Water the plants');
+      await user.type(titleField(), 'Water the plants');
       await setTaskTime(user);
       // 15m on, anchor off, 15m back off — rule 2 then takes the master down.
       // (The box has to be armed first: nothing in the group starts selected.)
       await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
       await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
       await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
-      await user.click(screen.getByRole('button', { name: 'Create' }));
+      await user.click(createBtn());
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       const payload = mutateCreate.mock.calls[0][0];
@@ -1768,7 +1653,8 @@ describe('AddEventModal', () => {
 
     it('medication — unchecking the last earlier reminder leaves the master ON (rule 2 skipped)', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
+      expandRemindersRow();
 
       // 15m starts OFF for every type now — every event alerts at its scheduled
       // time on its own, so nothing earlier is pre-selected. Turn it ON first so
@@ -1856,8 +1742,7 @@ describe('AddEventModal', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
-          // The full task form (layout-agnostic logic; the simple one has its own suite).
-          layout="full"
+         
           event={makeReminderEvent(
             { event_type: 'task', duration_minutes: 30 },
             {
@@ -1872,6 +1757,7 @@ describe('AddEventModal', () => {
         />
       );
 
+      expandRemindersRow();
       expect(screen.getByRole('checkbox', { name: 'At the scheduled time' })).toHaveAttribute(
         'aria-checked',
         'true'
@@ -1894,8 +1780,7 @@ describe('AddEventModal', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
-          // The full task form (layout-agnostic logic; the simple one has its own suite).
-          layout="full"
+         
           event={makeReminderEvent(
             { event_type: 'task', duration_minutes: 30 },
             {
@@ -1911,6 +1796,7 @@ describe('AddEventModal', () => {
         />
       );
 
+      expandRemindersRow();
       const warning = screen.getByText('Select at least one time, or no reminder will be sent.');
       const group = screen.getByRole('group', { name: 'Earlier reminders' });
       expect(group).toHaveAttribute('aria-describedby', warning.id);
@@ -1935,7 +1821,8 @@ describe('AddEventModal', () => {
 
     it('never shows the none-selected warning for a medication (baseline still fires)', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
+      expandRemindersRow();
 
       await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
 
@@ -1947,14 +1834,14 @@ describe('AddEventModal', () => {
 
     it('saves exactly the chosen flags — the messaging changes no payload', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
 
-      await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Water the plants');
+      await user.type(titleField(), 'Water the plants');
       await setTaskTime(user);
       // Pick 24h and nothing else — no box starts checked, so the master is
       // never taken down and the payload is purely the user's choice.
       await user.click(screen.getByRole('checkbox', { name: '24 hours before' }));
-      await user.click(screen.getByRole('button', { name: 'Create' }));
+      await user.click(createBtn());
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       const payload = mutateCreate.mock.calls[0][0];
@@ -1966,69 +1853,38 @@ describe('AddEventModal', () => {
     });
   });
 
-  describe('duration presets', () => {
+  describe('appointment end time', () => {
     it('prefills a 30-minute end time when a start time is picked', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+      renderNew('appointment');
 
-      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeInput);
-      await user.type(timeInput, '14:00');
+      await setTime(user, '14:00');
 
-      expect(screen.getByLabelText(/^End time/)).toHaveValue('14:30');
-    });
-
-    it('a duration chip sets the end time', async () => {
-      const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
-
-      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeInput);
-      await user.type(timeInput, '14:00');
-
-      const group = screen.getByRole('radiogroup', { name: 'Duration' });
-      await user.click(within(group).getByRole('radio', { name: '2 hrs' }));
-
-      expect(screen.getByLabelText(/^End time/)).toHaveValue('16:00');
-    });
-
-    it('offers no duration chips before a start time exists', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
-      expect(screen.queryByRole('radiogroup', { name: 'Duration' })).not.toBeInTheDocument();
-    });
-
-    it('offers no duration chips for medications', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
-      expect(screen.queryByRole('radiogroup', { name: 'Duration' })).not.toBeInTheDocument();
+      expect(toInput()).toHaveValue('14:30');
     });
   });
+
+  // "Who's doing it?" is a radiogroup of tiles in the simple task form (Anyone, Me, then members).
+  const OWNER_ID = '11111111-1111-4111-8111-111111111111';
+  const RECIPIENT_ID = '22222222-2222-4222-8222-222222222222';
+  const CAREGIVER_ID = '33333333-3333-4333-8333-333333333333';
+  const MEMBERS = [
+    { id: OWNER_ID, first_name: 'Tess', email: 't@example.com', is_care_recipient: false },
+    { id: RECIPIENT_ID, first_name: 'Ray', email: 'r@example.com', is_care_recipient: true },
+    { id: CAREGIVER_ID, first_name: null, email: 'cara@example.com', is_care_recipient: false },
+  ];
+  const whoGroup = (): HTMLElement => screen.getByRole('radiogroup', { name: "Who's doing it?" });
 
   describe('assignee', () => {
     it('sends an explicit null when an assigned task is set back to Anyone', async () => {
       const user = userEvent.setup();
-      useCircleResult.members = [
-        { id: 'user-2', first_name: 'Tess', email: 't@example.com', is_care_recipient: false },
-      ];
+      useCircleResult.members = MEMBERS;
 
-      render(
-        <AddEventModal
-          circleId={CIRCLE_ID}
-          // The full task form (layout-agnostic logic; the simple one has its own suite).
-          layout="full"
-          // duration_minutes so the end-time field prefills — without it the
-          // form blocks on the pre-existing "end time required" rule.
-          event={makeEvent({
-            event_type: 'task',
-            assigned_to: 'user-2',
-            duration_minutes: 30,
-          })}
-          onClose={vi.fn()}
-        />
-      );
+      renderEdit(makeEvent({ event_type: 'task', assigned_to: OWNER_ID, duration_minutes: 30 }));
 
       // Clear the assignee — this used to be dropped from the payload, so the
       // previous assignee survived the save.
-      await user.selectOptions(screen.getByLabelText('Assigned to'), '');
+      await user.click(within(whoGroup()).getByRole('radio', { name: 'Anyone' }));
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
       await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
@@ -2039,72 +1895,49 @@ describe('AddEventModal', () => {
 
   // An independent care recipient with their own phone can OWN a task (e.g.
   // meal-time reminders): the backend accepts them as `assigned_to` and sends
-  // the reminder only to the assignee. The picker used to filter them out —
-  // every case below fails if `.filter((m) => !m.is_care_recipient)` returns.
+  // the reminder only to the assignee. The picker used to filter them out.
   describe('assignee — the care recipient is assignable', () => {
-    // Circle member order as useCircleMembers sorts it: owner, recipient,
-    // caregivers. The picker must keep that order, recipient in place.
-    // Real UUIDs: the form's Zod schema requires `assigned_to` to be one.
-    const OWNER_ID = '11111111-1111-4111-8111-111111111111';
-    const RECIPIENT_ID = '22222222-2222-4222-8222-222222222222';
-    const CAREGIVER_ID = '33333333-3333-4333-8333-333333333333';
-    const MEMBERS = [
-      { id: OWNER_ID, first_name: 'Tess', email: 't@example.com', is_care_recipient: false },
-      { id: RECIPIENT_ID, first_name: 'Ray', email: 'r@example.com', is_care_recipient: true },
-      { id: CAREGIVER_ID, first_name: null, email: 'cara@example.com', is_care_recipient: false },
-    ];
-
-    function assigneeSelect(): HTMLSelectElement {
-      return document.getElementById('assigned_to') as HTMLSelectElement;
-    }
-
-    function optionLabels(): string[] {
-      return Array.from(assigneeSelect().options).map((o) => o.textContent ?? '');
-    }
-
     afterEach(async () => {
       const { default: i18n } = await import('@/i18n');
       if (i18n.language !== 'en') await i18n.changeLanguage('en');
     });
 
+    const labels = (group: HTMLElement = whoGroup()): string[] =>
+      within(group)
+        .getAllByRole('radio')
+        .map((r) => r.getAttribute('aria-label') ?? r.textContent ?? '');
+
     it('lists Anyone first, then every member in order with the recipient captioned (EN)', () => {
       useCircleResult.members = MEMBERS;
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
 
-      expect(optionLabels()).toEqual(['Anyone', 'Tess', 'Ray · Care recipient', 'cara']);
-      expect(Array.from(assigneeSelect().options).map((o) => o.value)).toEqual([
-        '',
-        OWNER_ID,
-        RECIPIENT_ID,
-        CAREGIVER_ID,
-      ]);
+      expect(labels()).toEqual(['Anyone', 'Tess', 'Ray, Care recipient', 'cara']);
       // Default stays "Anyone" (unassigned).
-      expect(assigneeSelect()).toHaveValue('');
+      expect(within(whoGroup()).getByRole('radio', { name: 'Anyone' })).toBeChecked();
     });
 
     it('captions the recipient in Spanish', async () => {
       const { default: i18n } = await import('@/i18n');
       await i18n.changeLanguage('es');
       useCircleResult.members = MEMBERS;
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
 
-      expect(optionLabels()).toContain('Ray · Persona cuidada');
-      expect(optionLabels()).toContain('Tess');
+      const group = screen.getByRole('radiogroup', { name: '¿Quién lo hace?' });
+      expect(labels(group)).toContain('Ray, Persona cuidada');
+      expect(labels(group)).toContain('Tess');
     });
 
     it('creates a task assigned to the recipient (his user_id is sent as assigned_to)', async () => {
       const user = userEvent.setup();
       useCircleResult.members = MEMBERS;
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
 
-      await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Lunch');
-      const timeField = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeField);
-      await user.type(timeField, '12:00');
-      await user.selectOptions(screen.getByLabelText('Assigned to'), RECIPIENT_ID);
-      expect(assigneeSelect()).toHaveValue(RECIPIENT_ID);
+      await user.type(titleField(), 'Lunch');
+      await setTime(user, '12:00');
+      await user.click(within(whoGroup()).getByRole('radio', { name: /^Ray/ }));
+      expect(within(whoGroup()).getByRole('radio', { name: /^Ray/ })).toBeChecked();
 
-      await user.click(screen.getByRole('button', { name: 'Create' }));
+      await user.click(createBtn());
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       expect(mutateCreate.mock.calls[0][0].assigned_to).toBe(RECIPIENT_ID);
     });
@@ -2112,19 +1945,11 @@ describe('AddEventModal', () => {
     it('hydrates a recipient-assigned task on edit and keeps him (not reset to Anyone)', async () => {
       const user = userEvent.setup();
       useCircleResult.members = MEMBERS;
-      render(
-        <AddEventModal
-          circleId={CIRCLE_ID}
-          // The full task form (layout-agnostic logic; the simple one has its own suite).
-          layout="full"
-          event={makeEvent({ event_type: 'task', assigned_to: RECIPIENT_ID, duration_minutes: 30 })}
-          onClose={vi.fn()}
-        />
-      );
+      renderEdit(makeEvent({ event_type: 'task', assigned_to: RECIPIENT_ID, duration_minutes: 30 }));
 
       // The validity effect drops an assignee missing from the options' source
       // list — a recipient must survive it.
-      expect(assigneeSelect()).toHaveValue(RECIPIENT_ID);
+      expect(within(whoGroup()).getByRole('radio', { name: /^Ray/ })).toBeChecked();
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
       await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
       expect(mutateUpdate.mock.calls[0][0].data.assigned_to).toBe(RECIPIENT_ID);
@@ -2133,17 +1958,9 @@ describe('AddEventModal', () => {
     it('reassigns an existing task from a caregiver to the recipient', async () => {
       const user = userEvent.setup();
       useCircleResult.members = MEMBERS;
-      render(
-        <AddEventModal
-          circleId={CIRCLE_ID}
-          // The full task form (layout-agnostic logic; the simple one has its own suite).
-          layout="full"
-          event={makeEvent({ event_type: 'task', assigned_to: OWNER_ID, duration_minutes: 30 })}
-          onClose={vi.fn()}
-        />
-      );
+      renderEdit(makeEvent({ event_type: 'task', assigned_to: OWNER_ID, duration_minutes: 30 }));
 
-      await user.selectOptions(screen.getByLabelText('Assigned to'), RECIPIENT_ID);
+      await user.click(within(whoGroup()).getByRole('radio', { name: /^Ray/ }));
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
       await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
       expect(mutateUpdate.mock.calls[0][0].data.assigned_to).toBe(RECIPIENT_ID);
@@ -2171,15 +1988,13 @@ describe('AddEventModal — the 15-minute default', () => {
     user: ReturnType<typeof userEvent.setup>,
     type: 'medication' | 'task' | 'appointment'
   ): Promise<void> {
-    if (type === 'medication') return;
-    const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-    await user.clear(timeInput);
-    await user.type(timeInput, '14:00');
+    if (type !== 'medication') await setTime(user, '14:00');
+    expandRemindersRow();
   }
 
   it.each(['medication', 'task', 'appointment'] as const)('is OFF for a new %s', async (type) => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType={type} layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType={type} onClose={vi.fn()} />);
     await openReminders(user, type);
 
     expect(screen.getByRole('checkbox', { name: '15 minutes before' })).toHaveAttribute(
@@ -2206,8 +2021,7 @@ describe('AddEventModal — the 15-minute default', () => {
     render(
       <AddEventModal
         circleId={CIRCLE_ID}
-          // The full task form (layout-agnostic logic; the simple one has its own suite).
-          layout="full"
+         
         event={makeReminderEvent(
           { event_type: 'task', duration_minutes: 30 },
           { notifications_enabled: true, reminder_15m: true }
@@ -2215,6 +2029,7 @@ describe('AddEventModal — the 15-minute default', () => {
         onClose={vi.fn()}
       />
     );
+    expandRemindersRow();
     expect(screen.getByRole('checkbox', { name: '15 minutes before' })).toHaveAttribute(
       'aria-checked',
       'true'
@@ -2238,47 +2053,6 @@ describe('AddEventModal — the 15-minute default', () => {
       'false'
     );
   });
-
-  // ── The zone NAMES on the dual-timezone strip ─────────────────────────────
-  //
-  // Both the field label and the live conversion line used to name a zone with
-  // a hand-written abbreviation ("MT", "ET"). Those strings could not be
-  // sourced for anywhere outside the US — the table fell through to Intl's
-  // short name, which is an OFFSET for most of the world ("GMT+2" for Berlin) —
-  // so a zone is now named by its city, the way Apple's Clock and Settings name
-  // it. The viewer is America/Denver and the recipient America/New_York here.
-
-  describe('zone names on the dual-timezone strip', () => {
-    it('labels the time field with the recipient’s CITY', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
-      expect(screen.getByText(/Your time \/ .*New York/)).toBeInTheDocument();
-    });
-
-    it('names both cities in the live conversion line', async () => {
-      const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
-
-      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeInput);
-      await user.type(timeInput, '20:00');
-
-      // 8 PM in Denver is 10 PM in New York, same day: recipient first, the viewer second.
-      expect(await screen.findByText('10:00 PM in New York is 8:00 PM for you (Denver)')).toBeInTheDocument();
-    });
-
-    it('never shows an abbreviation or a GMT offset', async () => {
-      const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
-
-      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeInput);
-      await user.type(timeInput, '20:00');
-
-      const line = await screen.findByText(/ for you /);
-      expect(line.textContent).not.toMatch(/\bMT\b|\bET\b|GMT/);
-    });
-  });
-
 });
 
 describe('AddEventModal RxNorm lookup (mobile parity)', () => {
@@ -2288,7 +2062,7 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
       { rxcui: '6809', name: 'Metformin', strength: null, dosageForm: null },
     ]);
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+    renderNew('medication');
 
     const name = screen.getByRole('combobox', { name: /^Medication name/ });
     await user.type(name, 'metf');
@@ -2296,13 +2070,9 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
     expect(name).toHaveValue('Metformin');
 
     // A far-future date, so the past-time confirm never intervenes.
-    const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
-    await user.clear(dateInput);
-    await user.type(dateInput, '2099-01-01');
-    const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-    await user.clear(timeInput);
-    await user.type(timeInput, '09:00');
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.change(startsInput(), { target: { value: '2099-01-01' } });
+    await user.click(doseChip(/Morning/));
+    await user.click(createBtn());
 
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     expect(mutateCreate.mock.calls[0][0]).toMatchObject({ medication_name: 'Metformin', rxcui: '6809' });
@@ -2312,7 +2082,7 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
     const { searchDrugs } = await import('@/api/drugs');
     vi.mocked(searchDrugs).mockResolvedValue([]);
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+    renderNew('medication');
 
     await user.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Doliprane');
     await waitFor(() => expect(searchDrugs).toHaveBeenCalled());
@@ -2321,13 +2091,9 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
     const list = await screen.findByRole('listbox', { name: 'Medication suggestions' });
     expect(within(list).getAllByRole('option')).toHaveLength(1);
     expect(screen.getByTestId('drug-use-as-typed')).toBeInTheDocument();
-    const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
-    await user.clear(dateInput);
-    await user.type(dateInput, '2099-01-01');
-    const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-    await user.clear(timeInput);
-    await user.type(timeInput, '09:00');
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.change(startsInput(), { target: { value: '2099-01-01' } });
+    await user.click(doseChip(/Morning/));
+    await user.click(createBtn());
 
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     expect(mutateCreate.mock.calls[0][0]).toMatchObject({ medication_name: 'Doliprane' });
@@ -2336,16 +2102,12 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
 
   it('sends no rxcui for a typed name', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+    renderNew('medication');
 
     await user.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
-    const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
-    await user.clear(dateInput);
-    await user.type(dateInput, '2099-01-01');
-    const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-    await user.clear(timeInput);
-    await user.type(timeInput, '09:00');
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.change(startsInput(), { target: { value: '2099-01-01' } });
+    await user.click(doseChip(/Morning/));
+    await user.click(createBtn());
 
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     expect(mutateCreate.mock.calls[0][0]).not.toHaveProperty('rxcui');
@@ -2372,12 +2134,8 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
     async function fillFutureMedication(): Promise<HTMLFormElement> {
       const user = userEvent.setup();
       await user.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
-      const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
-      await user.clear(dateInput);
-      await user.type(dateInput, '2099-01-01');
-      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-      await user.clear(timeInput);
-      await user.type(timeInput, '09:00');
+      fireEvent.change(startsInput(), { target: { value: '2099-01-01' } });
+      await user.click(doseChip(/Morning/));
       const form = document.getElementById('add-event-form');
       if (!(form instanceof HTMLFormElement)) throw new Error('add-event-form not found');
       return form;
@@ -2389,7 +2147,7 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
       // `vi.fn()` returning undefined would resolve on the next microtask and
       // legitimately free the guard.
       mutateCreate.mockImplementation(() => neverSettles());
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
 
       const form = await fillFutureMedication();
       await submitFormTwice(form);
@@ -2401,7 +2159,7 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
       // The guard must be released on the rejection path too — otherwise a
       // failed save latches the form shut for the rest of its life.
       mutateCreate.mockRejectedValueOnce(new Error('500'));
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+      renderNew('medication');
 
       const form = await fillFutureMedication();
       await submitFormTwice(form);
@@ -2414,7 +2172,7 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
 
     it('a validation failure does not latch the form — the corrected submit goes through', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+      renderNew('appointment');
 
       const form = document.getElementById('add-event-form');
       if (!(form instanceof HTMLFormElement)) throw new Error('add-event-form not found');
@@ -2423,11 +2181,9 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
       await submitFormTwice(form);
       expect(mutateCreate).not.toHaveBeenCalled();
 
-      await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Eye exam');
-      const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
-      await user.clear(dateInput);
-      await user.type(dateInput, '2099-01-01');
-      await user.click(screen.getByRole('button', { name: 'Create' }));
+      await user.type(titleField(), 'Eye exam');
+      fireEvent.change(startsInput(), { target: { value: '2099-01-01' } });
+      await user.click(createBtn());
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     });
@@ -2466,37 +2222,25 @@ describe('AddEventModal — days of the week', () => {
     });
   }
 
+  /** How often? > Custom… > Some days: the day chips open inline under the grid. */
+  async function chooseSomeDays(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+    await user.click(screen.getByTestId('task-repeat-custom'));
+    await user.click(
+      within(screen.getByTestId('task-repeat-custom-panel')).getByRole('radio', { name: 'Some days' })
+    );
+  }
+
   async function createTaskOn(date: string): Promise<ReturnType<typeof userEvent.setup>> {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Physio exercises');
-    const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
-    await user.clear(dateInput);
-    await user.type(dateInput, date);
+    renderNew('task');
+    await user.type(titleField(), 'Physio exercises');
+    fireEvent.change(startsInput(), { target: { value: date } });
     return user;
   }
 
-  it('offers "Some days" as the LAST repeat option, right after Days on / off (the tile words)', () => {
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
-    const options = within(screen.getByLabelText('Repeat')).getAllByRole('option');
-    expect(options.map((o) => o.textContent)).toEqual([
-      'Once',
-      'Every day',
-      'Every other day',
-      'Every week',
-      'Monthly',
-      'Yearly',
-      'Days on / off',
-      'Some days',
-    ]);
-    expect(options[options.length - 1]).toHaveValue('days_of_week');
-    // Hidden until chosen, like the Cycle inputs.
-    expect(screen.queryByRole('group', { name: 'Repeat on' })).not.toBeInTheDocument();
-  });
-
   it('reveals the chips inline in week order and pre-selects the start date weekday', async () => {
     const user = await createTaskOn('2026-06-16'); // Tuesday
-    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+    await chooseSomeDays(user);
 
     const names = within(repeatGroup())
       .getAllByRole('checkbox')
@@ -2524,7 +2268,7 @@ describe('AddEventModal — days of the week', () => {
 
   it('creates weekly + the chosen days and moves the start to the first selected day', async () => {
     const user = await createTaskOn('2026-06-16'); // Tuesday
-    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+    await chooseSomeDays(user);
     await user.click(chip('Tuesday')); // off
     await user.click(chip('Friday'));
     await user.click(chip('Monday'));
@@ -2534,7 +2278,7 @@ describe('AddEventModal — days of the week', () => {
     // Tuesday is not selected: the series cannot start there.
     expect(screen.getByText('First time: Wed, Jun 17')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(createBtn());
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     const payload = mutateCreate.mock.calls[0][0];
     expect(payload.recurrence_rule).toBe('weekly');
@@ -2544,8 +2288,8 @@ describe('AddEventModal — days of the week', () => {
 
   it('a single day is weekly + [that day], with the start left where it is', async () => {
     const user = await createTaskOn('2026-06-16');
-    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await chooseSomeDays(user);
+    await user.click(createBtn());
 
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     const payload = mutateCreate.mock.calls[0][0];
@@ -2556,10 +2300,10 @@ describe('AddEventModal — days of the week', () => {
 
   it('refuses to save with no day selected: inline error, focus on the chips, no request', async () => {
     const user = await createTaskOn('2026-06-16');
-    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+    await chooseSomeDays(user);
     await user.click(chip('Tuesday')); // now empty
 
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(createBtn());
 
     expect(mutateCreate).not.toHaveBeenCalled();
     const error = screen.getByText('Choose at least one day');
@@ -2570,18 +2314,18 @@ describe('AddEventModal — days of the week', () => {
     // Picking a day clears the error and the save goes through.
     await user.click(chip('Thursday'));
     expect(screen.queryByText('Choose at least one day')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(createBtn());
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
   });
 
   it('all seven days are saved as Daily, with no day list', async () => {
     const user = await createTaskOn('2026-06-16');
-    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+    await chooseSomeDays(user);
     for (const day of ['Sunday', 'Monday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']) {
       await user.click(chip(day));
     }
 
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(createBtn());
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     const payload = mutateCreate.mock.calls[0][0];
     expect(payload.recurrence_rule).toBe('daily');
@@ -2591,7 +2335,7 @@ describe('AddEventModal — days of the week', () => {
 
   it('Space toggles a focused chip (keyboard parity with a click)', async () => {
     const user = await createTaskOn('2026-06-16');
-    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+    await chooseSomeDays(user);
     chip('Thursday').focus();
     await user.keyboard(' ');
     expect(chip('Thursday')).toHaveAttribute('aria-checked', 'true');
@@ -2603,13 +2347,13 @@ describe('AddEventModal — days of the week', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
-          layout="full"
+         
           event={makeSeries({ scheduled_date: '2026-06-01', recurrence_days: [5, 1, 3] })}
           onClose={vi.fn()}
         />
       );
 
-      expect(screen.getByLabelText('Repeat')).toHaveValue('days_of_week');
+      expect(screen.getByRole('radio', { name: 'Some days' })).toBeChecked();
       expect(chip('Monday')).toHaveAttribute('aria-checked', 'true');
       expect(chip('Wednesday')).toHaveAttribute('aria-checked', 'true');
       expect(chip('Friday')).toHaveAttribute('aria-checked', 'true');
@@ -2656,7 +2400,7 @@ describe('AddEventModal — days of the week', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
-          layout="full"
+         
           event={makeSeries({
             id: 'root-1_2026-06-17',
             parent_event_id: 'root-1',
@@ -2667,11 +2411,11 @@ describe('AddEventModal — days of the week', () => {
         />
       );
 
-      expect(screen.getByLabelText('Repeat')).toHaveValue('days_of_week');
+      expect(screen.getByRole('radio', { name: 'Some days' })).toBeChecked();
       expect(chip('Monday')).toHaveAttribute('aria-disabled', 'true');
       expect(chip('Wednesday')).not.toHaveAttribute('aria-disabled');
       // The form edits the SERIES, so it shows the series' start date.
-      expect(screen.getByLabelText(/^Date/)).toHaveValue('2026-06-01');
+      expect(startsInput()).toHaveValue('2026-06-01');
 
       await user.click(chip('Wednesday')); // off — allowed, it is not the anchor
       await user.click(chip('Thursday'));
@@ -2704,7 +2448,7 @@ describe('AddEventModal — days of the week', () => {
       // the occurrence's date nor its (possibly stale) title can be shown,
       // typed over, or saved onto the series.
       expect(screen.getByTestId('series-root-loading')).toBeInTheDocument();
-      expect(screen.queryByLabelText(/^Date/)).toBeNull();
+      expect(screen.queryByLabelText(/^Starts/)).toBeNull();
       expect(screen.queryByRole('button', { name: 'Save changes' })).toBeNull();
       await user.keyboard('{Enter}');
       expect(mutateUpdate).not.toHaveBeenCalled();
@@ -2717,12 +2461,12 @@ describe('AddEventModal — days of the week', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
-          layout="full"
+         
           event={makeSeries({ scheduled_date: '2026-06-01', recurrence_days: [1, 3, 5] })}
           onClose={vi.fn()}
         />
       );
-      await user.selectOptions(screen.getByLabelText('Repeat'), 'weekly');
+      await user.click(screen.getByRole('radio', { name: 'Every week' }));
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
       await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
@@ -2736,12 +2480,12 @@ describe('AddEventModal — days of the week', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
-          layout="full"
+         
           event={makeSeries({ scheduled_date: '2026-06-01', recurrence_days: [1, 3, 5] })}
           onClose={vi.fn()}
         />
       );
-      await user.selectOptions(screen.getByLabelText('Repeat'), 'daily');
+      await user.click(screen.getByRole('radio', { name: 'Every day' }));
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
       await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
@@ -2755,12 +2499,12 @@ describe('AddEventModal — days of the week', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
-          layout="full"
+         
           event={makeSeries({ scheduled_date: '2026-06-01', recurrence_days: null })}
           onClose={vi.fn()}
         />
       );
-      expect(screen.getByLabelText('Repeat')).toHaveValue('weekly');
+      expect(screen.getByRole('radio', { name: 'Every week' })).toBeChecked();
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
       await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
@@ -2773,12 +2517,12 @@ describe('AddEventModal — days of the week', () => {
     render(
       <AddEventModal
         circleId={CIRCLE_ID}
-        layout="full"
+       
         event={makeSeries({ scheduled_date: '2026-06-23', recurrence_days: null })} // Tue, future
         onClose={vi.fn()}
       />
     );
-    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+    await chooseSomeDays(user);
     expect(chip('Tuesday')).toHaveAttribute('aria-checked', 'true');
     expect(chip('Tuesday')).not.toHaveAttribute('aria-disabled');
     expect(screen.queryByText(/^Started on/)).not.toBeInTheDocument();
@@ -2822,31 +2566,35 @@ describe('PK21: moving the start moves the end', () => {
 
   it('wraps past midnight instead of clamping at 23:59 (22:00-23:00 moved to 23:30 ends 00:30)', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Late visit');
+    renderNew('appointment');
+    await user.type(titleField(), 'Late visit');
+    await pickTime(user);
     fireEvent.change(timeInput(), { target: { value: '22:00' } });
     fireEvent.change(endInput(), { target: { value: '23:00' } });
     fireEvent.change(timeInput(), { target: { value: '23:30' } });
     expect(endInput().value).toBe('00:30');
 
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(createBtn());
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     expect(mutateCreate.mock.calls[0][0].duration_minutes).toBe(60);
   });
 
   it('a hand-typed midnight-crossing end saves as the next-day span (23:45 -> 00:15 = 30)', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Night call');
+    renderNew('appointment');
+    await user.type(titleField(), 'Night call');
+    await pickTime(user);
     fireEvent.change(timeInput(), { target: { value: '23:45' } });
     fireEvent.change(endInput(), { target: { value: '00:15' } });
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(createBtn());
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     expect(mutateCreate.mock.calls[0][0].duration_minutes).toBe(30);
   });
 
   it('a NEW entry still gets the 30-minute default end', async () => {
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
+    const user = userEvent.setup();
+    renderNew('appointment');
+    await pickTime(user);
     fireEvent.change(timeInput(), { target: { value: '09:00' } });
     expect(endInput().value).toBe('09:30');
   });
@@ -2887,8 +2635,11 @@ describe('PK23: the weekday chips name the recipient zone only when it differs',
 
   async function openDays() {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
-    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+    renderNew('task');
+    await user.click(screen.getByTestId('task-repeat-custom'));
+    await user.click(
+      within(screen.getByTestId('task-repeat-custom-panel')).getByRole('radio', { name: 'Some days' })
+    );
     return screen.getByRole('group', { name: 'Repeat on' });
   }
 
@@ -2980,7 +2731,7 @@ describe('AddEventModal — editing a recurring TASK series from any occurrence'
   });
 
   const titleInput = (): HTMLInputElement =>
-    screen.getByLabelText(/^Title( \*)?( \(required\))?$/) as HTMLInputElement;
+    titleField() as HTMLInputElement;
 
   describe.each([
     ['A — from an UPCOMING (not completed) occurrence', upcomingOccurrence],
@@ -3125,7 +2876,7 @@ describe('AddEventModal — editing a recurring TASK series from any occurrence'
     });
 
     it('absent when creating a task', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      renderNew('task');
       expect(titleInput()).toBeInTheDocument();
       expect(screen.queryByTestId('series-edit-note')).toBeNull();
     });

@@ -122,7 +122,6 @@
     "close": "Fermer le formulaire d’événement",
     "create": "Ajouter",
     "saveChanges": "Enregistrer les modifications",
-    "creating": "Enregistrement…",
     "created": "Événement ajouté",
     "createdMedication": "Médicament ajouté",
     "createdAppointment": "Rendez-vous ajouté",
@@ -132,29 +131,15 @@
     "seriesEditNote": "S’applique uniquement aux prochaines tâches.",
     "seriesEditNoteMedication": "S’applique uniquement aux prochaines doses.",
     "seriesEditNoteAppointment": "S’applique uniquement aux prochains rendez-vous.",
-    "viewOnly": "Lecture seule",
-    "types": {
-      "medication": "Médicament",
-      "appointment": "Rendez-vous",
-      "task": "Tâche"
-    },
     "fields": {
-      "type": "Type",
       "title": "Titre",
       "medicationName": "Nom du médicament",
       "dosage": "Posologie",
-      "date": "Date",
-      "time": "Heure",
-      "endTime": "Heure de fin",
       "location": "Lieu",
       "details": "Détails",
       "instructions": "Instructions",
-      "repeat": "Répétition",
       "daysOn": "Jours de prise",
       "daysOff": "Jours de pause",
-      "endDate": "Date de fin",
-      "assignedTo": "Confié à",
-      "duration": "Durée",
       "pillsRemaining": "Comprimés restants",
       "quantityOnHand": "Quantité en stock",
       "pillsPerDose": "Comprimés par dose",
@@ -175,21 +160,6 @@
       "details": "Ajoutez des détails…",
       "instructions": "p. ex. à prendre pendant le repas"
     },
-    "timePresets": {
-      "label": "Heures courantes",
-      "morning": "Matin (8 h)",
-      "noon": "Midi (12 h)",
-      "evening": "Soir (18 h)",
-      "bedtime": "Coucher (21 h)"
-    },
-    "schedulePresets": {
-      "label": "Horaires courants",
-      "onceDaily": "Une fois par jour (8 h)",
-      "everyMorning": "Tous les matins (8 h)",
-      "everyEvening": "Tous les soirs (20 h)",
-      "twiceDaily": "Deux fois par jour (8 h, 20 h)",
-      "threeTimesDaily": "Trois fois par jour (8 h, 14 h, 20 h)"
-    },
     "titleSuggestions": {
       "label": "Suggestions de titre",
       "appointment": {
@@ -208,9 +178,7 @@
       }
     },
     "hints": {
-      "timeOptional": "Laissez vide pour un événement sur toute la journée.",
-      "endDate": "Laissez vide pour répéter indéfiniment.",
-      "timesShownIn": "Les heures sont enregistrées en {{timezone}}."
+      "endDate": "Laissez vide pour répéter indéfiniment."
     },
     "anyone": "Tout le monde",
     "recurrence": {
@@ -222,8 +190,7 @@
       "yearly": "Tous les ans",
       "cycle": "Jours actifs / de pause",
       "daysOfWeek": "Certains jours",
-      "asNeeded": "Si besoin",
-      "asNeededHint": "Pas d’heure fixe. Enregistrez chaque dose quand elle est donnée."
+      "asNeeded": "Si besoin"
     },
     "daysOfWeek": {
       "title": "Répéter le",
@@ -309,26 +276,10 @@
       "photoUploadFailed": "L’événement est enregistré, mais l’envoi de la photo a échoué. Vous pourrez réessayer plus tard.",
       "photoRemoveFailed": "Les modifications sont enregistrées, mais la photo n’a pas pu être supprimée. Réessayez plus tard."
     },
-    "durations": {
-      "30": "30 min",
-      "60": "1 h",
-      "120": "2 h"
-    },
-    "dualTimezoneHint": "Votre heure / heure pour {{name}} ({{timezone}})",
-    "dualTimezoneHintGeneric": "Votre heure / son heure ({{timezone}})",
     "quietHoursDoseWarning": "Cette heure tombe pendant les heures de silence : aucun rappel ne sera envoyé. Vous pouvez modifier les heures de silence dans Paramètres, section Heures de silence.",
     "pastTimeInline": "Commence à la prochaine dose. Cette heure est déjà passée aujourd’hui.",
     "pastTimesInline_one": "Commence à la prochaine dose. L’heure de {{times}} est déjà passée aujourd’hui.",
     "pastTimesInline_other": "Commence à la prochaine dose. Les heures de {{times}} sont déjà passées aujourd’hui.",
-    "conversion": {
-      "sameDay_one": "{{recipientTime}} à {{recipientZone}}, c’est {{viewerTime}} pour vous ({{viewerZone}})",
-      "sameDay_other": "{{recipientTime}} à {{recipientZone}}, c’est {{viewerTime}} pour vous ({{viewerZone}})",
-      "nextDay_one": "{{recipientTime}} à {{recipientZone}}, c’est {{viewerTime}} le lendemain pour vous ({{viewerZone}})",
-      "nextDay_other": "{{recipientTime}} à {{recipientZone}}, c’est {{viewerTime}} le lendemain pour vous ({{viewerZone}})",
-      "previousDay_one": "{{recipientTime}} à {{recipientZone}}, c’est {{viewerTime}} la veille pour vous ({{viewerZone}})",
-      "previousDay_other": "{{recipientTime}} à {{recipientZone}}, c’est {{viewerTime}} la veille pour vous ({{viewerZone}})"
-    },
-    "timezoneUnresolvedNotice": "Chargement du fuseau horaire de ce cercle. L’enregistrement est suspendu pour éviter de stocker des dates dans le mauvais fuseau.",
     "drugSearch": {
       "searching": "Recherche de médicaments",
       "clear": "Effacer le nom",

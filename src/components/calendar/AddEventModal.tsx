@@ -67,15 +67,13 @@ import { DisclosureRow } from './DisclosureRow';
 import { RemindersSummaryRow } from './RemindersSummaryRow';
 import { prefersReducedMotion } from '@/components/ui/motion';
 import { reminderSummary } from '@/lib/reminderSummary';
-import { APPOINTMENT_TITLE_KEYS, MED_SCHEDULE_PRESETS, TASK_TITLE_KEYS } from '@/lib/quickPicks';
+import { APPOINTMENT_TITLE_KEYS, TASK_TITLE_KEYS } from '@/lib/quickPicks';
 import { deriveTitleSuggestions } from '@/lib/titleSuggestions';
 import {
   DEFAULT_DURATION_MINUTES,
-  DURATION_PRESETS,
   assignedToForSave,
   defaultReminder15mFor,
   hydratedReminder15m,
-  matchingDurationIndex,
   reminderFlagsForSave,
   remindersApply,
   shiftEndTimeStr,
@@ -100,17 +98,14 @@ import {
   ChipSelect,
   ChoiceTileButton,
   ConfirmDialog,
-  DateField,
   Eyebrow,
   Icon,
   Modal,
   RequiredMarker,
-  Select,
   Spinner,
   Text,
   TextArea,
   TextField,
-  TimeField,
   Toggle,
   useToast,
   validateWithZod,
@@ -118,7 +113,6 @@ import {
   type FieldErrors,
 } from '@/components/ui';
 import {
-  formatTimeOfDay,
   getDateInTimezone,
   getDeviceTimezone,
   getTimezoneLabel,
@@ -126,8 +120,6 @@ import {
   timezonesAreDifferent,
 } from '@/utils/timezone';
 import {
-  clockInZone,
-  dayInZone,
   defaultNewEventDate,
   eventDatesForApi,
   eventDatesFromApi,
@@ -185,45 +177,18 @@ import { formatRecurrenceLabel, formatWeekdayList } from './recurrenceLabel';
 //
 // NEVER new Date(`${d}T${t}`)/.getHours()/.split('T')[0] on these values.
 
+/** The three types this form creates and edits. Shifts have their own form. */
+export type FormKind = 'medication' | 'appointment' | 'task';
+
 export interface AddEventModalProps {
   circleId: string;
   /** Existing event when editing; omit/undefined for create. */
   event?: CalendarEvent | null;
-  /** Pre-select the event type in create mode (e.g. Tasks page → 'task'). */
-  initialType?: EventType;
   /**
-   * Prefill the title in create mode (R4-3 empty-state starter chips — e.g.
-   * Tasks page starter chip → open with that task title). Ignored when editing.
+   * The type to create. Required in create mode: there is no type switcher (one form per type);
+   * ignored when editing (the event's own type decides).
    */
-  initialTitle?: string;
-  /**
-   * Prefills for the FIRST-RUN WIZARD's "Add full details instead" hand-off, and
-   * for its constraint-4 gate (a multi-dose preset on a non-daily rule is handed
-   * here rather than guessed at). Create mode only; an edit hydrates from the
-   * stored event and ignores all three.
-   *
-   * They exist because mobile learned this the hard way: a user who had chosen
-   * "twice daily" and "every other day" and pressed Save landed in the full form
-   * with both answers GONE, re-answering the exact questions the wizard exists
-   * to spare them, on the one path it deliberately refuses to handle.
-   *
-   * `initialTime` is a VIEWER-frame `HH:MM` (a hand-picked CUSTOM time, typed on
-   * the viewer's clock) and drops in with no conversion. A schedule PRESET's time
-   * is NOT passed this way: presets are the CIRCLE's clock, so a caller applies one
-   * as a circle-clock `HH:MM` through the form's own setter (the chips' converter,
-   * `chooseRecipientTime`), never as a viewer time. (The first-run wizard is this
-   * form now and hands nothing over.) `initialRecurrence` is a rule
-   * string ('daily' | 'every_other_day' | 'weekly') or null for no repeat.
-   *
-   * KNOWN GAP: only the PRIMARY dose time survives a multi-dose hand-off,
-   * because this form has exactly one time field (see quickPicks'
-   * MED_SCHEDULE_PRESETS note). The wizard's own save path creates sibling rows
-   * for the extra times; the form cannot, on either the wizard's behalf or its
-   * own.
-   */
-  initialDosage?: string;
-  initialTime?: string;
-  initialRecurrence?: string | null;
+  initialType?: FormKind;
   /**
    * Preselect a doctor on a NEW appointment (the doctor's Visits & notes page
    * "Add an appointment"). The doctor's address fills an empty location, as when
@@ -249,15 +214,6 @@ export interface AddEventModalProps {
    * and the abandon events). Defaults to 'other'.
    */
   entry?: EntryFormOrigin;
-  /**
-   * 'auto' (default): a NEW medication / appointment / task opened for its type, and an EDIT of
-   * one (owner 1.4.0), gets the short form ("What is it? / When? / ..."; a task: "What needs
-   * doing? / When? / How often? / Who's doing it?"). 'full' forces the all-fields layout, which
-   * a type-less open always uses (tests compare the two). Same state and payload either way.
-   * (Mobile also keeps the full layout for a voice/AI-drafted entry and a follow-up; the web has
-   * neither entry point.)
-   */
-  layout?: 'auto' | 'full';
 }
 
 type RecurrenceChoice =
@@ -377,8 +333,6 @@ function simpleFocusErrors(
   return mapped;
 }
 const RECURRENCE_DAYS_LOCK_ID = 'recurrence_days-lock';
-/** The Repeat select's value for a stored rule no option names (never saved). */
-const UNSHOWN_RULE_VALUE = '__stored_rule__';
 const RECURRENCE_DAYS_NOTE_ID = 'recurrence_days-tznote';
 
 /**
@@ -556,6 +510,9 @@ export function AddEventModal(props: AddEventModalProps): ReactElement | null {
   );
 
   if (!canEdit) return null;
+  // One form per type: anything that is not a medication, appointment or task (a shift) has no form here.
+  const kind = event ? event.event_type : props.initialType;
+  if (kind !== 'medication' && kind !== 'appointment' && kind !== 'task') return null;
   if (event && root === undefined) {
     return (
       <Modal
@@ -570,24 +527,19 @@ export function AddEventModal(props: AddEventModalProps): ReactElement | null {
       </Modal>
     );
   }
-  return <AddEventForm {...props} event={formEvent} />;
+  return <AddEventForm {...props} event={formEvent} kind={kind} />;
 }
 
 function AddEventForm({
   circleId,
   event,
-  initialType,
-  initialTitle,
-  initialDosage,
-  initialTime,
-  initialRecurrence,
+  kind: simpleKind,
   initialProviderId,
   onClose,
   onSaved,
   firstRun: firstRunProp = false,
   entry: entryOrigin = 'other',
-  layout = 'auto',
-}: AddEventModalProps): ReactElement | null {
+}: AddEventModalProps & { kind: FormKind }): ReactElement | null {
   const { t, i18n } = useTranslation(['calendar', 'common']);
   const { showToast } = useToast();
   const { circle, timezone, canEdit, members } = useCircle(circleId);
@@ -637,24 +589,10 @@ function AddEventForm({
   const isEditingWithoutDuration =
     isEditing && !!scheduleSource && !scheduleSource.duration_minutes;
 
-  const [eventType, setEventType] = useState<EventType>(
-    event?.event_type ?? initialType ?? 'medication'
-  );
-  // SIMPLE LAYOUT (docs/plans/simple-ui-1-3-1.md): a NEW medication or appointment
-  // opened for that type gets the short "What is it? / When? / ..." form, and so does
-  // an EDIT of one (owner 1.4.0: editing looks exactly like adding, prefilled; only the
-  // title and the Save label differ). Every field the full form has sits where the add
-  // form puts it. A type-less open keeps the full form. A TASK too (owner 1.4.0, mobile parity):
-  // a new one opened for 'task' and every task edit.
-  const simpleType = isEditing ? event.event_type : initialType;
-  const simpleKind: 'medication' | 'appointment' | 'task' | null =
-    layout !== 'full' &&
-    (simpleType === 'medication' || simpleType === 'appointment' || simpleType === 'task')
-      ? simpleType
-      : null;
+  const eventType: FormKind = simpleKind;
   const firstRun = firstRunProp && simpleKind === 'medication';
-  const [title, setTitle] = useState(event?.medication_name || event?.title || initialTitle || '');
-  const [dosage, setDosage] = useState(event?.medication_dosage ?? initialDosage ?? '');
+  const [title, setTitle] = useState(event?.medication_name || event?.title || '');
+  const [dosage, setDosage] = useState(event?.medication_dosage ?? '');
   /** The RxNorm row behind a PICKED medication name; `null` once it is hand-edited. */
   const [selectedDrug, setSelectedDrug] = useState<DrugSearchResult | null>(null);
   /**
@@ -699,16 +637,14 @@ function AddEventForm({
       });
     }
     return {
-      // `initialTime` is a VIEWER-frame `HH:MM` (a custom time), so it drops straight in with
-      // no conversion — the same value the user would have typed here themselves.
       // The CARE RECIPIENT's today; '' while the zone is still loading (the same
       // gate as an edit), so no wrong day is shown and then replaced. The resync
       // effect below fills it the moment the zone lands.
       dateStr: defaultNewEventDate(timezone),
-      timeStr: initialTime ?? '',
+      timeStr: '',
       recurrenceEndDateStr: '',
     };
-  }, [event, timezone, initialTime, scheduleSource]);
+  }, [event, timezone, scheduleSource]);
 
   const [dateStr, setDateStr] = useState(hydrated.dateStr);
   const [timeStr, setTimeStr] = useState(hydrated.timeStr);
@@ -778,7 +714,7 @@ function AddEventForm({
         scheduleSource ? scheduleSource.recurrence_rule : event.recurrence_rule,
         scheduleSource ? scheduleSource.recurrence_days : null
       )
-    : parseRecurrence(initialRecurrence);
+    : parseRecurrence(undefined);
   // AS NEEDED is a property of the row, not of a rule: an as-needed medication
   // has none, so `parseRecurrence` would call it "Never". Opening one
   // for edit starts (and stays) on `as_needed`; `isAsNeededEdit` locks it.
@@ -786,10 +722,9 @@ function AddEventForm({
   const [recurrence, setRecurrence] = useState<RecurrenceChoice>(
     isAsNeededEdit
       ? 'as_needed'
-      : // A new simple medication starts on "Every day" (the wizard's explicit
-        // null / rule still wins): the pills below always have one answer. An edit
+      : // A new simple medication starts on "Every day": the pills below always have one answer. An edit
         // keeps its stored rule.
-        !isEditing && simpleKind === 'medication' && initialRecurrence === undefined
+        !isEditing && simpleKind === 'medication'
         ? 'daily'
         : initialRecurrenceState.choice
   );
@@ -913,7 +848,7 @@ function AddEventForm({
   // 30 min). The core fields only; recurrence/reminder choices are cheap to
   // redo and tie to rules that must be re-derived. Edits are not drafts.
   useSessionDraft<AddEventDraft>(
-    isEditing ? null : `calendar:addEvent:${circleId}`,
+    isEditing ? null : `calendar:addEvent:${circleId}:${eventType}`,
     () =>
       title.trim() || dosage.trim() || location.trim() || description.trim()
         ? {
@@ -929,7 +864,6 @@ function AddEventForm({
           }
         : null,
     (d) => {
-      setEventType(d.eventType);
       setTitle(d.title);
       setDosage(d.dosage);
       setDateStr(d.dateStr);
@@ -1240,11 +1174,6 @@ function AddEventForm({
   // up on a circle that is not dual-zone at all.
   const deviceTimezone = getDeviceTimezone();
   const hourCycle = useHourCycle();
-  // The date pickers' "today". With no time the picked day is stored AS-IS in
-  // the recipient's frame (`eventDatesForApi`'s null-time branch), so Today
-  // must be the RECIPIENT's today; with a time the field is the viewer's wall
-  // clock and the picker keeps its own (viewer) today.
-  const pickerToday = timeStr ? undefined : defaultNewEventDate(timezone) || undefined;
   //
   // Evaluated at the EVENT's instant, not at `new Date()`. Two zones can agree
   // today and differ on the date being scheduled: Phoenix and Denver are both
@@ -1277,79 +1206,13 @@ function AddEventForm({
   const recipientZone = timezone ? getTimezoneLabel(timezone) : '';
   const recipientName = circle?.recipient_name;
 
-  /**
-   * "8:00 PM in Denver is 9:00 PM for you (Chicago)" — the conversion, live, as the user
-   * types. Nothing about the frame is hidden: the caregiver types their own
-   * clock and sees the recipient's.
-   *
-   * The day indicator is derived by comparing the two zones' actual
-   * `YYYY-MM-DD` readings of the same instant, rather than mobile's numeric
-   * day-of-month compare (which needs a special case for month rollover and
-   * still misreads a 2-day gap).
-   */
-  const conversionText = useMemo(() => {
-    // `!timezone` is implied by `!showDualTimezone`; it is spelled out so the
-    // recipient-frame conversions below are provably never run on a guess.
-    if (!showDualTimezone || !timezone || !timeStr || !dateStr) return null;
-    try {
-      const instant = viewerInstant(dateStr, timeStr, heldInstant);
-      const render = (clock: string): string => {
-        const [hh, mm] = clock.split(':').map(Number);
-        return formatTimeOfDay(hh, mm, hourCycle);
-      };
-      const viewerClock = clockInZone(instant, deviceTimezone);
-      const viewerTime = render(viewerClock);
-      const recipientTime = render(clockInZone(instant, timezone));
-
-      // Recipient first (the stored frame), viewer second, in plain words (owner 1.4.0, mobile parity):
-      // "7:15 AM in Denver is 3:15 AM the next day for you (Auckland)". The day word is the VIEWER's day
-      // relative to the recipient's, from the two zones' YYYY-MM-DD readings of the one instant; the med
-      // repeats, so it is a relative day, never a weekday.
-      const viewerDay = dayInZone(instant, deviceTimezone);
-      const recipientDay = dayInZone(instant, timezone);
-      const key =
-        viewerDay > recipientDay
-          ? 'addEvent.conversion.nextDay'
-          : viewerDay < recipientDay
-            ? 'addEvent.conversion.previousDay'
-            : 'addEvent.conversion.sameDay';
-      // The viewer hour as it reads: Spanish "es la 1:15" / "son las 3:15" (pt, it) agree with it.
-      const h23 = Number(viewerClock.split(':')[0]) % 24;
-      const count = hourCycle === '24h' ? h23 : h23 % 12 === 0 ? 12 : h23 % 12;
-      // A zone with no city in it (the `Etc/*` family, a bare offset) says its id.
-      return t(key, {
-        recipientTime,
-        recipientZone: recipientZone || timezone,
-        viewerTime,
-        viewerZone: getTimezoneLabel(deviceTimezone) || deviceTimezone,
-        count,
-      });
-    } catch {
-      return null;
-    }
-  }, [
-    showDualTimezone,
-    dateStr,
-    timeStr,
-    deviceTimezone,
-    timezone,
-    hourCycle,
-    recipientZone,
-    t,
-    heldInstant,
-  ]);
-
   /** The label above the time field: "Your time / Margaret's time (New York)". */
   const daysTimezoneNote = recipientName
     ? t('addEvent.daysOfWeek.timezoneNote', { name: recipientName, timezone: recipientZone })
     : t('addEvent.daysOfWeek.timezoneNoteGeneric', { timezone: recipientZone });
-  const dualTimezoneLabel = recipientName
-    ? t('addEvent.dualTimezoneHint', { name: recipientName, timezone: recipientZone })
-    : t('addEvent.dualTimezoneHintGeneric', { timezone: recipientZone });
 
-  // History-based title quick-fill (QP6) — sourced from the circle's ALREADY
-  // CACHED calendar events (no new fetching); generics pad the list. The row
-  // hides when the title exactly matches a chip (it has done its job).
+  // History-based title quick-fill (QP6) — sourced from the circle's ALREADY CACHED calendar events (no new
+  // fetching); generics pad the list.
   const titleSuggestions = useMemo(() => {
     if (isMedication) return [];
     const generics = (eventType === 'appointment' ? APPOINTMENT_TITLE_KEYS : TASK_TITLE_KEYS).map(
@@ -1357,26 +1220,6 @@ function AddEventForm({
     );
     return deriveTitleSuggestions(cachedEvents, eventType, Date.now(), generics);
   }, [cachedEvents, eventType, isMedication, t]);
-  // Row stays visible when the title matches a chip so the selected chip can be
-  // tapped again to clear (accidental-tap undo).
-  const showTitleSuggestions = !isMedication && titleSuggestions.length > 0;
-
-  // Assignee options — "Anyone" first, then EVERY member in the circle's member
-  // order, the care recipient included (like mobile). An independent recipient
-  // with their own phone can own a task (e.g. meal-time reminders): the backend
-  // accepts them as `assigned_to` and sends the reminder only to the assignee.
-  // Their option carries the "Care recipient" role caption so caregivers can
-  // tell who they're assigning to. Do NOT re-add a caregivers-only filter.
-  const assigneeOptions = useMemo(() => {
-    const opts = members.map((m) => {
-      const name = m.first_name || m.email.split('@')[0];
-      return {
-        value: m.id,
-        label: m.is_care_recipient ? `${name} · ${t('members:roles.careRecipient')}` : name,
-      };
-    });
-    return [{ value: '', label: t('addEvent.anyone') }, ...opts];
-  }, [members, t]);
 
   /**
    * The simple task form's "Who's doing it?" tiles (mobile parity): Anyone (unassigned), Me (the signed-in
@@ -2175,7 +2018,6 @@ function AddEventForm({
    * Returns true when something was opened.
    */
   function revealErrorFields(fieldErrors: FieldErrors): boolean {
-    if (simpleKind === null) return false;
     let revealed = false;
     if (simpleKind === 'medication') {
       // The repeat end is the "Repeats until" tile in When? now (owner 2026-11-10), not in More details.
@@ -2221,7 +2063,7 @@ function AddEventForm({
     if (!canEdit || !timezone || isPending || seriesRootPending) return;
 
     // Before validation, so it counts EVERY attempt (mobile parity).
-    Analytics.entrySaveTapped(circleId, eventType, 'form', isEditing, simpleKind ? 'simple' : 'full');
+    Analytics.entrySaveTapped(circleId, eventType, 'form', isEditing, 'simple');
 
     const built = buildPayload(timezone);
     if (!built.ok) {
@@ -2241,9 +2083,7 @@ function AddEventForm({
       // fields (description, location, dosage, recurrence) (WCAG SC 3.3.1).
       const revealed = revealErrorFields(built.errors);
       const focusErrors = (): void =>
-        simpleKind === null
-          ? focusFirstError(built.errors, FOCUS_ORDER)
-          : focusFirstError(simpleFocusErrors(built.errors, simpleKind), SIMPLE_FOCUS_ORDER);
+        focusFirstError(simpleFocusErrors(built.errors, simpleKind), SIMPLE_FOCUS_ORDER);
       if (revealed) setTimeout(focusErrors, 0);
       else focusErrors();
       return;
@@ -2316,11 +2156,6 @@ function AddEventForm({
   // EventDetailModal download CTA instead (Task 1.6 gating).
   if (!canEdit) return null;
 
-  const typeOptions = (['medication', 'appointment', 'task'] as EventType[]).map((type) => ({
-    value: type,
-    label: t(`addEvent.types.${type}`),
-  }));
-
   const titleFieldId = isMedication ? 'medication_name' : 'title';
 
   // Save sits in the dialog's pinned footer (always on screen, in add AND
@@ -2383,7 +2218,7 @@ function AddEventForm({
     const focusIt = (): void => {
       // The simple forms' day and time are tiles over hidden inputs: the TILE takes focus (see PickerTile).
       const el =
-        (simpleKind !== null && PICKER_TILE_FIELDS.has(id) ? document.getElementById(`${id}-tile`) : null) ??
+        (PICKER_TILE_FIELDS.has(id) ? document.getElementById(`${id}-tile`) : null) ??
         document.getElementById(id);
       if (!el) return;
       el.scrollIntoView?.({ block: 'center' });
@@ -2391,40 +2226,6 @@ function AddEventForm({
     };
     focusIt();
   }
-
-  const repeatSelectBlock = (
-    <>
-        {/* Recurrence */}
-        {isAsNeededEdit ? (
-          // LOCKED: scheduled <-> as needed cannot change after create (the
-          // server refuses it, AS_NEEDED_IMMUTABLE), so the choice is shown, not
-          // offered. Same read-only treatment the Type selector gets on an edit.
-          <div className="flex flex-col gap-1" data-testid="as-needed-locked-repeat">
-            <span className="text-sm font-medium text-ink">{t('addEvent.fields.repeat')}</span>
-            <p className="m-0 rounded-xl bg-bg-2 px-4 py-3 text-sm text-ink-2">
-              {t('addEvent.asNeeded.lockedRepeat')}
-            </p>
-          </div>
-        ) : (
-          <Select
-            id="recurrence_rule"
-            label={t('addEvent.fields.repeat')}
-            options={
-              unshownRuleLabel
-                ? [{ value: UNSHOWN_RULE_VALUE, label: unshownRuleLabel }, ...recurrenceOptions]
-                : recurrenceOptions
-            }
-            value={unshownRuleLabel ? UNSHOWN_RULE_VALUE : recurrence}
-            error={errors.recurrence_rule}
-            hint={isAsNeeded ? t('addEvent.recurrence.asNeededHint') : undefined}
-            onChange={(e) => {
-              if (e.target.value === UNSHOWN_RULE_VALUE) return;
-              chooseRecurrence(e.target.value as RecurrenceChoice);
-            }}
-          />
-        )}
-    </>
-  );
 
   const asNeededReasonBlock = (
     <>
@@ -2529,29 +2330,6 @@ function AddEventForm({
               onChange={(e) => setDaysOff(e.target.value)}
             />
           </div>
-        )}
-    </>
-  );
-
-  const endDateBlock = (
-    <>
-        {recurrence !== 'none' && recurrence !== 'as_needed' && (
-          <DateField
-            id="recurrence_end_date"
-            label={t('addEvent.fields.endDate')}
-            // The simple task form names every day on the RECIPIENT's calendar (its day tiles and date
-            // field), so its end date is shown and typed there too; the state stays the viewer-side span.
-            value={simpleKind === 'task' ? recipientRepeatEnd : recurrenceEndDate}
-            today={simpleKind === 'task' ? recipientPickerToday : pickerToday}
-            hint={t('addEvent.hints.endDate')}
-            error={errors.recurrence_end_date}
-            onChange={(e) => {
-              datesTouched.current = true;
-              if (simpleKind === 'task') chooseRecipientRepeatEnd(e.target.value);
-              else setRecurrenceEndDate(e.target.value);
-              clearError('recurrence_end_date');
-            }}
-          />
         )}
     </>
   );
@@ -2773,9 +2551,6 @@ function AddEventForm({
         )}
     </>
   );
-  /** The full layout's Reminders, where it always was. */
-  const reminderBlock = reminderBlockFor(false);
-
   // ── The "Reminders" summary row (owner 2026-11-10, mobile parity) ──────────────────────────────────
   // Directly ABOVE each simple form's More details, always visible, live from the card's own state. An
   // accordion: tapping it expands the full Reminders card inline under it (and folds it again), outside More
@@ -2791,7 +2566,7 @@ function AddEventForm({
     reminder15m,
   });
   const remindersSummaryRow =
-    simpleKind === null || isAsNeeded ? null : remindersApply(eventType, timeStr) ? (
+    isAsNeeded ? null : remindersApply(eventType, timeStr) ? (
       <RemindersSummaryRow
         variant="summary"
         summary={simpleReminderSummary}
@@ -2814,11 +2589,6 @@ function AddEventForm({
     );
 
   // SIMPLE-UI FIELDS (new medication / new appointment): defined below.
-  const durationOptions = DURATION_PRESETS.map((mins) => ({
-    value: String(mins),
-    label: t(`addEvent.durations.${mins}`),
-  }));
-
   /**
    * The end time a NEW viewer-frame start brings (the full form's time-field rules, verbatim): no start, no
    * end; a moved start moves the end (the duration is kept, PK21); a first start gets the default duration,
@@ -4208,336 +3978,7 @@ function AddEventForm({
             <Text variant="caption">{t('addEvent.firstRun.hint')}</Text>
           </header>
         )}
-        {simpleKind !== null ? (simpleFields) : (
-        <>
-        {/* Type selector — locked in edit mode, like mobile. */}
-        {/* Opened for a specific type (or editing one): no type switch. */}
-        {!isEditing && !initialType && (
-        <Select
-          id="event_type"
-          label={t('addEvent.fields.type')}
-          options={typeOptions}
-          value={eventType}
-          disabled={isEditing}
-          onChange={(e) => {
-            const next = e.target.value as EventType;
-            setEventType(next);
-            if (next !== 'medication') setSelectedDrug(null);
-            // As needed only exists on a medication.
-            if (next !== 'medication' && recurrence === 'as_needed') setRecurrence('none');
-            if (next !== 'task' && next !== 'appointment') setAssignedTo(null);
-            if (next === 'medication') setEndTimeStr('');
-          }}
-        />
-        )}
-
-        {isMedication ? (
-          // Real drug names from RxNorm as you type (mobile parity). For a
-          // medication the payload sets BOTH `medication_name` and `title`
-          // from this one input, so a schema error can land on either key —
-          // bind both so it can never fail silently.
-          <DrugAutocomplete
-            id={titleFieldId}
-            label={t('addEvent.fields.medicationName')}
-            required
-            value={title}
-            maxLength={150}
-            error={errors[titleFieldId] ?? errors.title ?? missingErrorFor('title')}
-            placeholder={t('addEvent.placeholders.medicationName')}
-            selectedDrug={selectedDrug}
-            onSelectDrug={(drug) => {
-              if (drug) usedAsTypedRef.current = false;
-              setSelectedDrug(drug);
-            }}
-            onUseAsTyped={() => {
-              usedAsTypedRef.current = true;
-            }}
-            onChange={(next) => {
-              usedAsTypedRef.current = false;
-              setTitle(next);
-              clearError(titleFieldId, 'title');
-            }}
-          />
-        ) : (
-          <TextField
-            id={titleFieldId}
-            label={t('addEvent.fields.title')}
-            required
-            value={title}
-            maxLength={150}
-            error={errors[titleFieldId] ?? errors.title ?? missingErrorFor('title')}
-            placeholder={t(
-              eventType === 'appointment'
-                ? 'addEvent.placeholders.appointmentTitle'
-                : 'addEvent.placeholders.taskTitle'
-            )}
-            onChange={(e) => {
-              setTitle(e.target.value);
-              clearError(titleFieldId, 'title');
-            }}
-          />
-        )}
-
-        {showTitleSuggestions && (
-          <ChipSelect
-            id="title-suggestions"
-            label={t('addEvent.titleSuggestions.label')}
-            options={titleSuggestions}
-            value={title}
-            onChange={(next) => {
-              setTitle(next ?? '');
-              if (next) clearError(titleFieldId, 'title');
-            }}
-          />
-        )}
-
-        {isMedication && (
-          <TextField
-            id="medication_dosage"
-            label={t('addEvent.fields.dosage')}
-            value={dosage}
-            maxLength={100}
-            error={errors.medication_dosage}
-            placeholder={t('addEvent.placeholders.dosage')}
-            onChange={(e) => {
-              setDosage(e.target.value);
-              clearError('medication_dosage');
-            }}
-          />
-        )}
-
-        {eventType === 'appointment' && (
-          <DoctorField
-            circleId={circleId}
-            value={providerId}
-            storedValue={isEditing ? storedProviderId : null}
-            appliesToSeries={isRecurringEdit}
-            busy={isPending}
-            onChange={(id, provider) => {
-              setProviderId(id);
-              chooseDoctorLocation(provider);
-            }}
-          />
-        )}
-
-        {eventType === 'appointment' && (
-          <TextField
-            id="location"
-            label={t('addEvent.fields.location')}
-            value={location}
-            maxLength={250}
-            error={errors.location}
-            hint={
-              locationFilledFrom
-                ? t('addEvent.doctor.filledFrom', { name: locationFilledFrom })
-                : undefined
-            }
-            placeholder={t('addEvent.placeholders.location')}
-            onChange={(e) => {
-              setLocation(e.target.value);
-              setLocationFilledFrom(null);
-              clearError('location');
-            }}
-          />
-        )}
-
-        {!isAsNeeded && (
-          <DateField
-            id="scheduled_date"
-            label={t('addEvent.fields.date')}
-            required
-            value={dateStr}
-            today={pickerToday}
-            error={errors.scheduled_date ?? missingErrorFor('date')}
-            hint={showDualTimezone ? dualTimezoneLabel : undefined}
-            onChange={(e) => {
-              datesTouched.current = true;
-              setDateStr(e.target.value);
-              clearError('scheduled_date');
-            }}
-          />
-        )}
-
-        {/* Medication SCHEDULE presets (R6-2) — the ONE med chip strip: every
-            chip sets a COMPLETE daily schedule (time + daily recurrence) in
-            one tap; tapping the selected chip again returns both to unset.
-            A preset's time is the CIRCLE's clock, like the time chips ("Every
-            morning" is 8:00 AM where the person lives): it goes in through the
-            circle-clock setter (`chooseRecipientTime`), and the selected state
-            is an EXACT match of the form's circle clock + recurrence, so the
-            chip stays lit for a viewer in another zone and a stored daily 08:00
-            reads "Every morning" for everyone. Prefill only — the save path
-            below is untouched. (Web subset: the form has a single time field, so
-            only the single-time presets are offered — see MED_SCHEDULE_PRESETS.) */}
-        {isMedication && !isAsNeeded && (
-          <ChipSelect
-            id="schedule-presets"
-            label={t('addEvent.schedulePresets.label')}
-            options={MED_SCHEDULE_PRESETS.map((preset) => ({
-              value: preset.id,
-              label: t(preset.labelKey),
-            }))}
-            value={
-              MED_SCHEDULE_PRESETS.find(
-                (preset) => preset.time === recipientClock && preset.recurrence === recurrence
-              )?.id ?? null
-            }
-            onChange={(next) => {
-              const preset = next
-                ? MED_SCHEDULE_PRESETS.find((candidate) => candidate.id === next)
-                : undefined;
-              datesTouched.current = true;
-              touchRecurrence();
-              if (preset) {
-                chooseRecipientTime(preset.time);
-                setRecurrence(preset.recurrence);
-                clearError('scheduled_time');
-              } else {
-                // Untap — return the preset-controlled fields to unset, the day included: the preset's time may
-                // have moved the viewer-frame day (far zones), and with no time the date IS the circle's day.
-                if (recipientStartDate) moveViewerDay(recipientStartDate);
-                chooseRecipientTime('');
-                setRecurrence('none');
-              }
-            }}
-          />
-        )}
-
-        {!isAsNeeded && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <TimeField
-            id="scheduled_time"
-            label={t('addEvent.fields.time')}
-            // Mirrors `buildRequest`: a medication cannot be scheduled without
-            // a time; appointments and tasks may be all-day.
-            required={isMedication}
-            value={timeStr}
-            error={errors.scheduled_time ?? missingErrorFor('time')}
-            hint={
-              // The live conversion wins over the "optional" note whenever the
-              // zones differ — it is the thing the caregiver needs to see while
-              // typing, and it is what keeps the frame from being hidden.
-              conversionText ?? (isMedication ? undefined : t('addEvent.hints.timeOptional'))
-            }
-            onChange={(e) => {
-              const next = e.target.value;
-              datesTouched.current = true;
-              setTimeStr(next);
-              clearError('scheduled_time');
-              if (!next) {
-                setEndTimeStr('');
-              } else if (!isMedication && endTimeStr && timeStr) {
-                // PK21: moving the start moves the end (the duration is kept).
-                const shifted = shiftEndTimeStr(timeStr, next, endTimeStr);
-                if (shifted) setEndTimeStr(shifted);
-                clearError('endTime');
-              } else if (!isMedication && !endTimeStr && !isEditingWithoutDuration) {
-                // An end time is required (the calendar renders these as
-                // blocks), so prefill the default rather than making the user
-                // supply a second value before they can save.
-                setEndTimeStr(presetEndFor(next, DEFAULT_DURATION_MINUTES));
-                clearError('endTime');
-              }
-            }}
-          />
-          {!isMedication && (
-            <TimeField
-              id="endTime"
-              label={t('addEvent.fields.endTime')}
-              // Required only once a start time exists (the validator's rule);
-              // until then the field is disabled and nothing is asked of it.
-              required={Boolean(timeStr) && !isEditingWithoutDuration}
-              value={endTimeStr}
-              error={errors.endTime}
-              disabled={!timeStr}
-              onChange={(e) => {
-                setEndTimeStr(e.target.value);
-                clearError('endTime');
-              }}
-            />
-          )}
-        </div>
-        )}
-
-        {/* Amber note when the dose time is inside the viewer's OWN quiet hours
-            and the viewer is the one who gets the at-due reminder. Never blocks
-            Save. Same rule + copy as mobile's DoseQuietHoursNote. */}
-        {!isAsNeeded && (
-          <DoseQuietHoursNote
-            applies={isMedication && notificationsEnabled && reminderAtDue}
-            dateStr={dateStr}
-            timeStr={timeStr}
-            heldInstant={heldInstant}
-            members={members}
-            ownerId={circle?.owner_id}
-          />
-        )}
-
-        {/* Inline note (create only): the time already passed today, so the backend starts this
-            medication with its next dose. Live; never blocks Save. */}
-        <DosePastTimeNote visible={startsNextDose} />
-
-        {/* Duration presets — the chips cover the common spans; the end-time
-            field above stays for anything else. */}
-        {!isMedication && timeStr && (
-          <ChipSelect
-            id="duration-presets"
-            label={t('addEvent.fields.duration')}
-            options={durationOptions}
-            value={(() => {
-              const index = matchingDurationIndex(timeStr, endTimeStr);
-              return index === -1 ? null : String(DURATION_PRESETS[index]);
-            })()}
-            onChange={(next) => {
-              // Deselect is a no-op: the end time is required once a start
-              // time exists, so a chip can be changed but not cleared.
-              if (!next) return;
-              setEndTimeStr(presetEndFor(timeStr, Number(next)));
-              clearError('endTime');
-            }}
-          />
-        )}
-
-        {(eventType === 'task' || eventType === 'appointment') && (
-          <Select
-            id="assigned_to"
-            label={t('addEvent.fields.assignedTo')}
-            options={assigneeOptions}
-            value={assignedTo ?? ''}
-            onChange={(e) => setAssignedTo(e.target.value || null)}
-          />
-        )}
-
-        {medicationExtraFields}
-
-        {/* THE EVENT'S OWN DESCRIPTION FIELD — never labelled "Notes".
-            "Notes" already names two other things (the shared event-notes
-            thread on the detail dialog, and the Notes tab), so this single
-            free-text field is DETAILS — or, for a medication, its dosing
-            INSTRUCTIONS. EventDetailModal labels the same field the same way. */}
-        <TextArea
-          id="description"
-          label={isMedication ? t('addEvent.fields.instructions') : t('addEvent.fields.details')}
-          value={description}
-          rows={3}
-          maxLength={850}
-          error={errors.description}
-          placeholder={
-            isMedication ? t('addEvent.placeholders.instructions') : t('addEvent.placeholders.details')
-          }
-          onChange={(e) => {
-            setDescription(e.target.value);
-            clearError('description');
-          }}
-        />
-        {repeatSelectBlock}
-        {asNeededReasonBlock}
-        {daysBlock}
-        {cycleBlock}
-        {endDateBlock}
-        {reminderBlock}
-        </>
-        )}
+        {simpleFields}
       </form>
     </Modal>
 

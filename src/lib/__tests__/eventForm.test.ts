@@ -8,7 +8,6 @@ import {
   assignedToForSave,
   defaultReminder15mFor,
   hydratedReminder15m,
-  matchingDurationIndex,
   minutesBetween,
   presetEndTimeStr,
   shiftEndTimeStr,
@@ -382,37 +381,6 @@ describe('minutesBetween', () => {
   });
 });
 
-describe('matchingDurationIndex', () => {
-  it.each([
-    ['14:30', 0],
-    ['15:00', 1],
-    ['16:00', 2],
-  ])('selects the chip matching an end of %s', (end, expectedIndex) => {
-    expect(matchingDurationIndex('14:00', end)).toBe(expectedIndex);
-  });
-
-  it('leaves every chip unselected for a custom span', () => {
-    // 45 minutes came from the end-time field, not a chip — rounding it to the
-    // nearest preset would silently change the event.
-    expect(matchingDurationIndex('14:00', '14:45')).toBe(-1);
-  });
-
-  it('leaves every chip unselected when there is no time yet', () => {
-    expect(matchingDurationIndex('', '')).toBe(-1);
-    expect(matchingDurationIndex('14:00', '')).toBe(-1);
-  });
-
-  it('does not select a chip for a negative span', () => {
-    expect(matchingDurationIndex('14:00', '13:00')).toBe(-1);
-  });
-
-  it('round-trips with addMinutesToTimeStr', () => {
-    DURATION_PRESETS.forEach((preset, index) => {
-      expect(matchingDurationIndex('10:00', addMinutesToTimeStr('10:00', preset))).toBe(index);
-    });
-  });
-});
-
 /**
  * The "15 minutes before" default — the rule both AddEventModal call sites (the
  * initializer and the type switcher) now read instead of deriving inline. They
@@ -537,8 +505,8 @@ describe('spanMinutes (PK21: the mobile absolute-instant rule)', () => {
     expect(spanMinutes('', '10:00')).toBeNull();
     expect(spanMinutes('10:00', 'bad')).toBeNull();
   });
-  it('the 60-minute chip still matches across midnight', () => {
-    expect(matchingDurationIndex('23:30', '00:30')).toBe(1);
+  it('counts a span across midnight', () => {
+    expect(spanMinutes('23:30', '00:30')).toBe(60);
   });
 });
 

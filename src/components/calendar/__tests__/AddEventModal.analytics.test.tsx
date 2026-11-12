@@ -81,7 +81,7 @@ function renderMed(props: Partial<React.ComponentProps<typeof AddEventModal>> = 
   return render(
     <AddEventModal
       circleId={CIRCLE_ID}
-      initialType="medication" layout="full"
+      initialType="medication"
       onClose={onClose}
       onSaved={onSaved}
       {...props}
@@ -94,11 +94,11 @@ describe('save events', () => {
     const user = userEvent.setup();
     renderMed();
     await user.type(screen.getByLabelText(/^Medication name/), 'Metformin');
-    await user.selectOptions(screen.getByLabelText('Repeat'), 'as_needed');
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(screen.getByRole('radio', { name: 'When needed' }));
+    await user.click(screen.getByTestId('add-event-save'));
 
     await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
-    expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, 'medication', 'form', false, 'full');
+    expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, 'medication', 'form', false, 'simple');
     // as-needed has no recurrence
     expect(created).toHaveBeenCalledWith(CIRCLE_ID, false, 'form', false);
     expect(blocked).not.toHaveBeenCalled();
@@ -110,14 +110,10 @@ describe('save events', () => {
     const user = userEvent.setup();
     renderMed();
     await user.type(screen.getByLabelText(/^Medication name/), 'Metformin');
-    await user.selectOptions(screen.getByLabelText('Repeat'), 'daily');
-    const date = screen.getByLabelText(/^Date/) as HTMLInputElement;
-    await user.clear(date);
-    await user.type(date, '2099-01-01');
-    const time = screen.getByLabelText(/^Time/) as HTMLInputElement;
-    await user.clear(time);
-    await user.type(time, '08:00');
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(screen.getByRole('radio', { name: 'Every day' }));
+    fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: '2099-01-01' } });
+    await user.click(screen.getByRole('checkbox', { name: /^8:00 AM\s*Morning$/ }));
+    await user.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(created).toHaveBeenCalledWith(CIRCLE_ID, true, 'form', false));
   });
 
@@ -125,7 +121,7 @@ describe('save events', () => {
     renderMed();
     fireEvent.submit(document.getElementById('add-event-form') as HTMLFormElement);
 
-    expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, 'medication', 'form', false, 'full');
+    expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, 'medication', 'form', false, 'simple');
     expect(blocked).toHaveBeenCalledWith('missing_name', 'medication');
     expect(failed).not.toHaveBeenCalled();
     expect(mutateCreate).not.toHaveBeenCalled();
@@ -135,7 +131,6 @@ describe('save events', () => {
     const user = userEvent.setup();
     renderMed();
     await user.type(screen.getByLabelText(/^Medication name/), 'Metformin');
-    await user.clear(screen.getByLabelText(/^Time/));
     fireEvent.submit(document.getElementById('add-event-form') as HTMLFormElement);
     expect(blocked).toHaveBeenCalledWith('missing_time', 'medication');
     expect(failed).not.toHaveBeenCalled();
@@ -143,13 +138,11 @@ describe('save events', () => {
 
   it('a missing appointment end time is missing_end_time', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={onClose} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={onClose} />);
     await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Checkup');
-    const time = screen.getByLabelText(/^Time/) as HTMLInputElement;
-    await user.clear(time);
-    await user.type(time, '08:00');
-    const end = screen.getByLabelText(/^End time/) as HTMLInputElement;
-    await user.clear(end);
+    await user.click(screen.getByRole('radio', { name: 'Pick a time' }));
+    fireEvent.change(screen.getByLabelText('From', { selector: 'input' }), { target: { value: '08:00' } });
+    fireEvent.change(screen.getByLabelText('To', { selector: 'input' }), { target: { value: '' } });
     fireEvent.submit(document.getElementById('add-event-form') as HTMLFormElement);
     expect(blocked).toHaveBeenCalledWith('missing_end_time', 'appointment');
     expect(failed).not.toHaveBeenCalled();
@@ -163,8 +156,8 @@ describe('save events', () => {
     const user = userEvent.setup();
     renderMed();
     await user.type(screen.getByLabelText(/^Medication name/), 'Metformin');
-    await user.selectOptions(screen.getByLabelText('Repeat'), 'as_needed');
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(screen.getByRole('radio', { name: 'When needed' }));
+    await user.click(screen.getByTestId('add-event-save'));
 
     await waitFor(() => expect(failed).toHaveBeenCalledTimes(1));
     expect(failed).toHaveBeenCalledWith(CIRCLE_ID, 'medication', 'api_error', {
@@ -204,7 +197,7 @@ describe('save events', () => {
 });
 
 describe('past time on create (inline note, no prompt)', () => {
-  // The typed times below are a DENVER viewer's clock (10:00 = 12:00 New York). Without pinning the viewer
+  // The chips are the CIRCLE's clock (New York); the viewer is pinned to Denver. Without pinning the viewer
   // zone they named other instants under the sweep: from Honolulu, 10:00 is 16:00 New York, still ahead.
   const ORIGINAL_TZ = process.env.TZ;
   beforeAll(() => {
@@ -221,21 +214,17 @@ describe('past time on create (inline note, no prompt)', () => {
     vi.useRealTimers();
   });
 
-  async function fill(user: ReturnType<typeof userEvent.setup>, time: string) {
+  async function fill(user: ReturnType<typeof userEvent.setup>, time: RegExp) {
     await user.type(screen.getByLabelText(/^Medication name/), 'Metformin');
-    const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
-    await user.clear(dateInput);
-    await user.type(dateInput, '2026-06-15');
-    const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
-    await user.clear(timeInput);
-    await user.type(timeInput, time);
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: '2026-06-15' } });
+    await user.click(screen.getByRole('checkbox', { name: time }));
+    await user.click(screen.getByTestId('add-event-save'));
   }
 
   it('one tap saves: medication_created with starts_next_dose true, no past_time_cancelled', async () => {
     const user = userEvent.setup();
     renderMed();
-    await fill(user, '10:00'); // 12:00 New York, already past
+    await fill(user, /^12:00 PM\s*Midday$/); // 12:00 New York, already past
     await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
     expect(created.mock.calls[0][3]).toBe(true);
     expect(tapped).toHaveBeenCalledTimes(1);
@@ -246,7 +235,7 @@ describe('past time on create (inline note, no prompt)', () => {
   it('a future time reports starts_next_dose false', async () => {
     const user = userEvent.setup();
     renderMed();
-    await fill(user, '20:00'); // 22:00 New York, upcoming
+    await fill(user, /^9:00 PM\s*Bedtime$/); // 21:00 New York, upcoming
     await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
     expect(created.mock.calls[0][3]).toBe(false);
   });
@@ -285,15 +274,15 @@ describe('medication_form_abandoned', () => {
     const user = userEvent.setup();
     renderMed();
     await user.type(screen.getByLabelText(/^Medication name/), 'Metformin');
-    await user.selectOptions(screen.getByLabelText('Repeat'), 'as_needed');
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(screen.getByRole('radio', { name: 'When needed' }));
+    await user.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(abandoned).not.toHaveBeenCalled();
   });
 
   it('does not fire for an appointment', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={onClose} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={onClose} />);
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(abandoned).not.toHaveBeenCalled();
   });

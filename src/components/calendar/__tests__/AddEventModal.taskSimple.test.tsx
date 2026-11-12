@@ -125,8 +125,8 @@ function task(over: Partial<CalendarEvent> = {}): CalendarEvent {
 
 const renderNew = (props: Partial<Parameters<typeof AddEventModal>[0]> = {}) =>
   render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} {...props} />);
-const renderEdit = (event: CalendarEvent, layout?: 'full') =>
-  render(<AddEventModal circleId={CIRCLE_ID} event={event} layout={layout} onClose={vi.fn()} />);
+const renderEdit = (event: CalendarEvent) =>
+  render(<AddEventModal circleId={CIRCLE_ID} event={event} onClose={vi.fn()} />);
 
 /** The "Starts" tile's hidden input (the tile is the date picker; the input carries the value). */
 const dateInput = () => screen.getByLabelText(/^Starts/, { selector: 'input' }) as HTMLInputElement;
@@ -222,21 +222,6 @@ describe('layout: the mockup, top to bottom', () => {
     expect(screen.getByRole('dialog', { name: 'Edit task' })).toBeInTheDocument();
     expect(screen.getByTestId('simple-task-form')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
-  });
-
-  it('layout="full" keeps the old full task form (the AI-drafted / follow-up layout on mobile)', () => {
-    renderNew({ layout: 'full' });
-    expect(screen.queryByTestId('simple-task-form')).toBeNull();
-    expect(screen.getByRole('combobox', { name: /^Assigned to/ })).toBeInTheDocument();
-    expect(screen.getByTestId('add-event-save')).toHaveTextContent('Create');
-  });
-
-  it('a type-less open switched to Task stays on the full form (Calendar "+")', async () => {
-    const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
-    await user.selectOptions(screen.getByLabelText('Type'), 'task');
-    expect(screen.queryByTestId('simple-task-form')).toBeNull();
-    expect(screen.getByTestId('add-event-save')).toHaveTextContent('Create');
   });
 
   it('Spanish: the questions, tiles and CTA', async () => {
@@ -995,15 +980,5 @@ describe('analytics', () => {
     expect(stepDone).not.toHaveBeenCalled();
     expect(opened).not.toHaveBeenCalled();
     expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, 'task', 'form', true, 'simple');
-  });
-
-  it('the full task form (AI-drafted / follow-up on mobile; layout="full" here) reports layout full and counts no steps', async () => {
-    const user = userEvent.setup();
-    renderNew({ layout: 'full' });
-    await user.type(titleBox(), 'Groceries');
-    await user.tab();
-    await saveCreate(user);
-    expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, 'task', 'form', false, 'full');
-    expect(stepDone).not.toHaveBeenCalled();
   });
 });

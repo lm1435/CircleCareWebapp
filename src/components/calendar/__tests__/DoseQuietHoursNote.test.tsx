@@ -7,6 +7,7 @@
 // on the machine's timezone. Copy is read from the REAL en/es calendar.json.
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@/i18n';
 import i18n from '@/i18n';
@@ -186,32 +187,40 @@ describe('DoseQuietHoursNote', () => {
 
 describe('in the medication form', () => {
   function renderForm() {
-    return wrap(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+    return wrap(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
   }
 
-  it('appears under the Time field when a dose time inside quiet hours is typed, never blocks Save', async () => {
+  const otherInput = () => screen.getByLabelText('Other time', { selector: 'input' });
+  /** The Other… tile is the time picker: open it, then type the dose time into its input. */
+  async function typeDoseTime(user: ReturnType<typeof userEvent.setup>, value: string) {
+    await user.click(screen.getByTestId('time-chip-other'));
+    fireEvent.change(otherInput(), { target: { value } });
+  }
+
+  it('appears under the What time? chips when a dose time inside quiet hours is typed, never blocks Save', async () => {
+    const user = userEvent.setup();
     renderForm();
     expect(noteSelector()).toBeNull();
-    fireEvent.change(screen.getByLabelText(/^Time/), { target: { value: '22:30' } });
+    await typeDoseTime(user, '22:30');
     expect(await screen.findByTestId('dose-quiet-hours-note')).toHaveTextContent(EN_COPY);
     // Display only: the Save button is still enabled.
-    const save = screen.getAllByRole('button').find((b) => /^(save|add)/i.test(b.textContent || ''));
-    if (save) expect(save).not.toBeDisabled();
+    expect(screen.getByTestId('add-event-save')).not.toBeDisabled();
   });
 
   it('does not appear for a daytime dose, and goes away when the time moves out of the window', async () => {
+    const user = userEvent.setup();
     renderForm();
-    const time = screen.getByLabelText(/^Time/);
-    fireEvent.change(time, { target: { value: '22:30' } });
+    await typeDoseTime(user, '22:30');
     await screen.findByTestId('dose-quiet-hours-note');
-    fireEvent.change(time, { target: { value: '09:00' } });
+    fireEvent.change(otherInput(), { target: { value: '09:00' } });
     await waitFor(() => expect(noteSelector()).toBeNull());
   });
 
   it('does not appear when the reminder goes to a different responsible member', async () => {
     mockMembers = OTHER_RESPONSIBLE;
+    const user = userEvent.setup();
     renderForm();
-    fireEvent.change(screen.getByLabelText(/^Time/), { target: { value: '22:30' } });
+    await typeDoseTime(user, '22:30');
     await settle();
     expect(noteSelector()).toBeNull();
   });

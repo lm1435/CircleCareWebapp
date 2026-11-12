@@ -331,29 +331,3 @@ describe("the viewer's repeated hour: an untouched edit saves the stored pair ba
     );
   });
 });
-
-describe('the end time (mobile fix 3): web has no equivalent of the anchor-day frame bug', () => {
-  // Mobile kept times as Dates on an anchor day, and a real-day start (a preset or a chip) plus the end
-  // picker gave a duration near +/-3.59 million minutes. Web keeps start and end as viewer-frame HH:MM
-  // strings and derives the duration from the two strings (`spanMinutes`), so the same sequence on the
-  // type-less form (the only one with both presets and a type switch) must give the real duration.
-  it('preset -> switch to Appointment -> end time: the duration is the picked span', async () => {
-    const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} layout="full" onClose={vi.fn()} />);
-    const presets = screen.getByRole('radiogroup', { name: 'Common schedules' });
-    await user.click(within(presets).getByRole('radio', { name: 'Every morning (8:00 AM)' }));
-    // The preset is the CIRCLE's 08:00 (BC-8); the field holds the viewer's clock for it, so the end that is 75
-    // minutes later is derived from what the field reads.
-    const [sh, sm] = (screen.getByLabelText(/^Time/) as HTMLInputElement).value.split(':').map(Number);
-    const endTotal = (sh * 60 + sm + 75) % 1440;
-    const endValue = `${String(Math.floor(endTotal / 60)).padStart(2, '0')}:${String(endTotal % 60).padStart(2, '0')}`;
-    await user.selectOptions(screen.getByLabelText('Type'), 'appointment');
-    await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Dentist');
-    const end = screen.getByLabelText(/^End time/);
-    await user.clear(end);
-    await user.type(end, endValue);
-    await user.click(screen.getByRole('button', { name: 'Create' }));
-    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
-    expect(mutateCreate.mock.calls[0][0]).toMatchObject({ event_type: 'appointment', duration_minutes: 75 });
-  });
-});

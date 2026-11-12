@@ -122,7 +122,6 @@
     "close": "Close event form",
     "create": "Create",
     "saveChanges": "Save changes",
-    "creating": "Saving…",
     "created": "Event created",
     "createdMedication": "Medication added",
     "createdAppointment": "Appointment added",
@@ -132,29 +131,15 @@
     "seriesEditNote": "Applies to upcoming tasks only.",
     "seriesEditNoteMedication": "Applies to upcoming doses only.",
     "seriesEditNoteAppointment": "Applies to upcoming appointments only.",
-    "viewOnly": "View only",
-    "types": {
-      "medication": "Medication",
-      "appointment": "Appointment",
-      "task": "Task"
-    },
     "fields": {
-      "type": "Type",
       "title": "Title",
       "medicationName": "Medication name",
       "dosage": "Dosage",
-      "date": "Date",
-      "time": "Time",
-      "endTime": "End time",
       "location": "Location",
       "details": "Details",
       "instructions": "Instructions",
-      "repeat": "Repeat",
       "daysOn": "Days on",
       "daysOff": "Days off",
-      "endDate": "End date",
-      "assignedTo": "Assigned to",
-      "duration": "Duration",
       "pillsRemaining": "Pills remaining",
       "quantityOnHand": "Quantity on hand",
       "pillsPerDose": "Pills per dose",
@@ -175,21 +160,6 @@
       "details": "Add any details…",
       "instructions": "e.g. take with food"
     },
-    "timePresets": {
-      "label": "Common times",
-      "morning": "Morning (8:00 AM)",
-      "noon": "Noon (12:00 PM)",
-      "evening": "Evening (6:00 PM)",
-      "bedtime": "Bedtime (9:00 PM)"
-    },
-    "schedulePresets": {
-      "label": "Common schedules",
-      "onceDaily": "Once daily (8:00 AM)",
-      "everyMorning": "Every morning (8:00 AM)",
-      "everyEvening": "Every evening (8:00 PM)",
-      "twiceDaily": "Twice daily (8:00 AM, 8:00 PM)",
-      "threeTimesDaily": "Three times daily (8:00 AM, 2:00 PM, 8:00 PM)"
-    },
     "titleSuggestions": {
       "label": "Title suggestions",
       "appointment": {
@@ -208,9 +178,7 @@
       }
     },
     "hints": {
-      "timeOptional": "Leave blank for an all-day event.",
-      "endDate": "Leave blank to repeat indefinitely.",
-      "timesShownIn": "Times are saved in {{timezone}}."
+      "endDate": "Leave blank to repeat indefinitely."
     },
     "anyone": "Anyone",
     "recurrence": {
@@ -222,8 +190,7 @@
       "yearly": "Yearly",
       "cycle": "Days on / off",
       "daysOfWeek": "Some days",
-      "asNeeded": "As needed",
-      "asNeededHint": "No set times. Log each dose when it's given."
+      "asNeeded": "As needed"
     },
     "daysOfWeek": {
       "title": "Repeat on",
@@ -309,26 +276,10 @@
       "photoUploadFailed": "Event saved but photo upload failed. You can try adding the photo later.",
       "photoRemoveFailed": "Changes saved, but the photo could not be removed. Try again later."
     },
-    "durations": {
-      "30": "30 min",
-      "60": "1 hr",
-      "120": "2 hrs"
-    },
-    "dualTimezoneHint": "Your time / {{name}}'s time ({{timezone}})",
-    "dualTimezoneHintGeneric": "Your time / their time ({{timezone}})",
     "quietHoursDoseWarning": "This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Settings, under Quiet hours.",
     "pastTimeInline": "Starts with the next dose. This time has already passed today.",
     "pastTimesInline_one": "Starts with the next dose. {{times}} has already passed today.",
     "pastTimesInline_other": "Starts with the next dose. {{times}} have already passed today.",
-    "conversion": {
-      "sameDay_one": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} for you ({{viewerZone}})",
-      "sameDay_other": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} for you ({{viewerZone}})",
-      "nextDay_one": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} the next day for you ({{viewerZone}})",
-      "nextDay_other": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} the next day for you ({{viewerZone}})",
-      "previousDay_one": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} the day before for you ({{viewerZone}})",
-      "previousDay_other": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} the day before for you ({{viewerZone}})"
-    },
-    "timezoneUnresolvedNotice": "Still loading this circle's time zone. Saving is paused so dates aren't stored in the wrong one.",
     "drugSearch": {
       "searching": "Searching medications",
       "clear": "Clear name",

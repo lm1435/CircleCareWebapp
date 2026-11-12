@@ -2,7 +2,7 @@
 // no date / time / presets / end date / reminders; one optional plain reason;
 // LOCKED after create; the server pins the schedule so none is sent.
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import i18n from '@/i18n';
@@ -67,7 +67,7 @@ vi.mock('@/components/ui', async (importOriginal) => {
 const onClose = vi.fn();
 
 function renderCreate() {
-  return render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={onClose} />);
+  return render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={onClose} />);
 }
 
 function prnEvent(over: Partial<CalendarEvent> = {}): CalendarEvent {
@@ -90,8 +90,12 @@ function prnEvent(over: Partial<CalendarEvent> = {}): CalendarEvent {
 }
 
 async function chooseAsNeeded(user: ReturnType<typeof userEvent.setup>) {
-  await user.selectOptions(screen.getByLabelText('Repeat'), 'as_needed');
+  await user.click(screen.getByRole('radio', { name: 'When needed' }));
 }
+
+const REPEAT_HINT = 'No set times. Everyone in the circle is notified when someone logs a dose.';
+const saveButton = () => screen.getByTestId('add-event-save');
+const howOften = () => screen.getByRole('radiogroup', { name: 'How often?' });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -102,61 +106,63 @@ afterEach(async () => {
 });
 
 describe('creating: Repeat -> As needed', () => {
-  it('offers "As needed" on a NEW medication, last in the list', () => {
-    renderCreate();
-    const options = Array.from(
-      (screen.getByLabelText('Repeat') as HTMLSelectElement).options
-    ).map((o) => o.textContent);
-    expect(options[options.length - 1]).toBe('As needed');
-  });
-
-  it('the As needed option keeps its title, and once chosen the select is described by the hint (EN)', async () => {
+  it('offers "When needed" on a NEW medication, last of the How often? tiles (never inside Custom)', async () => {
     const user = userEvent.setup();
     renderCreate();
-    const select = screen.getByLabelText('Repeat') as HTMLSelectElement;
-    // Same order as the mobile Repeat sheet: As needed last, its title as the option's text.
-    expect(Array.from(select.options).map((o) => o.value)).toEqual([
-      'none', 'daily', 'every_other_day', 'weekly', 'monthly', 'yearly', 'cycle', 'days_of_week', 'as_needed',
-    ]);
-    expect(select.options[select.options.length - 1].textContent).toBe('As needed');
-    expect(select).not.toHaveAccessibleDescription(/No set times/);
+    const labels = within(howOften())
+      .getAllByRole('radio')
+      .map((r) => r.textContent);
+    expect(labels).toEqual(['Every day', 'Every week', 'When needed']);
+    await user.click(screen.getByTestId('repeat-custom'));
+    expect(within(screen.getByTestId('repeat-custom-panel')).queryByRole('radio', { name: 'When needed' })).toBeNull();
+  });
+
+  it('once chosen, When needed is lit and the reason field is described by the hint (EN)', async () => {
+    const user = userEvent.setup();
+    renderCreate();
+    expect(within(howOften()).getByRole('radio', { name: 'Every day' })).toBeChecked();
+    expect(screen.queryByText(REPEAT_HINT)).toBeNull();
     await chooseAsNeeded(user);
-    expect(select.options[select.selectedIndex].textContent).toBe('As needed');
-    expect(select).toHaveAccessibleDescription("No set times. Log each dose when it's given.");
-    expect(screen.getByText("No set times. Log each dose when it's given.")).toBeVisible();
+    expect(within(howOften()).getByRole('radio', { name: 'When needed' })).toBeChecked();
+    expect(screen.getByLabelText(/What is it for\?/)).toHaveAccessibleDescription(REPEAT_HINT);
+    expect(screen.getByText(REPEAT_HINT)).toBeVisible();
   });
 
   it.each(['medication', 'appointment', 'task'] as const)(
-    'the %s Repeat field has a VISIBLE "Repeat" label and reads "Once" by default (the tile words)',
+    'the %s form has a VISIBLE "How often?" question with its tiles',
     (initialType) => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType={initialType} layout="full" onClose={onClose} />);
-      const select = screen.getByRole('combobox', { name: 'Repeat' }) as HTMLSelectElement;
-      const label = document.querySelector(`label[for="${select.id}"]`);
-      expect(label).toHaveTextContent(/^Repeat$/);
-      expect(label).toBeVisible();
-      expect(select.options[select.selectedIndex].textContent).toBe('Once');
+      render(<AddEventModal circleId={CIRCLE_ID} initialType={initialType} onClose={onClose} />);
+      const group = screen.getByRole('radiogroup', { name: 'How often?' });
+      expect(group).toBeVisible();
+      expect(within(group).getAllByRole('radio').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByTestId(initialType === 'task' ? 'task-repeat-custom' : 'repeat-custom')).toBeVisible();
     }
   );
 
-  it('does not offer it for an appointment or task', async () => {
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={onClose} />);
-    const options = Array.from(
-      (screen.getByLabelText('Repeat') as HTMLSelectElement).options
-    ).map((o) => o.value);
-    expect(options).not.toContain('as_needed');
+  it('does not offer "When needed" for an appointment or task', async () => {
+    for (const initialType of ['appointment', 'task'] as const) {
+      const view = render(<AddEventModal circleId={CIRCLE_ID} initialType={initialType} onClose={onClose} />);
+      expect(within(howOften()).queryByRole('radio', { name: 'When needed' })).toBeNull();
+      view.unmount();
+    }
   });
 
   it('hides date, time, presets, end date and reminders; shows the reason and the "no reminders" note', async () => {
     const user = userEvent.setup();
     renderCreate();
-    expect(screen.getByLabelText(/^Date/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Time/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Starts/)).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Common dose times' })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Repeats until/)).toBeInTheDocument();
+    expect(screen.getByTestId('reminders-summary-row')).toBeInTheDocument();
 
     await chooseAsNeeded(user);
 
-    expect(screen.queryByLabelText(/^Date/)).toBeNull();
-    expect(screen.queryByLabelText(/^Time/)).toBeNull();
-    expect(screen.queryByRole('radiogroup', { name: /schedule/i })).toBeNull();
+    expect(screen.queryByLabelText(/^Starts/)).toBeNull();
+    expect(screen.queryByLabelText(/^Repeats until/)).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Common dose times' })).toBeNull();
+    expect(screen.queryByLabelText('Other time', { selector: 'input' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'What time?' })).toBeNull();
+    expect(screen.queryByTestId('reminders-summary-row')).toBeNull();
     expect(screen.queryByLabelText(/End date/i)).toBeNull();
     expect(screen.queryByText(/^Reminders$/)).toBeNull();
     expect(screen.getByTestId('as-needed-no-reminders')).toHaveTextContent(
@@ -174,7 +180,7 @@ describe('creating: Repeat -> As needed', () => {
     await user.type(screen.getByLabelText(/Dosage/i), '200 mg');
     await chooseAsNeeded(user);
     await user.type(screen.getByLabelText(/What is it for\?/), '  pain  ');
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.click(saveButton());
 
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     const data = mutateCreate.mock.calls[0][0];
@@ -205,7 +211,7 @@ describe('creating: Repeat -> As needed', () => {
     renderCreate();
     await user.type(screen.getByLabelText(/Medication name/i), 'Ibuprofen');
     await chooseAsNeeded(user);
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.click(saveButton());
     await waitFor(() => expect(mutateCreate).toHaveBeenCalled());
     expect('as_needed_reason' in mutateCreate.mock.calls[0][0]).toBe(false);
   });
@@ -222,7 +228,7 @@ describe('creating: Repeat -> As needed', () => {
     renderCreate();
     await user.type(screen.getByLabelText(/Medication name/i), 'Ibuprofen');
     await chooseAsNeeded(user);
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.click(saveButton());
     await waitFor(() => expect(mutateCreate).toHaveBeenCalled());
     expect(screen.queryByText(/time/i, { selector: '[role="alert"], .text-terracotta' })).toBeNull();
   });
@@ -234,7 +240,7 @@ describe('creating: Repeat -> As needed', () => {
     renderCreate();
     await user.type(screen.getByLabelText(/Medication name/i), 'Ibuprofen');
     await chooseAsNeeded(user);
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.click(saveButton());
 
     await waitFor(() => expect(deleteEventRequest).toHaveBeenCalledWith(CIRCLE_ID, 'ghost'));
     expect(showToast).toHaveBeenCalledWith(
@@ -251,7 +257,7 @@ describe('creating: Repeat -> As needed', () => {
     await user.type(screen.getByLabelText(/Medication name/i), 'Ibuprofen');
     await chooseAsNeeded(user);
     await user.type(screen.getByLabelText(/What is it for\?/), 'pain');
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.click(saveButton());
     await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
     expect(created).toHaveBeenCalledWith({ source: 'form', has_reason: true });
     created.mockRestore();
@@ -263,7 +269,7 @@ describe('creating: Repeat -> As needed', () => {
     renderCreate();
     await user.type(screen.getByLabelText(/Medication name/i), 'Ibuprofen');
     await chooseAsNeeded(user);
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.click(saveButton());
     await waitFor(() => expect(created).toHaveBeenCalledWith({ source: 'form', has_reason: false }));
     created.mockRestore();
   });
@@ -276,7 +282,7 @@ describe('creating: Repeat -> As needed', () => {
     renderCreate();
     await user.type(screen.getByLabelText(/Medication name/i), 'Ibuprofen');
     await chooseAsNeeded(user);
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.click(saveButton());
     await waitFor(() => expect(deleteEventRequest).toHaveBeenCalled());
     expect(created).not.toHaveBeenCalled();
     created.mockRestore();
@@ -287,7 +293,7 @@ describe('creating: Repeat -> As needed', () => {
     renderCreate();
     await user.type(screen.getByLabelText(/Medication name/i), 'Ibuprofen');
     await chooseAsNeeded(user);
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.click(saveButton());
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(deleteEventRequest).not.toHaveBeenCalled();
   });
@@ -296,13 +302,13 @@ describe('creating: Repeat -> As needed', () => {
     await i18n.changeLanguage('es');
     const user = userEvent.setup();
     renderCreate();
-    await user.selectOptions(screen.getByLabelText('Repetir'), 'as_needed');
+    await user.click(screen.getByRole('radio', { name: 'Cuando se necesite' }));
     expect(screen.getByTestId('as-needed-no-reminders')).toHaveTextContent(
       'Sin recordatorios. Los medicamentos según se necesite no tienen horario.'
     );
     expect(screen.getByLabelText(/¿Para qué es\?/)).toBeInTheDocument();
-    expect(screen.getByLabelText('Repetir')).toHaveAccessibleDescription(
-      'Sin horarios fijos. Registra cada dosis cuando se dé.'
+    expect(screen.getByLabelText(/¿Para qué es\?/)).toHaveAccessibleDescription(
+      'Sin horarios fijos. Todo el círculo recibe un aviso cuando alguien registra una dosis.'
     );
   });
 });

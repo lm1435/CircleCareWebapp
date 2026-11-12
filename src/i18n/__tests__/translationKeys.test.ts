@@ -254,7 +254,8 @@ const TRANS_KEY = /i18nKey=\s*(['"])([^'"\n]+)\1/g;
  * option labels are gone with the picker; the row names the zone from the IANA city +
  * `i18n/format` placeNames.
  */
-const EXPECTED_DYNAMIC_KEY_CALL_SITES = 62;
+// 62 -> 60 (2026-11-11): the legacy add-form layout and its `addEvent.types.${type}` / `addEvent.durations.${mins}` labels were deleted.
+const EXPECTED_DYNAMIC_KEY_CALL_SITES = 60;
 
 /**
  * Comments are stripped before scanning — a `t(key)` inside a JSDoc block is
@@ -586,12 +587,6 @@ describe('W5: no unreferenced en keys', () => {
     'shifts:tasks.form.delete',
     'shifts:tasks.form.editTitle',
     'shifts:tasks.form.explainOnce',
-    // Task 15 — `AddEventModal`'s Create/Save-changes button now renders
-    // through `Button`'s own `loading` prop (a spinner over the resting
-    // label, per spec §6.4's Modal footer convention) instead of manually
-    // swapping the label to this "Saving…" copy. Genuinely dead now, not
-    // merely unwired.
-    'calendar:addEvent.creating',
     // Mobile-parity Wave 2, Task 9. Added ahead of the UI that consumes them so
     // both locales land in one reviewable change:
     //   `addMenu.*` -> Task 10 `AddMenu`
@@ -619,14 +614,6 @@ describe('W5: no unreferenced en keys', () => {
     'common:addMenu.medication',
     'common:addMenu.note',
     'common:addMenu.task',
-    'calendar:addEvent.hints.timesShownIn',
-    'calendar:addEvent.schedulePresets.onceDaily',
-    'calendar:addEvent.timePresets.bedtime',
-    'calendar:addEvent.timePresets.evening',
-    'calendar:addEvent.timePresets.label',
-    'calendar:addEvent.timePresets.morning',
-    'calendar:addEvent.timePresets.noon',
-    'calendar:addEvent.viewOnly',
     'calendar:eventDetail.title',
     'calendar:moreEvents',
     'circles:join.or',
@@ -739,9 +726,6 @@ describe('W5: no unreferenced en keys', () => {
     // their copy has no reader left. Carried here rather than deleted (locale files are
     // append-only for concurrent sessions; an unused key stays in place). The copy the form
     // still shows (`firstRun.whatTitle`) is read through its own `addEvent.firstRun.*` keys.
-    'calendar:addEvent.schedulePresets.threeTimesDaily',
-    'calendar:addEvent.schedulePresets.twiceDaily',
-    'calendar:addEvent.timezoneUnresolvedNotice',
     'circles:firstRun.addDosage',
     'circles:firstRun.back',
     'circles:firstRun.customTimeHint',

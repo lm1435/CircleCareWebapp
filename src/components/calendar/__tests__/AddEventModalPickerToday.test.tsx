@@ -6,12 +6,8 @@ import { getDateInTimezone, getDeviceTimezone } from '@/utils/timezone';
 import { AddEventModal } from '../AddEventModal';
 
 /**
- * The date picker's "Today" in AddEventModal follows the frame of the value.
- *
- * - NO time: `eventDatesForApi` stores the picked day as-is, i.e. it is a
- *   RECIPIENT-frame day, so Today must be the recipient's today.
- * - WITH a time: the field holds the VIEWER's wall clock (converted on save),
- *   so Today stays the viewer's today.
+ * The date picker's "Today" in AddEventModal is the RECIPIENT's today, timed or not: the simple form's
+ * Starts tile shows the circle's calendar.
  *
  * The recipient zone is picked at runtime to sit on a different calendar day
  * from the device (process) zone, so both cases discriminate from any TZ.
@@ -73,7 +69,7 @@ afterEach(() => {
 });
 
 async function ringedAfterOpening(user: ReturnType<typeof userEvent.setup>): Promise<string | null> {
-  await user.click(screen.getAllByRole('button', { name: 'Choose a date' })[0]);
+  await user.click(screen.getByTestId('starts-tile'));
   await screen.findByRole('dialog', { name: 'Date picker' });
   return document.querySelector('[aria-current="date"]')?.getAttribute('data-day') ?? null;
 }
@@ -81,15 +77,16 @@ async function ringedAfterOpening(user: ReturnType<typeof userEvent.setup>): Pro
 describe('AddEventModal date picker "Today"', () => {
   it('untimed task: rings the RECIPIENT today', async () => {
     const user = userEvent.setup({ advanceTimers: () => undefined });
-    render(<AddEventModal circleId="c" initialType="task" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId="c" initialType="task" onClose={vi.fn()} />);
     expect(await ringedAfterOpening(user)).toBe(getDateInTimezone(RECIPIENT.zone, NOW));
   });
 
-  it('timed task: keeps the VIEWER today (the field is the viewer wall clock)', async () => {
+  it('timed task: the Starts tile is the recipient calendar too, so Today is the RECIPIENT today', async () => {
     const user = userEvent.setup({ advanceTimers: () => undefined });
     render(
-      <AddEventModal circleId="c" initialType="task" layout="full" initialTime="09:00" onClose={vi.fn()} />
+      <AddEventModal circleId="c" initialType="task" onClose={vi.fn()} />
     );
-    expect(await ringedAfterOpening(user)).toBe(deviceToday());
+    expect(await ringedAfterOpening(user)).toBe(getDateInTimezone(RECIPIENT.zone, NOW));
+    expect(getDateInTimezone(RECIPIENT.zone, NOW)).not.toBe(deviceToday());
   });
 });

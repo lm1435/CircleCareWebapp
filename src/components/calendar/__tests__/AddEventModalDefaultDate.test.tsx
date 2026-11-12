@@ -86,7 +86,7 @@ beforeEach(() => {
   mutateCreate.mockResolvedValue({ id: 'x' });
 });
 
-const dateInput = () => screen.getByLabelText(/^Date/) as HTMLInputElement;
+const dateInput = () => screen.getByLabelText(/^Starts/, { selector: 'input' }) as HTMLInputElement;
 
 // [label, viewer zone, recipient zone, clock, expected recipient today]
 const PAIRS: Array<[string, string, string, string, string]> = [
@@ -100,16 +100,16 @@ const PAIRS: Array<[string, string, string, string, string]> = [
 describe('AddEventModal - a NEW event defaults to the recipient\'s today', () => {
   it.each(PAIRS)('%s', async (_l, viewer, recipient, clock, expected) => {
     setWorld(viewer, recipient, clock);
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
     expect(dateInput().value).toBe(expected);
   });
 
   it('a date-only task SAVES on the recipient\'s today (Midway viewer, Kiritimati recipient)', async () => {
     setWorld('Pacific/Midway', 'Pacific/Kiritimati', '2026-09-30T23:30:00Z');
     const user = userEvent.setup({ advanceTimers: () => undefined });
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
     await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Water plants');
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(screen.getByRole('button', { name: 'Add task' }));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     expect(mutateCreate.mock.calls[0][0].scheduled_date).toBe('2026-10-01');
   });
@@ -117,16 +117,16 @@ describe('AddEventModal - a NEW event defaults to the recipient\'s today', () =>
   it('while the zone is loading: nothing is rendered (no wrong day), then the recipient day appears', () => {
     setWorld('Pacific/Midway', null, '2026-09-30T23:30:00Z');
     const { rerender, container } = render(
-      <AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />
+      <AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />
     );
     expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByLabelText(/^Date/)).toBeNull();
+    expect(screen.queryByLabelText(/^Starts/)).toBeNull();
 
     useCircleResult.timezone = 'Pacific/Kiritimati';
     useCircleResult.canEdit = true;
     useCircleResult.isLoading = false;
     act(() => {
-      rerender(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+      rerender(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
     });
     expect(dateInput().value).toBe('2026-10-01');
   });
@@ -135,12 +135,12 @@ describe('AddEventModal - a NEW event defaults to the recipient\'s today', () =>
     setWorld('Asia/Tokyo', 'America/Denver', '2026-10-01T10:30:00Z');
     const user = userEvent.setup({ advanceTimers: () => undefined });
     const { rerender } = render(
-      <AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />
+      <AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />
     );
     await user.clear(dateInput());
     await user.type(dateInput(), '2026-10-15');
     useCircleResult.timezone = 'Pacific/Kiritimati';
-    rerender(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+    rerender(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
     expect(dateInput().value).toBe('2026-10-15');
   });
 });

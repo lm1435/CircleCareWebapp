@@ -7,8 +7,8 @@ import { AddEventModal } from '../AddEventModal';
 
 // The simple "New medication" / "New appointment" forms (docs/plans/simple-ui-1-3-1.md; build 11 order,
 // owner 2026-11-10): What is it? / When? (Starts | Repeats until, then the How often? grid) / What time? /
-// Who's going? / Reminders / More details. Same state and same payload builder as the full form. The payload
-// tests below run the SAME answers through both layouts and require identical API bodies.
+// Who's going? / Reminders / More details. The payload
+// tests below pin the exact API body for fixed answers.
 
 const ORIGINAL_TZ = process.env.TZ;
 beforeAll(() => {
@@ -452,14 +452,14 @@ describe('new medication: Repeats until (build 11)', () => {
   });
 });
 
-describe('new medication: API payload is IDENTICAL to the full form for the same answers', () => {
+describe('new medication: API payload of the simple form', () => {
   async function savedPayload(
     run: (user: ReturnType<typeof userEvent.setup>) => Promise<void>,
-    props: { layout?: 'full'; saveLabel: string }
+    props: { saveLabel: string }
   ): Promise<Record<string, unknown>> {
     mutateCreate.mockClear();
     const user = userEvent.setup();
-    const view = renderMed(props.layout ? { layout: props.layout } : {});
+    const view = renderMed();
     await run(user);
     await user.click(screen.getByRole('button', { name: props.saveLabel }));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
@@ -468,12 +468,17 @@ describe('new medication: API payload is IDENTICAL to the full form for the same
     return payload;
   }
 
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-11T10:00:00Z')); // 03:00 Denver / 05:00 New York: every chip is ahead
+  });
+
   const nameAndDose = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
     await user.type(screen.getByLabelText('Dosage'), '500 mg');
   };
 
-  it('Evening chip + Every day == Time 16:00 (Denver) + Repeat Daily', async () => {
+  it('Evening chip + Every day = Time 18:00 (New York) + Repeat Daily', async () => {
     const simple = await savedPayload(
       async (user) => {
         await nameAndDose(user);
@@ -481,32 +486,25 @@ describe('new medication: API payload is IDENTICAL to the full form for the same
       },
       { saveLabel: 'Add medication' }
     );
-    const full = await savedPayload(
-      async (user) => {
-        await nameAndDose(user);
-        // The full form's field is the viewer's clock: 4:00 PM Denver is 6:00 PM in New York.
-        const time = screen.getByLabelText(/^Time/);
-        await user.clear(time);
-        await user.type(time, '16:00');
-        await user.selectOptions(screen.getByLabelText('Repeat'), 'daily');
-      },
-      { layout: 'full', saveLabel: 'Create' }
-    );
-    expect(simple).toEqual(full);
-    // Spot-check the load-bearing fields (guards against two equally wrong bodies).
-    expect(simple).toMatchObject({
+    expect(simple).toEqual({
       event_type: 'medication',
       title: 'Metformin',
-      medication_name: 'Metformin',
-      medication_dosage: '500 mg',
+      scheduled_date: '2026-11-11',
       scheduled_time: '18:00', // the chip is the recipient's clock: 6:00 PM in New York
-      recurrence_rule: 'daily',
       notifications_enabled: true,
       reminder_at_due: true,
+      reminder_24h: false,
+      reminder_1h: false,
+      reminder_30m: false,
+      reminder_15m: false,
+      recurrence_rule: 'daily',
+      medication_name: 'Metformin',
+      medication_dosage: '500 mg',
+      entry_source: 'form',
     });
   });
 
-  it('Some days (Mon/Wed picked) == Repeat "Days of the week" with the same days', async () => {
+  it('Some days (Mon/Wed picked) = Repeat "Days of the week"', async () => {
     const pickDays = async (user: ReturnType<typeof userEvent.setup>) => {
       const group = await screen.findByRole('group', { name: 'Repeat on' });
       const first = within(group).getAllByRole('checkbox');
@@ -526,19 +524,23 @@ describe('new medication: API payload is IDENTICAL to the full form for the same
       },
       { saveLabel: 'Add medication' }
     );
-    const full = await savedPayload(
-      async (user) => {
-        await nameAndDose(user);
-        const time = screen.getByLabelText(/^Time/);
-        await user.clear(time);
-        await user.type(time, '06:00'); // Morning: 8:00 New York = 6:00 Denver
-        await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
-        await pickDays(user);
-      },
-      { layout: 'full', saveLabel: 'Create' }
-    );
-    expect(simple).toEqual(full);
-    expect(simple).toMatchObject({ recurrence_rule: expect.stringMatching(/^(weekly|daily)$/) });
+    expect(simple).toEqual({
+      event_type: 'medication',
+      title: 'Metformin',
+      scheduled_date: '2026-11-11',
+      scheduled_time: '08:00',
+      notifications_enabled: true,
+      reminder_at_due: true,
+      reminder_24h: false,
+      reminder_1h: false,
+      reminder_30m: false,
+      reminder_15m: false,
+      recurrence_rule: 'weekly',
+      recurrence_days: [3],
+      medication_name: 'Metformin',
+      medication_dosage: '500 mg',
+      entry_source: 'form',
+    });
   });
 
   it('When needed == Repeat "As needed": no time, no repeat, as_needed true', async () => {
@@ -549,17 +551,16 @@ describe('new medication: API payload is IDENTICAL to the full form for the same
       },
       { saveLabel: 'Add medication' }
     );
-    const full = await savedPayload(
-      async (user) => {
-        await nameAndDose(user);
-        await user.selectOptions(screen.getByLabelText('Repeat'), 'as_needed');
-      },
-      { layout: 'full', saveLabel: 'Create' }
-    );
-    expect(simple).toEqual(full);
-    expect(simple).toMatchObject({ as_needed: true });
-    expect(simple).not.toHaveProperty('scheduled_time');
-    expect(simple).not.toHaveProperty('recurrence_rule');
+    expect(simple).toEqual({
+      event_type: 'medication',
+      title: 'Metformin',
+      scheduled_date: '2026-11-11',
+      notifications_enabled: true,
+      as_needed: true,
+      medication_name: 'Metformin',
+      medication_dosage: '500 mg',
+      entry_source: 'form',
+    });
   });
 
   it('a field changed in More details (instructions, reminders off) reaches the payload', async () => {
@@ -995,50 +996,34 @@ describe('new appointment', () => {
     expect(screen.queryByRole('radiogroup', { name: 'Title suggestions' })).toBeNull();
   });
 
-  it('saves the same body as the full form: title, date, time, end, assignee, place', async () => {
-    const run = async (full: boolean) => {
-      mutateCreate.mockClear();
-      const user = userEvent.setup();
-      const view = renderAppt(full ? { layout: 'full' } : {});
-      await user.type(title(), 'Cardiology follow-up');
-      if (full) {
-        const date = screen.getByLabelText(/^Date/);
-        await user.clear(date);
-        await user.type(date, '2026-10-29');
-        const time = screen.getByLabelText(/^Time/, { selector: 'input' });
-        await user.clear(time);
-        await user.type(time, '14:30');
-      } else {
-        // Build 11: the Starts tile and the From tile, From on the circle's clock (16:30 New York = 14:30 Denver).
-        fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: '2026-10-29' } });
-        await user.click(screen.getByRole('radio', { name: 'Pick a time' }));
-        fireEvent.change(screen.getByLabelText('From', { selector: 'input' }), { target: { value: '16:30' } });
-      }
-      if (full) {
-        await user.selectOptions(screen.getByLabelText('Assigned to'), LUIS_ID);
-        await user.type(screen.getByLabelText('Location'), 'Clinic');
-        await user.click(screen.getByRole('button', { name: 'Create' }));
-      } else {
-        await user.click(screen.getByRole('radio', { name: 'Luis' }));
-        await user.click(screen.getByRole('button', { name: /^More details/ }));
-        await user.type(screen.getByLabelText('Location'), 'Clinic');
-        await user.click(screen.getByRole('button', { name: 'Add appointment' }));
-      }
-      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
-      const payload = mutateCreate.mock.calls[0][0];
-      view.unmount();
-      return payload;
-    };
-    const simple = await run(false);
-    const full = await run(true);
-    expect(simple).toEqual(full);
-    expect(simple).toMatchObject({
+  it('saves the exact body: title, date, time, end, assignee, place', async () => {
+    const user = userEvent.setup();
+    renderAppt();
+    await user.type(title(), 'Cardiology follow-up');
+    // Build 11: the Starts tile and the From tile, From on the circle's clock (16:30 New York = 14:30 Denver).
+    fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: '2026-10-29' } });
+    await user.click(screen.getByRole('radio', { name: 'Pick a time' }));
+    fireEvent.change(screen.getByLabelText('From', { selector: 'input' }), { target: { value: '16:30' } });
+    await user.click(screen.getByRole('radio', { name: 'Luis' }));
+    await user.click(screen.getByRole('button', { name: /^More details/ }));
+    await user.type(screen.getByLabelText('Location'), 'Clinic');
+    await user.click(screen.getByRole('button', { name: 'Add appointment' }));
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+    expect(mutateCreate.mock.calls[0][0]).toEqual({
       event_type: 'appointment',
       title: 'Cardiology follow-up',
       scheduled_date: '2026-10-29',
       scheduled_time: '16:30',
-      assigned_to: LUIS_ID,
+      duration_minutes: 30,
       location: 'Clinic',
+      notifications_enabled: true,
+      reminder_at_due: true,
+      reminder_24h: false,
+      reminder_1h: false,
+      reminder_30m: false,
+      reminder_15m: false,
+      assigned_to: LUIS_ID,
+      entry_source: 'form',
     });
   });
 
@@ -1083,25 +1068,12 @@ describe('new appointment', () => {
   });
 });
 
-describe('where the full form still applies', () => {
-  it('a type-less open keeps the type switch and the full fields', () => {
-    render(<AddEventModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
-    expect(screen.getByLabelText('Type')).toBeInTheDocument();
-    expect(screen.getByTestId('add-event-save')).toHaveTextContent('Create');
-    expect(screen.queryByTestId('simple-medication-form')).toBeNull();
-  });
-
+describe('where the simple form applies', () => {
   it('a task opened for tasks has no type switch and gets the simple task form (owner 1.4.0)', () => {
     render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
     expect(screen.queryByLabelText('Type')).toBeNull();
     expect(title()).toBeInTheDocument();
     expect(screen.getByTestId('simple-task-form')).toBeInTheDocument();
     expect(screen.getByTestId('add-event-save')).toHaveTextContent('Add task');
-  });
-
-  it('layout="full" still forces the full task form', () => {
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
-    expect(screen.queryByTestId('simple-task-form')).toBeNull();
-    expect(screen.getByTestId('add-event-save')).toHaveTextContent('Create');
   });
 });

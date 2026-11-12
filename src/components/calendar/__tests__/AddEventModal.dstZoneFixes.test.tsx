@@ -227,29 +227,35 @@ describe('BC-2 untouched edit, wired in the form', () => {
   });
 });
 
-// ── BC-8: the schedule presets mean the CIRCLE's clock ───────────────────────────────────────────────────────────
-// The web form's strip has the two single-time presets (the multi-dose ones live in the first-run builders, tested in
-// utils/__tests__/firstRunMedication.test.ts). `layout="full"` is the only layout that shows the strip.
-const BC8: Array<{ viewer: string[]; circle: string; preset: 'Every morning' | 'Every evening'; time: string; day: string }> = [
-  { viewer: ['America/New_York'], circle: 'America/Denver', preset: 'Every morning', time: '08:00', day: '2026-11-12' },
-  { viewer: ['America/Denver'], circle: 'America/New_York', preset: 'Every morning', time: '08:00', day: '2026-11-12' },
-  { viewer: ['UTC', 'Etc/UTC'], circle: 'America/Denver', preset: 'Every evening', time: '20:00', day: '2026-11-12' },
-  { viewer: ['Europe/London'], circle: 'America/Denver', preset: 'Every morning', time: '08:00', day: '2026-11-12' },
-  { viewer: ['Pacific/Auckland'], circle: 'America/Denver', preset: 'Every evening', time: '20:00', day: '2026-11-12' },
-  { viewer: ['Asia/Kolkata', 'Asia/Calcutta'], circle: 'America/Los_Angeles', preset: 'Every evening', time: '20:00', day: '2026-11-12' },
+// ── BC-8: the single-time answers mean the CIRCLE's clock ────────────────────────────────────────────────────────
+// The old schedule-preset strip is gone; the same circle-clock contract now runs through the time chips: "Every
+// morning" is the Morning chip (08:00) and "Every evening" (20:00) is the picked "Other…" time, both on the circle
+// clock, with the default Every day.
+const BC8: Array<{ viewer: string[]; circle: string; pick: 'Morning' | '20:00'; time: string; day: string }> = [
+  { viewer: ['America/New_York'], circle: 'America/Denver', pick: 'Morning', time: '08:00', day: '2026-11-12' },
+  { viewer: ['America/Denver'], circle: 'America/New_York', pick: 'Morning', time: '08:00', day: '2026-11-12' },
+  { viewer: ['UTC', 'Etc/UTC'], circle: 'America/Denver', pick: '20:00', time: '20:00', day: '2026-11-12' },
+  { viewer: ['Europe/London'], circle: 'America/Denver', pick: 'Morning', time: '08:00', day: '2026-11-12' },
+  { viewer: ['Pacific/Auckland'], circle: 'America/Denver', pick: '20:00', time: '20:00', day: '2026-11-12' },
+  { viewer: ['Asia/Kolkata', 'Asia/Calcutta'], circle: 'America/Los_Angeles', pick: '20:00', time: '20:00', day: '2026-11-12' },
 ];
 
-describe('BC-8 schedule presets are the circle clock', () => {
-  it('preset from another zone saves the circle clock and stays selected', async () => {
+describe('BC-8 single-time answers are the circle clock', () => {
+  it('a time from another zone saves the circle clock and stays selected', async () => {
     const row = BC8.find((r) => r.viewer.includes(AMBIENT));
     if (!row) throw new Error(`ambient zone ${AMBIENT} is not in the BC-8 table`);
     useCircleResult.timezone = row.circle;
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText(/Medication name/), 'Metformin');
-    const strip = within(document.getElementById('schedule-presets') as HTMLElement);
-    await user.click(strip.getByRole('radio', { name: new RegExp(`^${row.preset}`) }));
-    expect(strip.getByRole('radio', { name: new RegExp(`^${row.preset}`) })).toHaveAttribute('aria-checked', 'true');
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+    await nameIt(user);
+    if (row.pick === 'Morning') {
+      await user.click(chipBox(/Morning$/));
+      expect(chipBox(/Morning$/)).toBeChecked();
+    } else {
+      await user.click(screen.getByTestId('time-chip-other'));
+      fireEvent.change(screen.getByLabelText('Other time', { selector: 'input' }), { target: { value: row.time } });
+      expect(screen.getByLabelText('Other time', { selector: 'input' })).toHaveValue(row.time);
+    }
     await user.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     const body = mutateCreate.mock.calls[0][0] as Record<string, unknown>;
@@ -258,12 +264,11 @@ describe('BC-8 schedule presets are the circle clock', () => {
     expect(body.recurrence_rule).toBe('daily');
   });
 
-  it('a hydrated daily 08:00 medication shows "Every morning" selected for every viewer', () => {
+  it('a hydrated daily 08:00 medication shows the Morning chip selected for every viewer', () => {
     useCircleResult.timezone = 'Pacific/Auckland';
     render(
       <AddEventModal
         circleId={CIRCLE_ID}
-        layout="full"
         event={
           {
             id: 'med-1',
@@ -281,28 +286,27 @@ describe('BC-8 schedule presets are the circle clock', () => {
         onClose={vi.fn()}
       />
     );
-    const strip = within(document.getElementById('schedule-presets') as HTMLElement);
-    expect(strip.getByRole('radio', { name: /^Every morning/ })).toHaveAttribute('aria-checked', 'true');
+    const group = within(document.getElementById('time-chips') as HTMLElement);
+    const morning = group.getByRole('radio', { name: /Morning$/ });
+    expect(morning).toBeChecked();
   });
 });
 
 // ── Reviewer follow-ups (mobile 1cc6ca60) ────────────────────────────────────────────────────────────────────────
-describe('preset untap and dose promotion keep the circle day', () => {
-  it('tapping a day-moving preset off puts the circle day back', async () => {
+describe('time chip untap and dose promotion keep the circle day', () => {
+  it('tapping a chip on and off leaves the Starts day on the circle day', async () => {
     const rows: Record<string, string> = { 'Pacific/Auckland': 'America/Denver', 'America/Denver': 'Asia/Tokyo' };
     const circle = rows[AMBIENT];
-    if (!circle) return; // the preset does not move the viewer day from this zone
+    if (!circle) return; // the chip would move the viewer day from this zone
     useCircleResult.timezone = circle;
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
     const day = wallIn(circle, NOW).day;
-    const dateField = () => screen.getByLabelText(/^Date/) as HTMLInputElement;
+    const dateField = () => screen.getByLabelText(/^Starts/) as HTMLInputElement;
     expect(dateField().value).toBe(day);
-    const strip = within(document.getElementById('schedule-presets') as HTMLElement);
-    const morning = () => strip.getByRole('radio', { name: /^Every morning/ });
-    await user.click(morning());
-    expect(dateField().value).not.toBe(day); // the preset moved the viewer-frame day
-    await user.click(morning());
+    await user.click(chipBox(/Morning$/));
+    expect(dateField().value).toBe(day); // the Starts tile is the circle's calendar: the chip never moves it
+    await user.click(chipBox(/Morning$/));
     expect(dateField().value).toBe(day);
   });
 

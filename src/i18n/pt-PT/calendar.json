@@ -22,23 +22,12 @@
     "providerUnavailable": "Este médico já não está disponível. Escolha outro médico ou Nenhum."
   },
   "addEvent": {
-    "conversion": {
-      "sameDay_one": "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} para si ({{viewerZone}})",
-      "sameDay_other": "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} para si ({{viewerZone}})",
-      "nextDay_one": "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} do dia seguinte para si ({{viewerZone}})",
-      "nextDay_other": "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} do dia seguinte para si ({{viewerZone}})",
-      "previousDay_one": "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} do dia anterior para si ({{viewerZone}})",
-      "previousDay_other": "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} do dia anterior para si ({{viewerZone}})"
-    },
     "saveChanges": "Guardar alterações",
-    "creating": "A guardar…",
     "updated": "Alterações guardadas",
     "seriesEditNote": "Aplica-se apenas às próximas tarefas.",
     "seriesEditNoteMedication": "Aplica-se apenas às próximas doses.",
     "seriesEditNoteAppointment": "Aplica-se apenas às próximas consultas.",
-    "viewOnly": "Apenas visualização",
     "recurrence": {
-      "asNeededHint": "Sem horários fixos. Registe cada dose quando ela for dada.",
       "weekly": "Todas as semanas"
     },
     "reminders": {
@@ -57,13 +46,10 @@
       "photoUploadFailed": "O evento foi guardado, mas o envio da fotografia falhou. Pode tentar adicionar a fotografia mais tarde.",
       "photoRemoveFailed": "As alterações foram guardadas, mas não foi possível remover a fotografia. Tente novamente mais tarde."
     },
-    "dualTimezoneHint": "O seu horário / horário de {{name}} ({{timezone}})",
-    "dualTimezoneHintGeneric": "O seu horário / horário da pessoa ({{timezone}})",
     "quietHoursDoseWarning": "Este horário está dentro do horário de silêncio, então nenhum lembrete será enviado nele. Pode alterar o horário de silêncio em Definições, na secção Horário de silêncio.",
     "pastTimeInline": "Começa na próxima dose. Esta hora já passou hoje.",
     "pastTimesInline_one": "Começa na próxima dose. A hora de {{times}} já passou hoje.",
     "pastTimesInline_other": "Começa na próxima dose. As horas de {{times}} já passaram hoje.",
-    "timezoneUnresolvedNotice": "A carregar o fuso horário deste círculo. A gravação está em pausa para que as datas não sejam guardadas no fuso errado.",
     "drugSearch": {
       "searching": "A pesquisar medicamentos"
     },
