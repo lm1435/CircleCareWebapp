@@ -20,7 +20,7 @@ export function DoseSummaryLine({
   testId?: string;
 }) {
   const noteLine = text && note && (
-    <p data-testid={`${testId}-note`} className="m-0 mt-0.5 text-[13px] leading-[18px] text-ink-3">
+    <p data-testid={`${testId}-note`} className="m-0 mt-0.5 text-xs leading-[18px] text-ink-3">
       {note}
     </p>
   );
