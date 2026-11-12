@@ -22,6 +22,16 @@ import {
   type MedicationStatus,
 } from './eventStyles';
 
+/**
+ * The day heading's date (page titles, owner 2026-11-11; parity with mobile `formatDayTitle`): long weekday +
+ * SHORT month + day ("Thursday, Nov 12", "miercoles, 30 sept"); Brazilian Portuguese uses the short weekday too.
+ */
+export function dayTitleOptions(language: string): Intl.DateTimeFormatOptions {
+  const brazilianPt = /^pt(-(?!PT$)|$)/i.test(language);
+  return { weekday: brazilianPt ? 'short' : 'long', month: 'short', day: 'numeric' };
+}
+
+
 export interface DayViewProps {
   /** The day shown, YYYY-MM-DD in the care recipient's timezone. */
   date: string;
@@ -83,7 +93,7 @@ export function DayView({
   shiftsSlot,
   shiftsSummary,
 }: DayViewProps): ReactElement {
-  const { t } = useTranslation(['calendar', 'meds', 'shifts']);
+  const { t, i18n } = useTranslation(['calendar', 'meds', 'shifts']);
   const hourCycle = useHourCycle();
   // Literal keys (not a template over the enum) so the key scanner can see them.
   const typeLabels: Record<CalendarEvent['event_type'], string> = {
@@ -136,7 +146,7 @@ export function DayView({
           : null;
   const title = relative
     ? `${relative}, ${weekday}`
-    : formatDateForDisplay(date, { weekday: 'long', month: 'long', day: 'numeric' });
+    : formatDateForDisplay(date, dayTitleOptions(i18n.language));
   const subtitle = relative
     ? formatDateForDisplay(date, { month: 'long', day: 'numeric', year: 'numeric' })
     : null;

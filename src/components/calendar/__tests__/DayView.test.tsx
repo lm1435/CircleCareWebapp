@@ -197,10 +197,18 @@ describe('DayView', () => {
       expect(screen.getByTestId('day-view-title')).toHaveTextContent('Tomorrow, Sunday');
     });
 
-    it('a distant date shows the full date and no relative word', () => {
+    it('a distant date shows long weekday + SHORT month (mobile parity, page titles 11-11) and no relative word', () => {
       setup({ date: '2026-06-20' });
-      expect(screen.getByTestId('day-view-title')).toHaveTextContent('Saturday, June 20');
+      expect(screen.getByTestId('day-view-title')).toHaveTextContent(/^Saturday, Jun 20$/);
       expect(screen.getByTestId('day-view-title')).not.toHaveTextContent(/Today|Tomorrow|Yesterday/);
+    });
+
+    it('Brazilian Portuguese uses the short weekday too, like mobile formatDayTitle', async () => {
+      const { dayTitleOptions } = await import('../DayView');
+      expect(dayTitleOptions('pt')).toEqual({ weekday: 'short', month: 'short', day: 'numeric' });
+      expect(dayTitleOptions('pt-BR')).toEqual({ weekday: 'short', month: 'short', day: 'numeric' });
+      expect(dayTitleOptions('pt-PT')).toEqual({ weekday: 'long', month: 'short', day: 'numeric' });
+      expect(dayTitleOptions('es')).toEqual({ weekday: 'long', month: 'short', day: 'numeric' });
     });
 
     it('flips with the recipient clock: same instant, a zone behind is still the 12th', () => {
