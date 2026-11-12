@@ -158,6 +158,21 @@ export function getEventCardClass(
 }
 
 /**
+ * The same look for a LIST card (Day view, Month day panel) minus the left bar. Owner 2026-11-12:
+ * no thick left border on list cards; mobile's day list cards have none either. The bar stays only
+ * on Week timeline blocks (mobile TimelineEventBlock has it too).
+ */
+export function getEventListCardClass(
+  event: CalendarEvent,
+  status: MedicationStatus | null = null
+): string {
+  return getEventCardClass(event, status)
+    .split(' ')
+    .filter((c) => c !== 'border-l-[3px]' && c !== 'border-clay')
+    .join(' ');
+}
+
+/**
  * Text color for the event block's title/time spans. Must be applied to the
  * spans directly (not just the block): MonthView/WeekView inline the mono
  * type scale (no color of their own, precisely so this is the only color

@@ -14,7 +14,7 @@ import type { AsNeededDayEntry } from './asNeededByDay';
 import { addDays, formatDateForDisplay } from './dateMath';
 import { eventAssigneeName, eventNoteCount } from './eventChipMeta';
 import {
-  getEventCardClass,
+  getEventListCardClass,
   getEventTextClass,
   getMedicationStatus,
   hidesUnloggedDoseTime,
@@ -250,7 +250,7 @@ export function DayView({
                       data-med-status={status ?? undefined}
                       aria-label={ariaLabel}
                       onClick={() => onEventClick(event)}
-                      className={`block min-h-[56px] w-full rounded-lg p-3 text-left ${getEventCardClass(event, status)}`}
+                      className={`block min-h-[56px] w-full rounded-lg p-3 text-left ${getEventListCardClass(event, status)}`}
                     >
                       <span className={`flex items-baseline justify-between gap-3 ${text}`}>
                         <span

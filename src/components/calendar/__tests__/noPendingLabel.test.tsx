@@ -88,6 +88,39 @@ describe('calendar dose rows never say "Pending"', () => {
     expect(takenRow.getAttribute('aria-label')).toMatch(/, Taken/);
   });
 
+  // Owner 2026-11-12: list cards (Day view, Month day panel) carry NO left bar, like mobile's
+  // day list Sheet cards; the bar stays only on the Week timeline blocks (both platforms).
+  it('DayView: a medication row is the soft tint with no left bar', () => {
+    render(
+      <DayView
+        date={DAY}
+        events={[upcoming]}
+        asNeeded={[]}
+        timezone={TZ}
+        onEventClick={vi.fn()}
+        onPrev={vi.fn()}
+        onNext={vi.fn()}
+        onToday={vi.fn()}
+      />
+    );
+    const row = screen.getByTestId('day-event');
+    expect(row.className).toContain('bg-clay-soft');
+    expect(row.className).not.toMatch(/border-l/);
+  });
+
+  it('WeekView: the timeline block keeps its left bar', () => {
+    render(
+      <WeekView
+        days={['2026-03-15', DAY, '2026-03-17', '2026-03-18', '2026-03-19', '2026-03-20', '2026-03-21']}
+        eventsByDay={new Map([[DAY, [upcoming]]])}
+        careRecipientTimezone={TZ}
+        todayStr={DAY}
+        onEventClick={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('button', { name: /^Ibuprofen,/ }).className).toContain('border-l-[3px]');
+  });
+
   it('WeekView: an upcoming dose chip speaks no status', () => {
     render(
       <WeekView
@@ -122,6 +155,8 @@ describe('calendar dose rows never say "Pending"', () => {
     const panel = screen.getByRole('complementary');
     const row = within(panel).getByRole('button', { name: /^Ibuprofen,/ });
     expect(row.getAttribute('aria-label')).not.toMatch(/Pending/);
+    expect(row.className).toContain('bg-clay-soft');
+    expect(row.className).not.toMatch(/border-l/);
     expect(within(panel).getByRole('button', { name: /^Zyrtec,/ }).getAttribute('aria-label')).toMatch(
       /, Taken/
     );

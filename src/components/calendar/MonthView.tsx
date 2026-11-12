@@ -10,7 +10,7 @@ import { AsNeededDayRow, AsNeededRing } from './AsNeededDayRow';
 import type { AsNeededDayEntry } from './asNeededByDay';
 import {
   EVENT_TYPE_DOT_CLASS,
-  getEventCardClass,
+  getEventListCardClass,
   getEventTextClass,
   getMedicationStatus,
   hidesUnloggedDoseTime,
@@ -250,7 +250,7 @@ export function MonthView({
                           .filter(Boolean)
                           .join(', ')}
                         onClick={() => onEventClick(event)}
-                        className={`block min-h-[44px] w-full rounded p-1.5 text-left ${getEventCardClass(event, status)}`}
+                        className={`block min-h-[44px] w-full rounded p-1.5 text-left ${getEventListCardClass(event, status)}`}
                       >
                         <span className="flex items-baseline gap-1.5">
                           {/* Not <Text variant="mono">: getEventTextClass's color MUST
