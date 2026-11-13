@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Analytics } from '@/lib/analytics';
 import { helpMediaUrl } from '@/help/media';
@@ -19,7 +19,28 @@ export function HelpVideo({ slug, title, file, poster }: HelpVideoProps): ReactE
   const { t } = useTranslation('help');
   const [failed, setFailed] = useState(false);
   const started = useRef(false);
+  const retried = useRef(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const posterUrl = poster ? helpMediaUrl(poster) : undefined;
+  const src = helpMediaUrl(file);
+
+  // iOS Safari keeps a <video> that was playing alive after a client-side navigation removes it, and
+  // the NEXT help video then fails to play (owner repro on the public help pages 2026-11-12). Release
+  // the element on unmount. StrictMode (dev) re-runs setup after cleanup: put the source back.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (v && !v.getAttribute('src')) v.setAttribute('src', src);
+    return () => {
+      if (!v) return;
+      try {
+        v.pause();
+        v.removeAttribute('src');
+        v.load();
+      } catch {
+        // Releasing is best effort.
+      }
+    };
+  }, [src]);
 
   if (failed) {
     return (
@@ -40,9 +61,10 @@ export function HelpVideo({ slug, title, file, poster }: HelpVideoProps): ReactE
 
   return (
     <video
+      ref={videoRef}
       data-testid="help-video"
       className="aspect-video w-full rounded-xl bg-bg-2"
-      src={helpMediaUrl(file)}
+      src={src}
       poster={posterUrl}
       aria-label={t('center.videoLabel', { title })}
       muted
@@ -56,7 +78,18 @@ export function HelpVideo({ slug, title, file, poster }: HelpVideoProps): ReactE
         Analytics.helpVideoStarted(slug);
       }}
       onEnded={() => Analytics.helpVideoCompleted(slug)}
-      onError={() => {
+      onError={(e) => {
+        const v = e.currentTarget;
+        // One silent retry before giving up: a transient decoder/network failure should not strand the user.
+        if (!retried.current && v.getAttribute('src')) {
+          retried.current = true;
+          v.load();
+          // play() returns undefined on old engines; never let the retry throw.
+          void Promise.resolve()
+            .then(() => v.play())
+            .catch(() => {});
+          return;
+        }
         Analytics.helpVideoFailed(slug);
         setFailed(true);
       }}

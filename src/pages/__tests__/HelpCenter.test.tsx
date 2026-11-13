@@ -271,6 +271,11 @@ describe('Help article', () => {
     fireEvent(video, new Event('ended'));
     expect(mocks.helpVideoCompleted).toHaveBeenCalledWith('add-a-medication');
 
+    // First error: one silent retry (iOS can fail a video once after another one played), no fallback yet.
+    fireEvent(video, new Event('error'));
+    expect(mocks.helpVideoFailed).not.toHaveBeenCalled();
+    expect(screen.getByTestId('help-video')).toBeInTheDocument();
+    // Second error: give up, show the poster and the line.
     fireEvent(video, new Event('error'));
     expect(mocks.helpVideoFailed).toHaveBeenCalledWith('add-a-medication');
     expect(screen.queryByTestId('help-video')).toBeNull();
