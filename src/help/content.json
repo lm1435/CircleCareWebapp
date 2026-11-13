@@ -91,7 +91,7 @@
         ],
         "video": {
           "file": "create-a-care-circle-en.mp4",
-          "durationSec": 74
+          "durationSec": 64
         },
         "poster": "create-a-care-circle-en.jpg"
       },
@@ -126,7 +126,7 @@
         ],
         "video": {
           "file": "invite-family-en.mp4",
-          "durationSec": 64
+          "durationSec": 63
         },
         "poster": "invite-family-en.jpg"
       },
@@ -161,7 +161,7 @@
         ],
         "video": {
           "file": "join-a-circle-en.mp4",
-          "durationSec": 129
+          "durationSec": 122
         },
         "poster": "join-a-circle-en.jpg"
       },
@@ -189,7 +189,7 @@
         ],
         "video": {
           "file": "roles-and-permissions-en.mp4",
-          "durationSec": 67
+          "durationSec": 62
         },
         "poster": "roles-and-permissions-en.jpg"
       },
@@ -202,7 +202,7 @@
           "Open a web browser on your computer and go to my.circlecare.app.",
           "Sign in with the same email, Google or Apple account you use in the phone app.",
           "Your circle opens. If you have more than one, choose it from your list of circles. To get back to that list later, click the circle's name at the top and choose \"All circles\".",
-          "Use the menu on the side to move between Today, Calendar, Medications, Tasks, Notes, Vitals, Documents, Members and more."
+          "Use the menu on the side to move between Today, Calendar, Medications, Tasks, Notes, Vitals, Documents, Emergency Info, Activity, Members, Circle Settings and Assistant."
         ],
         "body": "## What you can do on a computer\n\nMost everyday things: see the calendar, add and edit medications, appointments and tasks, mark doses, write notes, log vitals, upload documents, keep emergency info, invite people from \"Members\", and manage your notification settings and subscription in Settings (click your name at the top right, then \"Settings\"). Anything you change shows up on everyone's phones too.\n\n## What needs the phone app\n\n- **Reminders and alerts.** CircleCare sends them as push notifications to the iPhone and Android app. The website does not deliver reminders. If you want reminders, install the app and turn on notifications. See [Not getting notifications](/help/notifications-not-arriving/).\n- **Adding by voice** is only in the phone app.\n- **Importing appointments from your phone's calendar** is only in the phone app.\n- **Face ID or fingerprint sign-in** is a phone feature.\n\n## Good to know\n\n- People you invite can join from a browser without installing anything. They still need a free account.\n- To switch between circles on the website, click the circle's name at the top, then \"All circles\".",
         "related": [
@@ -305,7 +305,7 @@
         "slug": "confirm-a-dose",
         "category": "medications",
         "title": "Mark a dose taken or skipped",
-        "summary": "On Today, tap Taken when a dose is given. To mark one as not given, tap Skip on it in the calendar. Everyone in the circle sees who marked it and when.",
+        "summary": "On Today, tap Taken when a dose is given. To mark one as not given, tap All of today, then Skip on that dose. Everyone in the circle sees who marked it and when.",
         "steps": [
           "Open Today. Next up lists what is due, in time order, including today's doses.",
           "Tap Taken on the dose that was given.",
@@ -330,7 +330,7 @@
         ],
         "video": {
           "file": "confirm-a-dose-en.mp4",
-          "durationSec": 71
+          "durationSec": 72
         },
         "poster": "confirm-a-dose-en.jpg"
       },
@@ -566,7 +566,7 @@
         ],
         "video": {
           "file": "care-shifts-en.mp4",
-          "durationSec": 151
+          "durationSec": 150
         },
         "poster": "care-shifts-en.jpg"
       },
@@ -634,7 +634,7 @@
         ],
         "video": {
           "file": "daily-care-notes-en.mp4",
-          "durationSec": 55
+          "durationSec": 51
         },
         "poster": "daily-care-notes-en.jpg"
       },
@@ -667,7 +667,7 @@
         ],
         "video": {
           "file": "find-older-notes-en.mp4",
-          "durationSec": 94
+          "durationSec": 69
         },
         "poster": "find-older-notes-en.jpg"
       },
@@ -702,7 +702,7 @@
         ],
         "video": {
           "file": "care-info-and-summary-en.mp4",
-          "durationSec": 83
+          "durationSec": 81
         },
         "poster": "care-info-and-summary-en.jpg"
       },
@@ -737,7 +737,7 @@
         ],
         "video": {
           "file": "documents-en.mp4",
-          "durationSec": 56
+          "durationSec": 62
         },
         "poster": "documents-en.jpg"
       },
@@ -772,7 +772,7 @@
         ],
         "video": {
           "file": "vitals-en.mp4",
-          "durationSec": 66
+          "durationSec": 71
         },
         "poster": "vitals-en.jpg"
       },
@@ -807,7 +807,7 @@
         ],
         "video": {
           "file": "export-your-data-en.mp4",
-          "durationSec": 42
+          "durationSec": 43
         },
         "poster": "export-your-data-en.jpg"
       },
@@ -844,7 +844,7 @@
         ],
         "video": {
           "file": "medication-history-report-en.mp4",
-          "durationSec": 51
+          "durationSec": 58
         },
         "poster": "medication-history-report-en.jpg"
       },
@@ -879,7 +879,7 @@
         ],
         "video": {
           "file": "log-a-past-incident-en.mp4",
-          "durationSec": 64
+          "durationSec": 72
         },
         "poster": "log-a-past-incident-en.jpg"
       },
@@ -915,7 +915,7 @@
         ],
         "video": {
           "file": "notifications-not-arriving-en.mp4",
-          "durationSec": 86
+          "durationSec": 85
         },
         "poster": "notifications-not-arriving-en.jpg"
       },
@@ -978,7 +978,7 @@
         ],
         "video": {
           "file": "free-and-premium-en.mp4",
-          "durationSec": 94
+          "durationSec": 96
         },
         "poster": "free-and-premium-en.jpg"
       },
@@ -991,7 +991,8 @@
           "Go to your list of circles. From inside a circle, tap the back arrow at the top left.",
           "Tap the \"+\" button (\"Start a care circle\").",
           "If you are on the free plan and already own a circle, the app shows the Premium plans. Choose a plan to continue.",
-          "Fill in the new person's details and tap \"Create circle\"."
+          "Fill in the new person's details and tap \"Create circle\".",
+          "The app shows that the new circle is ready and suggests a first step, like adding a medication. Pick one, or tap \"Skip for now\"."
         ],
         "body": "## Free ways to care for two people\n\n- **Let someone else own the second circle.** For example, someone else who helps creates the second circle and invites you. You can be a member of any number of circles for free.\n- A circle you create for yourself (\"Myself\") counts as one of your own circles.\n\n## Good to know\n\n- Premium allows up to 5 circles that you own. If you need more, write to support@circlecare.app.\n- If you delete a circle, it no longer counts toward your limit.\n- Each circle is separate. Medications, notes and members do not mix between circles.\n- Switch circles from your list of circles in the app, or with \"All circles\" on the website.\n- If your Premium ends while you own several circles, you choose one to keep with free access and the others become read-only. Nothing is deleted. See [What is free and what Premium adds](/help/free-and-premium/).",
         "related": [
@@ -1011,7 +1012,7 @@
         ],
         "video": {
           "file": "second-circle-en.mp4",
-          "durationSec": 76
+          "durationSec": 68
         },
         "poster": "second-circle-en.jpg"
       },
@@ -1093,7 +1094,7 @@
         ],
         "video": {
           "file": "privacy-and-security-en.mp4",
-          "durationSec": 84
+          "durationSec": 83
         },
         "poster": "privacy-and-security-en.jpg"
       }
@@ -1130,7 +1131,7 @@
         ],
         "video": {
           "file": "create-a-care-circle-es.mp4",
-          "durationSec": 74
+          "durationSec": 67
         },
         "poster": "create-a-care-circle-es.jpg"
       },
@@ -1165,7 +1166,7 @@
         ],
         "video": {
           "file": "invite-family-es.mp4",
-          "durationSec": 68
+          "durationSec": 67
         },
         "poster": "invite-family-es.jpg"
       },
@@ -1200,7 +1201,7 @@
         ],
         "video": {
           "file": "join-a-circle-es.mp4",
-          "durationSec": 129
+          "durationSec": 125
         },
         "poster": "join-a-circle-es.jpg"
       },
@@ -1228,7 +1229,7 @@
         ],
         "video": {
           "file": "roles-and-permissions-es.mp4",
-          "durationSec": 68
+          "durationSec": 61
         },
         "poster": "roles-and-permissions-es.jpg"
       },
@@ -1241,7 +1242,7 @@
           "Abre un navegador en tu computadora y entra a my.circlecare.app.",
           "Inicia sesión con el mismo correo, o la misma cuenta de Google o Apple, que usas en la app del celular.",
           "Se abre tu círculo. Si tienes más de uno, elígelo en la lista de tus círculos. Para volver a esa lista después, haz clic en el nombre del círculo, arriba, y elige \"Todos los círculos\".",
-          "Usa el menú lateral para moverte entre Hoy, Calendario, Medicamentos, Tareas, Notas, Signos vitales, Documentos, Miembros y más."
+          "Usa el menú lateral para moverte entre Hoy, Calendario, Medicamentos, Tareas, Notas, Signos vitales, Documentos, Información de emergencia, Actividad, Miembros, Configuración del círculo y Asistente."
         ],
         "body": "## Qué puedes hacer en la computadora\n\nCasi todo lo del día a día: ver el calendario, agregar y editar medicamentos, citas y tareas, marcar dosis, escribir notas, registrar signos vitales, subir documentos, mantener la información de emergencia, invitar a otras personas desde \"Miembros\" y administrar tus notificaciones y tu suscripción en Configuración (haz clic en tu nombre arriba a la derecha y luego en \"Configuración\"). Lo que cambies aparece también en los celulares de todos.\n\n## Qué necesita la app del celular\n\n- **Recordatorios y alertas.** CircleCare los envía como notificaciones a la app de iPhone y Android. El sitio web no entrega recordatorios. Si quieres recibirlos, instala la app y activa las notificaciones. Consulta [No me llegan las notificaciones](/help/notifications-not-arriving/).\n- **Agregar por voz** solo está en la app del celular.\n- **Importar citas desde el calendario de tu celular** solo está en la app del celular.\n- **Iniciar sesión con Face ID o huella** es una función del celular.\n\n## Bueno saber\n\n- Las personas que invites pueden unirse desde el navegador sin instalar nada. Sí necesitan una cuenta gratuita.\n- Para cambiar de círculo en el sitio web, haz clic en el nombre del círculo, arriba, y luego en \"Todos los círculos\".",
         "related": [
@@ -1262,7 +1263,7 @@
         ],
         "video": {
           "file": "use-on-a-computer-es.mp4",
-          "durationSec": 71
+          "durationSec": 74
         },
         "poster": "use-on-a-computer-es.jpg"
       },
@@ -1344,7 +1345,7 @@
         "slug": "confirm-a-dose",
         "category": "medications",
         "title": "Marca una dosis como tomada u omitida",
-        "summary": "En Hoy, toca Tomado cuando se dio la dosis. Para marcar una que no se dio, toca Omitir en el calendario. Todos en el círculo ven quién la marcó y cuándo.",
+        "summary": "En Hoy, toca Tomado cuando se dio la dosis. Para marcar una que no se dio, toca Todo lo de hoy y luego Omitir en esa dosis. Todos en el círculo ven quién la marcó y cuándo.",
         "steps": [
           "Abre Hoy. Lo próximo muestra lo que toca, en orden de hora, incluidas las dosis de hoy.",
           "Toca Tomado en la dosis que se dio.",
@@ -1369,7 +1370,7 @@
         ],
         "video": {
           "file": "confirm-a-dose-es.mp4",
-          "durationSec": 73
+          "durationSec": 71
         },
         "poster": "confirm-a-dose-es.jpg"
       },
@@ -1427,7 +1428,7 @@
         ],
         "video": {
           "file": "stop-or-delete-a-medication-es.mp4",
-          "durationSec": 75
+          "durationSec": 78
         },
         "poster": "stop-or-delete-a-medication-es.jpg"
       },
@@ -1605,7 +1606,7 @@
         ],
         "video": {
           "file": "care-shifts-es.mp4",
-          "durationSec": 157
+          "durationSec": 153
         },
         "poster": "care-shifts-es.jpg"
       },
@@ -1673,7 +1674,7 @@
         ],
         "video": {
           "file": "daily-care-notes-es.mp4",
-          "durationSec": 54
+          "durationSec": 51
         },
         "poster": "daily-care-notes-es.jpg"
       },
@@ -1706,7 +1707,7 @@
         ],
         "video": {
           "file": "find-older-notes-es.mp4",
-          "durationSec": 94
+          "durationSec": 73
         },
         "poster": "find-older-notes-es.jpg"
       },
@@ -1741,7 +1742,7 @@
         ],
         "video": {
           "file": "care-info-and-summary-es.mp4",
-          "durationSec": 88
+          "durationSec": 78
         },
         "poster": "care-info-and-summary-es.jpg"
       },
@@ -1776,7 +1777,7 @@
         ],
         "video": {
           "file": "documents-es.mp4",
-          "durationSec": 57
+          "durationSec": 63
         },
         "poster": "documents-es.jpg"
       },
@@ -1811,7 +1812,7 @@
         ],
         "video": {
           "file": "vitals-es.mp4",
-          "durationSec": 67
+          "durationSec": 65
         },
         "poster": "vitals-es.jpg"
       },
@@ -1846,7 +1847,7 @@
         ],
         "video": {
           "file": "export-your-data-es.mp4",
-          "durationSec": 43
+          "durationSec": 44
         },
         "poster": "export-your-data-es.jpg"
       },
@@ -1918,7 +1919,7 @@
         ],
         "video": {
           "file": "log-a-past-incident-es.mp4",
-          "durationSec": 65
+          "durationSec": 71
         },
         "poster": "log-a-past-incident-es.jpg"
       },
@@ -1954,7 +1955,7 @@
         ],
         "video": {
           "file": "notifications-not-arriving-es.mp4",
-          "durationSec": 86
+          "durationSec": 84
         },
         "poster": "notifications-not-arriving-es.jpg"
       },
@@ -2030,7 +2031,8 @@
           "Ve a tu lista de círculos. Si estás dentro de un círculo, toca la flecha para regresar, arriba a la izquierda.",
           "Toca el botón \"+\" (\"Comienza un círculo de cuidado\").",
           "Si tienes el plan gratuito y ya tienes un círculo propio, la app te muestra los planes Premium. Elige un plan para continuar.",
-          "Llena los datos de la otra persona y toca \"Crear círculo\"."
+          "Llena los datos de la otra persona y toca \"Crear círculo\".",
+          "La app te muestra que el nuevo círculo está listo y te sugiere un primer paso, como agregar un medicamento. Elige uno, o toca \"Omitir por ahora\"."
         ],
         "body": "## Formas gratuitas de cuidar a dos personas\n\n- **Que otra persona sea la propietaria del segundo círculo.** Por ejemplo, otra persona que ayuda crea el segundo círculo y te invita. Puedes estar en todos los círculos que quieras sin pagar.\n- Un círculo que creas para ti (\"A mí\") cuenta como uno de tus círculos propios.\n\n## Bueno saber\n\n- Premium permite hasta 5 círculos propios. Si necesitas más, escríbenos a support@circlecare.app.\n- Si eliminas un círculo, ya no cuenta para tu límite.\n- Cada círculo es independiente. Los medicamentos, las notas y los miembros no se mezclan entre círculos.\n- Cambia de círculo desde tu lista de círculos en la app, o con \"Todos los círculos\" en el sitio web.\n- Si se termina tu Premium y tienes varios círculos propios, eliges uno para conservar con acceso gratuito y los demás quedan en solo lectura. No se borra nada. Consulta [Qué es gratis y qué agrega Premium](/help/free-and-premium/).",
         "related": [
@@ -2050,7 +2052,7 @@
         ],
         "video": {
           "file": "second-circle-es.mp4",
-          "durationSec": 77
+          "durationSec": 72
         },
         "poster": "second-circle-es.jpg"
       },
@@ -2132,7 +2134,7 @@
         ],
         "video": {
           "file": "privacy-and-security-es.mp4",
-          "durationSec": 86
+          "durationSec": 85
         },
         "poster": "privacy-and-security-es.jpg"
       }
