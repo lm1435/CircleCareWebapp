@@ -4,9 +4,9 @@ import type { HelpContent } from '../types';
 export const HELP_FIXTURE: HelpContent = {
   generated: '2026-10-24',
   categories: [
-    { id: 'getting-started', label: { en: 'Getting started', es: 'Primeros pasos' } },
-    { id: 'care', label: { en: 'Daily care', es: 'Cuidado diario' } },
-    { id: 'empty', label: { en: 'Empty', es: 'Vacía' } },
+    { id: 'getting-started', label: { en: 'Getting started', es: 'Primeros pasos', de: 'Getting started', fr: 'Getting started', it: 'Getting started', pt: 'Getting started' } },
+    { id: 'care', label: { en: 'Daily care', es: 'Cuidado diario', de: 'Daily care', fr: 'Daily care', it: 'Daily care', pt: 'Daily care' } },
+    { id: 'empty', label: { en: 'Empty', es: 'Vacía', de: 'Empty', fr: 'Empty', it: 'Empty', pt: 'Empty' } },
   ],
   popular: ['add-a-medication', 'invite-family', 'missing-slug'],
   articles: {
@@ -32,6 +32,10 @@ export const HELP_FIXTURE: HelpContent = {
         related: ['add-a-medication'],
       },
     ],
+    de: [],
+    fr: [],
+    it: [],
+    pt: [],
     es: [
       {
         slug: 'add-a-medication',

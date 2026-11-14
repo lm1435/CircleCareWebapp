@@ -175,7 +175,7 @@ describe('EventDetailActions', () => {
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reactivate' }));
 
     await waitFor(() => expect(statusMutateAsync).toHaveBeenCalledTimes(1));
-    expect(await screen.findByRole('button', { name: 'Discontinue' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Stop' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reactivate' })).not.toBeInTheDocument();
   });
 
@@ -1331,7 +1331,7 @@ describe('EventDetailActions', () => {
       renderActions(makeMed({ scheduled_date: '2020-01-02', scheduled_time: '08:00:00' }));
 
       expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
-      expect(labels()).toEqual(['Edit', 'Discontinue', 'Delete', 'Skip dose', 'Taken']);
+      expect(labels()).toEqual(['Edit', 'Stop', 'Delete', 'Skip dose', 'Taken']);
       const filled = filledButtons();
       expect(filled).toHaveLength(1);
       // The visible word is Today's "Taken" (1.4.0 owner decision); its name is the action.
@@ -1363,7 +1363,7 @@ describe('EventDetailActions', () => {
 
     it('a medication outside its window shows Edit, Discontinue, Delete and nothing filled', () => {
       renderActions(makeMed({ scheduled_date: '2099-01-01' }));
-      expect(labels()).toEqual(['Edit', 'Discontinue', 'Delete']);
+      expect(labels()).toEqual(['Edit', 'Stop', 'Delete']);
       expect(filledButtons()).toHaveLength(0);
       expect(screen.getByRole('button', { name: 'Delete' }).className).toContain('text-terracotta-deep');
     });

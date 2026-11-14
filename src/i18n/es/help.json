@@ -37,7 +37,7 @@
       "items": [
         {
           "question": "¿Cómo funcionan los recordatorios de medicamentos?",
-          "answer": "Cuando agregas un medicamento, el recordatorio llega al miembro que el propietario eligió para recibir los recordatorios de medicamentos (uno por círculo). Si no hay ninguno elegido, llega al receptor de cuidado o, si no lo hay, al propietario. Toca 'Lo tomé' para confirmar, y el resto del círculo recibe un aviso. Si la dosis no se confirma en 15 minutos, se envía un amable recordatorio de seguimiento. Después de 30 minutos, todos los cuidadores del círculo son notificados. Después de 1 hora, todos los miembros del círculo reciben una alerta. Nada se registra automáticamente: mientras nadie la marque como Tomado u Omitido, la dosis aparece como Sin marcar."
+          "answer": "Cuando agregas un medicamento, el recordatorio llega al miembro que la persona titular eligió para recibir los recordatorios de medicamentos (uno por círculo). Si no hay ninguno elegido, llega al receptor de cuidado o, si no lo hay, a la persona titular. Toca 'Lo tomé' para confirmar, y el resto del círculo recibe un aviso. Si la dosis no se confirma en 15 minutos, se envía un amable recordatorio de seguimiento. Después de 30 minutos, todos los cuidadores del círculo son notificados. Después de 1 hora, todos los miembros del círculo reciben una alerta. Nada se registra automáticamente: mientras nadie la marque como Tomado u Omitido, la dosis aparece como Sin marcar."
         },
         {
           "question": "¿Qué pasa si una dosis no se marca?",

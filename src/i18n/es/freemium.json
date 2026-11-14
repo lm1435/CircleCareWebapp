@@ -6,7 +6,7 @@
   "readOnly": {
     "ownerBanner": "Tu suscripción terminó, así que este círculo está en solo lectura por ahora. Todo está guardado; vuelve a suscribirte para continuar donde lo dejaste.",
     "ownerUpgradeCta": "Volver a suscribirse",
-    "memberBanner": "Este círculo está en solo lectura porque terminó la suscripción del propietario. Todo sigue aquí para consultarlo, y la edición volverá si el propietario se vuelve a suscribir."
+    "memberBanner": "Este círculo está en solo lectura porque terminó la suscripción de la persona titular. Todo sigue aquí para consultarlo, y la edición volverá si la persona titular se vuelve a suscribir."
   },
   "circleSelection": {
     "banner": "Tu suscripción terminó. Elige qué círculo conservar con acceso gratuito.",

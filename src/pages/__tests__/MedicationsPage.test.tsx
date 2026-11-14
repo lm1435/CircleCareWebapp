@@ -375,7 +375,7 @@ describe('MedicationsPage', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await chooseAction(user, 'Metformin', 'Discontinue');
+    await chooseAction(user, 'Metformin', 'Stop');
     const dialog = screen.getByRole('dialog', { name: 'discontinue-med-dialog' });
     expect(dialog).toHaveTextContent('status-active-1-roster-2');
   });
@@ -424,7 +424,7 @@ describe('MedicationsPage', () => {
     // representative IS the active root — this assertion is the load-bearing
     // one: it fails if the representative ever regresses to the discontinued
     // root).
-    await chooseAction(user, 'Metformin', 'Discontinue');
+    await chooseAction(user, 'Metformin', 'Stop');
     const dialog = screen.getByRole('dialog', { name: 'discontinue-med-dialog' });
     expect(dialog).toHaveTextContent('status-root-active-roster-2-group-inactive-false');
   });
@@ -1216,7 +1216,7 @@ describe('MedicationsPage — ended series', () => {
 
     await user.click(screen.getByRole('button', { name: 'More actions for Metformin' }));
     expect(screen.queryByRole('menuitem', { name: 'Reactivate' })).toBeNull();
-    expect(screen.queryByRole('menuitem', { name: 'Discontinue' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Stop' })).toBeNull();
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
   });
@@ -1249,7 +1249,7 @@ describe('MedicationsPage — ended series', () => {
     expect(within(dialog).getByText('Ended Jan 5, 2026')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Edit' })).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: 'Reactivate' })).toBeNull();
-    expect(within(dialog).queryByRole('button', { name: 'Discontinue' })).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: 'Stop' })).toBeNull();
     expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeInTheDocument();
   });
 
@@ -1315,7 +1315,7 @@ describe('MedicationsPage — ended series', () => {
     expect(screen.queryByRole('region', { name: 'Inactive / Past medications' })).toBeNull();
     expect(screen.queryByText(/^Ended/)).toBeNull();
     // Discontinue targets the LIVE root (representativeScore treats ended as inactive).
-    await chooseAction(user, 'Metformin', 'Discontinue');
+    await chooseAction(user, 'Metformin', 'Stop');
     expect(screen.getByRole('dialog', { name: 'discontinue-med-dialog' })).toHaveTextContent(
       'status-pm-live-'
     );
@@ -1428,7 +1428,7 @@ describe('MedicationsPage — ended series', () => {
 
     await user.click(screen.getByRole('button', { name: 'More actions for Metformin' }));
     expect(screen.queryByRole('menuitem', { name: 'Reactivate' })).toBeNull();
-    expect(screen.queryByRole('menuitem', { name: 'Discontinue' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Stop' })).toBeNull();
     await user.keyboard('{Escape}');
 
     // The detail sheet shows no refill figure for it either.

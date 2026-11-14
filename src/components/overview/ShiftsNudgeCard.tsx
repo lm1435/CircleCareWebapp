@@ -45,6 +45,8 @@ export interface ShiftsNudgeCardProps {
   onNotNow: () => void;
   /** False when Next up below already shows a filled Taken / Done: Set up is then the outline. Default true. */
   primaryAllowed?: boolean;
+  /** Which showing this is (1..3), sent as `show_count` on `coaching_hint_shown`. */
+  showCount?: number;
 }
 
 export function ShiftsNudgeCard({
@@ -55,12 +57,13 @@ export function ShiftsNudgeCard({
   onSetUp,
   onNotNow,
   primaryAllowed = true,
+  showCount,
 }: ShiftsNudgeCardProps): ReactElement {
   const { t } = useTranslation('overview');
   const name = member.first_name || member.email;
 
   useEffect(() => {
-    Analytics.coachingHintShown('shifts_second_caregiver', { upsell });
+    Analytics.coachingHintShown('shifts_second_caregiver', { upsell, showCount });
     // Once per appearance.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -50,7 +50,7 @@
     "alreadyUsed": "Esta invitación ya fue utilizada. Pídele a quien te invitó que te envíe una nueva.",
     "alreadyMember": "Ya eres miembro de este círculo.",
     "joinFailed": "No pudimos unirte a este círculo. Por favor intenta de nuevo.",
-    "circleArchived": "Este círculo ya no está activo. Pídele a quien te invitó que consulte con el propietario del círculo.",
+    "circleArchived": "Este círculo ya no está activo. Pídele a quien te invitó que consulte con la persona titular del círculo.",
     "careRecipientExists": "Este círculo ya tiene un receptor de cuidado. Pídele a quien te invitó que te envíe una invitación de cuidador."
   },
   "edit": {
@@ -59,8 +59,8 @@
     "loadingLabel": "Cargando la configuración del círculo",
     "errorTitle": "No se pudo cargar este círculo.",
     "retry": "Reintentar",
-    "ownerOnlyTitle": "Solo el propietario del círculo puede editar esto",
-    "ownerOnlyMessage": "Pídele al propietario del círculo que actualice estos datos.",
+    "ownerOnlyTitle": "Solo la persona titular del círculo puede editar esto",
+    "ownerOnlyMessage": "Pídele a la persona titular del círculo que actualice estos datos.",
     "recipientName": "Nombre del receptor de cuidado",
     "recipientNamePlaceholder": "Nombre completo",
     "recipientDob": "Fecha de nacimiento",
@@ -174,20 +174,11 @@
       "question": "¿Ya se tomó hoy?",
       "action": "Márcalo",
       "done": "Marcado como tomado."
-    },
-    "inviteStep": {
-      "eyebrow": "Compartir el cuidado",
-      "title": "Invita a alguien a ayudar",
-      "body": "Suma a alguien que ayuda con el cuidado de {{name}}. Así, las dos personas ven lo que falta y lo que ya se hizo.",
-      "bodySelf": "Suma a alguien que te ayuda con tu cuidado. Así, las dos personas ven lo que falta y lo que ya se hizo.",
-      "freePlan": "Tu plan gratuito incluye a una persona.",
-      "primary": "Invitar a alguien",
-      "notNow": "Ahora no"
     }
   },
   "accessLost": {
     "removedTitle": "Acceso eliminado",
-    "removedBody": "Ya no tienes acceso a este círculo. Es posible que el dueño te haya eliminado de él o que haya eliminado el círculo.",
+    "removedBody": "Ya no tienes acceso a este círculo. Es posible que la persona titular te haya eliminado de él o que haya eliminado el círculo.",
     "notFoundTitle": "Círculo no encontrado",
     "notFoundBody": "Este círculo ha sido eliminado o ya no existe.",
     "returnToCircles": "Volver a círculos"

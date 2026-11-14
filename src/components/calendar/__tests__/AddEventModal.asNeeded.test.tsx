@@ -323,7 +323,7 @@ describe('editing: LOCKED after create', () => {
     expect(screen.getByRole('radio', { name: 'Every day' })).toBeDisabled();
     expect(screen.getByTestId('repeat-custom')).toBeDisabled();
     expect(screen.getByTestId('as-needed-locked-how-often')).toHaveTextContent(
-      "As needed · can't be changed. To put this medication on a schedule, discontinue it and add it again."
+      "As needed · can't be changed. To put this medication on a schedule, stop it and add it again."
     );
     expect(screen.getByLabelText(/What is it for\?/)).toHaveValue('pain');
     expect(screen.queryByLabelText(/^Time/)).toBeNull();

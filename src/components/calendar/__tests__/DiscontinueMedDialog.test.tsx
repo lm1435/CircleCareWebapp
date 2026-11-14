@@ -63,7 +63,7 @@ describe('DiscontinueMedDialog', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Discontinue' }));
+    await user.click(screen.getByRole('button', { name: 'Stop' }));
 
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
     expect(mutateAsync).toHaveBeenCalledWith({
@@ -87,7 +87,7 @@ describe('DiscontinueMedDialog', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Discontinue' }));
+    await user.click(screen.getByRole('button', { name: 'Stop' }));
 
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
     expect(mutateAsync).toHaveBeenCalledWith({
@@ -112,9 +112,9 @@ describe('DiscontinueMedDialog', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Discontinue' }));
+    await user.click(screen.getByRole('button', { name: 'Stop' }));
 
-    await waitFor(() => expect(showToast).toHaveBeenCalledWith('Medication discontinued', 'success'));
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('Medication stopped', 'success'));
   });
 
   // WA3 regression: `groupInactive` overrides the representative event's own
@@ -142,10 +142,10 @@ describe('DiscontinueMedDialog', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: 'Discontinue' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Stop' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reactivate' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Discontinue' }));
+    await user.click(screen.getByRole('button', { name: 'Stop' }));
     await waitFor(() =>
       expect(mutateAsync).toHaveBeenCalledWith({
         eventId: 'root-discontinued',
@@ -169,7 +169,7 @@ describe('DiscontinueMedDialog', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Discontinue' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument();
   });
 
   it('falls back to event.discontinued_at when groupInactive is omitted (single-event callers)', () => {

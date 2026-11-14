@@ -9,6 +9,7 @@ import { useNextStep, type NextStepState } from '@/hooks/useNextStep';
 import { useAuthStore } from '@/store/authStore';
 import { useEarnedUpsell } from '@/hooks/useEarnedUpsell';
 import { Analytics } from '@/lib/analytics';
+import { getShiftsNudgeShowCount, recordShiftsNudgeShowing } from '@/lib/todayCoaching';
 import { resetLargeTextReports } from '@/hooks/useLargeTextLayout';
 import type { NextUpItem } from '@/components/overview/nextUpItems';
 import { getDateInTimezone } from '@/utils/timezone';
@@ -643,6 +644,62 @@ describe('Today (OverviewPage)', () => {
       expect(screen.queryByTestId('shifts-nudge-card')).not.toBeInTheDocument();
     });
 
+    describe('capped at 3 showings per person per circle (1.4.2)', () => {
+      it('POSITIVE: three visits show it (show_count 1, 2, 3) and the stored count follows', () => {
+        const shown = vi.spyOn(Analytics, 'coachingHintShown').mockImplementation(() => {});
+        for (const n of [1, 2, 3]) {
+          renderToday();
+          expect(screen.getByTestId('shifts-nudge-card')).toBeInTheDocument();
+          expect(shown).toHaveBeenLastCalledWith('shifts_second_caregiver', { upsell: false, showCount: n });
+          expect(getShiftsNudgeShowCount('c1')).toBe(n);
+          document.body.innerHTML = '';
+        }
+      });
+
+      it('NEGATIVE: never a 4th showing, and no 4th coaching_hint_shown', () => {
+        const shown = vi.spyOn(Analytics, 'coachingHintShown').mockImplementation(() => {});
+        for (let i = 0; i < 3; i++) {
+          renderToday();
+          document.body.innerHTML = '';
+        }
+        shown.mockClear();
+        renderToday();
+        expect(screen.queryByTestId('shifts-nudge-card')).not.toBeInTheDocument();
+        expect(shown).not.toHaveBeenCalledWith('shifts_second_caregiver', expect.anything());
+        expect(getShiftsNudgeShowCount('c1')).toBe(3);
+      });
+
+      it('NEGATIVE: the cap is per circle (another circle still has its own 3)', () => {
+        for (let i = 0; i < 3; i++) recordShiftsNudgeShowing('other-circle');
+        renderToday();
+        expect(screen.getByTestId('shifts-nudge-card')).toBeInTheDocument();
+      });
+
+      it('NEGATIVE: a view-only member never sees it and no showing is counted', () => {
+        setCircle({ canEdit: false });
+        renderToday();
+        expect(screen.queryByTestId('shifts-nudge-card')).not.toBeInTheDocument();
+        expect(getShiftsNudgeShowCount('c1')).toBe(0);
+      });
+
+      it('NEGATIVE: a free-circle non-owner is never shown the card (no paywall) and nothing is counted', () => {
+        setCircle({ isPremiumCircle: false, ownerId: 'someone-else' });
+        renderToday();
+        expect(screen.queryByTestId('shifts-nudge-card')).not.toBeInTheDocument();
+        expect(getShiftsNudgeShowCount('c1')).toBe(0);
+      });
+
+      it('NEGATIVE: Set up shifts / Not now retire it even with showings left', async () => {
+        const user = userEvent.setup();
+        renderToday();
+        expect(getShiftsNudgeShowCount('c1')).toBe(1);
+        await user.click(screen.getByRole('button', { name: 'Not now' }));
+        document.body.innerHTML = '';
+        renderToday();
+        expect(screen.queryByTestId('shifts-nudge-card')).not.toBeInTheDocument();
+      });
+    });
+
     it('a lapsed (read-only) circle does not get it', () => {
       setCircle({ isPremiumCircle: false, hasShifts: true });
       renderToday();
@@ -664,6 +721,7 @@ describe('Today (OverviewPage)', () => {
         expect(screen.getByTestId('shifts-nudge-card')).toBeInTheDocument();
         expect(Analytics.coachingHintShown).toHaveBeenCalledWith('shifts_second_caregiver', {
           upsell: true,
+          showCount: 1,
         });
         await user.click(screen.getByRole('button', { name: 'Set up shifts' }));
         expect(Analytics.coachingHintActed).toHaveBeenCalledWith('shifts_second_caregiver', {
@@ -693,7 +751,7 @@ describe('Today (OverviewPage)', () => {
       const shown = vi.spyOn(Analytics, 'coachingHintShown').mockImplementation(() => {});
       vi.spyOn(Analytics, 'coachingHintActed').mockImplementation(() => {});
       renderToday();
-      expect(shown).toHaveBeenCalledWith('shifts_second_caregiver', { upsell: false });
+      expect(shown).toHaveBeenCalledWith('shifts_second_caregiver', { upsell: false, showCount: 1 });
       await user.click(screen.getByRole('button', { name: 'Set up shifts' }));
       expect(Analytics.coachingHintActed).toHaveBeenCalledWith('shifts_second_caregiver', {
         upsell: false,

@@ -495,7 +495,7 @@ describe('JoinCircleModal', () => {
 
       const archived = await failLookupWith('CIRCLE_ARCHIVED', ES);
       expect(archived).toHaveTextContent(
-        'Este círculo ya no está activo. Pídele a quien te invitó que consulte con el propietario del círculo.'
+        'Este círculo ya no está activo. Pídele a quien te invitó que consulte con la persona titular del círculo.'
       );
 
       cleanup();

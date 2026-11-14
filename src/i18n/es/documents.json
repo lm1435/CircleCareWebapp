@@ -14,7 +14,7 @@
     "other": "Otro"
   },
   "uploadCtaTitle": "¿Quieres agregar un documento?",
-  "uploadCta": "Solo los miembros con acceso de edición pueden agregar documentos a este círculo. Pídele al propietario del círculo si necesitas agregar algo.",
+  "uploadCta": "Solo los miembros con acceso de edición pueden agregar documentos a este círculo. Pídele a la persona titular del círculo si necesitas agregar algo.",
   "errorTitle": "No se pudieron cargar los documentos",
   "errorHint": "Revisa tu conexión e intenta de nuevo.",
   "noDocuments": "Sin documentos aún",
@@ -72,8 +72,8 @@
     "used": "{{used}} usado",
     "remaining": "{{remaining}} disponible",
     "full": "Almacenamiento lleno. Mejora tu plan para más espacio.",
-    "fullNonOwnerNamed": "Almacenamiento lleno. Solo {{ownerName}}, el dueño del círculo, puede mejorar el plan para tener más espacio.",
-    "fullNonOwner": "Almacenamiento lleno. Solo el dueño del círculo puede mejorar el plan para tener más espacio.",
+    "fullNonOwnerNamed": "Almacenamiento lleno. Solo {{ownerName}}, titular del círculo, puede mejorar el plan para tener más espacio.",
+    "fullNonOwner": "Almacenamiento lleno. Solo la persona titular del círculo puede mejorar el plan para tener más espacio.",
     "fullPremium": "Almacenamiento lleno. Elimina los archivos que ya no necesitas para liberar espacio.",
     "upgrade": "Mejorar plan",
     "trackLabel": "Almacenamiento usado"

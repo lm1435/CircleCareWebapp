@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useCircle } from '@/hooks/useCircle';
 import { useAuthStore } from '@/store/authStore';
@@ -39,6 +39,9 @@ import { resolveShiftsEntry } from '@/lib/shiftsAccess';
 import { ShiftsTeaserDialog } from '@/components/shifts/ShiftsTeaserDialog';
 import {
   dismissShiftsNudge,
+  getShiftsNudgeShowCount,
+  recordShiftsNudgeShowing,
+  SHIFTS_NUDGE_MAX_SHOWINGS,
   hasDismissedShiftsNudge,
   hasSeenDoseHint,
   markDoseHintSeen,
@@ -217,8 +220,14 @@ export default function OverviewPage(): ReactElement {
   const shiftsUpsell = shiftsEntry === 'teaser';
   const [shiftsTeaserOpen, setShiftsTeaserOpen] = useState(false);
   const [shiftsDismissedFor, setShiftsDismissedFor] = useState<string | null>(null);
+  // At most 3 showings per user per circle (1.4.2). The count is read ONCE per circle visit, so the
+  // card stays for the visit that counted its 3rd showing and is gone from the next one.
+  const shiftsShownBefore = useMemo(() => getShiftsNudgeShowCount(circleId), [circleId]);
   const showShiftsNudge =
-    shiftsMember !== null && shiftsDismissedFor !== circleId && !hasDismissedShiftsNudge(circleId);
+    shiftsMember !== null &&
+    shiftsDismissedFor !== circleId &&
+    !hasDismissedShiftsNudge(circleId) &&
+    shiftsShownBefore < SHIFTS_NUDGE_MAX_SHOWINGS;
 
   // First-dose hint: under the first dose row that can be answered, once per user.
   const [doseHintGone, setDoseHintGone] = useState(false);
@@ -246,6 +255,14 @@ export default function OverviewPage(): ReactElement {
         : doseHintAvailable
           ? 'dose_hint'
           : 'none';
+
+  // One showing = one visit where the shifts card renders: counted once per circle per mount.
+  const shiftsCountedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (coaching !== 'shifts' || shiftsCountedFor.current === circleId) return;
+    shiftsCountedFor.current = circleId;
+    recordShiftsNudgeShowing(circleId);
+  }, [coaching, circleId]);
 
   // today_viewed: once per circle visit, when everything that decides it has answered.
   const viewedFor = useRef<string | null>(null);
@@ -328,6 +345,7 @@ export default function OverviewPage(): ReactElement {
             isSelfCare={isSelfCare}
             upsell={shiftsUpsell}
             primaryAllowed={!nextUpFilled}
+            showCount={shiftsShownBefore + 1}
             onNotNow={() => {
               dismissShiftsNudge(circleId);
               setShiftsDismissedFor(circleId);

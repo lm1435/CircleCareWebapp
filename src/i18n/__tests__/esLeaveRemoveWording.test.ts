@@ -80,7 +80,7 @@ describe('web ES: leaving says "salir", removing a member says "eliminar"', () =
     const lost = (read('circles') as any).accessLost;
     expect(lost.removedTitle).toBe('Acceso eliminado');
     expect(lost.removedBody).toBe(
-      'Ya no tienes acceso a este círculo. Es posible que el dueño te haya eliminado de él o que haya eliminado el círculo.'
+      'Ya no tienes acceso a este círculo. Es posible que la persona titular te haya eliminado de él o que haya eliminado el círculo.'
     );
   });
 

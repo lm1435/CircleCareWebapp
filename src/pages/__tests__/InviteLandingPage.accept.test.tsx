@@ -330,7 +330,7 @@ describe('InviteLandingPage — accept flow', () => {
       const alert = await failAcceptWith('CIRCLE_ARCHIVED', 'Aceptar invitación');
 
       expect(alert).toHaveTextContent(
-        'Este círculo ya no está activo, así que la invitación no se puede usar. Pídele a quien te invitó que consulte con el propietario del círculo.'
+        'Este círculo ya no está activo, así que la invitación no se puede usar. Pídele a quien te invitó que consulte con la persona titular del círculo.'
       );
     });
 

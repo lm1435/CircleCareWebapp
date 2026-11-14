@@ -744,8 +744,18 @@ export const Analytics = {
     capture('next_step_dismissed', { step }),
   nextStepCompleted: (step: 'first_med' | 'invite' | 'reminders') =>
     capture('next_step_completed', { step }),
-  coachingHintShown: (hint: 'first_dose' | 'shifts_second_caregiver', opts: { upsell?: boolean } = {}) =>
-    capture('coaching_hint_shown', { hint, upsell: opts.upsell === true }),
+  /** `showCount` (1..3): which showing of a capped hint this is (the shifts card, 1.4.2). */
+  coachingHintShown: (
+    hint: 'first_dose' | 'shifts_second_caregiver',
+    opts: { upsell?: boolean; showCount?: number } = {}
+  ) =>
+    capture('coaching_hint_shown', {
+      hint,
+      upsell: opts.upsell === true,
+      ...(typeof opts.showCount === 'number' && Number.isFinite(opts.showCount)
+        ? { show_count: Math.min(3, Math.max(1, Math.round(opts.showCount))) }
+        : {}),
+    }),
   coachingHintDismissed: (hint: 'first_dose' | 'shifts_second_caregiver', opts: { upsell?: boolean } = {}) =>
     capture('coaching_hint_dismissed', { hint, upsell: opts.upsell === true }),
   coachingHintActed: (hint: 'first_dose' | 'shifts_second_caregiver', opts: { upsell?: boolean } = {}) =>
@@ -1888,7 +1898,7 @@ export const Analytics = {
   helpArticleViewed: (props: {
     slug: string;
     source: 'hub' | 'search' | 'related' | 'contextual';
-    locale: 'en' | 'es';
+    locale: 'en' | 'es' | 'de' | 'fr' | 'it' | 'pt';
   }) => capture('help_article_viewed', props),
   helpSearchUsed: (resultCountBucket: '0' | '1-3' | '4+') =>
     capture('help_search_used', { result_count_bucket: resultCountBucket }),

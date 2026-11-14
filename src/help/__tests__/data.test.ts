@@ -6,18 +6,70 @@ import {
   groupByCategory,
   pickHelpLocale,
   getBundledHelpContent,
+  helpHasVideo,
 } from '../content';
 import { helpMediaUrl } from '../media';
 import { normalizeForSearch, resultCountBucket, searchArticles } from '../search';
 import { HELP_FIXTURE } from './fixture';
 
 describe('pickHelpLocale', () => {
-  it('maps es (and regional es) to es and everything else to en', () => {
-    expect(pickHelpLocale('es')).toBe('es');
-    expect(pickHelpLocale('es-MX')).toBe('es');
-    for (const l of ['en', 'fr', 'fr-CA', 'pt', 'pt-PT', 'de', 'it', undefined, null, '']) {
-      expect(pickHelpLocale(l)).toBe('en');
+  it('maps each help language to itself, regional variants to their base', () => {
+    for (const [l, want] of [
+      ['es', 'es'], ['es-MX', 'es'], ['de', 'de'], ['fr', 'fr'], ['fr-CA', 'fr'],
+      ['it', 'it'], ['pt', 'pt'], ['pt-PT', 'pt'], ['en', 'en'],
+    ] as const) {
+      expect(pickHelpLocale(l)).toBe(want);
     }
+  });
+  it('falls back to en for anything else', () => {
+    for (const l of ['ja', 'zh-Hans', undefined, null, '']) expect(pickHelpLocale(l)).toBe('en');
+  });
+});
+
+describe('NEGATIVE: language isolation', () => {
+  const c = getBundledHelpContent();
+  it('fr-CA and pt-PT never pick en; unsupported picks en and has articles (never blank)', () => {
+    expect(pickHelpLocale('fr-CA')).not.toBe('en');
+    expect(pickHelpLocale('pt-PT')).not.toBe('en');
+    expect(pickHelpLocale('xx')).toBe('en');
+    expect(c.articles[pickHelpLocale('xx')].length).toBeGreaterThan(0);
+  });
+  it('German search never returns an English or Spanish article object', () => {
+    const own = new Set(c.articles.de);
+    for (const a of [...c.articles.en, ...c.articles.es].slice(0, 20)) {
+      const word = a.title.split(/\s+/).sort((x, y) => y.length - x.length)[0];
+      searchArticles(c.articles.de, word).forEach((h) => expect(own.has(h)).toBe(true));
+    }
+  });
+  it('German in-body links resolve to German articles only', () => {
+    for (const a of c.articles.de) {
+      for (const m of a.body.matchAll(/\]\(\/help\/([a-z0-9-]+)\/\)/g)) {
+        expect(findArticle(c, 'de', m[1])).toBeDefined();
+      }
+      expect(a.body).not.toMatch(/\]\(\/(en|es)\/help/);
+    }
+  });
+});
+
+describe('bundled content (six languages)', () => {
+  const c = getBundledHelpContent();
+  const langs = ['en', 'es', 'de', 'fr', 'it', 'pt'] as const;
+  it.each(langs)('%s has the same slugs as en and labelled categories', (lang) => {
+    expect(c.articles[lang].map((a) => a.slug)).toEqual(c.articles.en.map((a) => a.slug));
+    c.categories.forEach((cat) => expect(cat.label[lang].length).toBeGreaterThan(0));
+  });
+  it('only en and es have videos; helpHasVideo agrees', () => {
+    for (const lang of ['de', 'fr', 'it', 'pt'] as const) {
+      c.articles[lang].forEach((a) => expect(a.video || a.poster).toBeUndefined());
+      expect(helpHasVideo(lang)).toBe(false);
+    }
+    expect(c.articles.en.some((a) => a.video)).toBe(true);
+    expect(helpHasVideo('en') && helpHasVideo('es')).toBe(true);
+  });
+  it('searches in German and French', () => {
+    const de = c.articles.de[0];
+    expect(searchArticles(c.articles.de, de.title.split(' ')[0]).map((a) => a.slug)).toContain(de.slug);
+    expect(normalizeForSearch('Für Ärzte')).toBe('fur arzte');
   });
 });
 

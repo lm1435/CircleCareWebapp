@@ -57,7 +57,9 @@ function invites(circleId: string): { invited_email: string; member_type: string
   );
 }
 
-test.describe('setup invite step (web)', () => {
+// OBSOLETE since 1.4.2: the setup invite step was removed from first run (the invite is Today's next-step card).
+// Skipped, not deleted: rewrite it from the Today next-step card or retire it.
+test.describe.skip('setup invite step (web)', () => {
   test.setTimeout(120_000);
 
   test('free owner: invite one person from setup, then the paywall once, then Today', async ({

@@ -153,7 +153,7 @@ describe('AppLayout access-removed state', () => {
     renderAt('/circles/c1/meds');
     expect(screen.getByRole('heading', { level: 1, name: 'Acceso eliminado' })).toBeInTheDocument();
     expect(
-      screen.getByText('Ya no tienes acceso a este círculo. Es posible que el dueño te haya eliminado de él o que haya eliminado el círculo.')
+      screen.getByText('Ya no tienes acceso a este círculo. Es posible que la persona titular te haya eliminado de él o que haya eliminado el círculo.')
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Volver a círculos' })).toBeInTheDocument();
   });

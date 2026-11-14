@@ -227,7 +227,7 @@
         "close": "Fechar como as notificações funcionam",
         "scheduledTitle": "Lembretes agendados",
         "scheduledBody": "Uma notificação é enviada no horário agendado, para o app CircleCare do celular.",
-        "escalationTitle": "Alertas de escalonamento",
+        "escalationTitle": "Se ninguém marcar a dose",
         "earlyTitle": "Lembretes antecipados",
         "earlyBody": "Se quiser, receba um lembrete 24 horas, 1 hora, 30 minutos ou 15 minutos antes do horário agendado."
       },

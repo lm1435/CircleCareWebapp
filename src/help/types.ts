@@ -24,13 +24,15 @@ export interface HelpArticleOut {
 export interface HelpContent {
   /** ISO date. */
   generated: string;
-  categories: { id: HelpCategory; label: { en: string; es: string } }[];
+  categories: { id: HelpCategory; label: Record<HelpLocale, string> }[];
   /** Slugs. */
   popular: string[];
-  articles: { en: HelpArticleOut[]; es: HelpArticleOut[] };
+  /** Videos exist for en and es only; the other languages carry no video/poster. */
+  articles: Record<HelpLocale, HelpArticleOut[]>;
 }
 
-export type HelpLocale = 'en' | 'es';
+/** fr-CA and pt-PT resolve to fr / pt (pickHelpLocale). */
+export type HelpLocale = 'en' | 'es' | 'de' | 'fr' | 'it' | 'pt';
 
 export type HelpOpenSource = 'profile' | 'login' | 'signup' | 'home_card' | 'contextual';
 export type HelpArticleSource = 'hub' | 'search' | 'related' | 'contextual';

@@ -1292,7 +1292,7 @@ describe('AddEventModal', () => {
       expect(
         within(dialog).getByText('A notification is sent at the scheduled time, to the CircleCare mobile app.')
       ).toBeInTheDocument();
-      expect(within(dialog).getByText('Escalation alerts')).toBeInTheDocument();
+      expect(within(dialog).getByText('If nobody marks the dose')).toBeInTheDocument();
       expect(within(dialog).getByText('Early reminders')).toBeInTheDocument();
     });
 
@@ -1305,7 +1305,7 @@ describe('AddEventModal', () => {
 
       const dialog = screen.getByRole('dialog', { name: 'How notifications work' });
       // There is no missed-dose chain for a task, so there is nothing to explain.
-      expect(within(dialog).queryByText('Escalation alerts')).not.toBeInTheDocument();
+      expect(within(dialog).queryByText('If nobody marks the dose')).not.toBeInTheDocument();
       expect(within(dialog).getByText('Scheduled reminders')).toBeInTheDocument();
     });
 

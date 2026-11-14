@@ -111,7 +111,7 @@
     "invalidOccurrenceDate": "This event no longer repeats on that day — the calendar has been refreshed.",
     "eventNotFound": "That event no longer exists. Someone else may have deleted it.",
     "recurrenceDaysExcludeStart": "The start day must stay selected.",
-    "asNeededLocked": "A medication can't be switched between scheduled and as needed. Discontinue it and add it again.",
+    "asNeededLocked": "A medication can't be switched between scheduled and as needed. Stop it and add it again.",
     "providerUnavailable": "That doctor is no longer available. Pick another doctor or choose None.",
     "providerNotAllowed": "Only appointments can have a doctor."
   },
@@ -227,7 +227,7 @@
         "close": "Close how notifications work",
         "scheduledTitle": "Scheduled reminders",
         "scheduledBody": "A notification is sent at the scheduled time, to the CircleCare mobile app.",
-        "escalationTitle": "Escalation alerts",
+        "escalationTitle": "If nobody marks the dose",
         "earlyTitle": "Early reminders",
         "earlyBody": "Optionally get reminded 24 hours, 1 hour, 30 minutes, or 15 minutes before the scheduled time."
       },
@@ -292,7 +292,7 @@
       "reason": "What is it for?",
       "reasonPlaceholder": "e.g. pain, nausea",
       "repeatHint": "No set times. Everyone in the circle is notified when someone logs a dose.",
-      "lockedRepeat": "As needed · can't be changed. To put this medication on a schedule, discontinue it and add it again.",
+      "lockedRepeat": "As needed · can't be changed. To put this medication on a schedule, stop it and add it again.",
       "remindersNone": "No reminders. As-needed medications don't have a schedule.",
       "updateOldBackend": "Couldn't add an as-needed medication yet — please update the app and try again."
     },
@@ -417,7 +417,7 @@
     "scopeFuture": "This and all future doses",
     "deleted": "Medication deleted",
     "wholeMessage": "Delete \"{{title}}\"? It will be removed from your medication list and its reminders will stop. Doses already recorded stay in adherence reports. This can't be undone.",
-    "discontinueHint": "To keep it in your Inactive list so you can turn it back on later, use Discontinue instead."
+    "discontinueHint": "To keep it in your Inactive list so you can turn it back on later, use Stop instead."
   },
   "deleteTask": {
     "title": "Delete task",
@@ -435,19 +435,19 @@
     "addedByVoice": "Added by voice"
   },
   "discontinueMed": {
-    "title": "Discontinue medication",
+    "title": "Stop medication",
     "reactivateTitle": "Reactivate medication",
     "close": "Close medication status dialog",
-    "confirmMessage": "Discontinue \"{{title}}\"? This stops the whole medication now — all upcoming doses leave the calendar and it moves to Inactive. Past history is kept. You can reactivate it anytime.",
+    "confirmMessage": "Stop \"{{title}}\"? This stops the whole medication now — all upcoming doses leave the calendar and it moves to Inactive. Past history is kept. You can reactivate it anytime.",
     "reactivateMessage": "Reactivate \"{{title}}\"? Reminders will resume.",
-    "discontinue": "Discontinue",
+    "discontinue": "Stop",
     "reactivate": "Reactivate",
     "working": "Saving…",
-    "discontinuedToast": "Medication discontinued",
+    "discontinuedToast": "Medication stopped",
     "reactivatedToast": "Medication reactivated",
     "inactiveBadge": "Inactive",
     "endedOn": "Ended {{date}}",
-    "inactiveCalendarNote": "This medication is inactive. Doses from before it was discontinued stay on the calendar, and you can still mark one taken or skipped — a dose that was really given should be recorded. Reactivate the medication to change its details or resume reminders.",
+    "inactiveCalendarNote": "This medication is inactive. Doses from before it was stopped stay on the calendar, and you can still mark one taken or skipped — a dose that was really given should be recorded. Reactivate the medication to change its details or resume reminders.",
     "editInactiveTitle": "Medication is inactive",
     "editInactiveMessage": "This medication is inactive. Reactivate it to make changes."
   },

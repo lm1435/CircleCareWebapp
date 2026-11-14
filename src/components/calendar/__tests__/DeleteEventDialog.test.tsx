@@ -590,7 +590,7 @@ describe('DeleteEventDialog', () => {
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          'To keep it in your Inactive list so you can turn it back on later, use Discontinue instead.'
+          'To keep it in your Inactive list so you can turn it back on later, use Stop instead.'
         )
       ).toBeInTheDocument();
 
@@ -689,7 +689,7 @@ describe('DeleteEventDialog', () => {
       expect(screen.getByRole('radiogroup')).toBeInTheDocument();
       expect(
         screen.queryByText(
-          'To keep it in your Inactive list so you can turn it back on later, use Discontinue instead.'
+          'To keep it in your Inactive list so you can turn it back on later, use Stop instead.'
         )
       ).not.toBeInTheDocument();
     });

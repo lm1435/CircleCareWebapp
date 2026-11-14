@@ -240,8 +240,8 @@
     "assign": "No pudimos asignar el turno. Inténtalo de nuevo.",
     "save": "No pudimos guardar el turno. Inténtalo de nuevo.",
     "delete": "No pudimos eliminar el turno. Inténtalo de nuevo.",
-    "dropForbidden": "Solo quien tiene el turno, el dueño o un gestor puede soltarlo.",
-    "assignForbidden": "Solo el dueño o un gestor puede poner a otra persona en un turno.",
+    "dropForbidden": "Solo quien tiene el turno, la persona titular o un gestor puede soltarlo.",
+    "assignForbidden": "Solo la persona titular o un gestor puede poner a otra persona en un turno.",
     "invalidAssignee": "Esa persona no puede tener un turno.",
     "permissionDenied": "No tienes permiso para cambiar turnos en este círculo."
   },

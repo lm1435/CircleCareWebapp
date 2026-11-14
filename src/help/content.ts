@@ -13,7 +13,7 @@ export const EMPTY_HELP_CONTENT: HelpContent = {
   generated: '',
   categories: [],
   popular: [],
-  articles: { en: [], es: [] },
+  articles: { en: [], es: [], de: [], fr: [], it: [], pt: [] },
 };
 
 export function getBundledHelpContent(): HelpContent {
@@ -21,11 +21,21 @@ export function getBundledHelpContent(): HelpContent {
   return mod?.default ?? EMPTY_HELP_CONTENT;
 }
 
-/** es -> es; every other app language shows the English articles (plan). */
-const HELP_LOCALE_BY_BASE: Record<string, HelpLocale> = { es: 'es' };
+export const HELP_LOCALES: readonly HelpLocale[] = ['en', 'es', 'de', 'fr', 'it', 'pt'];
 
+/**
+ * App language -> help language. Regional variants use their base (fr-CA -> fr,
+ * pt-PT -> pt); anything else falls back to English.
+ */
 export function pickHelpLocale(language: string | undefined | null): HelpLocale {
-  return HELP_LOCALE_BY_BASE[baseLanguage(language ?? '')] ?? 'en';
+  const base = baseLanguage(language ?? '') as HelpLocale;
+  return HELP_LOCALES.includes(base) ? base : 'en';
+}
+
+/** Videos are recorded for en and es only. */
+const VIDEO_LOCALES: readonly HelpLocale[] = ['en', 'es'];
+export function helpHasVideo(locale: HelpLocale): boolean {
+  return VIDEO_LOCALES.includes(locale);
 }
 
 export function getArticles(content: HelpContent, locale: HelpLocale): HelpArticleOut[] {

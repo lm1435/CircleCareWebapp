@@ -50,7 +50,7 @@
     "viewOnly": "Solo visualización",
     "readOnlyOwnerSubtitle": "Tu suscripción terminó: solo lectura por ahora.",
     "readOnlyMemberSubtitle": "Puedes ver este círculo, pero no editarlo",
-    "viewOnlySubtitle": "Solo visualización: habla con el propietario si necesitas hacer cambios."
+    "viewOnlySubtitle": "Solo visualización: habla con la persona titular si necesitas hacer cambios."
   },
   "member": {
     "notificationsOff": "Notificaciones desactivadas",
@@ -79,14 +79,14 @@
     "pendingInviteSeat": "Ya usaste tu invitación: el lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancela esa invitación para liberarlo o mejora a Premium para agregar más cuidadores.",
     "pendingInviteSeatUnknown": "Ya usaste tu invitación: el lugar gratuito lo tiene otra invitación pendiente. Cancela esa invitación para liberarlo o mejora a Premium para agregar más cuidadores.",
     "circleArchived": "Este círculo de cuidado ya no está activo, así que no se pueden enviar ni aceptar invitaciones.",
-    "careRecipientExists": "Este círculo ya tiene un receptor de cuidado.",
-    "careRecipientInvitePending": "Ya hay una invitación pendiente para el receptor de cuidado.",
+    "careRecipientExists": "Este círculo ya tiene una persona cuidada.",
+    "careRecipientInvitePending": "Ya hay una invitación pendiente para la persona cuidada.",
     "managerUnavailable": "El rol de gestor no está disponible en este momento. Inténtalo de nuevo más tarde.",
-    "careRecipientCannotManage": "El receptor de cuidado no puede tener el rol de gestor.",
+    "careRecipientCannotManage": "La persona cuidada no puede tener el rol de gestor.",
     "viewOnlyCannotManage": "Los miembros con acceso de solo visualización no pueden tener el rol de gestor.",
     "circleInactive": "Este círculo de cuidado ya no está activo.",
-    "pendingInviteSeatAskOwner": "El lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancela esa invitación para liberarlo o pídele al dueño del círculo que mejore a Premium.",
-    "pendingInviteSeatAskOwnerUnknown": "El lugar gratuito lo tiene otra invitación pendiente. Cancela esa invitación para liberarlo o pídele al dueño del círculo que mejore a Premium."
+    "pendingInviteSeatAskOwner": "El lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancela esa invitación para liberarlo o pídele a la persona titular del círculo que mejore a Premium.",
+    "pendingInviteSeatAskOwnerUnknown": "El lugar gratuito lo tiene otra invitación pendiente. Cancela esa invitación para liberarlo o pídele a la persona titular del círculo que mejore a Premium."
   },
   "invite": {
     "cta": "Invitar miembro",
@@ -125,10 +125,10 @@
     "sendAnother": "Invitar a alguien más",
     "dailyUpdateLine": "Las personas que invites reciben un resumen diario de {{name}}.",
     "dailyUpdateLineSelfCare": "Las personas que invites reciben un resumen diario de tu día.",
-    "capReachedAskOwner": "Los círculos gratuitos incluyen hasta dos cuidadores. Solo el dueño del círculo puede mejorar el plan para agregar más.",
-    "capReachedAskOwnerNamed": "Los círculos gratuitos incluyen hasta dos cuidadores. Solo {{ownerName}}, el dueño del círculo, puede mejorar el plan para agregar más.",
-    "pendingSeatAskOwner": "El lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancélala en Invitaciones pendientes para liberar el lugar o pídele al dueño del círculo que mejore el plan.",
-    "pendingSeatAskOwnerUnknown": "El lugar gratuito lo tiene otra invitación pendiente. Cancélala en Invitaciones pendientes para liberar el lugar o pídele al dueño del círculo que mejore el plan."
+    "capReachedAskOwner": "Los círculos gratuitos incluyen hasta dos cuidadores. Solo la persona titular del círculo puede mejorar el plan para agregar más.",
+    "capReachedAskOwnerNamed": "Los círculos gratuitos incluyen hasta dos cuidadores. Solo {{ownerName}}, titular del círculo, puede mejorar el plan para agregar más.",
+    "pendingSeatAskOwner": "El lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancélala en Invitaciones pendientes para liberar el lugar o pídele a la persona titular del círculo que mejore el plan.",
+    "pendingSeatAskOwnerUnknown": "El lugar gratuito lo tiene otra invitación pendiente. Cancélala en Invitaciones pendientes para liberar el lugar o pídele a la persona titular del círculo que mejore el plan."
   },
   "manage": {
     "subheading": "Todos en este círculo de cuidado. Invita, elimina o administra miembros abajo.",
@@ -162,7 +162,7 @@
     "resendInviteFailed": "No pudimos reenviar esa invitación. Por favor intenta de nuevo.",
     "leave": "Salir del círculo",
     "leaveConfirmTitle": "¿Salir de este círculo?",
-    "leaveConfirmBody": "Perderás el acceso a este círculo de cuidado. El propietario puede volver a invitarte más tarde.",
+    "leaveConfirmBody": "Perderás el acceso a este círculo de cuidado. La persona titular puede volver a invitarte más tarde.",
     "leaveSuccess": "Saliste del círculo.",
     "subheadingManager": "Todas las personas de este círculo de cuidado. Como gestor, puedes invitar a personas y quitar cuidadores.",
     "makeManager": "Dar rol de gestor",

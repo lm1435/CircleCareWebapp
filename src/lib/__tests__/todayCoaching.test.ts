@@ -101,3 +101,28 @@ describe('todayCoaching persistence', () => {
     set.mockRestore();
   });
 });
+
+describe('shifts nudge showing counter (1.4.2)', () => {
+  it('POSITIVE: counts showings 1, 2, 3 per circle', async () => {
+    const m = await import('@/lib/todayCoaching');
+    expect(m.getShiftsNudgeShowCount('cx')).toBe(0);
+    expect([1, 2, 3].map(() => m.recordShiftsNudgeShowing('cx'))).toEqual([1, 2, 3]);
+    expect(m.getShiftsNudgeShowCount('cx')).toBe(3);
+  });
+
+  it('NEGATIVE: never counts past the cap, and one circle never affects another', async () => {
+    const m = await import('@/lib/todayCoaching');
+    for (let i = 0; i < 6; i++) m.recordShiftsNudgeShowing('cy');
+    expect(m.getShiftsNudgeShowCount('cy')).toBe(m.SHIFTS_NUDGE_MAX_SHOWINGS);
+    expect(m.getShiftsNudgeShowCount('cz')).toBe(0);
+  });
+
+  it('NEGATIVE: garbage in storage reads as 0 and throwing storage never throws', async () => {
+    const m = await import('@/lib/todayCoaching');
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    expect(m.getShiftsNudgeShowCount('cq')).toBe(0);
+    spy.mockRestore();
+  });
+});

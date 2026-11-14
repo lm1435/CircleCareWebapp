@@ -11,19 +11,17 @@ import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useAuthStore } from '@/store/authStore';
 import { getCircleOwnerName, viewerCanSuggestManager } from '@/lib/premiumOwnership';
 import { Analytics } from '@/lib/analytics';
-import { snoozeNextStep } from '@/lib/todayCoaching';
 import {
   consumeOnboardingPaywall,
   peekOnboardingPaywallPending,
 } from '@/lib/onboardingPaywall';
 import { markItEligible, type SavedMedicationInfo } from '@/utils/firstMedSaved';
-import { onboardingInviteStepDecision } from '@/lib/onboardingInviteStep';
 import {
   firstRunActionRoute,
   type FirstRunAction,
   type FirstRunModal,
 } from './firstRunActionRoute';
-import { ChooseActionStep, FirstMedPayoffStep, InviteStep } from './steps';
+import { ChooseActionStep, FirstMedPayoffStep } from './steps';
 
 /**
  * The post-create first run (onboarding 1.3.1): Setup (1), then the ONE simple medication
@@ -36,20 +34,18 @@ import { ChooseActionStep, FirstMedPayoffStep, InviteStep } from './steps';
  * MOUNTED OVER TODAY, which is what lets the non-medication hand-offs be in-place modal
  * swaps rather than navigations: nothing is pushed, so nothing can be left behind.
  *
- * INVITE STEP (pricing report 2026-11-02): after the payoff (or straight after an as-needed
- * save), the owner is asked once to invite the one person the free plan includes, when
- * `onboardingInviteStepDecision` says so. "Invite someone" opens the existing InviteMemberModal;
- * "Not now", the x and the form's close all go on to `finish`. It never claims the paywall, so
- * the exactly-once rule below is unchanged.
+ * NO INVITE STEP (1.4.2): the payoff is the END of first run. The invite question lives in
+ * Today's existing next-step card (no snooze is written here), not in this flow. Setup's
+ * "Someone to help" row still opens the invite form in place.
  *
  * PAYWALL TIMING (spec section 7): circle creation only records "owed". After the payoff's
- * Continue (and the invite step, when shown) the onboarding paywall shows exactly once (then
+ * Continue the onboarding paywall shows exactly once (then
  * Today). Every other way out
  * (Skip, close, an appointment / someone to help / emergency info, the first-run form closed
  * unsaved) leaves it owed, and Today shows it the next time it is on screen.
  */
 
-type Step = 'choose' | 'payoff' | 'invite';
+type Step = 'choose' | 'payoff';
 
 export interface FirstRunWizardModalProps {
   circleId: string;
@@ -92,12 +88,6 @@ export function FirstRunWizardModal({
    */
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const continueRef = useRef<HTMLButtonElement>(null);
-  /** The invite form was opened FROM the invite step (not from Setup's "Someone to help" row). */
-  const inviteFromStepRef = useRef(false);
-  const inviteSentFromStepRef = useRef(false);
-  /** Decided once, when the step opens: the free-plan line does not flip under the reader. */
-  const [inviteFreePlanLine, setInviteFreePlanLine] = useState(false);
-
   useEffect(() => {
     if (step === 'choose') Analytics.firstRunStepViewed(circleId, 'choose');
   }, [circleId, step]);
@@ -107,16 +97,12 @@ export function FirstRunWizardModal({
     if (handoff === 'firstMed') Analytics.firstRunStepViewed(circleId, 'first_med');
   }, [circleId, handoff]);
 
-  // ── Payoff: viewed, the invite snooze, and the Mark it line ──────────────
+  // ── Payoff: viewed and the Mark it line ──────────────
   const markItOffered = step === 'payoff' && saved !== null && canEdit && markItEligible(saved);
   useEffect(() => {
     if (step !== 'payoff') return;
     Analytics.onboardingPayoffViewed();
-    // The payoff does NOT ask the invite question (decision 7); the invite comes later from
-    // Today's next-step card. Same 3-day snooze as "Not now" there, so Today never asks it in
-    // the session the first med was saved.
-    snoozeNextStep(circleId, 'invite');
-  }, [circleId, step]);
+  }, [step]);
   useEffect(() => {
     if (markItOffered) Analytics.markItShown('payoff');
   }, [markItOffered]);
@@ -219,47 +205,13 @@ export function FirstRunWizardModal({
     onClose();
   };
 
-  /**
-   * Leaving the payoff (or an as-needed save, which has none): the invite step first when it
-   * applies, decided from what is known NOW (unknown = no step), otherwise `finish`.
-   */
-  const afterPayoff = (): void => {
-    const decision = onboardingInviteStepDecision({
-      circle,
-      userId: currentUserId,
-      tier: subscription?.tier,
-    });
-    if (decision.show) {
-      setInviteFreePlanLine(decision.freePlanLine);
-      setStep('invite');
-      Analytics.onboardingInviteStepShown({
-        freePlan: decision.freePlanLine,
-        selfCare: circle?.is_self_care === true,
-      });
-      return;
-    }
-    finish();
-  };
-
-  const openInviteFromStep = (): void => {
-    inviteFromStepRef.current = true;
-    inviteSentFromStepRef.current = false;
-    setHandoff('invite');
-  };
-
-  const skipInviteStep = (via: 'not_now' | 'close'): void => {
-    Analytics.onboardingInviteStepSkipped(via);
-    finish();
-  };
+  /** Leaving the payoff (or an as-needed save, which has none): the paywall once if owed, then Today. */
+  const afterPayoff = finish;
 
   /** The modal's x / Escape. On Setup that is a skip; on the payoff it is Continue. */
   const handleClose = (): void => {
     if (step === 'payoff') {
       afterPayoff();
-      return;
-    }
-    if (step === 'invite') {
-      skipInviteStep('close');
       return;
     }
     Analytics.firstRunSkipped(circleId, 'close');
@@ -299,34 +251,6 @@ export function FirstRunWizardModal({
     );
   }
 
-  if (handoff === 'invite' && circle && inviteFromStepRef.current) {
-    // Opened from the invite step: a send is recorded as the step's, and any close (Done after
-    // a send, Cancel or the x without one) goes on to `finish` (the paywall once, then Today).
-    return (
-      <InviteMemberModal
-        circleId={circleId}
-        isSelfCare={circle.is_self_care}
-        circleName={circle.name}
-        recipientName={circle.recipient_name}
-        viewerIsOwner={isOwner}
-        ownerName={getCircleOwnerName(circle)}
-        canSuggestManager={viewerCanSuggestManager(circle, currentUserId)}
-        onInvited={(memberType) => {
-          if (!inviteSentFromStepRef.current) {
-            inviteSentFromStepRef.current = true;
-            Analytics.onboardingInviteStepSent(memberType);
-          }
-        }}
-        onClose={() => {
-          inviteFromStepRef.current = false;
-          setHandoff(null);
-          if (!inviteSentFromStepRef.current) Analytics.onboardingInviteStepSkipped('form_closed');
-          finish();
-        }}
-      />
-    );
-  }
-
   if (handoff === 'invite' && circle) {
     return (
       <InviteMemberModal
@@ -344,7 +268,6 @@ export function FirstRunWizardModal({
   }
 
   const isPayoff = step === 'payoff' && saved !== null;
-  const isInvite = step === 'invite';
 
   return (
     <Modal
@@ -359,22 +282,7 @@ export function FirstRunWizardModal({
       closeOnBackdropClick={false}
       initialFocusRef={stepHeadingRef}
       footer={
-        isInvite ? (
-          // Keyed: a second click on the payoff's Continue must not land on the button React
-          // would otherwise reuse in its place ("Not now").
-          <div key="invite-footer" className="flex flex-wrap justify-end gap-3">
-            <Button
-              variant="ghost"
-              onClick={() => skipInviteStep('not_now')}
-              data-testid="first-run-invite-not-now"
-            >
-              {t('firstRun.inviteStep.notNow')}
-            </Button>
-            <Button onClick={openInviteFromStep} data-testid="first-run-invite-send">
-              {t('firstRun.inviteStep.primary')}
-            </Button>
-          </div>
-        ) : isPayoff ? (
+        isPayoff ? (
           <div className="flex justify-end">
             <Button ref={continueRef} onClick={afterPayoff} data-testid="first-run-continue">
               {t('firstRun.continue')}
@@ -393,14 +301,7 @@ export function FirstRunWizardModal({
         )
       }
     >
-      {isInvite ? (
-        <InviteStep
-          recipientName={circleName}
-          isSelfCare={circle?.is_self_care === true}
-          freePlanLine={inviteFreePlanLine}
-          headingRef={stepHeadingRef}
-        />
-      ) : isPayoff && saved ? (
+      {isPayoff && saved ? (
         <FirstMedPayoffStep
           recipientName={circleName}
           isSelfCare={circle?.is_self_care === true}

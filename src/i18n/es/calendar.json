@@ -1,7 +1,7 @@
 {
   "noCareRecipient": {
     "title": "Los recordatorios te llegan a ti",
-    "description": "Los recordatorios de medicamentos te llegan a ti (dueño del círculo) hasta que agregues un receptor de cuidado o elijas a un miembro para recibirlos."
+    "description": "Los recordatorios de medicamentos te llegan a ti (titular del círculo) hasta que agregues un receptor de cuidado o elijas a un miembro para recibirlos."
   },
   "title": "Calendario",
   "subtitle": "Medicamentos, citas y tareas en un solo lugar.",
@@ -227,7 +227,7 @@
         "close": "Cerrar cómo funcionan las notificaciones",
         "scheduledTitle": "Recordatorios programados",
         "scheduledBody": "Se envía una notificación a la hora programada, a la app móvil de CircleCare.",
-        "escalationTitle": "Alertas de escalamiento",
+        "escalationTitle": "Si nadie marca la dosis",
         "earlyTitle": "Recordatorios anticipados",
         "earlyBody": "Si quieres, recibe recordatorios 24 horas, 1 hora, 30 minutos o 15 minutos antes de la hora programada."
       },
