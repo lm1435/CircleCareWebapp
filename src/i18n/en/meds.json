@@ -80,7 +80,7 @@
     },
     "actions": {
       "edit": "Edit",
-      "discontinue": "Stop",
+      "discontinue": "Discontinue",
       "reactivate": "Reactivate",
       "delete": "Delete",
       "more": "More actions for {{name}}"

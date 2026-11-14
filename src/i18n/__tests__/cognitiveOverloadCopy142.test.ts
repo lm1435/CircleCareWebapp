@@ -31,16 +31,23 @@ describe('copy pass 1.4.2 (web)', () => {
     expect(Object.entries(load('pt')).find(([k]) => k.endsWith('escalationTitle'))![1]).toBe('Se ninguém marcar a dose');
   });
 
-  it('POSITIVE: the EN medication action is "Stop"', () => {
-    expect(EN['meds.medications.actions.discontinue'] ?? Object.entries(EN).find(([k]) => k.startsWith('meds.') && k.endsWith('.discontinue'))![1]).toBe('Stop');
-    expect(Object.entries(EN).find(([k]) => k === 'calendar.discontinueMed.discontinue')![1]).toBe('Stop');
+  it('POSITIVE: the EN medication action stays "Discontinue" (owner decision 2026-11-13)', () => {
+    expect(EN['meds.medications.actions.discontinue'] ?? Object.entries(EN).find(([k]) => k.startsWith('meds.') && k.endsWith('.discontinue'))![1]).toBe('Discontinue');
+    expect(Object.entries(EN).find(([k]) => k === 'calendar.discontinueMed.discontinue')![1]).toBe('Discontinue');
   });
 
-  it('NEGATIVE: no user-facing EN string says "Escalation alerts", "adherence log" or the verb "Discontinue"', () => {
+  it('NEGATIVE: no user-facing EN string says "Escalation alerts" or "adherence log"', () => {
     const bad = Object.entries(EN).filter(
-      ([k, v]) => !isFeed(k) && /escalation alerts|adherence log|\bdiscontinue\b/i.test(v)
+      ([k, v]) => !isFeed(k) && /escalation alerts|adherence log/i.test(v)
     );
     expect(bad).toEqual([]);
+  });
+
+  it('NEGATIVE: the discontinue action and its confirm/toast never say "Stop"', () => {
+    for (const k of ['calendar.discontinueMed.discontinue', 'calendar.discontinueMed.title', 'calendar.discontinueMed.discontinuedToast']) {
+      const v = EN[k];
+      if (v !== undefined) expect(v).not.toMatch(/^Stop\b|stopped$/);
+    }
   });
 
   it('NEGATIVE: the touched labels never use "missed"', () => {
