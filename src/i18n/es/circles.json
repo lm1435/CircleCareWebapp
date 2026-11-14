@@ -1,13 +1,11 @@
 {
   "create": {
     "title": "Nuevo círculo de cuidado",
-    "subtitle": "Crea un círculo para coordinar el cuidado con familiares y cuidadores.",
+    "subtitle": "Comienza a coordinar el cuidado de tu ser querido",
     "recipientName": "Nombre de la persona cuidada",
     "recipientNamePlaceholder": "Nombre completo",
     "recipientDob": "Fecha de nacimiento",
     "recipientDobHint": "Opcional. Aparece en su información de emergencia para que los médicos confirmen su identidad.",
-    "selfCareToggle": "Este círculo es para mí",
-    "selfCareHint": "Serás la persona cuidada. Invita a familiares o cuidadores para que ayuden.",
     "selfCareDefaultName": "Mi cuidado",
     "create": "Crear círculo",
     "creating": "Creando...",
@@ -15,7 +13,29 @@
     "close": "Cerrar",
     "success": "Círculo creado.",
     "failed": "No pudimos crear tu círculo en este momento. No se perdió nada; por favor intenta de nuevo.",
-    "limitReached": "Has alcanzado el máximo de 5 círculos."
+    "limitReached": "Has alcanzado el máximo de 5 círculos.",
+    "whoCaringFor": "¿A quién estás cuidando?",
+    "selfCareSubtitle": "Configura seguimiento de medicamentos y recordatorios para ti",
+    "selfCareCircleDesc": "Tu círculo rastrea tus propios medicamentos y horario de cuidado. Invita a familiares o cuidadores a unirse y ayudar.",
+    "personalizedGreeting": {
+      "parent": "Vamos a configurar el cuidado para tu padre o madre",
+      "spouse": "Vamos a configurar el cuidado para tu pareja",
+      "child": "Vamos a configurar el cuidado para tu hijo/a",
+      "other": "Vamos a configurar el cuidado para tu ser querido"
+    },
+    "personalizedPlaceholder": {
+      "parent": "ej., Mamá, Papá",
+      "spouse": "ej., su nombre",
+      "child": "ej., su nombre",
+      "other": "ej., su nombre"
+    },
+    "relationship": {
+      "parent": "A un padre o madre",
+      "spouse": "A mi pareja",
+      "child": "A mi hijo/a",
+      "myself": "A mí",
+      "other": "A otra persona"
+    }
   },
   "join": {
     "button": "Unirte a un círculo",

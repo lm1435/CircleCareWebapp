@@ -105,6 +105,68 @@ describe('DrugAutocomplete', () => {
     expect(screen.queryByRole('option', { name: 'Zyrtec' })).toBeNull();
   });
 
+  describe('1.4.2 stale answers ("Lis" showed matches for "Li")', () => {
+    const LI_STALE: DrugSearchResult = { rxcui: '11', name: 'Lisinopril (Li answer)', strength: null, dosageForm: null };
+    const LIS: DrugSearchResult = { rxcui: '12', name: 'Lisinopril 10 MG Oral Tablet', strength: null, dosageForm: null };
+
+    it('POSITIVE: the answer for the text in the field is shown', async () => {
+      search.mockResolvedValueOnce([LIS]);
+      const user = userEvent.setup();
+      render(<Host onSelectDrug={vi.fn()} />);
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'lis');
+      expect(await screen.findByRole('option', { name: LIS.name })).toBeInTheDocument();
+      expect(search).toHaveBeenCalledTimes(1);
+    });
+
+    it('POSITIVE: a keystroke aborts the previous lookup (debounce kept: one request per settled text)', async () => {
+      let liSignal: AbortSignal | undefined;
+      let resolveLis: (rows: DrugSearchResult[]) => void = () => {};
+      search
+        .mockImplementationOnce((_q, signal) => {
+          liSignal = signal;
+          return new Promise(() => {});
+        })
+        .mockImplementationOnce(() => new Promise((r) => (resolveLis = r)));
+      const user = userEvent.setup();
+      render(<Host onSelectDrug={vi.fn()} />);
+      const input = screen.getByRole('combobox', { name: /Medication name/ });
+      await user.type(input, 'li');
+      await waitFor(() => expect(search).toHaveBeenCalledTimes(1));
+      await user.type(input, 's');
+      expect(liSignal?.aborted).toBe(true);
+      await waitFor(() => expect(search).toHaveBeenCalledTimes(2));
+      expect(search.mock.calls.map((c) => c[0])).toEqual(['li', 'lis']);
+      resolveLis([LIS]);
+      expect(await screen.findByRole('option', { name: LIS.name })).toBeInTheDocument();
+    });
+
+    it('NEGATIVE: a "Li" answer that lands after "Lis" was typed (abort ignored) is never shown', async () => {
+      let resolveLi: (rows: DrugSearchResult[]) => void = () => {};
+      let resolveLis: (rows: DrugSearchResult[]) => void = () => {};
+      search
+        // A transport that ignores the abort and answers anyway.
+        .mockImplementationOnce(() => new Promise((r) => (resolveLi = r)))
+        .mockImplementationOnce(() => new Promise((r) => (resolveLis = r)));
+      const user = userEvent.setup();
+      render(<Host onSelectDrug={vi.fn()} />);
+      const input = screen.getByRole('combobox', { name: /Medication name/ });
+      await user.type(input, 'li');
+      await waitFor(() => expect(search).toHaveBeenCalledTimes(1));
+      await user.type(input, 's');
+      // Inside "lis"'s debounce, before its request is sent: the late "li" answer arrives.
+      await act(async () => {
+        resolveLi([LI_STALE]);
+      });
+      expect(screen.queryByRole('option', { name: LI_STALE.name })).toBeNull();
+      await waitFor(() => expect(search).toHaveBeenCalledTimes(2));
+      await act(async () => {
+        resolveLis([LIS]);
+      });
+      expect(await screen.findByRole('option', { name: LIS.name })).toBeInTheDocument();
+      expect(screen.queryByRole('option', { name: LI_STALE.name })).toBeNull();
+    });
+  });
+
   it('picks with the keyboard: the name fills in and the drug is reported', async () => {
     const user = userEvent.setup();
     const onSelectDrug = vi.fn();

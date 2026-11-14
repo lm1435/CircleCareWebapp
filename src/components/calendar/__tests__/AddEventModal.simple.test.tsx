@@ -1077,3 +1077,46 @@ describe('where the simple form applies', () => {
     expect(screen.getByTestId('add-event-save')).toHaveTextContent('Add task');
   });
 });
+
+// 1.4.2 (owner, item 8): the first-run medication step is 1:1 the regular Add medication form; only the dialog's
+// header copy and the first-run footer action ("Skip for now") differ.
+describe('first-run medication step = the regular form', () => {
+  const fieldShape = (): string[] => {
+    const dialog = screen.getByRole('dialog');
+    return [
+      // The first-run header ("What does {name} take?") is the one allowed difference: header copy.
+      ...within(dialog)
+        .getAllByRole('heading', { level: 3 })
+        .map((h) => `h3:${h.textContent}`)
+        .filter((h) => !/^h3:What does .* take\?$/.test(h)),
+      ...Array.from(dialog.querySelectorAll('input, textarea, [role="radiogroup"], [role="group"]')).map(
+        (el) =>
+          `${el.tagName.toLowerCase()}:${(el.getAttribute('id') ?? el.getAttribute('aria-label') ?? '').replace(/^:r[^:]*:/, ':id:')}`
+      ),
+      `save:${screen.getByTestId('add-event-save').textContent}`,
+    ];
+  };
+
+  it('POSITIVE: same headings ("What is it?" visible), same fields, same Save', () => {
+    const regular = renderMed();
+    const regularShape = fieldShape();
+    regular.unmount();
+    renderMed({ firstRun: true });
+    expect(fieldShape()).toEqual(regularShape);
+    expect(screen.getByRole('heading', { level: 3, name: 'What is it?' })).toBeVisible();
+  });
+
+  it('NEGATIVE: "What is it?" is no longer hidden for assistive tech only in first run', () => {
+    renderMed({ firstRun: true });
+    const heading = screen.getByText('What is it?');
+    expect(heading).not.toHaveClass('sr-only');
+  });
+
+  it('the dose field is labelled on both', () => {
+    for (const props of [{}, { firstRun: true }]) {
+      const r = renderMed(props);
+      expect(screen.getByLabelText('Dosage')).toBeInTheDocument();
+      r.unmount();
+    }
+  });
+});

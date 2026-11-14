@@ -1,13 +1,11 @@
 {
   "create": {
     "title": "New care circle",
-    "subtitle": "Create a circle to coordinate care with family and caregivers.",
+    "subtitle": "Start coordinating care for your loved one",
     "recipientName": "Care recipient name",
     "recipientNamePlaceholder": "Full name",
     "recipientDob": "Date of birth",
     "recipientDobHint": "Optional. Shown on their emergency info so doctors can confirm who they are.",
-    "selfCareToggle": "This circle is for myself",
-    "selfCareHint": "You'll be the care recipient. Invite family or caregivers to help.",
     "selfCareDefaultName": "My Care",
     "create": "Create circle",
     "creating": "Creating...",
@@ -15,7 +13,29 @@
     "close": "Close",
     "success": "Circle created.",
     "failed": "We couldn't create your circle just now. Nothing was lost — please try again.",
-    "limitReached": "You've reached the maximum of 5 circles."
+    "limitReached": "You've reached the maximum of 5 circles.",
+    "whoCaringFor": "Who are you caring for?",
+    "selfCareSubtitle": "Set up medication tracking and reminders for yourself",
+    "selfCareCircleDesc": "Your circle tracks your own medications and care schedule. Invite family or caregivers to join and help.",
+    "personalizedGreeting": {
+      "parent": "Let's set up care for your parent",
+      "spouse": "Let's set up care for your partner",
+      "child": "Let's set up care for your child",
+      "other": "Let's set up care for your loved one"
+    },
+    "personalizedPlaceholder": {
+      "parent": "e.g., Mom, Dad",
+      "spouse": "e.g., their first name",
+      "child": "e.g., their first name",
+      "other": "e.g., their first name"
+    },
+    "relationship": {
+      "parent": "A parent",
+      "spouse": "My spouse / partner",
+      "child": "My child",
+      "myself": "Myself",
+      "other": "Someone else"
+    }
   },
   "join": {
     "button": "Join a circle",

@@ -1,13 +1,11 @@
 {
   "create": {
     "title": "Novo círculo de cuidado",
-    "subtitle": "Crie um círculo para coordenar o cuidado com familiares e cuidadores.",
+    "subtitle": "Comece a coordenar o cuidado do seu ente querido",
     "recipientName": "Nome da pessoa cuidada",
     "recipientNamePlaceholder": "Nome completo",
     "recipientDob": "Data de nascimento",
     "recipientDobHint": "Opcional. Aparece nas informações de emergência para que os médicos possam confirmar quem é a pessoa.",
-    "selfCareToggle": "Este círculo é para mim",
-    "selfCareHint": "Será a pessoa cuidada. Convide familiares ou cuidadores para ajudar.",
     "selfCareDefaultName": "Meu cuidado",
     "create": "Criar círculo",
     "creating": "Criando...",
@@ -15,7 +13,29 @@
     "close": "Fechar",
     "success": "Círculo criado.",
     "failed": "Não foi possível criar o círculo agora. Nada foi perdido — tente novamente.",
-    "limitReached": "O máximo de 5 círculos foi atingido."
+    "limitReached": "O máximo de 5 círculos foi atingido.",
+    "whoCaringFor": "De quem você cuida?",
+    "selfCareSubtitle": "Configure o acompanhamento de medicamentos e lembretes para você",
+    "selfCareCircleDesc": "Seu círculo acompanha seus próprios medicamentos e rotina de cuidado. Convide familiares ou cuidadores para participar e ajudar.",
+    "personalizedGreeting": {
+      "parent": "Vamos configurar o cuidado do seu pai ou da sua mãe",
+      "spouse": "Vamos configurar o cuidado do seu parceiro ou da sua parceira",
+      "child": "Vamos configurar o cuidado do seu filho ou da sua filha",
+      "other": "Vamos configurar o cuidado do seu ente querido"
+    },
+    "personalizedPlaceholder": {
+      "parent": "ex.: Mãe, Pai",
+      "spouse": "ex.: o primeiro nome",
+      "child": "ex.: o primeiro nome",
+      "other": "ex.: o primeiro nome"
+    },
+    "relationship": {
+      "parent": "Pai ou mãe",
+      "spouse": "Meu cônjuge ou parceiro",
+      "child": "Meu filho ou minha filha",
+      "myself": "Eu mesmo(a)",
+      "other": "Outra pessoa"
+    }
   },
   "join": {
     "button": "Participar de um círculo",

@@ -21,6 +21,7 @@
     "calendarEmpty": "Nothing yet",
     "medsRefill_one": "{{count}} refill soon",
     "medsRefill_other": "{{count}} refills soon",
+    "medsDefault": "Schedule and refills",
     "medsEmpty": "Nothing yet",
     "shifts": "Shifts",
     "healthInfo": "Health info",

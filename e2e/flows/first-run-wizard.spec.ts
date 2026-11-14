@@ -169,6 +169,10 @@ test.describe('first-run wizard (onboarding 1.3.1: Setup -> the ONE simple form 
     await expect(page.getByText(`${recipient.toUpperCase()}'S FIRST MED`, { exact: true })).toBeVisible();
     await expect(page.getByText('Just the name, the big word on the bottle. Dose is optional.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Skip for now' })).toBeVisible();
+    // 1.4.2 (owner): the first-run step is 1:1 the regular Add medication form: the same visible "What is it?"
+    // heading and the same labelled dose field; only the header copy above differs.
+    await expect(page.getByRole('dialog').last().getByRole('heading', { level: 3, name: 'What is it?' })).toBeVisible();
+    await expect(page.getByRole('dialog').last().getByLabel('Dosage')).toBeVisible();
     await listbox.getByRole('option').nth(2).click();
     await expect(page.getByLabel(COPY.en.nameLabel)).toHaveValue(DRUGS[2].name);
 

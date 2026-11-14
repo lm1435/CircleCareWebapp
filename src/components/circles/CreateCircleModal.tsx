@@ -15,17 +15,21 @@ import {
   markOnboardingPaywallPending,
   shouldShowOnboardingPaywall,
 } from '@/lib/onboardingPaywall';
-import { Button, DateField, Modal, TextField, Toggle, useToast, useZodForm } from '@/components/ui';
+import { Button, ChipSelect, DateField, Eyebrow, Modal, TextField, useToast, useZodForm } from '@/components/ui';
 import { getDeviceTimezone, isSameTimezone } from '@/utils/timezone';
 import { TimezoneCombobox } from './TimezoneCombobox';
 
 // Plan Stage 8, Task 8.6c — circle create modal.
 //
-// PORT of mobile/src/screens/circle/CreateCircleScreen.tsx (the create form +
-// is_self_care toggle), reduced to the parity-relevant fields. The mobile
-// relationship-chip / quick-win flow is mobile-onboarding chrome, not part of
-// the create contract — web keeps the plain form the backend expects:
+// PORT of mobile/src/screens/circle/CreateCircleScreen.tsx. The payload is the
+// plain form the backend expects:
 //   { recipient_name, recipient_dob?, recipient_conditions?, is_self_care }.
+//
+// "Who are you caring for?" (1.4.2, mobile parity): the same five relationship
+// chips in the same order (parent, spouse, child, myself, other), none picked by
+// default. "Myself" is self-care (it replaced the old self-care switch); the other
+// four personalise the subtitle and the name hint exactly as mobile does. The
+// relationship itself is not sent or tracked, on either platform.
 //
 // Self-care: like mobile, the care recipient IS the current user, so the name
 // field is hidden and we resolve the user's own name on submit (falling back to
@@ -53,6 +57,10 @@ export interface CreateCircleModalProps {
    */
   onJoinInstead?: () => void;
 }
+
+/** Mobile's RELATIONSHIP_OPTIONS (CreateCircleScreen), same order. */
+export const RELATIONSHIP_OPTIONS = ['parent', 'spouse', 'child', 'myself', 'other'] as const;
+export type Relationship = (typeof RELATIONSHIP_OPTIONS)[number];
 
 export function CreateCircleModal({
   onClose,
@@ -84,7 +92,8 @@ export function CreateCircleModal({
 
   const [recipientName, setRecipientName] = useState('');
   const [recipientDob, setRecipientDob] = useState('');
-  const [isSelfCare, setIsSelfCare] = useState(false);
+  const [relationship, setRelationship] = useState<Relationship | null>(null);
+  const isSelfCare = relationship === 'myself';
   // "Where does {name} live?" (circle-timezone spec). Prefilled with the
   // browser's zone; sent ONLY when the creator picks a different one, so
   // leaving it alone keeps today's automatic behavior (no `timezone` key).
@@ -118,6 +127,36 @@ export function CreateCircleModal({
     const parts = [user?.first_name, user?.last_name].filter(Boolean) as string[];
     return parts.length > 0 ? parts.join(' ') : t('create.selfCareDefaultName');
   };
+
+  // Literal keys (no template strings) so the translation-key audit sees each one.
+  const relationshipLabel: Record<Relationship, string> = {
+    parent: t('create.relationship.parent'),
+    spouse: t('create.relationship.spouse'),
+    child: t('create.relationship.child'),
+    myself: t('create.relationship.myself'),
+    other: t('create.relationship.other'),
+  };
+  const greeting: Record<Exclude<Relationship, 'myself'>, string> = {
+    parent: t('create.personalizedGreeting.parent'),
+    spouse: t('create.personalizedGreeting.spouse'),
+    child: t('create.personalizedGreeting.child'),
+    other: t('create.personalizedGreeting.other'),
+  };
+  const placeholderFor: Record<Exclude<Relationship, 'myself'>, string> = {
+    parent: t('create.personalizedPlaceholder.parent'),
+    spouse: t('create.personalizedPlaceholder.spouse'),
+    child: t('create.personalizedPlaceholder.child'),
+    other: t('create.personalizedPlaceholder.other'),
+  };
+  const subtitle = isSelfCare
+    ? t('create.selfCareSubtitle')
+    : relationship
+      ? greeting[relationship]
+      : t('create.subtitle');
+  const namePlaceholder =
+    relationship && relationship !== 'myself'
+      ? placeholderFor[relationship]
+      : t('create.recipientNamePlaceholder');
 
   const handleSubmit = (event: FormEvent): void => {
     event.preventDefault();
@@ -238,16 +277,35 @@ export function CreateCircleModal({
       }
     >
       <form id="create-circle-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <p className="m-0 text-sm text-ink-3">{t('create.subtitle')}</p>
+        <p className="m-0 text-sm text-ink-3" data-testid="create-circle-subtitle">
+          {subtitle}
+        </p>
 
-        <Toggle
-          checked={isSelfCare}
-          onChange={setIsSelfCare}
-          label={t('create.selfCareToggle')}
-          hint={t('create.selfCareHint')}
-        />
+        <div className="flex flex-col gap-2">
+          <Eyebrow id="create-circle-relationship-label" color="ink-2">
+            {t('create.whoCaringFor')}
+          </Eyebrow>
+          <ChipSelect
+            id="create-circle-relationship"
+            label={t('create.whoCaringFor')}
+            options={RELATIONSHIP_OPTIONS.map((rel) => ({ value: rel, label: relationshipLabel[rel] }))}
+            value={relationship}
+            allowDeselect={false}
+            onChange={(next) => {
+              if (!next) return;
+              setRelationship(next as Relationship);
+              // The name field unmounts on "Myself"; a required-name error must not
+              // reappear stale when switching back (mobile clears it the same way).
+              form.clearError('recipient_name');
+            }}
+          />
+        </div>
 
-        {!isSelfCare && (
+        {isSelfCare ? (
+          <p className="m-0 text-md text-ink" data-testid="create-circle-self-care-desc">
+            {t('create.selfCareCircleDesc')}
+          </p>
+        ) : (
           <>
             <TextField
               ref={nameFieldRef}
@@ -257,7 +315,7 @@ export function CreateCircleModal({
               maxLength={100}
               required
               error={messageFor(form.errors.recipient_name)}
-              placeholder={t('create.recipientNamePlaceholder')}
+              placeholder={namePlaceholder}
               onChange={(e) => {
                 setRecipientName(e.target.value);
                 form.clearError('recipient_name');

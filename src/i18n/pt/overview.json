@@ -22,6 +22,7 @@
     "medsRefill_zero": "nenhuma reposição em breve",
     "medsRefill_one": "{{count}} reposição em breve",
     "medsRefill_other": "{{count}} reposições em breve",
+    "medsDefault": "Horários e reposições",
     "medsEmpty": "Nada ainda",
     "shifts": "Plantões",
     "healthInfo": "Informações de saúde",

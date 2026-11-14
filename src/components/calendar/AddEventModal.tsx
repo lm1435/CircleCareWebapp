@@ -3367,15 +3367,10 @@ function AddEventForm({
           if (title.trim()) completeStep('what');
         }}
       >
-        {firstRun ? (
-          // First-run mode: the dialog's own big title ("What does Mom take?") is the
-          // heading, so this one stays for assistive tech only.
-          <span id="sf-what" className="sr-only">
-            {t('addEvent.simple.whatIsIt')}
-          </span>
-        ) : (
-          sectionHeading('sf-what', t('addEvent.simple.whatIsIt'))
-        )}
+        {/* 1.4.2 (owner): the first-run step is 1:1 the regular Add medication form, so it shows the
+            same "What is it?" heading (mobile's first-run form does too); only the dialog's header copy
+            ("{NAME}'S FIRST MED" / "What does {name} take?") differs. */}
+        {sectionHeading('sf-what', t('addEvent.simple.whatIsIt'))}
         <DrugAutocomplete
           id={titleFieldId}
           label={t('addEvent.fields.medicationName')}

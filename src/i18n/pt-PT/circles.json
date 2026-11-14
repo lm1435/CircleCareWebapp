@@ -1,6 +1,9 @@
 {
   "create": {
-    "creating": "A criar..."
+    "creating": "A criar...",
+    "whoCaringFor": "De quem cuida?",
+    "selfCareSubtitle": "Configure o acompanhamento de medicamentos e lembretes para si",
+    "selfCareCircleDesc": "O seu círculo acompanha os seus próprios medicamentos e rotina de cuidado. Convide familiares ou cuidadores para participar e ajudar."
   },
   "joinModal": {
     "pasteNoCode": "Não encontrámos um código de convite na área de transferência.",

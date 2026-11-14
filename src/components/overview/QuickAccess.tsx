@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Eyebrow, Sheet } from '@/components/ui';
 import { useTasks } from '@/hooks/useTasks';
 import { useCareNotes } from '@/hooks/useCareNotes';
-import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import { useCalendarEvents, useEventsPresence } from '@/hooks/useCalendarEvents';
 import { TODAY_WINDOW_DAYS } from '@/hooks/useNextUp';
 import { addDays } from '@/components/calendar/dateMath';
 import { Analytics } from '@/lib/analytics';
@@ -71,6 +71,23 @@ export function countRefillSoon(events: readonly CalendarEvent[]): number {
     }
   }
   return bottles.size;
+}
+
+/**
+ * The Meds tile's status line - ONE rule on both platforms (mobile:
+ * utils/todayQuickAccess.ts medicationsStatus). Refills win; "Nothing yet" only
+ * when the presence read has ANSWERED that the circle has no medication; any
+ * other state (a saved medication, or presence still loading / failed) reads
+ * "Schedule and refills", never "nothing".
+ */
+export function medicationsStatus(
+  hasAnyMedication: boolean | undefined,
+  refillCount: number,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string {
+  if (refillCount > 0) return t('quickAccess.medsRefill', { count: refillCount });
+  if (hasAnyMedication === false) return t('quickAccess.medsEmpty');
+  return t('quickAccess.medsDefault');
 }
 
 export function latestNote(notes: readonly CareNote[]): CareNote | null {
@@ -146,6 +163,15 @@ export function QuickAccess({
     );
   }, [events, timezone]);
   const refillCount = useMemo(() => countRefillSoon(events ?? []), [events]);
+  // "Is there any medication?" uses Home's presence window (today-30 .. today+180, the same
+  // query key the next-step card reads, so no extra request). The 7-day events window above
+  // only sees refill-tracked doses; a saved medication with no refill tracking (or one whose
+  // doses start later) left the tile saying "Nothing yet".
+  const presence = useEventsPresence(
+    circleId,
+    today ? addDays(today, -30) : '',
+    today ? addDays(today, 180) : ''
+  );
 
   const dayLabel = (dateStr: string): string => {
     if (dateStr === today) return t('appointments.today');
@@ -168,10 +194,7 @@ export function QuickAccess({
     calendar: nextEvent
       ? t('quickAccess.calendarNext', { day: dayLabel(nextEvent.scheduled_date) })
       : t('quickAccess.calendarEmpty'),
-    medications:
-      refillCount > 0
-        ? t('quickAccess.medsRefill', { count: refillCount })
-        : t('quickAccess.medsEmpty'),
+    medications: medicationsStatus(presence.data?.medication, refillCount, t),
   };
 
   // Literal keys (no interpolation) so the translation-key audit sees them.

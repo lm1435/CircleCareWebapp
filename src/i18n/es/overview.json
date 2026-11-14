@@ -21,6 +21,7 @@
     "calendarEmpty": "Aún nada",
     "medsRefill_one": "{{count}} resurtido pronto",
     "medsRefill_other": "{{count}} resurtidos pronto",
+    "medsDefault": "Horario y resurtidos",
     "medsEmpty": "Aún nada",
     "shifts": "Turnos",
     "healthInfo": "Info de salud",

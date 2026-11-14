@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { submitFormTwice } from '@/test/doubleSubmit';
 import { MemoryRouter } from 'react-router-dom';
@@ -166,11 +166,11 @@ describe('CreateCircleModal', () => {
     expect(screen.queryByLabelText('Health conditions')).not.toBeInTheDocument();
   });
 
-  it('self-care toggle hides the name field and resolves the user own name', async () => {
+  it('"Myself" hides the name field and resolves the user own name', async () => {
     const user = userEvent.setup();
     renderModal();
 
-    await user.click(screen.getByRole('switch', { name: 'This circle is for myself' }));
+    await user.click(screen.getByRole('radio', { name: 'Myself' }));
     expect(screen.queryByLabelText(/Care recipient name/)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Create circle' }));
@@ -179,6 +179,89 @@ describe('CreateCircleModal', () => {
     const payload = createMutate.mock.calls[0][0];
     expect(payload.recipient_name).toBe('Luis Meza');
     expect(payload.is_self_care).toBe(true);
+  });
+
+  describe('1.4.2 "Who are you caring for?" (mobile parity)', () => {
+    it('POSITIVE: the five mobile options in mobile order, none picked by default', () => {
+      renderModal();
+      const group = screen.getByRole('radiogroup', { name: 'Who are you caring for?' });
+      const radios = within(group).getAllByRole('radio');
+      expect(radios.map((r) => r.textContent)).toEqual([
+        'A parent',
+        'My spouse / partner',
+        'My child',
+        'Myself',
+        'Someone else',
+      ]);
+      expect(radios.every((r) => r.getAttribute('aria-checked') === 'false')).toBe(true);
+      expect(screen.getByTestId('create-circle-subtitle')).toHaveTextContent(
+        'Start coordinating care for your loved one'
+      );
+      expect(screen.getByLabelText(/Care recipient name/)).toHaveAttribute('placeholder', 'Full name');
+    });
+
+    it('POSITIVE: "A parent" personalises the subtitle and the name hint like mobile', async () => {
+      const user = userEvent.setup();
+      renderModal();
+      await user.click(screen.getByRole('radio', { name: 'A parent' }));
+      expect(screen.getByRole('radio', { name: 'A parent' })).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByTestId('create-circle-subtitle')).toHaveTextContent("Let's set up care for your parent");
+      expect(screen.getByLabelText(/Care recipient name/)).toHaveAttribute('placeholder', 'e.g., Mom, Dad');
+    });
+
+    it('POSITIVE: "Myself" is self-care: own-circle copy, no name field', async () => {
+      const user = userEvent.setup();
+      renderModal();
+      await user.click(screen.getByRole('radio', { name: 'Myself' }));
+      expect(screen.getByTestId('create-circle-subtitle')).toHaveTextContent(
+        'Set up medication tracking and reminders for yourself'
+      );
+      expect(screen.getByTestId('create-circle-self-care-desc')).toBeInTheDocument();
+    });
+
+    it('NEGATIVE: any relationship other than Myself sends is_self_care false (and no relationship field)', async () => {
+      const user = userEvent.setup();
+      renderModal();
+      await user.click(screen.getByRole('radio', { name: 'Someone else' }));
+      await user.type(screen.getByLabelText(/Care recipient name/), 'Rose Meza');
+      await user.click(screen.getByRole('button', { name: 'Create circle' }));
+      await waitFor(() => expect(createMutate).toHaveBeenCalled());
+      const payload = createMutate.mock.calls[0][0];
+      expect(payload.is_self_care).toBe(false);
+      expect(payload).not.toHaveProperty('relationship');
+    });
+
+    it('NEGATIVE: switching Myself -> A parent brings the name field back with no stale error', async () => {
+      const user = userEvent.setup();
+      renderModal();
+      await user.click(screen.getByRole('radio', { name: 'A parent' }));
+      // Whitespace passes HTML `required` and reaches Zod's own required-name error.
+      await user.type(screen.getByLabelText(/Care recipient name/), '   ');
+      await user.click(screen.getByRole('button', { name: 'Create circle' }));
+      // Precondition: the required-name error is up.
+      expect(await screen.findByText("Please enter the care recipient's name.")).toBeInTheDocument();
+      await user.click(screen.getByRole('radio', { name: 'Myself' }));
+      await user.click(screen.getByRole('radio', { name: 'A parent' }));
+      expect(screen.getByLabelText(/Care recipient name/)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Care recipient name/)).not.toHaveAttribute('aria-invalid', 'true');
+      expect(screen.queryByText("Please enter the care recipient's name.")).not.toBeInTheDocument();
+    });
+
+    it('NEGATIVE: the old self-care switch is gone', () => {
+      renderModal();
+      expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    });
+
+    it('Spanish copy matches mobile', async () => {
+      await i18n.changeLanguage('es');
+      try {
+        renderModal();
+        expect(screen.getByRole('radiogroup', { name: '¿A quién estás cuidando?' })).toBeInTheDocument();
+        expect(screen.getByRole('radio', { name: 'A un padre o madre' })).toBeInTheDocument();
+      } finally {
+        await i18n.changeLanguage('en');
+      }
+    });
   });
 
   it('on success closes the modal and navigates to the new circle calendar', async () => {

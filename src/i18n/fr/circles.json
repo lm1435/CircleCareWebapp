@@ -1,13 +1,11 @@
 {
   "create": {
     "title": "Nouveau cercle de soins",
-    "subtitle": "Créez un cercle pour coordonner les soins avec la famille et les aidants.",
+    "subtitle": "Commencez à coordonner les soins de votre proche",
     "recipientName": "Nom de la personne aidée",
     "recipientNamePlaceholder": "Nom complet",
     "recipientDob": "Date de naissance",
     "recipientDobHint": "Facultatif. Affichée dans ses infos d’urgence pour que les médecins puissent confirmer son identité.",
-    "selfCareToggle": "Ce cercle est pour moi",
-    "selfCareHint": "La personne aidée, c’est vous. Invitez des proches ou des aidants à vous aider.",
     "selfCareDefaultName": "Mes soins",
     "create": "Créer le cercle",
     "creating": "Création…",
@@ -15,7 +13,29 @@
     "close": "Fermer",
     "success": "Cercle créé.",
     "failed": "Nous n’avons pas pu créer votre cercle pour le moment. Rien n’a été perdu — réessayez.",
-    "limitReached": "Vous avez atteint le maximum de 5 cercles."
+    "limitReached": "Vous avez atteint le maximum de 5 cercles.",
+    "whoCaringFor": "Qui accompagnez-vous ?",
+    "selfCareSubtitle": "Configurez le suivi de vos médicaments et vos rappels",
+    "selfCareCircleDesc": "Votre cercle suit vos propres médicaments et votre programme de soins. Invitez vos proches ou d’autres aidants à le rejoindre pour vous soutenir.",
+    "personalizedGreeting": {
+      "parent": "Configurons les soins de votre parent",
+      "spouse": "Configurons les soins de votre conjoint",
+      "child": "Configurons les soins de votre enfant",
+      "other": "Configurons les soins de votre proche"
+    },
+    "personalizedPlaceholder": {
+      "parent": "p. ex. Maman, Papa",
+      "spouse": "p. ex. son prénom",
+      "child": "p. ex. son prénom",
+      "other": "p. ex. son prénom"
+    },
+    "relationship": {
+      "parent": "D’un parent",
+      "spouse": "De mon conjoint / ma conjointe",
+      "child": "De mon enfant",
+      "myself": "De moi-même",
+      "other": "De quelqu’un d’autre"
+    }
   },
   "join": {
     "button": "Rejoindre un cercle",

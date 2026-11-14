@@ -8,10 +8,11 @@ import {
   countRefillSoon,
   REFILL_SOON_DAYS,
   latestNote,
+  medicationsStatus,
 } from '../QuickAccess';
 import { useTasks } from '@/hooks/useTasks';
 import { useCareNotes } from '@/hooks/useCareNotes';
-import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import { useCalendarEvents, useEventsPresence } from '@/hooks/useCalendarEvents';
 import { getDateInTimezone } from '@/utils/timezone';
 import { addDays } from '@/components/calendar/dateMath';
 import type { CalendarEvent } from '@/api/calendarEvents';
@@ -19,7 +20,7 @@ import type { CareNote } from '@/api/careNotes';
 
 vi.mock('@/hooks/useTasks', () => ({ useTasks: vi.fn() }));
 vi.mock('@/hooks/useCareNotes', () => ({ useCareNotes: vi.fn() }));
-vi.mock('@/hooks/useCalendarEvents', () => ({ useCalendarEvents: vi.fn() }));
+vi.mock('@/hooks/useCalendarEvents', () => ({ useCalendarEvents: vi.fn(), useEventsPresence: vi.fn() }));
 
 // Each press mirrors mobile's `quick_access_tapped` with the destination id.
 const quickAccessTapped = vi.fn();
@@ -50,6 +51,16 @@ function setEvents(events: Partial<CalendarEvent>[]): void {
   } as unknown as ReturnType<typeof useCalendarEvents>);
 }
 
+/** `medication`: true / false = the presence read answered; undefined = still loading or failed. */
+function setMedPresence(medication: boolean | undefined): void {
+  vi.mocked(useEventsPresence).mockReturnValue({
+    data: medication === undefined ? undefined : { medication, appointment: false, task: false },
+    isSuccess: medication !== undefined,
+    isPending: medication === undefined,
+    isError: false,
+  } as unknown as ReturnType<typeof useEventsPresence>);
+}
+
 function renderQuickAccess(over: Partial<React.ComponentProps<typeof QuickAccess>> = {}): void {
   render(
     <MemoryRouter>
@@ -66,6 +77,7 @@ describe('QuickAccess (Today)', () => {
     setOpenTasks(0);
     setNotes([]);
     setEvents([]);
+    setMedPresence(false);
   });
 
   it('is a 2x2 card of Notes, Tasks, Calendar, Meds in that order', () => {
@@ -165,6 +177,60 @@ describe('QuickAccess (Today)', () => {
       ]);
       renderQuickAccess();
       expect(tile('Meds')).toHaveTextContent('1 refill soon');
+    });
+  });
+
+  describe('Meds tile with a medication saved (1.4.2: web said "Nothing yet")', () => {
+    it('POSITIVE: a saved medication with no refill due reads "Schedule and refills"', () => {
+      // A medication exists in the circle (presence) but none is refill-tracked/low.
+      setMedPresence(true);
+      setEvents([{ id: 'm', event_type: 'medication', scheduled_date: TODAY, scheduled_time: '08:00:00' }]);
+      renderQuickAccess();
+      expect(tile('Meds')).toHaveTextContent('Schedule and refills');
+      expect(tile('Meds')).not.toHaveTextContent('Nothing yet');
+    });
+
+    it('POSITIVE: a medication outside the 7-day window still counts (presence, not the window)', () => {
+      setMedPresence(true);
+      setEvents([]);
+      renderQuickAccess();
+      expect(tile('Meds')).toHaveTextContent('Schedule and refills');
+    });
+
+    it('NEGATIVE: "Nothing yet" only when presence ANSWERED no medication', () => {
+      setMedPresence(false);
+      renderQuickAccess();
+      expect(tile('Meds')).toHaveTextContent('Nothing yet');
+      expect(tile('Meds')).not.toHaveTextContent('Schedule and refills');
+    });
+
+    it('NEGATIVE: an unanswered presence read never says "Nothing yet"', () => {
+      setMedPresence(undefined);
+      renderQuickAccess();
+      expect(tile('Meds')).not.toHaveTextContent('Nothing yet');
+      expect(tile('Meds')).toHaveTextContent('Schedule and refills');
+    });
+
+    it('refills still win over the default line', () => {
+      setMedPresence(true);
+      setEvents([
+        { id: 'a', event_type: 'medication', scheduled_date: TODAY, track_refills: true, quantity_remaining: 2, pills_per_day: 1 },
+      ]);
+      renderQuickAccess();
+      expect(tile('Meds')).toHaveTextContent('1 refill soon');
+    });
+
+    it('reads presence over Home\'s window (today-30 .. today+180, shared cache key)', () => {
+      renderQuickAccess();
+      expect(useEventsPresence).toHaveBeenCalledWith('c1', addDays(TODAY, -30), addDays(TODAY, 180));
+    });
+
+    it('medicationsStatus mirrors mobile (todayQuickAccess.medicationsStatus) case for case', () => {
+      const t = (k: string) => k;
+      expect(medicationsStatus(true, 2, t)).toBe('quickAccess.medsRefill');
+      expect(medicationsStatus(true, 0, t)).toBe('quickAccess.medsDefault');
+      expect(medicationsStatus(false, 0, t)).toBe('quickAccess.medsEmpty');
+      expect(medicationsStatus(undefined, 0, t)).toBe('quickAccess.medsDefault');
     });
   });
 

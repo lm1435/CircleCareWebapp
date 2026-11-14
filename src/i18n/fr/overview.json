@@ -21,6 +21,7 @@
     "calendarEmpty": "Rien pour l’instant",
     "medsRefill_one": "{{count}} renouvellement bientôt",
     "medsRefill_other": "{{count}} renouvellements bientôt",
+    "medsDefault": "Horaire et renouvellements",
     "medsEmpty": "Rien pour l’instant",
     "shifts": "Gardes",
     "healthInfo": "Infos de santé",

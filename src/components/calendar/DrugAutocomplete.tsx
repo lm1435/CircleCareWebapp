@@ -178,7 +178,12 @@ export function DrugAutocomplete({
   // reported exactly once.
   const lastKeystrokeAtRef = useRef<number | null>(null);
   const inFlightRef = useRef<SentLookup | null>(null);
+  // Monotonic lookup id, CLAIMED AT THE KEYSTROKE (1.4.2), not when the debounce sends: from the
+  // moment the text changes, no answer for the old text may land, even one whose abort the transport
+  // ignored and which arrives inside the new text's debounce ("Li" rows under "Lis").
   const requestSeq = useRef(0);
+  // The folded text in the field now: an answer is applied only for exactly this text.
+  const currentQueryRef = useRef('');
   // Suggestions only ever follow the USER's typing — never a prefilled value
   // (an edit, a wizard hand-off), which would pop a list over a field nobody
   // is looking at.
@@ -229,6 +234,8 @@ export function DrugAutocomplete({
   }, [listVisible, shownSuggestions.length]);
 
   const cancelPending = (): void => {
+    // Whatever was in flight is now superseded, aborted or not.
+    requestSeq.current += 1;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
     if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
@@ -240,6 +247,7 @@ export function DrugAutocomplete({
   useEffect(() => cancelPending, []);
 
   useEffect(() => {
+    currentQueryRef.current = foldDrugQuery(value);
     if (!userTypedRef.current || selectedDrug) return;
     cancelPending();
     setAnswered(false);
@@ -262,7 +270,8 @@ export function DrugAutocomplete({
       };
       const controller = new AbortController();
       abortRef.current = controller;
-      const seq = ++requestSeq.current;
+      const seq = requestSeq.current;
+      const answeredFor = foldDrugQuery(value);
       // The request is SENT now: the hint waits to see whether the answer is slow.
       slowTimerRef.current = setTimeout(() => {
         slowTimerRef.current = null;
@@ -270,7 +279,8 @@ export function DrugAutocomplete({
       }, SLOW_SEARCH_HINT_MS);
       searchDrugs(value, controller.signal)
         .then((results) => {
-          if (seq !== requestSeq.current) return;
+          // Out of order or for other text: dropped (the newer lookup owns the list).
+          if (seq !== requestSeq.current || answeredFor !== currentQueryRef.current) return;
           endLookup(results.length > 0 ? 'matches' : 'no_match');
           setSuggestions(results);
           setResultsFor(foldDrugQuery(value));

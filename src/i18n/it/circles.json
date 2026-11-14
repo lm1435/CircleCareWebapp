@@ -1,13 +1,11 @@
 {
   "create": {
     "title": "Nuova cerchia di cura",
-    "subtitle": "Crea una cerchia per coordinare la cura con familiari e caregiver.",
+    "subtitle": "Inizia a coordinare la cura della persona cara",
     "recipientName": "Nome della persona assistita",
     "recipientNamePlaceholder": "Nome e cognome",
     "recipientDob": "Data di nascita",
     "recipientDobHint": "Facoltativa. Compare nelle sue informazioni di emergenza, così i medici possono confermarne l'identità.",
-    "selfCareToggle": "Questa cerchia è per me",
-    "selfCareHint": "Sarai tu la persona assistita. Invita familiari o caregiver ad aiutarti.",
     "selfCareDefaultName": "La mia cura",
     "create": "Crea cerchia",
     "creating": "Creazione in corso...",
@@ -15,7 +13,29 @@
     "close": "Chiudi",
     "success": "Cerchia creata.",
     "failed": "Al momento non siamo riusciti a creare la tua cerchia. Non è andato perso nulla: riprova.",
-    "limitReached": "Hai raggiunto il massimo di 5 cerchie."
+    "limitReached": "Hai raggiunto il massimo di 5 cerchie.",
+    "whoCaringFor": "Di chi ti prendi cura?",
+    "selfCareSubtitle": "Imposta il monitoraggio dei farmaci e i promemoria per te",
+    "selfCareCircleDesc": "La tua cerchia tiene traccia dei tuoi farmaci e della tua agenda di cura. Invita familiari o caregiver a entrare e darti una mano.",
+    "personalizedGreeting": {
+      "parent": "Organizziamo la cura per tuo genitore",
+      "spouse": "Organizziamo la cura per il tuo partner",
+      "child": "Organizziamo la cura per tuo figlio",
+      "other": "Organizziamo la cura per la persona cara"
+    },
+    "personalizedPlaceholder": {
+      "parent": "ad es. Mamma, Papà",
+      "spouse": "ad es. il suo nome",
+      "child": "ad es. il suo nome",
+      "other": "ad es. il suo nome"
+    },
+    "relationship": {
+      "parent": "Di un genitore",
+      "spouse": "Del mio coniuge / partner",
+      "child": "Di mio figlio o mia figlia",
+      "myself": "Di me",
+      "other": "Di qualcun altro"
+    }
   },
   "join": {
     "button": "Unisciti a una cerchia",

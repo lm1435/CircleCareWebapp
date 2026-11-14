@@ -133,7 +133,7 @@ describe('CreateCircleModal — time zone', () => {
   it('self-care hides the field (the creator IS the recipient)', async () => {
     const user = userEvent.setup();
     renderModal();
-    await user.click(screen.getByRole('switch', { name: 'This circle is for myself' }));
+    await user.click(screen.getByRole('radio', { name: 'Myself' }));
     expect(screen.queryByRole('combobox')).toBeNull();
   });
 

@@ -21,6 +21,7 @@
     "calendarEmpty": "Noch nichts",
     "medsRefill_one": "{{count}} Nachschub bald",
     "medsRefill_other": "{{count}} Nachschübe bald",
+    "medsDefault": "Zeitplan und Nachschub",
     "medsEmpty": "Noch nichts",
     "shifts": "Schichten",
     "healthInfo": "Gesundheitsinfos",

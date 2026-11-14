@@ -21,6 +21,7 @@
     "calendarEmpty": "Ancora niente",
     "medsRefill_one": "{{count}} rifornimento a breve",
     "medsRefill_other": "{{count}} rifornimenti a breve",
+    "medsDefault": "Orari e rinnovi",
     "medsEmpty": "Ancora niente",
     "shifts": "Turni",
     "healthInfo": "Info sulla salute",

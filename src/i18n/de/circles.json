@@ -1,13 +1,11 @@
 {
   "create": {
     "title": "Neuer Pflegekreis",
-    "subtitle": "Erstellen Sie einen Kreis, um die Pflege mit Familie und Pflegepersonen zu koordinieren.",
+    "subtitle": "Beginnen Sie, die Pflege Ihrer Angehörigen zu koordinieren",
     "recipientName": "Name der umsorgten Person",
     "recipientNamePlaceholder": "Vollständiger Name",
     "recipientDob": "Geburtsdatum",
     "recipientDobHint": "Optional. Wird in den Notfallinfos angezeigt, damit Ärztinnen und Ärzte die Identität bestätigen können.",
-    "selfCareToggle": "Dieser Kreis ist für mich selbst",
-    "selfCareHint": "Sie sind die umsorgte Person. Laden Sie Familie oder Pflegepersonen ein, die Ihnen helfen.",
     "selfCareDefaultName": "Meine Pflege",
     "create": "Kreis erstellen",
     "creating": "Wird erstellt …",
@@ -15,7 +13,29 @@
     "close": "Schließen",
     "success": "Kreis erstellt.",
     "failed": "Wir konnten Ihren Kreis gerade nicht erstellen. Es ist nichts verloren gegangen – bitte versuchen Sie es erneut.",
-    "limitReached": "Sie haben die Höchstzahl von 5 Kreisen erreicht."
+    "limitReached": "Sie haben die Höchstzahl von 5 Kreisen erreicht.",
+    "whoCaringFor": "Wen pflegen Sie?",
+    "selfCareSubtitle": "Medikamentenverfolgung und Erinnerungen für sich selbst einrichten",
+    "selfCareCircleDesc": "Ihr Kreis erfasst Ihre eigenen Medikamente und Ihren Pflegeplan. Laden Sie Familie oder Pflegepersonen ein, mitzumachen und zu helfen.",
+    "personalizedGreeting": {
+      "parent": "Richten wir die Pflege für Ihr Elternteil ein",
+      "spouse": "Richten wir die Pflege für Ihre Partnerin oder Ihren Partner ein",
+      "child": "Richten wir die Pflege für Ihr Kind ein",
+      "other": "Richten wir die Pflege für Ihre Angehörigen ein"
+    },
+    "personalizedPlaceholder": {
+      "parent": "z. B. Mama, Papa",
+      "spouse": "z. B. Vorname",
+      "child": "z. B. Vorname",
+      "other": "z. B. Vorname"
+    },
+    "relationship": {
+      "parent": "Um ein Elternteil",
+      "spouse": "Um meine Partnerin / meinen Partner",
+      "child": "Um mein Kind",
+      "myself": "Um mich selbst",
+      "other": "Um jemand anderen"
+    }
   },
   "join": {
     "button": "Kreis beitreten",
