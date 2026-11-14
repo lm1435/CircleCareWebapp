@@ -290,7 +290,7 @@ describe('legacy phrase substitution', () => {
         },
         "invited care recipient": {
           "en": "Invited alicia.smith@example.org to join as Care recipient",
-          "es": "Invitó a alicia.smith@example.org a unirse como receptor de cuidado",
+          "es": "Invitó a alicia.smith@example.org a unirse como persona cuidada",
         },
         "invited caregiver": {
           "en": "Invited alicia.smith@example.org to join as Caregiver",
@@ -298,7 +298,7 @@ describe('legacy phrase substitution', () => {
         },
         "joined as care recipient": {
           "en": "Alicia Smith joined the circle as Care recipient",
-          "es": "Alicia Smith se unió al círculo como receptor de cuidado",
+          "es": "Alicia Smith se unió al círculo como persona cuidada",
         },
         "joined as caregiver": {
           "en": "Alicia Smith joined the circle as Caregiver",
@@ -502,7 +502,7 @@ describe('KEY_RENDERERS (parameterized rows)', () => {
         },
         "invited care recipient": {
           "en": "Invited alicia.smith@example.org to join as Care Recipient",
-          "es": "Invitó a alicia.smith@example.org a unirse como receptor de cuidado",
+          "es": "Invitó a alicia.smith@example.org a unirse como persona cuidada",
         },
         "invited caregiver": {
           "en": "Invited alicia.smith@example.org to join as Caregiver",
@@ -510,11 +510,11 @@ describe('KEY_RENDERERS (parameterized rows)', () => {
         },
         "joined care recipient": {
           "en": "Alicia Smith joined the circle as Care Recipient",
-          "es": "Alicia Smith se unió al círculo como receptor de cuidado",
+          "es": "Alicia Smith se unió al círculo como persona cuidada",
         },
         "joined care recipient unknown": {
           "en": "Someone joined the circle as care recipient",
-          "es": "Alguien se unió al círculo como receptor de cuidado",
+          "es": "Alguien se unió al círculo como persona cuidada",
         },
         "joined caregiver": {
           "en": "Alicia Smith joined the circle as Caregiver",

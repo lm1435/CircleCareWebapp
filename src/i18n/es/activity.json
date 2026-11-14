@@ -34,13 +34,13 @@
     "careNoteAdded": "Agregó una nota de cuidado diaria",
     "careNoteAddedForDate": "Agregó una nota de cuidado diaria para el {{date}}",
     "memberInvited": {
-      "careRecipient": "Invitó a {{email}} a unirse como receptor de cuidado",
+      "careRecipient": "Invitó a {{email}} a unirse como persona cuidada",
       "caregiver": "Invitó a {{email}} a unirse como cuidador"
     },
     "memberJoined": {
-      "careRecipient": "{{name}} se unió al círculo como receptor de cuidado",
+      "careRecipient": "{{name}} se unió al círculo como persona cuidada",
       "caregiver": "{{name}} se unió al círculo como cuidador",
-      "careRecipientUnknown": "Alguien se unió al círculo como receptor de cuidado",
+      "careRecipientUnknown": "Alguien se unió al círculo como persona cuidada",
       "caregiverUnknown": "Alguien se unió al círculo como cuidador"
     },
     "asNeededDoseLogged": "Dosis registrada: {{title}} a las {{time}}",
@@ -65,10 +65,10 @@
     "deletedTask": "Tarea eliminada:",
     "completedTask": "Tarea completada:",
     "createdCircleFor": "Círculo de cuidado creado para",
-    "joinedAsCareRecipient": "se unió al círculo como receptor de cuidado",
+    "joinedAsCareRecipient": "se unió al círculo como persona cuidada",
     "joinedAsCaregiver": "se unió al círculo como cuidador",
     "invited": "Invitó a",
-    "toJoinAsCareRecipient": "a unirse como receptor de cuidado",
+    "toJoinAsCareRecipient": "a unirse como persona cuidada",
     "toJoinAsCaregiver": "a unirse como cuidador",
     "updatedEmergencyInfo": "Actualizó la información de emergencia",
     "taken": "tomado",

@@ -503,7 +503,7 @@ describe('JoinCircleModal', () => {
 
       const recipient = await failAcceptWith('CARE_RECIPIENT_EXISTS', ES);
       expect(recipient).toHaveTextContent(
-        'Este círculo ya tiene un receptor de cuidado. Pídele a quien te invitó que te envíe una invitación de cuidador.'
+        'Este círculo ya tiene una persona cuidada. Pídele a quien te invitó que te envíe una invitación de cuidador.'
       );
     });
 

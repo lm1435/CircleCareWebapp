@@ -4,12 +4,14 @@ import { dbQuery, sqlStr } from '../unhappy';
 import { createAccount, runScopedEmail, ACCOUNT_PASSWORD } from '../isolation';
 import { cookieLogin, stubJson, uniq } from '../unhappy/auth-invites/_helpers';
 
-// The setup invite step (pricing report 2026-11-02, owner-approved), end to end against the real
-// backend: a FREE owner's first circle -> first med -> payoff -> Continue -> "Invite someone to
-// help" (with "Your free plan includes one person.") -> the existing invite form -> a real invite
-// row -> Done -> the onboarding paywall exactly once -> Today. The step itself is never a
-// paywall. Invites go to @example.com, which the backend's isEmailBlocked swallows: nothing is
-// mailed. Mobile twin: mobile/.maestro/parity/onboarding/onboarding-invite-step.yaml.
+// 1.4.2 REWRITE (file name kept): the setup invite step is gone from first run; the invite question
+// is Today's next-step card. Against the real backend: a FREE owner's first circle -> first med ->
+// payoff -> Continue. NEGATIVE: no invite step appears (no "Invite someone to help" heading, no
+// first-run-invite-* test ids, no free-plan line). Then the onboarding paywall exactly once ->
+// Continue with free plan -> Today, where the next-step card (data-step="invite") asks "Invite
+// someone to help" -> Invite -> Members -> Invite member -> a real invite row. Invites go to
+// @example.com, which the backend's isEmailBlocked swallows: nothing is mailed. Mobile twin:
+// mobile/.maestro/parity/onboarding/owner-invite-step-send.yaml.
 
 const SEEN_KEY = 'cc:onboardingPaywallSeen';
 
@@ -57,12 +59,10 @@ function invites(circleId: string): { invited_email: string; member_type: string
   );
 }
 
-// OBSOLETE since 1.4.2: the setup invite step was removed from first run (the invite is Today's next-step card).
-// Skipped, not deleted: rewrite it from the Today next-step card or retire it.
-test.describe.skip('setup invite step (web)', () => {
-  test.setTimeout(120_000);
+test.describe('first run has no invite step; Today next-step card sends the invite (web)', () => {
+  test.setTimeout(150_000);
 
-  test('free owner: invite one person from setup, then the paywall once, then Today', async ({
+  test('negative: first run never shows an invite step; positive: the Today invite card sends one invite', async ({
     page,
     context,
     baseURL,
@@ -75,37 +75,47 @@ test.describe.skip('setup invite step (web)', () => {
     const circleId = await createFirstCircle(page, uniq('ObInv'));
     await saveFirstMed(page);
 
+    // NEGATIVE: Continue ends first run. No invite step, in any of its old forms.
     await wizard(page).getByRole('button', { name: 'Continue', exact: true }).click();
-    const step = wizard(page).getByTestId('first-run-invite-step');
-    await expect(step.getByRole('heading', { name: 'Invite someone to help' })).toBeVisible();
-    await expect(step.getByTestId('first-run-invite-free-line')).toHaveText(
-      'Your free plan includes one person.'
-    );
-    // Never a paywall: no price, no upgrade, no route change, the ask not spent.
-    await expect(wizard(page).getByText(/Premium|Upgrade|\$/)).toHaveCount(0);
-    expect(paths).not.toContain('/upgrade');
+    await expect(wizard(page).getByRole('heading', { name: 'Invite someone to help' })).toHaveCount(0);
+    await expect(page.getByTestId('first-run-invite-step')).toHaveCount(0);
+    await expect(page.getByTestId('first-run-invite-free-line')).toHaveCount(0);
+    await expect(page.getByTestId('first-run-invite-send')).toHaveCount(0);
+    await expect(page.getByText('Your free plan includes one person.')).toHaveCount(0);
+
+    // The onboarding paywall, once; "Continue with free plan" -> Today.
+    await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     expect(
       await page.evaluate((k) => window.localStorage.getItem(k), `${SEEN_KEY}:${userId}`)
-    ).toBeNull();
+    ).not.toBeNull();
+    await page.getByRole('button', { name: /Continue with free plan/ }).click();
+    await page.waitForURL(new RegExp(`/circles/${circleId}$`), { timeout: 30_000 });
+    await expect(wizard(page)).toHaveCount(0);
 
-    await wizard(page).getByTestId('first-run-invite-send').click();
+    // POSITIVE: Today's next-step card asks the invite question (the first med is done).
+    const card = page.getByTestId('next-step-card');
+    await expect(card).toHaveAttribute('data-step', 'invite', { timeout: 30_000 });
+    await expect(card.getByRole('heading', { name: 'Invite someone to help' })).toBeVisible();
+    expect(invites(circleId)).toEqual([]);
+    await card.getByRole('button', { name: 'Invite', exact: true }).click();
+
+    await page.waitForURL(new RegExp(`/circles/${circleId}/members$`), { timeout: 20_000 });
+    await page.getByRole('button', { name: 'Invite member' }).first().click();
     const form = page.getByRole('dialog', { name: 'Invite a member' });
     await expect(form).toBeVisible();
     const invitee = `e2e-obinv-${Date.now()}@example.com`;
     await form.locator('#invite-email').fill(invitee);
     await form.getByRole('button', { name: 'Send invitation' }).click();
     await expect(form.getByText('Invitation sent')).toBeVisible({ timeout: 20_000 });
-    await expect.poll(() => invites(circleId)).toEqual([{ invited_email: invitee, member_type: 'caregiver' }]);
+    await expect
+      .poll(() => invites(circleId))
+      .toEqual([{ invited_email: invitee, member_type: 'caregiver' }]);
 
-    // Closing the form ends the step: the onboarding paywall, exactly once.
+    // NEGATIVE: with the invite out, Today no longer asks it, and the paywall did not come back.
     await form.getByRole('button', { name: 'Close', exact: true }).click();
-    await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
-    await page.getByRole('button', { name: /Continue with free plan/ }).click();
-    await page.waitForURL(new RegExp(`/circles/${circleId}$`), { timeout: 30_000 });
-    await expect(wizard(page)).toHaveCount(0);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 20_000 });
-    await page.waitForTimeout(1500);
+    await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('quick-access-grid')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('[data-testid="next-step-card"][data-step="invite"]')).toHaveCount(0);
     expect(paths.filter((p) => p === '/upgrade')).toHaveLength(1);
   });
 });

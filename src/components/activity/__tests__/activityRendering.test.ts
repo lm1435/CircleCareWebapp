@@ -222,7 +222,7 @@ describe('renderActivityDescription — key-based rendering', () => {
           tEs,
           { timezone: 'America/Denver', hourCycle: '12h', locale: 'es' }
         )
-      ).toBe('Mom se unió al círculo como receptor de cuidado');
+      ).toBe('Mom se unió al círculo como persona cuidada');
     });
 
     it('renders memberInvited for each role, EN and ES', () => {
@@ -248,7 +248,7 @@ describe('renderActivityDescription — key-based rendering', () => {
           tEs,
           { timezone: 'America/Denver', hourCycle: '12h', locale: 'es' }
         )
-      ).toBe('Invitó a mom@example.com a unirse como receptor de cuidado');
+      ).toBe('Invitó a mom@example.com a unirse como persona cuidada');
     });
 
     // A joiner with NO feed name (an OAuth signup with no first_name and no
@@ -277,7 +277,7 @@ describe('renderActivityDescription — key-based rendering', () => {
           key: 'entries.memberJoined.careRecipientUnknown',
           writerDescription: 'Someone joined the circle as Care Recipient',
           en: 'Someone joined the circle as care recipient',
-          es: 'Alguien se unió al círculo como receptor de cuidado',
+          es: 'Alguien se unió al círculo como persona cuidada',
         },
       } as const;
 

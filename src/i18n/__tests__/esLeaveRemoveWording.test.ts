@@ -5,7 +5,7 @@
  * Twin of mobile/src/__tests__/i18n/esLeaveRemoveWording.test.ts (which also
  * compares the two platforms string for string). Mobile used to say "Abandonar
  * círculo", "Remover miembro" and "como paciente"; this side says "Salir",
- * "Eliminar" and "receptor de cuidado", and the activity feed on both clients
+ * "Eliminar" and "persona cuidada", and the activity feed on both clients
  * says "salió del círculo" / "Se eliminó a … del círculo". This pins the web
  * half so it cannot drift back.
  *
@@ -93,7 +93,7 @@ describe('web ES: leaving says "salir", removing a member says "eliminar"', () =
 
   it('the care recipient is the care recipient in the legacy feed phrases', () => {
     const phrases = (read('activity') as any).phrases;
-    expect(phrases.joinedAsCareRecipient).toBe('se unió al círculo como receptor de cuidado');
-    expect(phrases.toJoinAsCareRecipient).toBe('a unirse como receptor de cuidado');
+    expect(phrases.joinedAsCareRecipient).toBe('se unió al círculo como persona cuidada');
+    expect(phrases.toJoinAsCareRecipient).toBe('a unirse como persona cuidada');
   });
 });

@@ -61,4 +61,24 @@ describe('copy pass 1.4.2 (web)', () => {
     expect(bad).toEqual([]);
     expect(ES['invite.roles.care_recipient']).toBe('Persona cuidada');
   });
+
+  it('POSITIVE: Spanish join flow, delete dialog, FAQ and activity feed say "persona cuidada"', () => {
+    expect(ES['circles.joinModal.careRecipientExists']).toMatch(/una persona cuidada/);
+    expect(ES['circles.create.recipientName']).toBe('Nombre de la persona cuidada');
+    expect(ES['invite.acceptRecipientExists']).toMatch(/una persona cuidada/);
+    expect(
+      Object.values(ES).some((v) => /La Persona cuidada es quien recibe el cuidado/.test(v))
+    ).toBe(true);
+    expect(ES['activity.phrases.joinedAsCareRecipient']).toBe('se unió al círculo como persona cuidada');
+    expect(ES['activity.entries.memberJoined.careRecipient']).toBe(
+      '{{name}} se unió al círculo como persona cuidada'
+    );
+  });
+
+  it('NEGATIVE: no user-facing Spanish string (app, FAQ, help articles) says "receptor de cuidado", feed included', () => {
+    const bad = Object.entries(ES).filter(([, v]) => /receptor(a)? de cuidado/i.test(v));
+    expect(bad).toEqual([]);
+    const help = fs.readFileSync(path.resolve(__dirname, '../../help/content.json'), 'utf8');
+    expect(help).not.toMatch(/receptor(a)? de cuidado/i);
+  });
 });

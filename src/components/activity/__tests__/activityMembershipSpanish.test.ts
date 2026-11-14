@@ -189,11 +189,11 @@ describe('the match is anchored and gated by action_type (no false positives)', 
 describe('rows that were ALREADY translated are unchanged', () => {
   it.each([
     [row('member_invited', `Invited ${EMAIL} to join as Caregiver`, 'entries.memberInvited.caregiver', { email: EMAIL }), `Invitó a ${EMAIL} a unirse como cuidador`],
-    [row('member_invited', `Invited ${EMAIL} to join as Care Recipient`, 'entries.memberInvited.careRecipient', { email: EMAIL }), `Invitó a ${EMAIL} a unirse como receptor de cuidado`],
+    [row('member_invited', `Invited ${EMAIL} to join as Care Recipient`, 'entries.memberInvited.careRecipient', { email: EMAIL }), `Invitó a ${EMAIL} a unirse como persona cuidada`],
     [row('member_invited', `Invited ${EMAIL} to join as Caregiver`), `Invitó a ${EMAIL} a unirse como cuidador`],
     // The LEGACY keyless phrases for the care recipient: mobile used to say "paciente".
-    [row('member_invited', `Invited ${EMAIL} to join as Care Recipient`), `Invitó a ${EMAIL} a unirse como receptor de cuidado`],
-    [row('member_joined', `${NAME} joined the circle as Care Recipient`), `${NAME} se unió al círculo como receptor de cuidado`],
+    [row('member_invited', `Invited ${EMAIL} to join as Care Recipient`), `Invitó a ${EMAIL} a unirse como persona cuidada`],
+    [row('member_joined', `${NAME} joined the circle as Care Recipient`), `${NAME} se unió al círculo como persona cuidada`],
     [row('member_joined', `${NAME} joined the circle as Caregiver`, 'entries.memberJoined.caregiver', { name: NAME }), `${NAME} se unió al círculo como cuidador`],
     [row('member_joined', 'A member joined the circle', 'entries.memberJoined.caregiverUnknown', {}), 'Alguien se unió al círculo como cuidador'],
     [row('circle_created', 'Created Care Circle for Maria'), 'Círculo de cuidado creado para Maria'],
