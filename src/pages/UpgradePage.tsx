@@ -101,7 +101,7 @@ export default function UpgradePage(): ReactElement {
   }, []);
   const secondsSinceView = useCallback((): number => {
     const start = viewStartRef.current;
-    return start === null ? 0 : (Date.now() - start) / 1000;
+    return start === null ? 0 : Math.floor((Date.now() - start) / 1000);
   }, []);
 
   /** "See everything included" state, mirrored up from PlansView for the dismissal. */
