@@ -129,7 +129,10 @@ const pad2 = (n: number): string => n.toString().padStart(2, '0');
  * `p. m.`, this column cannot say anything else.
  */
 function meridiemLabel(hour24: number): string {
-  return formatTimeOfDay(hour24, 0, '12h').split(' ').slice(1).join(' ');
+  // Everything after the clock and its separator. `\s` (not ' '): since 1.4.2 a marker with a
+  // space of its own is bound with U+00A0 ("1:00\u00a0a.\u00a0m.") so it never wraps; that is
+  // kept here too, so the narrow period column cannot break "a. m." in two either.
+  return formatTimeOfDay(hour24, 0, '12h').replace(/^\S+\s/, '');
 }
 
 interface PickerOption {

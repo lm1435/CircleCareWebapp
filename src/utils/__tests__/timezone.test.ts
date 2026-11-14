@@ -156,13 +156,13 @@ describe('formatTimeOfDay', () => {
   // --------------------------------------------------------------------------
   describe('language', () => {
     it('renders the RAE meridiem in Spanish', () => {
-      expect(formatTimeOfDay(0, 0, '12h', 'es')).toBe('12:00 a. m.');
-      expect(formatTimeOfDay(9, 5, '12h', 'es')).toBe('9:05 a. m.');
-      expect(formatTimeOfDay(11, 59, '12h', 'es')).toBe('11:59 a. m.');
-      expect(formatTimeOfDay(12, 0, '12h', 'es')).toBe('12:00 p. m.');
-      expect(formatTimeOfDay(13, 0, '12h', 'es')).toBe('1:00 p. m.');
-      expect(formatTimeOfDay(20, 45, '12h', 'es')).toBe('8:45 p. m.');
-      expect(formatTimeOfDay(23, 59, '12h', 'es')).toBe('11:59 p. m.');
+      expect(formatTimeOfDay(0, 0, '12h', 'es')).toBe('12:00\u00a0a.\u00a0m.');
+      expect(formatTimeOfDay(9, 5, '12h', 'es')).toBe('9:05\u00a0a.\u00a0m.');
+      expect(formatTimeOfDay(11, 59, '12h', 'es')).toBe('11:59\u00a0a.\u00a0m.');
+      expect(formatTimeOfDay(12, 0, '12h', 'es')).toBe('12:00\u00a0p.\u00a0m.');
+      expect(formatTimeOfDay(13, 0, '12h', 'es')).toBe('1:00\u00a0p.\u00a0m.');
+      expect(formatTimeOfDay(20, 45, '12h', 'es')).toBe('8:45\u00a0p.\u00a0m.');
+      expect(formatTimeOfDay(23, 59, '12h', 'es')).toBe('11:59\u00a0p.\u00a0m.');
     });
 
     it('renders ENGLISH byte-identically to before this change', () => {
@@ -199,7 +199,7 @@ describe('formatTimeOfDay', () => {
       expect(pm).not.toBe('2:30 pm');
       expect(pm).not.toBe('2:30 p.m.');
       expect(pm).not.toBe('2:30 P. M.');
-      expect(pm).toBe('2:30 p. m.');
+      expect(pm).toBe('2:30\u00a0p.\u00a0m.');
     });
   });
 });

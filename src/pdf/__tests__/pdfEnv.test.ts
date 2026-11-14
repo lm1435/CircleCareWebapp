@@ -137,7 +137,7 @@ describe('buildPdfEnv() clock', () => {
       notification_preferences: {},
     });
     const env = buildPdfEnv();
-    expect(env.formatTimeOfDay(14, 5, DENVER)).toBe('2:05 p. m.');
+    expect(env.formatTimeOfDay(14, 5, DENVER)).toBe('2:05\u00a0p.\u00a0m.');
   });
 });
 

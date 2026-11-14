@@ -800,7 +800,7 @@ describe('Spanish', () => {
 
     expect(await screen.findByRole('heading', { name: 'Según se necesite' })).toBeInTheDocument();
     expect((await screen.findByTestId('as-needed-last-given')).textContent).toBe(
-      'Última dosis 11:50 a. m. por Jennie'
+      'Última dosis 11:50\u00a0a.\u00a0m. por Jennie'
     );
     await user.click(screen.getByRole('button', { name: 'Di una dosis de Ibuprofen' }));
     const prompt = await screen.findByRole('dialog', { name: 'Jennie acaba de registrar una dosis' });

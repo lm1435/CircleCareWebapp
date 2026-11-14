@@ -42,7 +42,7 @@ describe('as-needed activity rows', () => {
 
   it('ES: both rows in Spanish, in the viewer\'s clock', () => {
     expect(renderActivityDescription(logged, tEs, ctx({ locale: 'es' }))).toBe(
-      'Dosis registrada: Ibuprofen a las 2:15 p. m.'
+      'Dosis registrada: Ibuprofen a las 2:15\u00a0p.\u00a0m.'
     );
     expect(renderActivityDescription(removed, tEs, ctx({ locale: 'es', hourCycle: '24h' }))).toBe(
       'Dosis registrada quitada: Ibuprofen (14:15)'

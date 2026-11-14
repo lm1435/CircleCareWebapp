@@ -40,8 +40,8 @@ describe('WeekView hour axis', () => {
   });
 
   it.each([
-    ['es', '12 p. m.', '9 a. m.'],
-    ['es-MX', '12 p. m.', '9 a. m.'],
+    ['es', '12\u00a0p.\u00a0m.', '9\u00a0a.\u00a0m.'],
+    ['es-MX', '12\u00a0p.\u00a0m.', '9\u00a0a.\u00a0m.'],
     ['fr-CA', '12 p.m.', '9 a.m.'],
     ['en', '12 PM', '9 AM'],
   ])('%s, 12-hour: noon reads "%s", 9:00 reads "%s"', async (lng, noon, nine) => {
@@ -62,7 +62,7 @@ describe('WeekView hour axis', () => {
   });
 
   it('formatHourOfDay matches mobile for midnight-as-24 and both cycles', () => {
-    expect(formatHourOfDay(12, '12h', 'es')).toBe('12 p. m.');
+    expect(formatHourOfDay(12, '12h', 'es')).toBe('12\u00a0p.\u00a0m.');
     expect(formatHourOfDay(24, '12h', 'en')).toBe('12 AM');
     expect(formatHourOfDay(14, '24h', 'es')).toBe('14');
   });

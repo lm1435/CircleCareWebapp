@@ -72,7 +72,7 @@ describe('renderActivityDescription — key-based rendering', () => {
 
     it('renders the Spanish RAE meridiem for a 12h Spanish viewer', () => {
       expect(renderActivityDescription(rescheduled, tEs, { timezone: 'America/Denver', hourCycle: '12h', locale: 'es' })).toBe(
-        'Medicamento reprogramado: Atorvastatin a las 2:30 p. m.'
+        'Medicamento reprogramado: Atorvastatin a las 2:30\u00a0p.\u00a0m.'
       );
     });
 
@@ -741,7 +741,7 @@ describe('the zone label', () => {
         hourCycle: '12h',
         locale: 'es',
       })
-    ).toBe('Medicamento reprogramado: Atorvastatin a las 2:30 p. m. (Berlín)');
+    ).toBe('Medicamento reprogramado: Atorvastatin a las 2:30\u00a0p.\u00a0m. (Berlín)');
   });
 
   it('judges the comparison at the instant the caller supplies', () => {

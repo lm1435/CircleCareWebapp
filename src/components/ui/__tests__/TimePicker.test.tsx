@@ -232,7 +232,7 @@ describe('TimePickerPanel in Spanish', () => {
 
     expect(column('Hora')).toBeInTheDocument();
     expect(column('Minuto')).toBeInTheDocument();
-    expect(within(column('a. m./p. m.')).getByRole('option', { name: 'p. m.' })).toHaveAttribute(
+    expect(within(column('a. m./p. m.')).getByRole('option', { name: 'p.\u00a0m.' })).toHaveAttribute(
       'aria-selected',
       'true'
     );

@@ -129,7 +129,7 @@ describe('the weekday is in the active language (Intl short weekday)', () => {
   it('es: "mar"', () => {
     setLanguage('es');
     expect(dual('09:00', 'America/Denver', '2026-11-02')).toBe(
-      '9:00 a. m. (Denver) / mar 5:00 a. m. (Auckland)'
+      '9:00\u00a0a.\u00a0m. (Denver) / mar 5:00\u00a0a.\u00a0m. (Auckland)'
     );
   });
 

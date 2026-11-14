@@ -576,7 +576,24 @@ export function formatTimeOfDay(
   const meridiem = MERIDIEM[language] ?? resolveMeridiem(language);
   const period = normalisedHours >= 12 ? meridiem.pm : meridiem.am;
   const hour12 = normalisedHours % 12 || 12;
-  return `${hour12}:${mm} ${period}`;
+  return joinClockAndPeriod(`${hour12}:${mm}`, period);
+}
+
+/**
+ * Join a clock ("8:00") to its period marker for DISPLAY.
+ *
+ * A marker with a space of its own (Spanish RAE `a. m.` / `p. m.`) must never
+ * wrap: the ES first-run payoff title broke "8:00 a." / "m." across two lines
+ * (1.4.2). So for such a marker every breaking space, inside the marker and
+ * between clock and marker, becomes U+00A0 and the time renders as one unit; a
+ * U+202F (narrow no-break space, what ICU emits) is already non-breaking and is
+ * left as is, so nothing is ever doubled. A one-word marker ("AM", "p.m.") keeps
+ * the plain space: English and every other table stay byte-identical.
+ * Verbatim port of mobile's utils/timezone `joinClockAndPeriod`.
+ */
+export function joinClockAndPeriod(clock: string, period: string): string {
+  if (!/[\s\u00a0\u202f]/.test(period)) return `${clock} ${period}`;
+  return `${clock}\u00a0${period.replace(/ /g, '\u00a0')}`;
 }
 
 /**

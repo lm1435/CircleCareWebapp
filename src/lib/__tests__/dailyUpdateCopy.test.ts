@@ -296,7 +296,7 @@ describe('dose status lines', () => {
     );
     expect(doseStatusLine(dose({ status: 'skipped' }), es, esTime)).toBe('Omitida, marcó Luis');
     expect(doseStatusLine(dose({ status: 'taken_late', marked_at: '14:10' }), es, esTime)).toMatch(
-      /^Tomada a las 2:10 p\. m\., un poco tarde, marcó Luis$/
+      /^Tomada a las 2:10\u00a0p\.\u00a0m\., un poco tarde, marcó Luis$/
     );
   });
 });

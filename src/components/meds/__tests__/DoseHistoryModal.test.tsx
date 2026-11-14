@@ -163,6 +163,6 @@ describe('DoseHistoryModal', () => {
     const [live, removed] = await screen.findAllByTestId('dose-row');
     expect(live).toHaveTextContent('Dada por Jennie Ruiz');
     expect(removed).toHaveTextContent('Quitada por Luis');
-    expect(within(live).getByRole('button', { name: /Quitar esta dosis, registrada a las 9:15 a\. m\./ })).toBeInTheDocument();
+    expect(within(live).getByRole('button', { name: /Quitar esta dosis, registrada a las 9:15\sa\.\sm\./ })).toBeInTheDocument();
   });
 });

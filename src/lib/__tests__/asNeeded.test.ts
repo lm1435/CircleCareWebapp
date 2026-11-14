@@ -53,7 +53,7 @@ describe('formatGivenWhen — recipient-zone rendering', () => {
         today: 'Hoy',
         yesterday: 'Ayer',
       }, NOW)
-    ).toBe('9:15 a. m.');
+    ).toBe('9:15\u00a0a.\u00a0m.');
     expect(
       formatGivenWhen('2026-06-11T15:15:00Z', 'America/Denver', '24h', 'es', {
         today: 'Hoy',

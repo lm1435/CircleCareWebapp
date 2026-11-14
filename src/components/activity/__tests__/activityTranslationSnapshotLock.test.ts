@@ -550,11 +550,11 @@ describe('KEY_RENDERERS (parameterized rows)', () => {
         },
         "prn logged": {
           "en": "Logged a dose: Tylenol at 2:30 PM",
-          "es": "Dosis registrada: Tylenol a las 2:30 p. m.",
+          "es": "Dosis registrada: Tylenol a las 2:30\u00a0p.\u00a0m.",
         },
         "prn removed": {
           "en": "Removed a logged dose: Tylenol (2:30 PM)",
-          "es": "Dosis registrada quitada: Tylenol (2:30 p. m.)",
+          "es": "Dosis registrada quitada: Tylenol (2:30\u00a0p.\u00a0m.)",
         },
         "recurrence stopped": {
           "en": "Stopped recurrence for Aspirin from Jun 10",
@@ -562,19 +562,19 @@ describe('KEY_RENDERERS (parameterized rows)', () => {
         },
         "rescheduled": {
           "en": "Rescheduled Medication: Metformin to 8:00 PM",
-          "es": "Medicamento reprogramado: Metformin a las 8:00 p. m.",
+          "es": "Medicamento reprogramado: Metformin a las 8:00\u00a0p.\u00a0m.",
         },
         "rescheduled midnight": {
           "en": "Rescheduled Medication: Metformin to 12:00 AM",
-          "es": "Medicamento reprogramado: Metformin a las 12:00 a. m.",
+          "es": "Medicamento reprogramado: Metformin a las 12:00\u00a0a.\u00a0m.",
         },
         "rescheduled morning HH:MM": {
           "en": "Rescheduled Medication: Metformin to 8:05 AM",
-          "es": "Medicamento reprogramado: Metformin a las 8:05 a. m.",
+          "es": "Medicamento reprogramado: Metformin a las 8:05\u00a0a.\u00a0m.",
         },
         "rescheduled noon": {
           "en": "Rescheduled Medication: Metformin to 12:00 PM",
-          "es": "Medicamento reprogramado: Metformin a las 12:00 p. m.",
+          "es": "Medicamento reprogramado: Metformin a las 12:00\u00a0p.\u00a0m.",
         },
         "rescheduled out-of-range raw": {
           "en": "Rescheduled Medication: Metformin to 25:00:00",
@@ -642,27 +642,27 @@ describe('KEY_RENDERERS (parameterized rows)', () => {
       {
         "prn logged": {
           "en": "Logged a dose: Tylenol at 2:30 PM (Tokyo)",
-          "es": "Dosis registrada: Tylenol a las 2:30 p. m. (Tokio)",
+          "es": "Dosis registrada: Tylenol a las 2:30\u00a0p.\u00a0m. (Tokio)",
         },
         "prn removed": {
           "en": "Removed a logged dose: Tylenol (2:30 PM (Tokyo))",
-          "es": "Dosis registrada quitada: Tylenol (2:30 p. m. (Tokio))",
+          "es": "Dosis registrada quitada: Tylenol (2:30\u00a0p.\u00a0m. (Tokio))",
         },
         "rescheduled": {
           "en": "Rescheduled Medication: Metformin to 8:00 PM (Tokyo)",
-          "es": "Medicamento reprogramado: Metformin a las 8:00 p. m. (Tokio)",
+          "es": "Medicamento reprogramado: Metformin a las 8:00\u00a0p.\u00a0m. (Tokio)",
         },
         "rescheduled midnight": {
           "en": "Rescheduled Medication: Metformin to 12:00 AM (Tokyo)",
-          "es": "Medicamento reprogramado: Metformin a las 12:00 a. m. (Tokio)",
+          "es": "Medicamento reprogramado: Metformin a las 12:00\u00a0a.\u00a0m. (Tokio)",
         },
         "rescheduled morning HH:MM": {
           "en": "Rescheduled Medication: Metformin to 8:05 AM (Tokyo)",
-          "es": "Medicamento reprogramado: Metformin a las 8:05 a. m. (Tokio)",
+          "es": "Medicamento reprogramado: Metformin a las 8:05\u00a0a.\u00a0m. (Tokio)",
         },
         "rescheduled noon": {
           "en": "Rescheduled Medication: Metformin to 12:00 PM (Tokyo)",
-          "es": "Medicamento reprogramado: Metformin a las 12:00 p. m. (Tokio)",
+          "es": "Medicamento reprogramado: Metformin a las 12:00\u00a0p.\u00a0m. (Tokio)",
         },
         "rescheduled out-of-range raw": {
           "en": "Rescheduled Medication: Metformin to 25:00:00",

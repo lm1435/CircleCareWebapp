@@ -77,19 +77,19 @@ afterEach(async () => {
 describe('formatTimeOfDay default language', () => {
   it('renders the RAE meridiem once i18next is on Spanish', async () => {
     await i18n.changeLanguage('es');
-    expect(formatTimeOfDay(20, 45, '12h')).toBe('8:45 p. m.');
-    expect(formatTimeOfDay(9, 5, '12h')).toBe('9:05 a. m.');
+    expect(formatTimeOfDay(20, 45, '12h')).toBe('8:45\u00a0p.\u00a0m.');
+    expect(formatTimeOfDay(9, 5, '12h')).toBe('9:05\u00a0a.\u00a0m.');
   });
 
   it('renders Spanish for a regional tag (es-MX)', async () => {
     // The browser detector routinely reports es-MX or es-419, never bare es.
     await i18n.changeLanguage('es-MX');
-    expect(formatTimeOfDay(20, 45, '12h')).toBe('8:45 p. m.');
+    expect(formatTimeOfDay(20, 45, '12h')).toBe('8:45\u00a0p.\u00a0m.');
   });
 
   it('renders Spanish for es-419', async () => {
     await i18n.changeLanguage('es-419');
-    expect(formatTimeOfDay(20, 45, '12h')).toBe('8:45 p. m.');
+    expect(formatTimeOfDay(20, 45, '12h')).toBe('8:45\u00a0p.\u00a0m.');
   });
 
   it('renders English when i18next is on English', () => {
@@ -102,7 +102,7 @@ describe('formatTimeOfDay default language', () => {
     await i18n.changeLanguage('es');
     expect(formatTimeOfDay(20, 45, '12h', 'en')).toBe('8:45 PM');
     await i18n.changeLanguage('en');
-    expect(formatTimeOfDay(20, 45, '12h', 'es')).toBe('8:45 p. m.');
+    expect(formatTimeOfDay(20, 45, '12h', 'es')).toBe('8:45\u00a0p.\u00a0m.');
   });
 
   it('leaves the 24h cycle byte-identical whatever the active language', async () => {
