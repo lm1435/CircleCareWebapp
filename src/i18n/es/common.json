@@ -58,7 +58,8 @@
     "dailyUpdate": "Resumen del día",
     "providerVisits": "Visitas y notas",
     "howItWorks": "Mira cómo funciona",
-    "welcome": "Bienvenida"
+    "welcome": "Bienvenida",
+    "routineCheckIn": "Avisos de seguimiento"
   },
   "errorBoundary": {
     "title": "Algo salió mal",
@@ -252,7 +253,20 @@
     "circleUnreadA11y_other": "Notificaciones de {{name}}, {{count}} nuevas",
     "scopedSubtitle_one": "{{name}} · {{count}} nueva",
     "scopedSubtitle_other": "{{name}} · {{count}} nuevas",
-    "allNotifications": "Todas las notificaciones"
+    "allNotifications": "Todas las notificaciones",
+    "slot": {
+      "title": "Medicamentos ({{time}})",
+      "due_one": "{{count}} medicamento programado",
+      "due_other": "{{count}} medicamentos programados",
+      "notMarked_one": "{{count}} dosis aún no se ha marcado",
+      "notMarked_other": "{{count}} dosis aún no se han marcado",
+      "allTaken_one": "Tomado",
+      "allTaken_other": "Los {{count}} tomados",
+      "taken_one": "{{count}} tomado",
+      "taken_other": "{{count}} tomados",
+      "skipped_one": "{{count}} omitido",
+      "skipped_other": "{{count}} omitidos"
+    }
   },
   "trialCharge": {
     "endsSentence": "Tu prueba gratis termina el {{date}}.",

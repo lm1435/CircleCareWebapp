@@ -53,7 +53,11 @@ export function useNextStep(circleId: string, timezone: string | null): NextStep
     first_med: presence.data?.medication === true,
     invite: members.length > 1 || liveInvites > 0,
     // Unknown prefs (still loading / failed) count as done: never nag on a guess.
-    reminders: prefs === undefined ? true : groupOn(prefs, 'medications'),
+    // The old Medications group is two switches since 1.4.2; "on" keeps its old meaning: either is on.
+    reminders:
+      prefs === undefined
+        ? true
+        : groupOn(prefs, 'doses_taken') || groupOn(prefs, 'doses_not_marked'),
   };
   // Steps THIS viewer can perform: inviting needs the invite right.
   const applicable = NEXT_STEP_ORDER.filter((s) => (s === 'invite' ? canManageMembers : true));

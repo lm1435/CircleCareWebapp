@@ -191,17 +191,23 @@ describe('ProfilePage', () => {
     });
   });
 
-  // Notification settings: 8 per-key switches -> 4 groups
+  // Notification settings: 8 per-key switches -> groups
   // (docs/plans/notification-settings-4-groups.md). Storage is unchanged; a
   // group tap PATCHes every child key (+ the event_notes pin for Tasks).
+  // 1.4.2: the Medications group is split into "Doses taken" (medication_confirmations)
+  // and "Doses not marked" (missed_medications), each its own switch and its own key.
   describe('notification groups', () => {
     const GROUP_NAMES = [
-      /^Medications/i,
+      /^Doses taken/i,
+      /^Doses not marked/i,
       /^Tasks & appointments/i,
       /^Notes/i,
       /^Daily update & tips/i,
     ];
+    const TAKEN = GROUP_NAMES[0];
+    const NOT_MARKED = GROUP_NAMES[1];
     const RETIRED = [
+      /^Medications$/i,
       /Medication confirmations/i,
       /Unmarked medications/i,
       /Task assignments/i,
@@ -219,17 +225,16 @@ describe('ProfilePage', () => {
       };
     };
 
-    it('renders exactly four group switches in order, and none of the retired labels', async () => {
+    it('renders the group switches in order (Doses taken, Doses not marked first), none of the retired labels', async () => {
       renderPage('/profile/alerts');
       await screen.findByRole('switch', { name: GROUP_NAMES[0] });
       const names = screen
         .getAllByRole('switch')
         .map((el) => el.getAttribute('aria-labelledby'))
         .map((id) => document.getElementById(id!)?.textContent ?? '');
-      // Quiet hours + analytics consent + email digest are other switches; the
-      // notification sheet is the first four.
-      expect(names.slice(0, 4)).toEqual([
-        'Medications',
+      expect(names.slice(0, 5)).toEqual([
+        'Doses taken',
+        'Doses not marked',
         'Tasks & appointments',
         'Notes',
         'Daily update & tips',
@@ -239,7 +244,7 @@ describe('ProfilePage', () => {
       }
     });
 
-    it('all four ON when keys are absent (!== false), with no status line', async () => {
+    it('all groups ON when keys are absent (!== false), with no status line', async () => {
       seed({});
       currentUser = {
         ...USER,
@@ -258,11 +263,11 @@ describe('ProfilePage', () => {
     it('a group is OFF only when every child is false (fixes the old raw === true read)', async () => {
       seed({ event_notes: false, care_notes: false });
       renderPage('/profile/alerts');
-      expect(await screen.findByRole('switch', { name: GROUP_NAMES[2] })).toHaveAttribute(
+      expect(await screen.findByRole('switch', { name: GROUP_NAMES[3] })).toHaveAttribute(
         'aria-checked',
         'false'
       );
-      expect(screen.getByRole('switch', { name: GROUP_NAMES[1] })).toHaveAttribute(
+      expect(screen.getByRole('switch', { name: GROUP_NAMES[2] })).toHaveAttribute(
         'aria-checked',
         'true'
       );
@@ -270,23 +275,54 @@ describe('ProfilePage', () => {
     });
 
     it('mixed fixture: group ON, "Some turned off" visible and inside the accessible description', async () => {
-      seed({ missed_medications: false });
+      seed({ care_notes: false });
       renderPage('/profile/alerts');
-      const meds = await screen.findByRole('switch', { name: GROUP_NAMES[0] });
-      expect(meds).toHaveAttribute('aria-checked', 'true');
+      const notes = await screen.findByRole('switch', { name: GROUP_NAMES[3] });
+      expect(notes).toHaveAttribute('aria-checked', 'true');
       expect(screen.getAllByText('Some turned off')).toHaveLength(1);
-      expect(meds).toHaveAccessibleDescription(/Doses taken, skipped or not marked/);
-      expect(meds).toHaveAccessibleDescription(/Some turned off/);
-      expect(screen.getByRole('switch', { name: GROUP_NAMES[2] })).not.toHaveAccessibleDescription(
+      expect(notes).toHaveAccessibleDescription(/When someone adds a note/);
+      expect(notes).toHaveAccessibleDescription(/Some turned off/);
+      expect(screen.getByRole('switch', { name: TAKEN })).not.toHaveAccessibleDescription(
         /Some turned off/
       );
     });
 
-    it('Medications click opens the confirm; "Keep on" does not write and the switch stays ON', async () => {
+    // P (split preserves old values): a user who had turned off ONLY the not-marked key keeps
+    // exactly that — Doses taken ON, Doses not marked OFF, neither "mixed".
+    it('P split: old values are preserved per key (missed_medications off -> Doses not marked off, Doses taken on)', async () => {
+      seed({ missed_medications: false });
+      renderPage('/profile/alerts');
+      expect(await screen.findByRole('switch', { name: TAKEN })).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByRole('switch', { name: NOT_MARKED })).toHaveAttribute('aria-checked', 'false');
+      expect(screen.queryByText('Some turned off')).toBeNull();
+    });
+
+    it('P split: old switch fully off -> both new switches off (never turns on what a user turned off)', async () => {
+      seed({ medication_confirmations: false, missed_medications: false });
+      renderPage('/profile/alerts');
+      expect(await screen.findByRole('switch', { name: TAKEN })).toHaveAttribute('aria-checked', 'false');
+      expect(screen.getByRole('switch', { name: NOT_MARKED })).toHaveAttribute('aria-checked', 'false');
+    });
+
+    it('P split: Doses taken off saves ONLY medication_confirmations, with no confirm', async () => {
       const user = userEvent.setup();
       renderPage('/profile/alerts');
-      const meds = await screen.findByRole('switch', { name: GROUP_NAMES[0] });
-      await user.click(meds);
+      await user.click(await screen.findByRole('switch', { name: TAKEN }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(updateNotif).toHaveBeenCalledTimes(1);
+      expect(updateNotif.mock.calls[0][0]).toEqual({ medication_confirmations: false });
+      expect(mockGroupToggled).toHaveBeenCalledWith({
+        group: 'doses_taken',
+        enabled: false,
+        was_mixed: false,
+      });
+    });
+
+    it('Doses not marked click opens the confirm; "Keep on" does not write and the switch stays ON', async () => {
+      const user = userEvent.setup();
+      renderPage('/profile/alerts');
+      const notMarked = await screen.findByRole('switch', { name: NOT_MARKED });
+      await user.click(notMarked);
 
       const dialog = await screen.findByRole('dialog');
       expect(within(dialog).getByText('Turn off medication alerts?')).toBeInTheDocument();
@@ -301,66 +337,44 @@ describe('ProfilePage', () => {
       await user.click(within(dialog).getByText('Keep on', { selector: 'button' }));
       expect(screen.queryByRole('dialog')).toBeNull();
       expect(updateNotif).not.toHaveBeenCalled();
-      expect(meds).toHaveAttribute('aria-checked', 'true');
+      expect(notMarked).toHaveAttribute('aria-checked', 'true');
       expect(mockGroupToggled).toHaveBeenCalledWith({
-        group: 'medications',
+        group: 'doses_not_marked',
         enabled: false,
         was_mixed: false,
         confirmed: false,
       });
     });
 
-    it('Medications "Turn off" writes both med keys false', async () => {
+    it('P split: Doses not marked "Turn off" saves ONLY missed_medications (Doses taken untouched)', async () => {
       const user = userEvent.setup();
       renderPage('/profile/alerts');
-      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[0] }));
+      await user.click(await screen.findByRole('switch', { name: NOT_MARKED }));
       await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Turn off' }));
 
       expect(updateNotif).toHaveBeenCalledTimes(1);
-      expect(updateNotif.mock.calls[0][0]).toEqual({
-        medication_confirmations: false,
-        missed_medications: false,
-      });
+      expect(updateNotif.mock.calls[0][0]).toEqual({ missed_medications: false });
       expect(mockGroupToggled).toHaveBeenCalledWith({
-        group: 'medications',
+        group: 'doses_not_marked',
         enabled: false,
         was_mixed: false,
         confirmed: true,
       });
     });
 
-    it('Medications off from the mixed state also confirms first', async () => {
+    it('turning Doses not marked ON never opens the confirm and saves only its key', async () => {
       seed({ missed_medications: false });
       const user = userEvent.setup();
       renderPage('/profile/alerts');
-      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[0] }));
-      expect(updateNotif).not.toHaveBeenCalled();
-      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Turn off' }));
-      expect(updateNotif.mock.calls[0][0]).toEqual({
-        medication_confirmations: false,
-        missed_medications: false,
-      });
-      expect(mockGroupToggled).toHaveBeenCalledWith(
-        expect.objectContaining({ was_mixed: true, confirmed: true })
-      );
-    });
-
-    it('turning Medications ON never opens the confirm', async () => {
-      seed({ medication_confirmations: false, missed_medications: false });
-      const user = userEvent.setup();
-      renderPage('/profile/alerts');
-      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[0] }));
+      await user.click(await screen.findByRole('switch', { name: NOT_MARKED }));
       expect(screen.queryByRole('dialog')).toBeNull();
-      expect(updateNotif.mock.calls[0][0]).toEqual({
-        medication_confirmations: true,
-        missed_medications: true,
-      });
+      expect(updateNotif.mock.calls[0][0]).toEqual({ missed_medications: true });
     });
 
     it('Tasks off sends the 4-key body with event_notes pinned true (absent)', async () => {
       const user = userEvent.setup();
       renderPage('/profile/alerts');
-      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[1] }));
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[2] }));
       expect(screen.queryByRole('dialog')).toBeNull();
       expect(updateNotif).toHaveBeenCalledTimes(1);
       expect(updateNotif.mock.calls[0][0]).toEqual({
@@ -375,7 +389,7 @@ describe('ProfilePage', () => {
       seed({ event_notes: false, care_notes: false });
       const user = userEvent.setup();
       renderPage('/profile/alerts');
-      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[1] }));
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[2] }));
       expect(updateNotif.mock.calls[0][0]).toEqual({
         task_assignments: false,
         appointment_reminders: false,
@@ -387,7 +401,7 @@ describe('ProfilePage', () => {
     it('Notes off sends exactly event_notes + care_notes, never note_nudges', async () => {
       const user = userEvent.setup();
       renderPage('/profile/alerts');
-      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[2] }));
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[3] }));
       expect(updateNotif).toHaveBeenCalledTimes(1);
       expect(updateNotif.mock.calls[0][0]).toEqual({ event_notes: false, care_notes: false });
       expect(Object.keys(updateNotif.mock.calls[0][0])).not.toContain('note_nudges');
@@ -397,7 +411,7 @@ describe('ProfilePage', () => {
       seed({ care_notes: false });
       const user = userEvent.setup();
       renderPage('/profile/alerts');
-      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[2] }));
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[3] }));
       expect(updateNotif.mock.calls[0][0]).toEqual({ event_notes: false, care_notes: false });
       expect(mockGroupToggled).toHaveBeenCalledWith({
         group: 'notes',
@@ -409,14 +423,14 @@ describe('ProfilePage', () => {
     it('Tips sends exactly one key', async () => {
       const user = userEvent.setup();
       renderPage('/profile/alerts');
-      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[3] }));
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[4] }));
       expect(updateNotif.mock.calls[0][0]).toEqual({ tips_and_suggestions: false });
     });
 
     it('Daily update & tips off reports notification_group_toggled with group=tips, enabled=false (no confirm)', async () => {
       const user = userEvent.setup();
       renderPage('/profile/alerts');
-      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[3] }));
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[4] }));
       expect(screen.queryByRole('dialog')).toBeNull();
       expect(mockGroupToggled).toHaveBeenCalledTimes(1);
       expect(mockGroupToggled).toHaveBeenCalledWith({ group: 'tips', enabled: false, was_mixed: false });
@@ -426,14 +440,14 @@ describe('ProfilePage', () => {
       seed({ tips_and_suggestions: false });
       const user = userEvent.setup();
       renderPage('/profile/alerts');
-      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[3] }));
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[4] }));
       expect(mockGroupToggled).toHaveBeenCalledWith({ group: 'tips', enabled: true, was_mixed: false });
     });
 
     it('toasts success after a group write', async () => {
       const user = userEvent.setup();
       renderPage('/profile/alerts');
-      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[3] }));
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[4] }));
       act(() => updateNotif.mock.calls[0][1].onSuccess());
       expect(showToast).toHaveBeenCalledWith('Notification preferences updated.', 'success');
     });

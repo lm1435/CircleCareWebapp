@@ -36,8 +36,6 @@
   "notifications": {
     "description": "Elige qué alertas quieres recibir.",
     "groups": {
-      "medications": "Medicamentos",
-      "medicationsDesc": "Dosis tomadas, omitidas o sin marcar",
       "tasks": "Tareas y citas",
       "tasksDesc": "Cuando te asignan algo y antes de que llegue la hora",
       "notes": "Notas",
@@ -45,7 +43,11 @@
       "tips": "Resumen del día y consejos",
       "tipsDesc": "Tu resumen del día y recordatorios útiles",
       "shifts": "Turnos",
-      "shiftsDesc": "Turnos abiertos nuevos, recordatorios y cambios en tus turnos"
+      "shiftsDesc": "Turnos abiertos nuevos, recordatorios y cambios en tus turnos",
+      "dosesTaken": "Dosis tomadas",
+      "dosesTakenDesc": "Cuando alguien marca una dosis como tomada u omitida",
+      "dosesNotMarked": "Dosis sin marcar",
+      "dosesNotMarkedDesc": "Cuando una dosis sigue sin marcar después de su hora"
     },
     "someTurnedOff": "Algunas desactivadas",
     "confirmMedicationsOff": {

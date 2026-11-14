@@ -58,7 +58,8 @@
     "dailyUpdate": "Daily update",
     "providerVisits": "Visits & notes",
     "howItWorks": "See how it works",
-    "welcome": "Welcome"
+    "welcome": "Welcome",
+    "routineCheckIn": "Follow-up alerts"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -252,7 +253,20 @@
     "circleUnreadA11y_other": "{{name}} notifications, {{count}} new",
     "scopedSubtitle_one": "{{name}} · {{count}} new",
     "scopedSubtitle_other": "{{name}} · {{count}} new",
-    "allNotifications": "All notifications"
+    "allNotifications": "All notifications",
+    "slot": {
+      "title": "Meds ({{time}})",
+      "due_one": "{{count}} medication scheduled",
+      "due_other": "{{count}} medications scheduled",
+      "notMarked_one": "{{count}} dose isn't marked yet",
+      "notMarked_other": "{{count}} doses aren't marked yet",
+      "allTaken_one": "Taken",
+      "allTaken_other": "All {{count}} taken",
+      "taken_one": "{{count}} taken",
+      "taken_other": "{{count}} taken",
+      "skipped_one": "{{count}} skipped",
+      "skipped_other": "{{count}} skipped"
+    }
   },
   "trialCharge": {
     "endsSentence": "Your free trial ends {{date}}.",

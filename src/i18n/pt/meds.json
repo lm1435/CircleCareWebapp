@@ -321,5 +321,37 @@
       "logged": "Administrada, se necessário",
       "openHistory": "Abrir histórico de doses"
     }
+  },
+  "doseAlerts": {
+    "notice": {
+      "title": "Os alertas de acompanhamento estão pausados",
+      "body": "Nenhuma dose foi marcada recentemente, então pausamos os alertas extras. Marcar qualquer dose os reativa.",
+      "bodyKept": "Você escolheu manter os alertas de acompanhamento pausados por enquanto. Marcar qualquer dose os reativa.",
+      "since": "Pausados desde {{date}}",
+      "resume": "Reativar alertas",
+      "routineChanged": "A rotina mudou?",
+      "resumed": "Os alertas estão ativados",
+      "resumeFailed": "Não foi possível reativar os alertas. Tente de novo."
+    },
+    "checkin": {
+      "eyebrow": "Alertas de acompanhamento",
+      "title": "A rotina de {{name}} mudou?",
+      "titleSelf": "Sua rotina mudou?",
+      "body": "Rotinas mudam: uma internação, uma nova receita, uma pausa. Pausamos os alertas de acompanhamento para que não se acumulem.",
+      "stillGiving": "Ainda damos esses",
+      "stillTaking": "Ainda tomo esses",
+      "stillHint": "Os alertas voltam na hora.",
+      "changed": "A rotina mudou",
+      "changedHint": "Atualize ou suspenda medicamentos",
+      "keep": "Manter os alertas pausados por enquanto",
+      "keepHint": "Você pode reativá-los quando quiser em Hoje.",
+      "alertsOnTitle": "Os alertas estão ativados",
+      "alertsOnBody": "Você vai receber alertas de acompanhamento de novo quando uma dose não for marcada.",
+      "viewOnly": "Só cuidadores que podem fazer alterações neste círculo podem responder.",
+      "answerFailed": "Não foi possível salvar sua resposta. Tente de novo.",
+      "loadFailed": "Não foi possível carregar agora.",
+      "retry": "Tentar de novo",
+      "backToToday": "Voltar para Hoje"
+    }
   }
 }

@@ -174,3 +174,65 @@ describe('NextUp landing', () => {
     expect(screen.getAllByTestId('next-up-row')).toHaveLength(3);
   });
 });
+
+// 1.4.2 grouped dose alert: ONE landing for every unmarked dose of a time slot.
+describe('NextUp slot landing (several rows)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    vi.mocked(useMedicationUndo).mockImplementation(
+      () =>
+        ({ pending: {}, confirm, undo: vi.fn(), hold: vi.fn() }) as unknown as ReturnType<typeof useMedicationUndo>
+    );
+    vi.mocked(useTaskCompletion).mockImplementation(
+      () =>
+        ({
+          pendingIds: new Set(),
+          handleComplete: vi.fn(),
+          handleUndo: vi.fn(),
+          handleHoldUndo: vi.fn(),
+          flushPending: vi.fn(),
+        }) as unknown as ReturnType<typeof useTaskCompletion>
+    );
+    vi.spyOn(Analytics, 'nextUpAction').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    // @ts-expect-error restore jsdom default (no scrollIntoView)
+    delete Element.prototype.scrollIntoView;
+  });
+
+  it('P every slot row is revealed and highlighted, focus on the first Taken, the count announced', () => {
+    renderNextUp({
+      landing: { key: 'medication:2', keys: ['medication:2', 'medication:4', 'medication:5'], entry: 'inbox' },
+    });
+    // The 5th row is past the first three but part of the slot: all five render.
+    expect(screen.getAllByTestId('next-up-row')).toHaveLength(5);
+    const lit = Array.from(document.querySelectorAll('[data-highlighted="true"]')).map(
+      (el) => (el.closest('[data-next-up-key]') as HTMLElement).dataset.nextUpKey
+    );
+    expect(lit).toEqual(['medication:2', 'medication:4', 'medication:5']);
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /^Taken, Med 2/ }));
+    expect(screen.getByRole('status')).toHaveTextContent("3 doses aren't marked yet");
+  });
+
+  it('N no mark-all: each slot dose keeps its own Taken, and a press confirms only that dose', async () => {
+    const user = userEvent.setup();
+    renderNextUp({
+      landing: { key: 'medication:2', keys: ['medication:2', 'medication:4'], entry: 'inbox' },
+    });
+    const takens = screen.getAllByRole('button', { name: /^Taken, / });
+    expect(takens).toHaveLength(4); // rows 1-4 (row 4 is revealed for the slot)
+    expect(screen.queryByRole('button', { name: /all/i })).toBeNull();
+    await user.click(screen.getByRole('button', { name: /^Taken, Med 4/ }));
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(confirm.mock.calls[0][0]).toMatchObject({ id: '4' });
+    // The slot landing still carries how the person got here.
+    expect(confirm.mock.calls[0][2]).toEqual({ entry: 'inbox' });
+  });
+
+  it('a single-dose landing is unchanged by the slot support', () => {
+    renderNextUp({ landing: { key: 'medication:1', entry: 'inbox' } });
+    expect(document.querySelectorAll('[data-highlighted="true"]')).toHaveLength(1);
+    expect(screen.getByRole('status')).toHaveTextContent("This dose hasn't been marked yet.");
+  });
+});

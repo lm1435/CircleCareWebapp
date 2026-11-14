@@ -34,6 +34,16 @@ import {
   type DoseLanding,
 } from '@/lib/doseLanding';
 import { DoseHint } from '@/components/overview/DoseHint';
+import { DoseAlertsNotice } from '@/components/doseAlerts/DoseAlertsNotice';
+import { useDoseAlerts } from '@/hooks/useDoseAlerts';
+import { useDoseAlertsResumedStore } from '@/store/doseAlertsResumedStore';
+import {
+  findSlotItems,
+  hasSlotParams,
+  parseSlotLanding,
+  stripSlotParams,
+  type SlotLanding,
+} from '@/lib/slotLanding';
 import { ShiftsNudgeCard, pickShiftsNudgeMember } from '@/components/overview/ShiftsNudgeCard';
 import { resolveShiftsEntry } from '@/lib/shiftsAccess';
 import { ShiftsTeaserDialog } from '@/components/shifts/ShiftsTeaserDialog';
@@ -54,7 +64,7 @@ interface FirstRunLocationState {
   firstRunRecipientName?: string;
 }
 
-type Coaching = 'next_step' | 'shifts' | 'dose_hint' | 'none';
+type Coaching = 'dose_alerts' | 'next_step' | 'shifts' | 'dose_hint' | 'none';
 
 /**
  * Today (`/circles/:id`), the landing page when you open a circle
@@ -164,7 +174,12 @@ export default function OverviewPage(): ReactElement {
   const [pendingLanding, setPendingLanding] = useState<(DoseLanding & { circleId: string }) | null>(
     null
   );
-  const [landed, setLanded] = useState<{ circleId: string; key: string } | null>(null);
+  const [landed, setLanded] = useState<{
+    circleId: string;
+    key: string;
+    /** A grouped (slot) landing: every unmarked dose of that time slot. */
+    keys?: string[];
+  } | null>(null);
   useEffect(() => {
     const parsed = parseDoseLanding(location.search);
     if (!parsed || !circleId) return;
@@ -192,7 +207,56 @@ export default function OverviewPage(): ReactElement {
     }
   }, [pendingLanding, circleId, nextUp.settled, nextUp.isError, nextUp.items, navigate, location.pathname, location.search]);
 
+  // SLOT LANDING (1.4.2, a grouped "not marked" alert or "doses taken" summary from the inbox):
+  // `?slot_date=&slot_time=`. Same once-per-landing rule as the dose landing above. Every dose of
+  // the slot still on Next up is revealed and highlighted, focus goes to the first one's Taken,
+  // and each is marked on its own (no mark-all). None left on Today: Today stays as it is.
+  const [pendingSlot, setPendingSlot] = useState<(SlotLanding & { circleId: string }) | null>(
+    null
+  );
+  useEffect(() => {
+    if (!circleId || !hasSlotParams(location.search)) return;
+    const parsed = parseSlotLanding(location.search);
+    if (!parsed) {
+      // Unusable slot params: plain Today, and the params leave the URL.
+      navigate(
+        { pathname: location.pathname, search: stripSlotParams(location.search) },
+        { replace: true }
+      );
+      return;
+    }
+    setLanded(null);
+    setPendingSlot({ ...parsed, circleId });
+  }, [location.search, location.pathname, circleId, navigate]);
+  useEffect(() => {
+    if (!pendingSlot) return;
+    if (pendingSlot.circleId !== circleId) {
+      setPendingSlot(null);
+      setLanded(null);
+      return;
+    }
+    if (!nextUp.settled || nextUp.isError) return;
+    const hits = findSlotItems(nextUp.items, pendingSlot);
+    setPendingSlot(null);
+    if (hits.length > 0) {
+      setLanded({ circleId, key: hits[0].key, keys: hits.map((h) => h.key) });
+    }
+    navigate(
+      { pathname: location.pathname, search: stripSlotParams(location.search) },
+      { replace: true }
+    );
+  }, [pendingSlot, circleId, nextUp.settled, nextUp.isError, nextUp.items, navigate, location.pathname, location.search]);
+
   const nextStep = useNextStep(circleId, timezone);
+
+  // QUIET-CIRCLE BACK-OFF (1.4.2): "Follow-up alerts are paused" is the ONE coaching element
+  // when it shows. Coaching waits for this read too (a card is never swapped under the pointer);
+  // a failed read is "not paused".
+  const doseAlerts = useDoseAlerts(circleId);
+  const doseAlertsPaused = doseAlerts.state?.paused === true;
+  // "Alerts are on" after a resume lasts for this Today visit only.
+  const clearResumed = useDoseAlertsResumedStore((st) => st.clear);
+  useEffect(() => () => clearResumed(circleId), [circleId, clearResumed]);
 
   // Shifts nudge (mobile's rule): PREMIUM circles (a setup prompt) and the OWNER of a FREE circle
   // (they just hit the caregiver cap: "Set up shifts" opens the existing shifts teaser -> paywall,
@@ -246,9 +310,11 @@ export default function OverviewPage(): ReactElement {
   // next step is still unknown: a lower card drawn first was swapped for the next-step card
   // under the pointer once it loaded (e2e today-shifts-nudge, ~3 in 10 runs).
   const coaching: Coaching =
-    nextStep.status === 'unknown'
+    nextStep.status === 'unknown' || !doseAlerts.settled
       ? 'none'
-      : nextStep.status === 'step'
+      : doseAlertsPaused
+        ? 'dose_alerts'
+        : nextStep.status === 'step'
       ? 'next_step'
       : showShiftsNudge
         ? 'shifts'
@@ -266,7 +332,7 @@ export default function OverviewPage(): ReactElement {
 
   // today_viewed: once per circle visit, when everything that decides it has answered.
   const viewedFor = useRef<string | null>(null);
-  const ready = nextUp.settled && nextStep.status !== 'unknown' && !!circle;
+  const ready = nextUp.settled && nextStep.status !== 'unknown' && doseAlerts.settled && !!circle;
   useEffect(() => {
     if (!ready || viewedFor.current === circleId) return;
     viewedFor.current = circleId;
@@ -313,6 +379,14 @@ export default function OverviewPage(): ReactElement {
             isRecipient={isRecipient}
           />
         )}
+      </div>
+
+      {/* Quiet-circle notice (or the "Alerts are on" line right after a resume). Renders
+          nothing otherwise; `empty:hidden` then drops the wrapper's spacing. */}
+      <div className="px-5 pb-6 empty:hidden">
+        {coaching === 'dose_alerts' || !doseAlertsPaused ? (
+          <DoseAlertsNotice circleId={circleId} surface="today" primaryAllowed={!nextUpFilled} />
+        ) : null}
       </div>
 
       {coaching === 'next_step' && nextStep.status === 'step' && (
@@ -387,7 +461,11 @@ export default function OverviewPage(): ReactElement {
               error={nextUp.isError}
               onRetry={nextUp.refetch}
               stacked={largeText}
-              landing={landed && landed.circleId === circleId ? { key: landed.key, entry: 'inbox' } : null}
+              landing={
+                landed && landed.circleId === circleId
+                  ? { key: landed.key, keys: landed.keys, entry: 'inbox' }
+                  : null
+              }
               hint={
                 coaching === 'dose_hint' ? (
                   <DoseHint

@@ -264,6 +264,9 @@ export function useConfirmMedication(
       void queryClient.invalidateQueries({ queryKey: queryKeys.activityFeed(circleId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.weeklyAdherence(circleId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.adherenceReport(circleId) });
+      // Marking ANY dose resumes a quiet (paused) circle server-side, so the paused notice
+      // must go at once (quiet-circle back-off 1.4.2; mobile invalidateAfterMedicationConfirm).
+      void queryClient.invalidateQueries({ queryKey: queryKeys.doseAlerts(circleId) });
 
       return todaysMedsRefetched;
     },

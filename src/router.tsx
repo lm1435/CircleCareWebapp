@@ -42,6 +42,7 @@ const DocumentsPage = lazy(() => import('@/pages/DocumentsPage'));
 const MembersPage = lazy(() => import('@/pages/MembersPage'));
 const VitalsPage = lazy(() => import('@/pages/VitalsPage'));
 const DailyUpdatePage = lazy(() => import('@/pages/DailyUpdatePage'));
+const RoutineCheckInPage = lazy(() => import('@/pages/RoutineCheckInPage'));
 const EditCirclePage = lazy(() => import('@/pages/EditCirclePage'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const HelpPage = lazy(() => import('@/pages/HelpPage'));
@@ -162,6 +163,9 @@ export const router = createBrowserRouter([
           // the last 7 recipient-local days (docs/plans/daily-update.md §6).
           { path: 'daily-update', element: <DailyUpdatePage /> },
           { path: 'daily-update/:date', element: <DailyUpdatePage /> },
+          // Quiet-circle back-off (1.4.2): "Has the routine changed?" (the routine_checkin
+          // inbox row, the paused notice). Mobile deep link: circles/:circleId/routine-check-in.
+          { path: 'routine-check-in', element: <RoutineCheckInPage /> },
           // One circle's notifications (the circle card's count, the in-circle bell).
           // `/notifications` stays the all-circles inbox. Flag off: redirects to the circle.
           { path: 'notifications', element: <CircleNotificationsPage /> },

@@ -57,6 +57,7 @@ const AUTHENTICATED_PAGES = [
   'MembersPage',
   'VitalsPage',
   'DailyUpdatePage',
+  'RoutineCheckInPage',
   'EditCirclePage',
   'ProfilePage',
   'HelpPage',

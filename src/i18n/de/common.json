@@ -58,7 +58,8 @@
     "dailyUpdate": "Tagesübersicht",
     "providerVisits": "Besuche und Notizen",
     "howItWorks": "So funktioniert es",
-    "welcome": "Willkommen"
+    "welcome": "Willkommen",
+    "routineCheckIn": "Folgehinweise"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
@@ -252,7 +253,20 @@
     "circleUnreadA11y_other": "Benachrichtigungen für {{name}}, {{count}} neu",
     "scopedSubtitle_one": "{{name}} · {{count}} neu",
     "scopedSubtitle_other": "{{name}} · {{count}} neu",
-    "allNotifications": "Alle Benachrichtigungen"
+    "allNotifications": "Alle Benachrichtigungen",
+    "slot": {
+      "title": "Medikamente ({{time}})",
+      "due_one": "{{count}} Medikament geplant",
+      "due_other": "{{count}} Medikamente geplant",
+      "notMarked_one": "{{count}} Dosis ist noch nicht eingetragen",
+      "notMarked_other": "{{count}} Dosen sind noch nicht eingetragen",
+      "allTaken_one": "Eingenommen",
+      "allTaken_other": "Alle {{count}} eingenommen",
+      "taken_one": "{{count}} eingenommen",
+      "taken_other": "{{count}} eingenommen",
+      "skipped_one": "{{count}} ausgelassen",
+      "skipped_other": "{{count}} ausgelassen"
+    }
   },
   "trialCharge": {
     "endsSentence": "Ihr kostenloser Testzeitraum endet am {{date}}.",

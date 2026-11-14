@@ -36,8 +36,6 @@
   "notifications": {
     "description": "Choisissez les alertes que vous recevez.",
     "groups": {
-      "medications": "Médicaments",
-      "medicationsDesc": "Doses prises, sautées ou non renseignées",
       "tasks": "Tâches et rendez-vous",
       "tasksDesc": "Quand quelque chose vous est confié, et avant l’échéance",
       "notes": "Notes",
@@ -45,7 +43,11 @@
       "tips": "Point du jour et conseils",
       "tipsDesc": "Votre point du jour et de petits rappels utiles",
       "shifts": "Gardes",
-      "shiftsDesc": "Nouvelles gardes à pourvoir, rappels et changements de vos gardes"
+      "shiftsDesc": "Nouvelles gardes à pourvoir, rappels et changements de vos gardes",
+      "dosesTaken": "Doses prises",
+      "dosesTakenDesc": "Quand quelqu’un indique une dose comme prise ou sautée",
+      "dosesNotMarked": "Doses non renseignées",
+      "dosesNotMarkedDesc": "Quand une dose n’est toujours pas renseignée après son heure"
     },
     "someTurnedOff": "Certaines désactivées",
     "confirmMedicationsOff": {

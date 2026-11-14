@@ -36,8 +36,6 @@
   "notifications": {
     "description": "Choose which alerts you receive.",
     "groups": {
-      "medications": "Medications",
-      "medicationsDesc": "Doses taken, skipped or not marked",
       "tasks": "Tasks & appointments",
       "tasksDesc": "When something's assigned to you and before it's due",
       "notes": "Notes",
@@ -45,7 +43,11 @@
       "tips": "Daily update & tips",
       "tipsDesc": "Your daily update and helpful nudges",
       "shifts": "Shifts",
-      "shiftsDesc": "New open shifts, shift reminders and changes to your shifts"
+      "shiftsDesc": "New open shifts, shift reminders and changes to your shifts",
+      "dosesTaken": "Doses taken",
+      "dosesTakenDesc": "When someone marks a dose taken or skipped",
+      "dosesNotMarked": "Doses not marked",
+      "dosesNotMarkedDesc": "When a dose still isn't marked after its time"
     },
     "someTurnedOff": "Some turned off",
     "confirmMedicationsOff": {

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
+import { DoseAlertsNotice } from '@/components/doseAlerts/DoseAlertsNotice';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import {
   Button,
@@ -1280,6 +1281,12 @@ export default function MedicationsPage(): ReactElement {
           onDismiss={() => setMedicationLinkGone(false)}
         />
       ) : null}
+
+      {/* Quiet-circle back-off (1.4.2): "Follow-up alerts are paused", a slim line at the top.
+          Renders nothing unless the circle is paused (or was just turned back on). */}
+      <div className="px-5 pt-1 pb-3 empty:hidden">
+        <DoseAlertsNotice circleId={circleId} surface="meds" />
+      </div>
 
       {tab === 'medications' && zoneLine && (
         <p className="sr-only" data-testid="meds-zone-sr">

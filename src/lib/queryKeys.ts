@@ -74,6 +74,9 @@ export const queryKeys = {
   // Daily update (mobile: ['dailyUpdate', circleId, localDate]). `date` is the
   // recipient-local YYYY-MM-DD, so the key rolls over at the recipient's midnight.
   dailyUpdate: (circleId: string, date: string) => ['dailyUpdate', circleId, date] as const,
+  // Quiet-circle back-off (1.4.2, docs/plans/quiet-circle-backoff-1-4-2-backend-contract.md).
+  // Mobile: ['doseAlerts', circleId]. Invalidated after a dose confirm and after an answer.
+  doseAlerts: (circleId: string) => ['doseAlerts', circleId] as const,
   // As-needed (PRN) medications. The summary map is one read per circle; the
   // dose log is per medication. Both are invalidated by every dose write.
   asNeededSummary: (circleId: string) => ['asNeededSummary', circleId] as const,

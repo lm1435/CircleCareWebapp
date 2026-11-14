@@ -58,7 +58,7 @@
         },
         {
           "question": "Quali notifiche riceverò?",
-          "answer": "Riceverai avvisi in cinque gruppi che puoi attivare o disattivare in Impostazioni, alla voce Avvisi: Farmaci (dosi prese, saltate o non segnate), Incarichi e appuntamenti (quando ti viene assegnato qualcosa e prima della scadenza), Note (quando qualcuno aggiunge una nota), Riepilogo del giorno e consigli e Turni (nuovi turni scoperti, promemoria e modifiche ai tuoi turni). Se sei la persona assistita ricevi anche i promemoria delle tue dosi, sempre attivi."
+          "answer": "Riceverai avvisi in sei gruppi che puoi attivare o disattivare in Impostazioni, alla voce Avvisi: Dosi prese (quando qualcuno segna una dose come presa o saltata), Dosi non segnate (quando una dose non è ancora segnata dopo il suo orario), Incarichi e appuntamenti (quando ti viene assegnato qualcosa e prima della scadenza), Note (quando qualcuno aggiunge una nota), Riepilogo del giorno e consigli e Turni (nuovi turni scoperti, promemoria e modifiche ai tuoi turni). Se sei la persona assistita ricevi anche i promemoria delle tue dosi, sempre attivi."
         },
         {
           "question": "Cosa sono le ore di silenzio?",
@@ -66,7 +66,7 @@
         },
         {
           "question": "Posso disattivare alcune notifiche?",
-          "answer": "Sì. Vai su Impostazioni, poi Avvisi. Ognuno dei cinque interruttori attiva o disattiva un intero gruppo per il tuo account, in tutte le cerchie di cui fai parte. Se disattivi Farmaci, non ricevi più avvisi quando una dose non viene segnata."
+          "answer": "Sì. Vai su Impostazioni, poi Avvisi. Ognuno dei sei interruttori attiva o disattiva un intero gruppo per il tuo account, in tutte le cerchie di cui fai parte. Se disattivi Dosi non segnate, non ricevi più avvisi quando una dose non viene segnata."
         }
       ]
     },

@@ -58,7 +58,8 @@
     "dailyUpdate": "Point du jour",
     "providerVisits": "Visites et notes",
     "howItWorks": "Découvrir comment ça marche",
-    "welcome": "Bienvenue"
+    "welcome": "Bienvenue",
+    "routineCheckIn": "Alertes de suivi"
   },
   "errorBoundary": {
     "title": "Un problème est survenu",
@@ -252,7 +253,20 @@
     "circleUnreadA11y_other": "Notifications de {{name}}, {{count}} nouvelles",
     "scopedSubtitle_one": "{{name}} · {{count}} nouvelle",
     "scopedSubtitle_other": "{{name}} · {{count}} nouvelles",
-    "allNotifications": "Toutes les notifications"
+    "allNotifications": "Toutes les notifications",
+    "slot": {
+      "title": "Médicaments ({{time}})",
+      "due_one": "{{count}} médicament prévu",
+      "due_other": "{{count}} médicaments prévus",
+      "notMarked_one": "{{count}} dose n’est pas encore renseignée",
+      "notMarked_other": "{{count}} doses ne sont pas encore renseignées",
+      "allTaken_one": "Pris",
+      "allTaken_other": "Les {{count}} ont été pris",
+      "taken_one": "{{count}} pris",
+      "taken_other": "{{count}} pris",
+      "skipped_one": "{{count}} sauté",
+      "skipped_other": "{{count}} sautés"
+    }
   },
   "trialCharge": {
     "endsSentence": "Votre essai gratuit prend fin le {{date}}.",

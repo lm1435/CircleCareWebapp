@@ -321,5 +321,37 @@
       "logged": "Donnée si besoin",
       "openHistory": "Ouvrir l’historique des doses"
     }
+  },
+  "doseAlerts": {
+    "notice": {
+      "title": "Les alertes de suivi sont en pause",
+      "body": "Aucune dose n’a été renseignée récemment, nous avons donc mis en pause les alertes supplémentaires. Renseigner une dose les réactive.",
+      "bodyKept": "Vous avez choisi de garder les alertes de suivi en pause pour l’instant. Renseigner une dose les réactive.",
+      "since": "En pause depuis le {{date}}",
+      "resume": "Réactiver les alertes",
+      "routineChanged": "La routine a-t-elle changé ?",
+      "resumed": "Les alertes sont activées",
+      "resumeFailed": "Impossible de réactiver les alertes. Réessayez."
+    },
+    "checkin": {
+      "eyebrow": "Alertes de suivi",
+      "title": "La routine de {{name}} a-t-elle changé ?",
+      "titleSelf": "Votre routine a-t-elle changé ?",
+      "body": "Les routines changent : une hospitalisation, une nouvelle ordonnance, une pause. Nous avons mis en pause les alertes de suivi pour qu’elles ne s’accumulent pas.",
+      "stillGiving": "Nous les donnons toujours",
+      "stillTaking": "Je les prends toujours",
+      "stillHint": "Les alertes reviennent tout de suite.",
+      "changed": "La routine a changé",
+      "changedHint": "Modifier ou arrêter des médicaments",
+      "keep": "Garder les alertes en pause pour l’instant",
+      "keepHint": "Vous pouvez les réactiver à tout moment depuis Aujourd’hui.",
+      "alertsOnTitle": "Les alertes sont activées",
+      "alertsOnBody": "Vous recevrez de nouveau des alertes de suivi quand une dose n’est pas renseignée.",
+      "viewOnly": "Seuls les aidants qui peuvent modifier ce cercle peuvent répondre.",
+      "answerFailed": "Impossible d’enregistrer votre réponse. Réessayez.",
+      "loadFailed": "Impossible de charger pour le moment.",
+      "retry": "Réessayer",
+      "backToToday": "Retour à Aujourd’hui"
+    }
   }
 }

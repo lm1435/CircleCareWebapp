@@ -101,6 +101,10 @@
     "settings": "Definições de notificação",
     "side": {
       "body": "Lembretes, doses tomadas, notas, compromissos e pessoas que entram, em todos os seus círculos, durante 3 dias. Abrir uma leva-o ao mesmo sítio que uma notificação no telemóvel."
+    },
+    "slot": {
+      "skipped_one": "{{count}} saltado",
+      "skipped_other": "{{count}} saltados"
     }
   },
   "trialCharge": {

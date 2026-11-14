@@ -321,5 +321,37 @@
       "logged": "Bei Bedarf gegeben",
       "openHistory": "Dosisverlauf öffnen"
     }
+  },
+  "doseAlerts": {
+    "notice": {
+      "title": "Folgehinweise sind pausiert",
+      "body": "In letzter Zeit wurden keine Dosen eingetragen, daher haben wir die zusätzlichen Hinweise pausiert. Sobald eine Dosis eingetragen wird, sind sie wieder an.",
+      "bodyKept": "Sie haben entschieden, die Folgehinweise vorerst pausiert zu lassen. Sobald eine Dosis eingetragen wird, sind sie wieder an.",
+      "since": "Pausiert seit {{date}}",
+      "resume": "Hinweise wieder einschalten",
+      "routineChanged": "Hat sich die Routine geändert?",
+      "resumed": "Die Hinweise sind an",
+      "resumeFailed": "Die Hinweise konnten nicht wieder eingeschaltet werden. Bitte versuchen Sie es erneut."
+    },
+    "checkin": {
+      "eyebrow": "Folgehinweise",
+      "title": "Hat sich die Routine von {{name}} geändert?",
+      "titleSelf": "Hat sich Ihre Routine geändert?",
+      "body": "Routinen ändern sich: ein Krankenhausaufenthalt, ein neues Rezept, eine Pause. Wir haben die Folgehinweise pausiert, damit sie sich nicht häufen.",
+      "stillGiving": "Wir geben sie weiterhin",
+      "stillTaking": "Ich nehme sie weiterhin",
+      "stillHint": "Die Hinweise sind sofort wieder an.",
+      "changed": "Die Routine hat sich geändert",
+      "changedHint": "Medikamente bearbeiten oder absetzen",
+      "keep": "Hinweise vorerst pausiert lassen",
+      "keepHint": "Sie können sie jederzeit unter Heute wieder einschalten.",
+      "alertsOnTitle": "Die Hinweise sind an",
+      "alertsOnBody": "Sie erhalten wieder Folgehinweise, wenn eine Dosis nicht eingetragen wird.",
+      "viewOnly": "Nur Pflegepersonen, die in diesem Kreis Änderungen vornehmen können, können hier antworten.",
+      "answerFailed": "Ihre Antwort konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+      "loadFailed": "Das konnte gerade nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "backToToday": "Zurück zu Heute"
+    }
   }
 }

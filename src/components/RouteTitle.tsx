@@ -40,6 +40,7 @@ const CIRCLE_SUBTITLES: Record<string, string> = {
   members: 'pageTitles.members',
   settings: 'pageTitles.settings',
   'daily-update': 'pageTitles.dailyUpdate',
+  'routine-check-in': 'pageTitles.routineCheckIn',
   welcome: 'pageTitles.welcome',
   notifications: 'pageTitles.notifications',
 };

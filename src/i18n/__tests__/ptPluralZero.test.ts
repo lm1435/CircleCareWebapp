@@ -53,6 +53,13 @@ const RENDERED_ONLY_ABOVE_ZERO: Record<string, string> = {
   'calendar:addEvent.simple.doseSummary': 'doseSummaryText is null with no dose',
   'calendar:addEvent.simple.doseSummaryDaily': 'doseSummaryText is null with no dose',
   'calendar:addEvent.pastTimesInline': 'the past-time note renders only when a dose time has passed',
+  // 1.4.2 grouped dose rows: the inbox fallback copy (lib/notificationsInbox.ts slotFallbackCopy)
+  // never renders a count of 0: a zero part is dropped and a zero total gives no fallback line.
+  'common:inbox.slot.due': 'slotFallbackCopy returns null when the dose count is 0',
+  'common:inbox.slot.notMarked': 'slotFallbackCopy returns null when the unmarked count is 0',
+  'common:inbox.slot.taken': 'slotFallbackCopy drops a zero taken part',
+  'common:inbox.slot.skipped': 'slotFallbackCopy drops a zero skipped part',
+  'common:inbox.slot.allTaken': 'used only when taken === doseCount > 0',
 };
 /**
  * Whole namespaces whose count lines are NEVER rendered at 0: the daily update omits a line

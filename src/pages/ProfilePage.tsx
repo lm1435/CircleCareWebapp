@@ -380,9 +380,10 @@ export default function ProfilePage(): ReactElement {
     if (blockOfflineWrite('save')) return;
     const prefs = savedPrefs();
     const wasMixed = groupMixed(prefs, group);
-    // Medications ON -> OFF (including from the mixed state) asks first,
-    // BEFORE any write. Turning on, and every other group, never asks.
-    if (group === 'medications' && !next) {
+    // Doses not marked ON -> OFF asks first, BEFORE any write: it is the safety alert
+    // ("you won't be told when a dose isn't marked"). Turning on, Doses taken, and every
+    // other group never ask.
+    if (group === 'doses_not_marked' && !next) {
       setPendingMedicationsOff({ wasMixed });
       return;
     }
@@ -394,17 +395,17 @@ export default function ProfilePage(): ReactElement {
     const wasMixed = pendingMedicationsOff?.wasMixed ?? false;
     setPendingMedicationsOff(null);
     Analytics.notificationGroupToggled({
-      group: 'medications',
+      group: 'doses_not_marked',
       enabled: false,
       was_mixed: wasMixed,
       confirmed: true,
     });
-    writeNotifGroup('medications', false);
+    writeNotifGroup('doses_not_marked', false);
   };
 
   const cancelMedicationsOff = (): void => {
     Analytics.notificationGroupToggled({
-      group: 'medications',
+      group: 'doses_not_marked',
       enabled: false,
       was_mixed: pendingMedicationsOff?.wasMixed ?? false,
       confirmed: false,
@@ -990,9 +991,13 @@ export default function ProfilePage(): ReactElement {
               const mixed = groupMixed(prefs, group);
               // Literal keys (not template strings) so the key-coverage scan can resolve them.
               const copy: Record<NotificationGroup, { title: string; desc: string }> = {
-                medications: {
-                  title: t('notifications.groups.medications'),
-                  desc: t('notifications.groups.medicationsDesc'),
+                doses_taken: {
+                  title: t('notifications.groups.dosesTaken'),
+                  desc: t('notifications.groups.dosesTakenDesc'),
+                },
+                doses_not_marked: {
+                  title: t('notifications.groups.dosesNotMarked'),
+                  desc: t('notifications.groups.dosesNotMarkedDesc'),
                 },
                 tasks: {
                   title: t('notifications.groups.tasks'),

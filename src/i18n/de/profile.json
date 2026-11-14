@@ -36,8 +36,6 @@
   "notifications": {
     "description": "Legen Sie fest, welche Benachrichtigungen Sie erhalten.",
     "groups": {
-      "medications": "Medikamente",
-      "medicationsDesc": "Dosen eingenommen, ausgelassen oder noch nicht eingetragen",
       "tasks": "Aufgaben & Termine",
       "tasksDesc": "Wenn Ihnen etwas zugewiesen wird und bevor es fällig ist",
       "notes": "Notizen",
@@ -45,7 +43,11 @@
       "tips": "Tagesübersicht und Tipps",
       "tipsDesc": "Ihre Tagesübersicht und hilfreiche Hinweise",
       "shifts": "Schichten",
-      "shiftsDesc": "Neue offene Schichten, Erinnerungen und Änderungen an Ihren Schichten"
+      "shiftsDesc": "Neue offene Schichten, Erinnerungen und Änderungen an Ihren Schichten",
+      "dosesTaken": "Eingenommene Dosen",
+      "dosesTakenDesc": "Wenn jemand eine Dosis als eingenommen oder ausgelassen einträgt",
+      "dosesNotMarked": "Nicht eingetragene Dosen",
+      "dosesNotMarkedDesc": "Wenn eine Dosis nach ihrer Zeit noch nicht eingetragen ist"
     },
     "someTurnedOff": "Teilweise ausgeschaltet",
     "confirmMedicationsOff": {

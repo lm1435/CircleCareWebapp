@@ -110,5 +110,27 @@
       "actionA11y": "Remover esta dose, registada às {{time}}",
       "body": "Remover a dose registada às {{time}} por {{name}}? Todos serão avisados de que ela foi removida."
     }
+  },
+  "doseAlerts": {
+    "notice": {
+      "title": "Os alertas de acompanhamento estão em pausa",
+      "body": "Nenhuma dose foi marcada recentemente, por isso pausámos os alertas adicionais. Marcar qualquer dose volta a ativá-los.",
+      "bodyKept": "Escolheu manter os alertas de acompanhamento em pausa por agora. Marcar qualquer dose volta a ativá-los.",
+      "since": "Em pausa desde {{date}}",
+      "resumeFailed": "Não foi possível reativar os alertas. Tente novamente."
+    },
+    "checkin": {
+      "titleSelf": "A sua rotina mudou?",
+      "body": "As rotinas mudam: um internamento, uma nova receita, uma pausa. Pausámos os alertas de acompanhamento para que não se acumulem.",
+      "stillGiving": "Ainda os estamos a dar",
+      "stillTaking": "Ainda os estou a tomar",
+      "stillHint": "Os alertas voltam de imediato.",
+      "keep": "Manter os alertas em pausa por agora",
+      "keepHint": "Pode reativá-los quando quiser em Hoje.",
+      "alertsOnBody": "Vai voltar a receber alertas de acompanhamento quando uma dose não for marcada.",
+      "viewOnly": "Só os cuidadores que podem fazer alterações neste círculo podem responder.",
+      "answerFailed": "Não foi possível guardar a sua resposta. Tente novamente.",
+      "retry": "Tentar novamente"
+    }
   }
 }

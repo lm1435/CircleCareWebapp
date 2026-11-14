@@ -290,6 +290,22 @@ describe('useConfirmMedication', () => {
     expect(mockNoteDoseAnswered).toHaveBeenCalledWith(CIRCLE_ID, 'taken');
   });
 
+  // Quiet-circle back-off (1.4.2): marking ANY dose resumes a paused circle on the server, so
+  // the paused notice ['doseAlerts', circleId] must refetch at once (mobile twin:
+  // invalidateAfterMedicationConfirm).
+  it('P a confirmed dose invalidates the dose-alerts notice for that circle', async () => {
+    mockConfirm.mockResolvedValue({ id: 'conf-3' } as MedicationConfirmation);
+    const { Wrapper, queryClient } = wrapper();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
+    const { result } = renderHook(() => useConfirmMedication(CIRCLE_ID, 'care_profile'), {
+      wrapper: Wrapper,
+    });
+    await act(async () => {
+      await result.current.mutateAsync({ event_id: 'e1', status: 'skipped', scheduled_time: '08:00:00' });
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['doseAlerts', CIRCLE_ID] });
+  });
+
   // THE CAP. This QueryClient runs `networkMode: 'online'` in production
   // (src/lib/queryClient.ts): a refetch begun while offline PAUSES rather than
   // rejects, so without a cap a dropped connection would hold the Take/Skip

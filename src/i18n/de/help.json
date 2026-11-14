@@ -58,7 +58,7 @@
         },
         {
           "question": "Welche Benachrichtigungen erhalte ich?",
-          "answer": "Sie erhalten Hinweise in fünf Gruppen, die Sie in den Einstellungen unter Hinweise ein- oder ausschalten können: Medikamente (eingenommene, ausgelassene oder nicht eingetragene Dosen), Aufgaben & Termine (wenn Ihnen etwas zugewiesen wird und bevor etwas fällig ist), Notizen (wenn jemand eine Notiz hinzufügt), Tagesübersicht und Tipps sowie Schichten (neue offene Schichten, Erinnerungen und Änderungen an Ihren Schichten). Sind Sie die umsorgte Person, erhalten Sie außerdem Ihre eigenen Dosis-Erinnerungen, die immer eingeschaltet sind."
+          "answer": "Sie erhalten Hinweise in sechs Gruppen, die Sie in den Einstellungen unter Hinweise ein- oder ausschalten können: Eingenommene Dosen (wenn jemand eine Dosis als eingenommen oder ausgelassen einträgt), Nicht eingetragene Dosen (wenn eine Dosis nach ihrer Zeit noch nicht eingetragen ist), Aufgaben & Termine (wenn Ihnen etwas zugewiesen wird und bevor etwas fällig ist), Notizen (wenn jemand eine Notiz hinzufügt), Tagesübersicht und Tipps sowie Schichten (neue offene Schichten, Erinnerungen und Änderungen an Ihren Schichten). Sind Sie die umsorgte Person, erhalten Sie außerdem Ihre eigenen Dosis-Erinnerungen, die immer eingeschaltet sind."
         },
         {
           "question": "Was sind Ruhezeiten?",
@@ -66,7 +66,7 @@
         },
         {
           "question": "Kann ich bestimmte Benachrichtigungen ausschalten?",
-          "answer": "Ja. Öffnen Sie Einstellungen, dann Hinweise. Jeder der fünf Schalter schaltet eine ganze Gruppe für Ihr Konto ein oder aus, in jedem Kreis, dem Sie angehören. Wenn Sie Medikamente ausschalten, werden Sie nicht benachrichtigt, wenn eine Dosis nicht eingetragen wurde."
+          "answer": "Ja. Öffnen Sie Einstellungen, dann Hinweise. Jeder der sechs Schalter schaltet eine ganze Gruppe für Ihr Konto ein oder aus, in jedem Kreis, dem Sie angehören. Wenn Sie Nicht eingetragene Dosen ausschalten, werden Sie nicht benachrichtigt, wenn eine Dosis nicht eingetragen wurde."
         }
       ]
     },

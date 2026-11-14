@@ -25,6 +25,16 @@ const mockUseMedicationRoster = vi.fn();
 const mockStatusMutateAsync = vi.fn();
 const mockUseCircle = vi.fn();
 
+// Quiet-circle back-off (1.4.2): the read answers "not paused" unless a test says otherwise.
+vi.mock('@/hooks/useDoseAlerts', () => ({
+  useDoseAlerts: vi.fn(() => ({
+    state: { paused: false, paused_since: null, answer: null, can_answer: false },
+    settled: true,
+    isError: false,
+    refetch: vi.fn(),
+  })),
+  useAnswerDoseAlerts: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+}));
 vi.mock('@/hooks/useCalendarEvents', () => ({
   useMedicationRoster: (circleId: string) => mockUseMedicationRoster(circleId),
   useMedicationStatus: () => ({ mutateAsync: mockStatusMutateAsync, isPending: false }),
@@ -2013,5 +2023,53 @@ describe('MedicationsPage — one add pattern', () => {
     mockUseCircle.mockReturnValue({ canEdit: false, timezone: 'America/New_York' });
     renderPage();
     expect(screen.queryByTestId('meds-add-medication-bottom')).not.toBeInTheDocument();
+  });
+});
+
+// Quiet-circle back-off (1.4.2): "Follow-up alerts are paused" as a slim line at the top of Meds.
+describe('MedicationsPage dose-alerts line', () => {
+  const paused = {
+    state: { paused: true, paused_since: '2026-12-01T17:00:00.000Z', answer: null, can_answer: true },
+    settled: true,
+    isError: false,
+    refetch: vi.fn(),
+  };
+  afterEach(async () => {
+    const { useDoseAlerts } = await import('@/hooks/useDoseAlerts');
+    vi.mocked(useDoseAlerts).mockReturnValue({
+      state: { paused: false, paused_since: null, answer: null, can_answer: false },
+      settled: true,
+      isError: false,
+      refetch: vi.fn(),
+    });
+  });
+
+  it('N paused:false shows no line', async () => {
+    renderPage();
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.queryByTestId('dose-alerts-notice-meds')).toBeNull();
+    expect(screen.queryByText('Follow-up alerts are paused')).toBeNull();
+  });
+
+  it('P paused: the slim line with "Turn alerts back on" (primary) and the check-in link', async () => {
+    const { useDoseAlerts } = await import('@/hooks/useDoseAlerts');
+    vi.mocked(useDoseAlerts).mockReturnValue(paused as never);
+    renderPage();
+    const line = await screen.findByTestId('dose-alerts-notice-meds');
+    expect(within(line).getByText('Follow-up alerts are paused')).toBeInTheDocument();
+    const resume = within(line).getByRole('button', { name: 'Turn alerts back on' });
+    expect(resume.className).toContain('bg-primary-fill');
+    expect(within(line).getByRole('button', { name: 'Has the routine changed?' })).toBeInTheDocument();
+  });
+
+  it('N view-only: the line shows without buttons', async () => {
+    const { useDoseAlerts } = await import('@/hooks/useDoseAlerts');
+    vi.mocked(useDoseAlerts).mockReturnValue({
+      ...paused,
+      state: { ...paused.state, can_answer: false },
+    } as never);
+    renderPage();
+    const line = await screen.findByTestId('dose-alerts-notice-meds');
+    expect(within(line).queryAllByRole('button')).toHaveLength(0);
   });
 });

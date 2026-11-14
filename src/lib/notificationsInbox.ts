@@ -93,6 +93,11 @@ const PUSH_TYPES: readonly string[] = [
   'tier_downgrade_view_only',
   'recognition',
   'test',
+  // 1.4.2: one alert per time slot, the 10-minute "doses taken" summary, and the
+  // quiet-circle routine check-in.
+  'medication_slot_alert',
+  'medication_taken_summary',
+  'routine_checkin',
 ];
 
 export function inboxTypeEnum(type: unknown): string {
@@ -192,12 +197,78 @@ export interface RowCopy {
   body: string;
 }
 
+/** The grouped medication rows (1.4.2): one row per time slot per tier, and the "doses taken" summary. */
+export const SLOT_TYPES: ReadonlySet<string> = new Set([
+  'medication_slot_alert',
+  'medication_taken_summary',
+]);
+
+/** A wire count: a finite whole number >= 0 (a string of digits is accepted), else null. */
+export function wireCount(v: unknown): number | null {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && /^\d+$/.test(v) ? Number(v) : NaN;
+  return Number.isInteger(n) && n >= 0 ? n : null;
+}
+
+const SLOT_TIER_DUE = new Set(['due', '0', 0]);
+
+/**
+ * The client's own copy for a grouped row, pluralized in the viewer's language
+ * (`common:inbox.slot.*`). Only used when the server's stored text is blank:
+ * the server text names the person and who marked, which the payload does not
+ * carry. Null when the counts are unusable.
+ */
+export function slotFallbackCopy(
+  item: InboxItem,
+  t: TFn,
+  cycle: HourCycle,
+  language?: string
+): RowCopy | null {
+  const data = item.data ?? {};
+  const clockValue = typeof data.scheduledTime === 'string' ? data.scheduledTime : '';
+  const clock = isClock(clockValue) ? parseClock(clockValue) : null;
+  const time = clock ? formatTimeOfDay(clock[0], clock[1], cycle, language as TimeLanguage | undefined) : '';
+  // No usable time: the plain "Medications" heading, so the row still has a title.
+  const title = time ? t('inbox.slot.title', { time }) : t('pageTitles.meds');
+  const doseCount = wireCount(data.doseCount);
+  if (item.type === 'medication_slot_alert') {
+    const due = SLOT_TIER_DUE.has(data.slotTier as string) || SLOT_TIER_DUE.has(data.tier as number);
+    const count = due ? doseCount : wireCount(data.unmarkedCount);
+    if (count === null || count === 0) return null;
+    return { title, body: due ? t('inbox.slot.due', { count }) : t('inbox.slot.notMarked', { count }) };
+  }
+  const taken = wireCount(data.takenCount);
+  const skipped = wireCount(data.skippedCount);
+  if (taken === null || skipped === null || taken + skipped === 0) return null;
+  if (skipped === 0 && doseCount !== null && taken === doseCount) {
+    return { title, body: t('inbox.slot.allTaken', { count: taken }) };
+  }
+  const parts: string[] = [];
+  if (taken > 0) parts.push(t('inbox.slot.taken', { count: taken }));
+  if (skipped > 0) parts.push(t('inbox.slot.skipped', { count: skipped }));
+  return { title, body: parts.join(', ') };
+}
+
 /**
  * Dose rows (state != null) render from `state`, never from the stored
  * title/body. Other rows show the stored title and body as written.
+ *
+ * Grouped rows (medication_slot_alert / medication_taken_summary, 1.4.2) show the
+ * server's title/body (written in the reader's language, with the person's name
+ * and who marked). A blank side falls back to the client's pluralized copy, so a
+ * row is never blank.
  */
 export function rowCopy(item: InboxItem, t: TFn, cycle: HourCycle, language?: string): RowCopy {
   const state = item.state;
+  if (!state && SLOT_TYPES.has(item.type)) {
+    const title = typeof item.title === 'string' ? item.title.trim() : '';
+    const body = typeof item.body === 'string' ? item.body.trim() : '';
+    if (title && body) return { title: item.title, body: item.body };
+    const fallback = slotFallbackCopy(item, t, cycle, language);
+    if (title) return { title: item.title, body: fallback?.body ?? '' };
+    if (fallback) return { title: fallback.title, body: body ? item.body : fallback.body };
+    // No usable counts and no title: the server body moves up, else the plain heading.
+    return body ? { title: item.body, body: '' } : { title: t('pageTitles.meds'), body: '' };
+  }
   if (!state) return { title: item.title, body: item.body };
 
   const clock = parseClock(state.scheduled_time);
@@ -265,7 +336,7 @@ export function rowMeta(
 export type GoneReason = 'removed' | 'ended' | 'no_access';
 
 export type InboxDestination =
-  | { kind: 'route'; to: string }
+  | { kind: 'route'; to: string; state?: Record<string, unknown> }
   | { kind: 'gone'; reason: GoneReason }
   | { kind: 'none' };
 
@@ -314,6 +385,18 @@ const MEDS_TYPES: ReadonlySet<string> = new Set([
   'as_needed_dose_removed',
 ]);
 const CIRCLE_LOSS_TYPES: ReadonlySet<string> = new Set(['member_removed', 'circle_archived']);
+
+/** Today focused on one time slot: `?slot_date=YYYY-MM-DD&slot_time=HH:MM:SS` (lib/slotLanding.ts reads it). */
+export function slotLandingPath(circleId: string, date: unknown, time: unknown): string {
+  const base = `/circles/${circleId}`;
+  // Both validated, so the URL is built literally (the clock's colons stay readable).
+  return isRealDate(date) && isClock(time) ? `${base}?slot_date=${date}&slot_time=${time}` : base;
+}
+
+/** The routine check-in (quiet-circle back-off 1.4.2). */
+export function routineCheckinPath(circleId: string): string {
+  return `/circles/${circleId}/routine-check-in`;
+}
 
 export function resolveInboxDestination(item: InboxItem): InboxDestination {
   // A gone target stays a row and opens the removed state.
@@ -375,6 +458,13 @@ export function resolveInboxDestination(item: InboxItem): InboxDestination {
   }
 
   switch (item.type) {
+    // One alert per time slot / the "doses taken" summary: Today, on that slot's doses
+    // (each marked one by one; there is no mark-all). Without a usable slot: Today.
+    case 'medication_slot_alert':
+    case 'medication_taken_summary':
+      return { kind: 'route', to: slotLandingPath(circleId, data.scheduledDate, data.scheduledTime) };
+    case 'routine_checkin':
+      return { kind: 'route', to: routineCheckinPath(circleId), state: { checkinSource: 'inbox' } };
     case 'care_note_added':
       return {
         kind: 'route',

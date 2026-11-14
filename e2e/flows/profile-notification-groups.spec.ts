@@ -5,12 +5,13 @@ import { checkA11y } from '../helpers';
 import { setProfileLanguage } from '../notesFirstClassShared';
 
 // docs/plans/notification-settings-4-groups.md: the eight per-key switches are
-// four GROUPS (Medications, Tasks & appointments, Notes, Daily update & tips).
+// GROUPS (Doses taken, Doses not marked, Tasks & appointments, Notes, Daily update & tips,
+// Shifts). 1.4.2 split the old Medications group into its two keys.
 // Storage is unchanged. A group is ON if ANY child is on (absent key = ON); a
 // tap sets every child. The Tasks write also pins `event_notes` to its stored
 // value so the backend's note_nudges -> event_notes legacy shim
-// (backend/src/routes/users.ts ~357-381) cannot flip Notes. Medications OFF
-// asks first. Twin of mobile/.maestro/parity/profile/notification-groups.yaml.
+// (backend/src/routes/users.ts ~357-381) cannot flip Notes. Doses not marked OFF
+// asks first; Doses taken never asks. Twin of mobile/.maestro/parity/profile/notification-groups.yaml.
 // (Replaces profile-note-switches.spec.ts, the three-note-switch spec.)
 
 type Prefs = Record<string, unknown>;
@@ -33,7 +34,7 @@ const without = (prefs: Prefs, ...keys: string[]): Prefs =>
   Object.fromEntries(Object.entries(prefs).filter(([k]) => !keys.includes(k)));
 
 test.describe('Profile: notification groups', () => {
-  test('Notes, Tasks & appointments and Medications write their whole group; absent note keys read ON', async ({
+  test('Notes, Tasks & appointments and the two dose switches write their own keys; absent note keys read ON', async ({
     page,
     account,
   }, testInfo) => {
@@ -53,7 +54,8 @@ test.describe('Profile: notification groups', () => {
       writePrefs(account.userId, base);
 
       await page.goto('/profile/alerts', { waitUntil: 'domcontentloaded' });
-      const meds = page.getByRole('switch', { name: 'Medications', exact: true });
+      const meds = page.getByRole('switch', { name: 'Doses not marked', exact: true });
+      const taken = page.getByRole('switch', { name: 'Doses taken', exact: true });
       const tasks = page.getByRole('switch', { name: 'Tasks & appointments', exact: true });
       const notes = page.getByRole('switch', { name: 'Notes', exact: true });
       const tips = page.getByRole('switch', { name: 'Daily update & tips', exact: true });
@@ -61,6 +63,7 @@ test.describe('Profile: notification groups', () => {
 
       // The eight retired labels are gone.
       for (const old of [
+        'Medications',
         'Medication confirmations',
         'Unmarked medications',
         'Task assignments',
@@ -74,7 +77,7 @@ test.describe('Profile: notification groups', () => {
 
       await checkA11y(page, '/profile/alerts', testInfo);
 
-      for (const sw of [meds, tasks, notes, tips]) await expect(sw).toHaveAttribute('aria-checked', 'true');
+      for (const sw of [taken, meds, tasks, notes, tips]) await expect(sw).toHaveAttribute('aria-checked', 'true');
       await expect(page.getByText('Some turned off')).toHaveCount(0);
 
       // --- Tasks off FIRST, while Notes is still ON: its three keys false and
@@ -137,7 +140,20 @@ test.describe('Profile: notification groups', () => {
       await expect(notes).toHaveAttribute('aria-checked', 'false');
       await expect(tasks).toHaveAttribute('aria-checked', 'false');
 
-      // --- Medications: the confirm comes first; "Keep on" changes nothing ---
+      // --- Doses taken: no confirm, ONLY medication_confirmations is written ---
+      const beforeTaken = readPrefs(account.userId);
+      await taken.click();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect
+        .poll(() => readPrefs(account.userId), { timeout: 10_000 })
+        .toEqual({ ...beforeTaken, medication_confirmations: false });
+      await expect(meds).toHaveAttribute('aria-checked', 'true');
+      await taken.click();
+      await expect
+        .poll(() => readPrefs(account.userId), { timeout: 10_000 })
+        .toEqual({ ...beforeTaken, medication_confirmations: true });
+
+      // --- Doses not marked: the confirm comes first; "Keep on" changes nothing ---
       const beforeMeds = readPrefs(account.userId);
       await meds.click();
       const dialog = page.getByRole('dialog');
@@ -152,15 +168,16 @@ test.describe('Profile: notification groups', () => {
       await dialog.getByText('Turn off', { exact: true }).click();
       await expect
         .poll(() => readPrefs(account.userId), { timeout: 10_000 })
-        .toEqual({ ...beforeMeds, medication_confirmations: false, missed_medications: false });
+        .toEqual({ ...beforeMeds, missed_medications: false });
       await expect(meds).toHaveAttribute('aria-checked', 'false');
+      await expect(taken).toHaveAttribute('aria-checked', 'true');
 
       // Persisted: a reload shows the stored state.
       await page.reload({ waitUntil: 'domcontentloaded' });
       for (const sw of [meds, tasks, notes]) await expect(sw).toHaveAttribute('aria-checked', 'false');
       await expect(tips).toHaveAttribute('aria-checked', 'true');
 
-      // --- Turning Medications back on never asks ---
+      // --- Turning Doses not marked back on never asks ---
       await meds.click();
       await expect(page.getByRole('dialog')).toHaveCount(0);
       await expect
@@ -226,7 +243,7 @@ test.describe('Profile: notification groups', () => {
     }
   });
 
-  test('Spanish: group names and "Algunas desactivadas" with a mixed seed', async ({ page, account }) => {
+  test('Spanish: group names, and the split keeps a half-off seed exactly (no "Algunas desactivadas")', async ({ page, account }) => {
     test.slow();
     const original = readPrefs(account.userId);
     try {
@@ -234,12 +251,21 @@ test.describe('Profile: notification groups', () => {
       await setProfileLanguage(page, 'es');
       await page.goto('/profile/alerts', { waitUntil: 'domcontentloaded' });
 
-      await expect(page.getByRole('switch', { name: 'Medicamentos', exact: true })).toBeVisible({ timeout: 15_000 });
+      // A user who had turned off only the not-marked key keeps exactly that after the split.
+      await expect(page.getByRole('switch', { name: 'Dosis tomadas', exact: true })).toHaveAttribute(
+        'aria-checked',
+        'true',
+        { timeout: 15_000 }
+      );
+      await expect(page.getByRole('switch', { name: 'Dosis sin marcar', exact: true })).toHaveAttribute(
+        'aria-checked',
+        'false'
+      );
       await expect(page.getByRole('switch', { name: 'Tareas y citas', exact: true })).toBeVisible();
       await expect(page.getByRole('switch', { name: 'Notas', exact: true })).toBeVisible();
       await expect(page.getByRole('switch', { name: 'Resumen del día y consejos', exact: true })).toBeVisible();
-      await expect(page.getByText('Algunas desactivadas')).toHaveCount(1);
-      await expect(page.getByText('Dosis tomadas, omitidas o sin marcar')).toBeVisible();
+      await expect(page.getByText('Algunas desactivadas')).toHaveCount(0);
+      await expect(page.getByText('Cuando una dosis sigue sin marcar después de su hora')).toBeVisible();
     } finally {
       writePrefs(account.userId, original);
       await setProfileLanguage(page, 'en').catch(() => {});

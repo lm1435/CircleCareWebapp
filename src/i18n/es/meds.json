@@ -321,5 +321,37 @@
       "logged": "Dada según se necesite",
       "openHistory": "Abrir historial de dosis"
     }
+  },
+  "doseAlerts": {
+    "notice": {
+      "title": "Los avisos de seguimiento están en pausa",
+      "body": "No se han marcado dosis últimamente, así que pausamos los avisos adicionales. Al marcar cualquier dosis, se vuelven a activar.",
+      "bodyKept": "Elegiste mantener los avisos de seguimiento en pausa por ahora. Al marcar cualquier dosis, se vuelven a activar.",
+      "since": "En pausa desde el {{date}}",
+      "resume": "Reactivar avisos",
+      "routineChanged": "¿Cambió la rutina?",
+      "resumed": "Los avisos están activados",
+      "resumeFailed": "No se pudieron reactivar los avisos. Inténtalo de nuevo."
+    },
+    "checkin": {
+      "eyebrow": "Avisos de seguimiento",
+      "title": "¿Cambió la rutina de {{name}}?",
+      "titleSelf": "¿Cambió tu rutina?",
+      "body": "Las rutinas cambian: una estancia en el hospital, una receta nueva, un descanso. Pausamos los avisos de seguimiento para que no se acumulen.",
+      "stillGiving": "Seguimos dándolos",
+      "stillTaking": "Sigo tomándolos",
+      "stillHint": "Los avisos vuelven de inmediato.",
+      "changed": "La rutina cambió",
+      "changedHint": "Actualiza o suspende medicamentos",
+      "keep": "Mantener los avisos en pausa por ahora",
+      "keepHint": "Puedes reactivarlos cuando quieras desde Hoy.",
+      "alertsOnTitle": "Los avisos están activados",
+      "alertsOnBody": "Volverás a recibir avisos de seguimiento cuando una dosis no se marque.",
+      "viewOnly": "Solo los cuidadores que pueden hacer cambios en este círculo pueden responder.",
+      "answerFailed": "No se pudo guardar tu respuesta. Inténtalo de nuevo.",
+      "loadFailed": "No se pudo cargar en este momento.",
+      "retry": "Reintentar",
+      "backToToday": "Volver a Hoy"
+    }
   }
 }

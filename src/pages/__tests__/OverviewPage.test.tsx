@@ -29,6 +29,16 @@ vi.mock('@/hooks/useCircle', () => ({ useCircle: vi.fn() }));
 vi.mock('@/hooks/useEarnedUpsell', () => ({ useEarnedUpsell: vi.fn() }));
 vi.mock('@/hooks/useNextUp', () => ({ useNextUp: vi.fn() }));
 vi.mock('@/hooks/useNextStep', () => ({ useNextStep: vi.fn() }));
+// Quiet-circle back-off (1.4.2): the read answers "not paused" unless a test says otherwise.
+vi.mock('@/hooks/useDoseAlerts', () => ({
+  useDoseAlerts: vi.fn(() => ({
+    state: { paused: false, paused_since: null, answer: null, can_answer: false },
+    settled: true,
+    isError: false,
+    refetch: vi.fn(),
+  })),
+  useAnswerDoseAlerts: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+}));
 
 vi.mock('@/components/calendar/AddEventModal', () => ({
   AddEventModal: ({

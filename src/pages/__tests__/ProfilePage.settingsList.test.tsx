@@ -285,7 +285,8 @@ describe('ProfilePage settings list', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/profile/alerts');
     expect(await screen.findByRole('heading', { level: 1, name: 'Alerts' })).toBeInTheDocument();
     expect(screen.getByTestId('settings-page-alerts')).toBeInTheDocument();
-    expect(screen.getAllByRole('switch')).toHaveLength(5);
+    // Six groups since 1.4.2: Medications split into Doses taken / Doses not marked.
+    expect(screen.getAllByRole('switch')).toHaveLength(6);
     expect(screen.queryByTestId('settings-group-you')).toBeNull();
     expect(screen.queryByTestId('profile-header')).toBeNull();
 

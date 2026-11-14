@@ -47,8 +47,13 @@ export const LANDING_HIGHLIGHT_MS = 3000;
 
 /** The dose row a notification landed on (OverviewPage resolved it from the URL). */
 export interface NextUpLanding {
-  /** `NextUpItem.key` of the row. */
+  /** `NextUpItem.key` of the row (the one focus moves to). */
   key: string;
+  /**
+   * More rows of the SAME landing (1.4.2 grouped alert: every unmarked dose of one time
+   * slot). Each is revealed and highlighted too; each keeps its own Taken (no mark-all).
+   */
+  keys?: readonly string[];
   /** How the person got here, for `medication_confirmed`. */
   entry: MedicationConfirmEntry;
 }
@@ -160,12 +165,15 @@ export function NextUp({
   } | null>(null);
 
   // LANDING: the highlight lasts a moment; the ENTRY (for analytics) lasts as long as the page.
-  const [highlightKey, setHighlightKey] = useState<string | null>(null);
+  const [highlightKeys, setHighlightKeys] = useState<ReadonlySet<string>>(() => new Set());
   const [announcement, setAnnouncement] = useState('');
-  const landedRef = useRef<NextUpLanding | null>(null);
+  const landedRef = useRef<{ keys: ReadonlySet<string>; entry: MedicationConfirmEntry } | null>(null);
   const listRef = useRef<HTMLUListElement | null>(null);
   const landingKey = landing?.key ?? null;
   const landingEntry = landing?.entry ?? null;
+  // Every row of this landing: the focused one first, then the rest of a slot (no duplicates).
+  const landingKeys = landing ? [...new Set([landing.key, ...(landing.keys ?? [])])] : [];
+  const landingKeysSig = landingKeys.join('|');
 
   const undoFlow = useMedicationUndo({
     circleId,
@@ -208,8 +216,11 @@ export function NextUp({
   });
   const tasks = useTaskCompletion(circleId, 'today');
 
-  // The landed row is always shown, even when it is past the first NEXT_UP_VISIBLE.
-  const landedIndex = landingKey ? items.findIndex((i) => i.key === landingKey) : -1;
+  // The landed rows are always shown, even when they are past the first NEXT_UP_VISIBLE.
+  const landedIndex = landingKeys.reduce(
+    (max, key) => Math.max(max, items.findIndex((i) => i.key === key)),
+    -1
+  );
   const visible = items.slice(0, Math.max(NEXT_UP_VISIBLE, landedIndex + 1));
   // The 5rem leading column exists so timed and untimed rows align on the
   // title. When nothing visible has a time (e.g. only late, dateless tasks),
@@ -227,13 +238,21 @@ export function NextUp({
   // live region. Runs when the landing key changes, once the rows are on screen.
   useEffect(() => {
     if (!landingKey || !landingEntry || loading) return;
-    const row = Array.from(
+    const rows = Array.from(
       listRef.current?.querySelectorAll<HTMLElement>('[data-next-up-key]') ?? []
-    ).find((el) => el.dataset.nextUpKey === landingKey);
+    );
+    const row = rows.find((el) => el.dataset.nextUpKey === landingKey);
     if (!row) return;
-    landedRef.current = { key: landingKey, entry: landingEntry };
-    setHighlightKey(landingKey);
-    setAnnouncement(t('today.nextUp.landingNotMarked'));
+    const keys = new Set(landingKeys);
+    landedRef.current = { keys, entry: landingEntry };
+    setHighlightKeys(keys);
+    // A slot landing names how many of its doses are still to mark (pluralized); one dose
+    // keeps its own line.
+    setAnnouncement(
+      keys.size > 1
+        ? t('common:inbox.slot.notMarked', { count: keys.size })
+        : t('today.nextUp.landingNotMarked')
+    );
     if (typeof row.scrollIntoView === 'function') {
       row.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     }
@@ -241,13 +260,13 @@ export function NextUp({
       row.querySelector<HTMLElement>('[data-next-up-taken]') ?? row.querySelector<HTMLElement>('a')
     )?.focus({ preventScroll: true });
     const timer = window.setTimeout(() => {
-      setHighlightKey(null);
+      setHighlightKeys(new Set());
       setAnnouncement('');
     }, LANDING_HIGHLIGHT_MS);
     return () => window.clearTimeout(timer);
     // `t` is stable per language; a language switch must not replay the landing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [landingKey, landingEntry, loading]);
+  }, [landingKeysSig, landingEntry, loading]);
 
   if (loading) {
     return (
@@ -360,7 +379,7 @@ export function NextUp({
             onTakenPressed?.();
             // Taken on the row a notification landed on: the event says how they got here.
             const landed = landedRef.current;
-            if (landed && landed.key === item.key) {
+            if (landed && landed.keys.has(item.key)) {
               undoFlow.confirm(item.med!, 'taken', { entry: landed.entry });
             } else {
               undoFlow.confirm(item.med!, 'taken');
@@ -399,9 +418,9 @@ export function NextUp({
         {/* The inset (-mx-2 px-2) gives the landing highlight room around the text; the
             highlight is a tint plus a ring from the theme tokens, so it reads in light and dark. */}
         <div
-          data-highlighted={highlightKey === item.key ? 'true' : undefined}
+          data-highlighted={highlightKeys.has(item.key) ? 'true' : undefined}
           className={`-mx-2 rounded-lg px-2 transition-colors duration-500 motion-reduce:transition-none ${
-            highlightKey === item.key ? 'bg-moss-soft ring-2 ring-moss' : ''
+            highlightKeys.has(item.key) ? 'bg-moss-soft ring-2 ring-moss' : ''
           } ${
             stacked
               ? 'flex flex-col items-stretch gap-2 py-3'

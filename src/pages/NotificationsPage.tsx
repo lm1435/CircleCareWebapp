@@ -154,7 +154,8 @@ export function InboxPage({ circleId }: InboxPageProps = {}): ReactElement {
       returnFocusTo.current = item.id;
       setGone({ item, reason: destination.reason });
     } else if (destination.kind === 'route') {
-      navigate(destination.to);
+      if (destination.state) navigate(destination.to, { state: destination.state });
+      else navigate(destination.to);
     }
   };
 

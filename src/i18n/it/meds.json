@@ -321,5 +321,37 @@
       "logged": "Somministrata al bisogno",
       "openHistory": "Apri la cronologia delle dosi"
     }
+  },
+  "doseAlerts": {
+    "notice": {
+      "title": "Gli avvisi di controllo sono in pausa",
+      "body": "Di recente non è stata segnata nessuna dose, quindi abbiamo messo in pausa gli avvisi aggiuntivi. Segnando una dose qualsiasi si riattivano.",
+      "bodyKept": "Hai scelto di mantenere in pausa gli avvisi di controllo per ora. Segnando una dose qualsiasi si riattivano.",
+      "since": "In pausa dal {{date}}",
+      "resume": "Riattiva gli avvisi",
+      "routineChanged": "La routine è cambiata?",
+      "resumed": "Gli avvisi sono attivi",
+      "resumeFailed": "Non è stato possibile riattivare gli avvisi. Riprova."
+    },
+    "checkin": {
+      "eyebrow": "Avvisi di controllo",
+      "title": "La routine di {{name}} è cambiata?",
+      "titleSelf": "La tua routine è cambiata?",
+      "body": "Le routine cambiano: un ricovero, una nuova prescrizione, una pausa. Abbiamo messo in pausa gli avvisi di controllo perché non si accumulino.",
+      "stillGiving": "Li stiamo ancora dando",
+      "stillTaking": "Li sto ancora prendendo",
+      "stillHint": "Gli avvisi tornano subito.",
+      "changed": "La routine è cambiata",
+      "changedHint": "Aggiorna o sospendi i farmaci",
+      "keep": "Mantieni gli avvisi in pausa per ora",
+      "keepHint": "Puoi riattivarli quando vuoi da Oggi.",
+      "alertsOnTitle": "Gli avvisi sono attivi",
+      "alertsOnBody": "Riceverai di nuovo gli avvisi di controllo quando una dose non viene segnata.",
+      "viewOnly": "Possono rispondere solo i caregiver che possono modificare questa cerchia.",
+      "answerFailed": "Non è stato possibile salvare la risposta. Riprova.",
+      "loadFailed": "Non è stato possibile caricare al momento.",
+      "retry": "Riprova",
+      "backToToday": "Torna a Oggi"
+    }
   }
 }

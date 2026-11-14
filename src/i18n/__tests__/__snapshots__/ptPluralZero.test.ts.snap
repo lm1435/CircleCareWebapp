@@ -117,6 +117,31 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Ana · 1 nova",
     "Ana · 2 novas",
   ],
+  "pt common:inbox.slot.allTaken": [
+    "Tomado",
+    "Tomado",
+    "Todos os 2 tomados",
+  ],
+  "pt common:inbox.slot.due": [
+    "0 medicamento agendado",
+    "1 medicamento agendado",
+    "2 medicamentos agendados",
+  ],
+  "pt common:inbox.slot.notMarked": [
+    "0 dose ainda não foi marcada",
+    "1 dose ainda não foi marcada",
+    "2 doses ainda não foram marcadas",
+  ],
+  "pt common:inbox.slot.skipped": [
+    "0 pulado",
+    "1 pulado",
+    "2 pulados",
+  ],
+  "pt common:inbox.slot.taken": [
+    "0 tomado",
+    "1 tomado",
+    "2 tomados",
+  ],
   "pt dailyUpdate:asNeeded.given": [
     "0 dose se necessário dada",
     "1 dose se necessário dada",
@@ -566,6 +591,31 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Ana · 0 nova",
     "Ana · 1 nova",
     "Ana · 2 novas",
+  ],
+  "pt-PT common:inbox.slot.allTaken": [
+    "Tomado",
+    "Tomado",
+    "Todos os 2 tomados",
+  ],
+  "pt-PT common:inbox.slot.due": [
+    "0 medicamento agendado",
+    "1 medicamento agendado",
+    "2 medicamentos agendados",
+  ],
+  "pt-PT common:inbox.slot.notMarked": [
+    "0 dose ainda não foi marcada",
+    "1 dose ainda não foi marcada",
+    "2 doses ainda não foram marcadas",
+  ],
+  "pt-PT common:inbox.slot.skipped": [
+    "0 saltados",
+    "1 saltado",
+    "2 saltados",
+  ],
+  "pt-PT common:inbox.slot.taken": [
+    "0 tomado",
+    "1 tomado",
+    "2 tomados",
   ],
   "pt-PT dailyUpdate:asNeeded.given": [
     "0 dose se necessário dada",

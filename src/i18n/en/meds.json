@@ -321,5 +321,37 @@
       "logged": "Given as needed",
       "openHistory": "Open dose history"
     }
+  },
+  "doseAlerts": {
+    "notice": {
+      "title": "Follow-up alerts are paused",
+      "body": "No doses have been marked lately, so we paused the extra alerts. Marking any dose turns them back on.",
+      "bodyKept": "You chose to keep follow-up alerts paused for now. Marking any dose turns them back on.",
+      "since": "Paused since {{date}}",
+      "resume": "Turn alerts back on",
+      "routineChanged": "Has the routine changed?",
+      "resumed": "Alerts are on",
+      "resumeFailed": "Couldn't turn alerts back on. Try again."
+    },
+    "checkin": {
+      "eyebrow": "Follow-up alerts",
+      "title": "Has {{name}}'s routine changed?",
+      "titleSelf": "Has your routine changed?",
+      "body": "Routines change: a hospital stay, a new prescription, a break. We paused the follow-up alerts so they don't pile up.",
+      "stillGiving": "We're still giving these",
+      "stillTaking": "I'm still taking these",
+      "stillHint": "Alerts come back right away.",
+      "changed": "The routine changed",
+      "changedHint": "Update or discontinue medications",
+      "keep": "Keep alerts paused for now",
+      "keepHint": "Turn them back on anytime from Today.",
+      "alertsOnTitle": "Alerts are on",
+      "alertsOnBody": "You'll get follow-up alerts again when a dose isn't marked.",
+      "viewOnly": "Caregivers who can make changes in this circle can answer this.",
+      "answerFailed": "Couldn't save your answer. Try again.",
+      "loadFailed": "Couldn't load this right now.",
+      "retry": "Try again",
+      "backToToday": "Back to Today"
+    }
   }
 }

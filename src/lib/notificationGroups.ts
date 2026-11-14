@@ -1,5 +1,5 @@
 /**
- * Notification settings: 8 per-key switches collapsed into 4 groups.
+ * Notification settings: 8 per-key switches collapsed into 6 groups.
  * Spec: docs/plans/notification-settings-4-groups.md (section 4).
  *
  * Storage is unchanged (per-key JSON on `users.notification_preferences`); a
@@ -10,12 +10,25 @@
  * deliberately NOT in any group, so no group write can ever touch them.
  */
 
-export type NotificationGroup = 'medications' | 'tasks' | 'notes' | 'tips' | 'shifts';
+/**
+ * 1.4.2 (docs/plans/cognitive-overload-1-4-2.md item 2): the old Medications group is TWO
+ * switches. "Doses taken" (`medication_confirmations`) is the volume; "Doses not marked"
+ * (`missed_medications`) is the safety alert. Each reads its own stored key, so every user
+ * keeps exactly what they had (no migration; the backend already reads them per key).
+ */
+export type NotificationGroup =
+  | 'doses_taken'
+  | 'doses_not_marked'
+  | 'tasks'
+  | 'notes'
+  | 'tips'
+  | 'shifts';
 
 export type NotificationPrefs = Partial<Record<string, boolean>>;
 
 export const NOTIFICATION_GROUP_ORDER: readonly NotificationGroup[] = [
-  'medications',
+  'doses_taken',
+  'doses_not_marked',
   'tasks',
   'notes',
   'tips',
@@ -23,7 +36,8 @@ export const NOTIFICATION_GROUP_ORDER: readonly NotificationGroup[] = [
 ] as const;
 
 export const GROUPS = {
-  medications: ['medication_confirmations', 'missed_medications'],
+  doses_taken: ['medication_confirmations'],
+  doses_not_marked: ['missed_medications'],
   tasks: ['task_assignments', 'appointment_reminders', 'note_nudges'],
   notes: ['event_notes', 'care_notes'],
   tips: ['tips_and_suggestions'],

@@ -36,8 +36,6 @@
   "notifications": {
     "description": "Escolha quais alertas receber.",
     "groups": {
-      "medications": "Medicamentos",
-      "medicationsDesc": "Doses tomadas, puladas ou não marcadas",
       "tasks": "Tarefas e consultas",
       "tasksDesc": "Quando algo for atribuído a você e antes do prazo",
       "notes": "Notas",
@@ -45,7 +43,11 @@
       "tips": "Resumo do dia e dicas",
       "tipsDesc": "Seu resumo do dia e lembretes úteis",
       "shifts": "Plantões",
-      "shiftsDesc": "Novos plantões em aberto, lembretes e mudanças nos seus plantões"
+      "shiftsDesc": "Novos plantões em aberto, lembretes e mudanças nos seus plantões",
+      "dosesTaken": "Doses tomadas",
+      "dosesTakenDesc": "Quando alguém marca uma dose como tomada ou pulada",
+      "dosesNotMarked": "Doses não marcadas",
+      "dosesNotMarkedDesc": "Quando uma dose ainda não foi marcada depois do horário"
     },
     "someTurnedOff": "Algumas desativadas",
     "confirmMedicationsOff": {

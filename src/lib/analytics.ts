@@ -825,7 +825,7 @@ export const Analytics = {
   todayViewed: (props: {
     has_items: boolean;
     next_up_count: number;
-    coaching: 'next_step' | 'shifts' | 'dose_hint' | 'none';
+    coaching: 'dose_alerts' | 'next_step' | 'shifts' | 'dose_hint' | 'none';
   }) => capture('today_viewed', props),
   /** A Next-up row's primary action (or the row itself, 'open') was pressed. */
   nextUpAction: (props: {
@@ -1968,9 +1968,10 @@ export const Analytics = {
     });
   },
   /** Profile > Notifications group switch. Enums/booleans only (no circle id,
-   *  no names). `confirmed` is present only for the Medications-off confirm. */
+   *  no names). `confirmed` is present only for the Doses-not-marked-off confirm. */
   notificationGroupToggled: (props: {
-    group: 'medications' | 'tasks' | 'notes' | 'tips' | 'shifts';
+    // 1.4.2: the Medications switch is split into Doses taken / Doses not marked.
+    group: 'doses_taken' | 'doses_not_marked' | 'tasks' | 'notes' | 'tips' | 'shifts';
     enabled: boolean;
     was_mixed: boolean;
     confirmed?: boolean;
@@ -2279,7 +2280,55 @@ export const Analytics = {
   /** "Mark all read" was used; `count` is how many unread rows it covered. */
   inboxMarkAllRead: (props: { count: number }) =>
     capture('inbox_mark_all_read', { count: props.count }),
+
+  // ── Quiet-circle back-off (1.4.2; mobile twins in services/analytics.ts) ──
+  // Enums and booleans only: never a circle id, a name or a date. Every value is
+  // coerced to its closed set so a stray string cannot ride along.
+
+  /** The routine check-in page opened. `source`: how it was reached. */
+  routineCheckinOpened: (props: { source: RoutineCheckinSource; isOwner: boolean }) =>
+    capture('routine_checkin_opened', {
+      source: pickEnum(props.source, ROUTINE_CHECKIN_SOURCES, 'link'),
+      is_owner: props.isOwner === true,
+    }),
+
+  /** A check-in answer was saved (server answered 200). */
+  routineCheckinAnswered: (props: {
+    answer: RoutineCheckinAnswer;
+    source: RoutineCheckinSource;
+    isOwner: boolean;
+  }) =>
+    capture('routine_checkin_answered', {
+      answer: pickEnum(props.answer, ROUTINE_CHECKIN_ANSWERS, 'still_giving'),
+      source: pickEnum(props.source, ROUTINE_CHECKIN_SOURCES, 'link'),
+      is_owner: props.isOwner === true,
+    }),
+
+  /** The "Follow-up alerts are paused" notice rendered (once per circle per surface per session). */
+  doseAlertsNoticeShown: (props: { surface: 'today' | 'meds'; canAnswer: boolean }) =>
+    capture('dose_alerts_notice_shown', {
+      surface: pickEnum(props.surface, ['today', 'meds'] as const, 'today'),
+      can_answer: props.canAnswer === true,
+    }),
 };
+
+export type RoutineCheckinSource = 'push' | 'inbox' | 'notice' | 'link';
+export type RoutineCheckinAnswer = 'still_giving' | 'routine_changed' | 'keep_paused';
+const ROUTINE_CHECKIN_SOURCES = ['push', 'inbox', 'notice', 'link'] as const;
+const ROUTINE_CHECKIN_ANSWERS = ['still_giving', 'routine_changed', 'keep_paused'] as const;
+
+/** `dose_alerts_notice_shown` is once per circle per surface per app session. */
+const noticeShownKeys = new Set<string>();
+export function shouldReportDoseAlertsNotice(circleId: string, surface: 'today' | 'meds'): boolean {
+  const key = `${surface}:${circleId}`;
+  if (noticeShownKeys.has(key)) return false;
+  noticeShownKeys.add(key);
+  return true;
+}
+/** Test-only. */
+export function __resetDoseAlertsNoticeShownForTests(): void {
+  noticeShownKeys.clear();
+}
 
 /**
  * The analytics vocabulary for `ai_chat_failed`. Declared here (not imported)

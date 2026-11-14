@@ -401,12 +401,13 @@ test('profile email digest: enable, change the delivery day, disable and re-enab
 
 type Prefs = Record<string, unknown>;
 
-// Notification settings are FOUR GROUPS over per-key storage
+// Notification settings are GROUPS over per-key storage (1.4.2: Medications split in two)
 // (docs/plans/notification-settings-4-groups.md). A group tap PATCHes every
 // child key; Tasks also pins event_notes (the backend note_nudges shim must not
 // fire). Absent key = ON (`!== false`); new accounts may lack the note keys.
 const SWITCHES = [
-  { group: 'medications', name: 'Medications', keys: ['medication_confirmations', 'missed_medications'], confirm: true },
+  { group: 'doses_taken', name: 'Doses taken', keys: ['medication_confirmations'], confirm: false },
+  { group: 'doses_not_marked', name: 'Doses not marked', keys: ['missed_medications'], confirm: true },
   { group: 'tasks', name: 'Tasks & appointments', keys: ['task_assignments', 'appointment_reminders', 'note_nudges'], confirm: false },
   { group: 'notes', name: 'Notes', keys: ['event_notes', 'care_notes'], confirm: false },
   { group: 'tips', name: 'Daily update & tips', keys: ['tips_and_suggestions'], confirm: false },
@@ -440,7 +441,7 @@ for (const { group, name, keys, confirm } of SWITCHES) {
       await write(page, to ? `notif-${group}-back` : `notif-${group}`, 'PATCH', NOTIF_PATH, { status: 200, body: { success: true, data: { user: {} } } }, async () => {
         await sw().click();
         if (confirm && !to) {
-          // Medications off asks first; "Keep on" must leave the DB untouched.
+          // Doses not marked off asks first; "Keep on" must leave the DB untouched.
           const dialog = page.getByRole('dialog');
           await expect(dialog).toBeVisible();
           await dialog.getByText('Turn off', { exact: true }).click();

@@ -36,8 +36,6 @@
   "notifications": {
     "description": "Scegli quali avvisi ricevere.",
     "groups": {
-      "medications": "Farmaci",
-      "medicationsDesc": "Dosi prese, saltate o non segnate",
       "tasks": "Incarichi e appuntamenti",
       "tasksDesc": "Quando ti viene assegnato qualcosa e prima della scadenza",
       "notes": "Note",
@@ -45,7 +43,11 @@
       "tips": "Riepilogo del giorno e consigli",
       "tipsDesc": "Il tuo riepilogo del giorno e piccoli suggerimenti utili",
       "shifts": "Turni",
-      "shiftsDesc": "Nuovi turni scoperti, promemoria e modifiche ai tuoi turni"
+      "shiftsDesc": "Nuovi turni scoperti, promemoria e modifiche ai tuoi turni",
+      "dosesTaken": "Dosi prese",
+      "dosesTakenDesc": "Quando qualcuno segna una dose come presa o saltata",
+      "dosesNotMarked": "Dosi non segnate",
+      "dosesNotMarkedDesc": "Quando una dose non è ancora segnata dopo il suo orario"
     },
     "someTurnedOff": "Alcune disattivate",
     "confirmMedicationsOff": {
