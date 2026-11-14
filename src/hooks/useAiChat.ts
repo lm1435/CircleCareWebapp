@@ -17,6 +17,13 @@ import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { Analytics, type AiChatFailureReason } from '@/lib/analytics';
 import { normalizeLocale } from '@/i18n/locales';
 import { parseNotesPath, sanitizeReplyActions } from '@/components/ai/aiReplyActions';
+import {
+  analyticsLanguage,
+  bucketHistoryLen,
+  isSuggestionId,
+  parseOutcome,
+  parseUnknownReason,
+} from '@/lib/aiChatSignals';
 
 // Web port of the send half of mobile/src/components/ai/AIChatModal.tsx's
 // handleSend. A mutation hook (mirrors useMedConfirmation's pattern) that POSTs
@@ -147,6 +154,13 @@ export interface AiChatSendVariables {
   /** True when the text came from a server-suggested question chip rather than
    *  the composer. Mirrors mobile's `usedSuggestion: !!messageText`. */
   usedSuggestion?: boolean;
+  /**
+   * 1.4.2: the tapped chip's id. The server answers it WITHOUT classifying. A chip with no id (an
+   * older backend) goes as text, exactly as before. Never sent for a typed message.
+   */
+  suggestionId?: string;
+  /** The backend's `circle_empty` from /suggestions (null/undefined = unknown), for analytics only. */
+  circleEmpty?: boolean | null;
 }
 
 export interface UseAiChatResult {
@@ -175,9 +189,11 @@ export function useAiChat(circleId: string): UseAiChatResult {
   /** Questions asked in this conversation, for turn-index analytics. */
   const turnIndexRef = useRef(0);
   const startedAtRef = useRef(0);
+  /** The language the in-flight request asked for (reported with its reply). */
+  const languageRef = useRef<string | undefined>(undefined);
 
   const mutation = useMutation<AIChatResponse, unknown, AiChatSendVariables>({
-    mutationFn: ({ message, usedSuggestion }: AiChatSendVariables) => {
+    mutationFn: ({ message, usedSuggestion, suggestionId }: AiChatSendVariables) => {
       // PHI-safe: circle_id and a LENGTH — never the message text.
       const turnIndex = turnIndexRef.current;
       turnIndexRef.current += 1;
@@ -191,18 +207,29 @@ export function useAiChat(circleId: string): UseAiChatResult {
       // region-qualified tag (e.g. 'en-US', 'es-MX', 'fr-BE'), so normalize it through
       // the registry — otherwise the request 400s and the modal shows "sendFailed".
       const language = normalizeLocale(i18n.language);
+      languageRef.current = language;
       return sendAiMessage(circleId, {
         message,
         conversation_id: conversationIdRef.current,
         language,
+        ...(usedSuggestion && isSuggestionId(suggestionId) ? { suggestion_id: suggestionId } : {}),
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       conversationIdRef.current = data.conversation_id;
+      const outcome = parseOutcome(data.outcome);
+      // Enums, counts and booleans only: never the question, the reply or a chip's text.
       Analytics.aiChatResponseReceived(circleId, {
         intent: data.intent ?? 'unreported',
         latencyMs: Date.now() - startedAtRef.current,
         turnIndex: Math.max(0, turnIndexRef.current - 1),
+        outcome,
+        reason: parseUnknownReason(data.reason, outcome),
+        // Web has no dictation: typed or chip (the one platform exception, plan §3.3).
+        inputMethod: variables.usedSuggestion ? 'chip' : 'typed',
+        language: analyticsLanguage(languageRef.current),
+        historyLen: bucketHistoryLen(data.history_len),
+        circleEmpty: variables.circleEmpty ?? null,
       });
       // FIND_NOTES: the reply pointed to where the notes are (mobile fires the
       // same event from its modal on the same response).

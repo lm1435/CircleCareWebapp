@@ -24,6 +24,17 @@
   "actions": {
     "openNotes": "Abrir as notas",
     "openDoctors": "Ver os médicos",
-    "openProvider": "{{name}}: Visitas e notas"
+    "openProvider": "{{name}}: Visitas e notas",
+    "openActivity": "Abrir atividade",
+    "openMedications": "Abrir medicamentos",
+    "openEmergencyInfo": "Abrir informações de saúde",
+    "openVitals": "Abrir sinais vitais",
+    "openMembers": "Ver equipe de cuidado",
+    "openAddMedication": "Adicionar um medicamento",
+    "openAddAppointment": "Adicionar uma consulta",
+    "openAddTask": "Adicionar uma tarefa",
+    "openInvite": "Convidar alguém",
+    "openSettingsNotifications": "Configurações de alertas",
+    "openSubscription": "Ver assinatura"
   }
 }

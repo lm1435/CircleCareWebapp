@@ -64,7 +64,11 @@ vi.mock('@/hooks/useAiChat', async (importOriginal) => {
 
 // Suggestions come from a React Query hook; stub it so these tests need no
 // QueryClientProvider. `suggestionsState` is the controllable query result.
-let suggestionsState: { data?: string[]; isLoading: boolean; isError: boolean } = {
+let suggestionsState: {
+  data?: { items: { id?: string; text: string }[]; circleEmpty: boolean | null };
+  isLoading: boolean;
+  isError: boolean;
+} = {
   data: undefined,
   isLoading: false,
   isError: false,
@@ -115,7 +119,7 @@ describe('AIChatModal', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
 
     expect(mutate).toHaveBeenCalledWith(
-      { message: 'How is adherence?', usedSuggestion: false },
+      { message: 'How is adherence?', usedSuggestion: false, circleEmpty: null },
       expect.any(Object)
     );
     await waitFor(() => {
@@ -342,6 +346,8 @@ describe('AIChatModal — failed sends: inline copy, paywall and flag refresh (r
 // truth (it also seeds the classifier's few-shot examples), so the web must only
 // ever echo what the endpoint returned.
 const SERVER_SUGGESTIONS = ['What medications are due today?', 'How is adherence this week?'];
+// 1.4.2 hook shape: chips (ids optional; these fixtures are the pre-id strings) + circle_empty.
+const SERVER_SET = { items: SERVER_SUGGESTIONS.map((text) => ({ text })), circleEmpty: null };
 
 describe('AIChatModal — suggested questions', () => {
   it('fetches suggestions only while the modal is open', () => {
@@ -359,7 +365,7 @@ describe('AIChatModal — suggested questions', () => {
   // case, no forced uppercase) so it matches every other sub-section header
   // in the app.
   it('renders the suggestions header with the shared Text label variant, not raw uppercase tracking', () => {
-    suggestionsState = { data: SERVER_SUGGESTIONS, isLoading: false, isError: false };
+    suggestionsState = { data: SERVER_SET, isLoading: false, isError: false };
     render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
 
     const header = screen.getByText('Suggested questions');
@@ -369,7 +375,7 @@ describe('AIChatModal — suggested questions', () => {
   });
 
   it('renders each suggestion as a real button under a labelled list', () => {
-    suggestionsState = { data: SERVER_SUGGESTIONS, isLoading: false, isError: false };
+    suggestionsState = { data: SERVER_SET, isLoading: false, isError: false };
     render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
 
     const list = screen.getByRole('list', { name: 'Suggested questions' });
@@ -385,7 +391,7 @@ describe('AIChatModal — suggested questions', () => {
   // 40ms-staggered fade-in (index * 40ms) so six chips cascade in rather than
   // popping in all at once. Full text always readable — no truncation/clamping.
   it('lays the chips out as a single column with a 40ms-staggered fade-in', () => {
-    suggestionsState = { data: SERVER_SUGGESTIONS, isLoading: false, isError: false };
+    suggestionsState = { data: SERVER_SET, isLoading: false, isError: false };
     render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
 
     const list = screen.getByRole('list', { name: 'Suggested questions' });
@@ -409,7 +415,7 @@ describe('AIChatModal — suggested questions', () => {
 
   it('sends the suggestion through the normal send path, flagged for analytics', async () => {
     const user = userEvent.setup();
-    suggestionsState = { data: SERVER_SUGGESTIONS, isLoading: false, isError: false };
+    suggestionsState = { data: SERVER_SET, isLoading: false, isError: false };
     mutate.mockImplementation((_vars: unknown, opts: { onSuccess: (d: unknown) => void }) => {
       opts.onSuccess({ message: 'Two doses left.', conversation_id: 'c1', remaining_requests: 47 });
     });
@@ -418,7 +424,7 @@ describe('AIChatModal — suggested questions', () => {
     await user.click(screen.getByRole('button', { name: SERVER_SUGGESTIONS[0] }));
 
     expect(mutate).toHaveBeenCalledWith(
-      { message: SERVER_SUGGESTIONS[0], usedSuggestion: true },
+      { message: SERVER_SUGGESTIONS[0], usedSuggestion: true, circleEmpty: null },
       expect.any(Object)
     );
     // Same path as a typed message: the turn renders and the reply lands.
@@ -427,7 +433,7 @@ describe('AIChatModal — suggested questions', () => {
 
   it('is keyboard reachable and sends on Enter', async () => {
     const user = userEvent.setup();
-    suggestionsState = { data: SERVER_SUGGESTIONS, isLoading: false, isError: false };
+    suggestionsState = { data: SERVER_SET, isLoading: false, isError: false };
     render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
 
     screen.getByRole('button', { name: SERVER_SUGGESTIONS[1] }).focus();
@@ -435,14 +441,14 @@ describe('AIChatModal — suggested questions', () => {
     await user.keyboard('{Enter}');
 
     expect(mutate).toHaveBeenCalledWith(
-      { message: SERVER_SUGGESTIONS[1], usedSuggestion: true },
+      { message: SERVER_SUGGESTIONS[1], usedSuggestion: true, circleEmpty: null },
       expect.any(Object)
     );
   });
 
   it('drops the suggestions once the conversation has started', async () => {
     const user = userEvent.setup();
-    suggestionsState = { data: SERVER_SUGGESTIONS, isLoading: false, isError: false };
+    suggestionsState = { data: SERVER_SET, isLoading: false, isError: false };
     mutate.mockImplementation((_vars: unknown, opts: { onSuccess: (d: unknown) => void }) => {
       opts.onSuccess({ message: 'ok', conversation_id: 'c1', remaining_requests: 47 });
     });
@@ -460,13 +466,13 @@ describe('AIChatModal — suggested questions', () => {
   // the modal inside Modal's max-h-[90vh] without an inner scrollbar (measured
   // in-browser: 681px of content, fits any viewport >= 757px tall).
   it('drops the intro paragraph when chips are present, keeps it when they are not', () => {
-    suggestionsState = { data: SERVER_SUGGESTIONS, isLoading: false, isError: false };
+    suggestionsState = { data: SERVER_SET, isLoading: false, isError: false };
     const withChips = render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
     expect(screen.getByText('How can I help?')).toBeInTheDocument();
     expect(screen.queryByText(/Ask me questions about caregiving/i)).not.toBeInTheDocument();
     withChips.unmount();
 
-    suggestionsState = { data: [], isLoading: false, isError: false };
+    suggestionsState = { data: { items: [], circleEmpty: null }, isLoading: false, isError: false };
     render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
     expect(screen.getByText(/Ask me questions about caregiving/i)).toBeInTheDocument();
   });
@@ -490,13 +496,13 @@ describe('AIChatModal — suggested questions', () => {
   });
 
   it('renders nothing when the endpoint returns an empty list', () => {
-    suggestionsState = { data: [], isLoading: false, isError: false };
+    suggestionsState = { data: { items: [], circleEmpty: null }, isLoading: false, isError: false };
     render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
     expect(screen.queryByText('Suggested questions')).not.toBeInTheDocument();
   });
 
   it('resolves the label in both languages — no raw i18n key leaks', async () => {
-    suggestionsState = { data: SERVER_SUGGESTIONS, isLoading: false, isError: false };
+    suggestionsState = { data: SERVER_SET, isLoading: false, isError: false };
 
     const en = render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
     expect(screen.getByText('Suggested questions')).toBeInTheDocument();

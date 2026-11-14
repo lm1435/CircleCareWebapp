@@ -29,7 +29,18 @@ import { useIsOffline } from '@/hooks/useIsOffline';
 import { blockOfflineWrite, offlineDisabledProps } from '@/lib/offlineWrite';
 import { Analytics } from '@/lib/analytics';
 import type { AIReplyAction } from '@/api/ai';
-import { replyActionKey, replyActionLabel, sanitizeReplyActions } from './aiReplyActions';
+import {
+  filterReplyActionsForViewer,
+  replyActionKey,
+  replyActionLabel,
+  sanitizeReplyActions,
+} from './aiReplyActions';
+import {
+  parseOutcome,
+  sanitizeSuggestionItems,
+  type AIOutcome,
+  type AISuggestionItem,
+} from '@/lib/aiChatSignals';
 
 // Web port of mobile/src/components/ai/AIChatModal.tsx (the core chat exchange
 // plus the server suggestions list). Mirrors mobile 1:1 for behavior; drops
@@ -52,8 +63,14 @@ interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  /** Buttons under an assistant reply (FIND_NOTES; validated server `actions`). */
+  /** Buttons under an assistant reply (validated server `actions`, filtered for this viewer). */
   actions?: AIReplyAction[];
+  /** Chips under a not_understood / advice_refused reply (validated `suggestion_items`). */
+  suggestionItems?: AISuggestionItem[];
+  /** The reply's outcome enum, for the action-tap event. */
+  outcome?: AIOutcome;
+  /** The reply's classifier label, for the FIND_NOTES-only notes event. */
+  intent?: string;
 }
 
 export interface AIChatModalProps {
@@ -67,6 +84,15 @@ export interface AIChatModalProps {
    * the place anyway). Mirrors mobile's `onOpenAction`.
    */
   onOpenAction?: (action: AIReplyAction) => void;
+  /**
+   * Can this viewer ADD medications / appointments / tasks? Reply buttons that open an add form are
+   * dropped without it. Defaults to `false` (fail-closed). Mirrors mobile's `canCreate`.
+   */
+  canCreate?: boolean;
+  /** Can this viewer invite (owner or manager, and can create)? `open_invite` is dropped without it. */
+  canInvite?: boolean;
+  /** Does this viewer own the circle? `open_subscription` is shown to the owner only. */
+  isOwner?: boolean;
 }
 
 let messageSeq = 0;
@@ -80,6 +106,9 @@ export function AIChatModal({
   isOpen,
   onClose,
   onOpenAction,
+  canCreate = false,
+  canInvite = false,
+  isOwner = false,
 }: AIChatModalProps): ReactElement | null {
   const { t } = useTranslation('ai');
   const { mutation, errorKey, resetConversation } = useAiChat(circleId);
@@ -134,9 +163,9 @@ export function AIChatModal({
    * Mirrors mobile's `handleSend(messageText?)` / `usedSuggestion: !!messageText`.
    */
   const handleSend = useCallback(
-    (suggestion?: string) => {
-      const usedSuggestion = typeof suggestion === 'string';
-      const text = (usedSuggestion ? suggestion : input).trim();
+    (suggestion?: AISuggestionItem) => {
+      const usedSuggestion = suggestion !== undefined;
+      const text = (usedSuggestion ? suggestion.text : input).trim();
       // THE SYNCHRONOUS DOUBLE-SEND GUARD. `mutation.isPending` is React Query
       // state, committed a render AFTER the send, so two sends dispatched in
       // the SAME tick both get through it — and the composer is a textarea with
@@ -159,13 +188,27 @@ export function AIChatModal({
       setInput('');
 
       mutation.mutate(
-        { message: text, usedSuggestion },
+        {
+          message: text,
+          usedSuggestion,
+          // The chip's id lets the server answer it WITHOUT classifying (1.4.2).
+          ...(suggestion?.id ? { suggestionId: suggestion.id } : {}),
+          circleEmpty: suggestionsQuery.data?.circleEmpty ?? null,
+        },
         {
           onSuccess: (data) => {
             setRemaining(data.remaining_requests);
-            // FIND_NOTES: buttons to where the notes are (additive; absent on
-            // every other reply and from older backends).
-            const actions = sanitizeReplyActions(data.actions);
+            // Buttons to a place in the app (additive; absent from older backends), narrowed to
+            // what THIS viewer can use: no add form for someone who cannot add, no invite for
+            // someone who cannot invite, no subscription for anyone but the owner.
+            const actions = filterReplyActionsForViewer(sanitizeReplyActions(data.actions), {
+              canCreate,
+              canInvite,
+              isOwner,
+            });
+            // not_understood / advice_refused: the starter chips again, instead of "rephrase".
+            const suggestionItems = sanitizeSuggestionItems(data.suggestion_items);
+            const outcome = parseOutcome(data.outcome);
             setMessages((prev) => [
               ...prev,
               {
@@ -173,6 +216,9 @@ export function AIChatModal({
                 role: 'assistant',
                 content: data.message,
                 ...(actions.length > 0 ? { actions } : {}),
+                ...(suggestionItems.length > 0 ? { suggestionItems } : {}),
+                ...(outcome ? { outcome } : {}),
+                ...(data.intent ? { intent: data.intent } : {}),
               },
             ]);
           },
@@ -226,14 +272,34 @@ export function AIChatModal({
         }
       );
     },
-    [input, mutation, errorKey, t, promptUpgrade, sendGuard]
+    [
+      input,
+      mutation,
+      errorKey,
+      t,
+      promptUpgrade,
+      sendGuard,
+      suggestionsQuery.data?.circleEmpty,
+      canCreate,
+      canInvite,
+      isOwner,
+    ]
   );
 
   /** A reply button: report the kind, hand it to the host (which closes and navigates). */
   const handleAction = useCallback(
-    (action: AIReplyAction) => {
+    (action: AIReplyAction, message: ChatMessage) => {
       if (!onOpenAction) return;
-      Analytics.aiNotesPathActionTapped({ action: action.type });
+      Analytics.aiReplyActionTapped({ action: action.type, outcome: message.outcome });
+      // The FIND_NOTES series keeps its own event (and its 3-value enum) for continuity.
+      if (
+        message.intent === 'FIND_NOTES' &&
+        (action.type === 'open_notes' ||
+          action.type === 'open_doctors' ||
+          action.type === 'open_provider')
+      ) {
+        Analytics.aiNotesPathActionTapped({ action: action.type });
+      }
       onOpenAction(action);
     },
     [onOpenAction]
@@ -266,8 +332,10 @@ export function AIChatModal({
   // empty state reads fine on its own. Nothing is rendered while loading either:
   // the endpoint returns 0–6 items, so any placeholder row count would be a
   // guess, and on the terminal 402/403 path a skeleton would flash and vanish.
-  const suggestions = suggestionsQuery.data ?? [];
+  const suggestions = suggestionsQuery.data?.items ?? [];
   const lowRemaining = remaining !== null && remaining <= 10;
+  // Only the LATEST reply keeps its chips: older ones would stack six buttons per miss.
+  const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : undefined;
 
   return (
     <Modal
@@ -362,15 +430,16 @@ export function AIChatModal({
                   className="m-0 flex list-none flex-col gap-2 p-0"
                 >
                   {suggestions.map((suggestion, index) => (
-                    <li key={suggestion}>
+                    <li key={suggestion.id ?? suggestion.text}>
                       <Card
                         variant="outlined"
                         padding="sm"
                         onPress={() => handleSend(suggestion)}
+                        data-testid={`ai-chat-suggestion-${suggestion.id ?? index}`}
                         className="min-h-[44px] w-full text-sm text-ink animate-[fade-in_200ms_ease-out] [animation-fill-mode:both] motion-reduce:animate-none"
                         style={{ animationDelay: `${index * 40}ms` }}
                       >
-                        {suggestion}
+                        {suggestion.text}
                       </Card>
                     </li>
                   ))}
@@ -387,27 +456,61 @@ export function AIChatModal({
               >
                 {message.content}
               </p>
-            ) : onOpenAction && message.actions && message.actions.length > 0 ? (
+            ) : (onOpenAction && message.actions && message.actions.length > 0) ||
+              (message.id === lastMessageId &&
+                message.suggestionItems &&
+                message.suggestionItems.length > 0) ? (
               <div key={message.id} className="flex max-w-[85%] flex-col gap-2">
                 <p className="whitespace-pre-wrap break-words rounded-xl rounded-bl-sm bg-bg-2 px-4 py-2.5 text-sm text-ink">
                   {message.content}
                 </p>
-                {/* FIND_NOTES buttons: the suggestion-chip look, 44px targets. */}
-                <ul className="m-0 flex list-none flex-col gap-2 p-0" data-testid="ai-chat-reply-actions">
-                  {message.actions.map((action) => (
-                    <li key={replyActionKey(action)}>
-                      <Card
-                        variant="outlined"
-                        padding="sm"
-                        onPress={() => handleAction(action)}
-                        data-testid={`ai-chat-action-${replyActionKey(action)}`}
-                        className="min-h-[44px] w-full text-sm font-semibold text-ink"
-                      >
-                        {replyActionLabel(t, action)}
-                      </Card>
-                    </li>
-                  ))}
-                </ul>
+                {/* Reply buttons: the suggestion-chip look, 44px targets. */}
+                {onOpenAction && message.actions && message.actions.length > 0 ? (
+                  <ul className="m-0 flex list-none flex-col gap-2 p-0" data-testid="ai-chat-reply-actions">
+                    {message.actions.map((action) => (
+                      <li key={replyActionKey(action)}>
+                        <Card
+                          variant="outlined"
+                          padding="sm"
+                          onPress={() => handleAction(action, message)}
+                          data-testid={`ai-chat-action-${replyActionKey(action)}`}
+                          className="min-h-[44px] w-full text-sm font-semibold text-ink"
+                        >
+                          {replyActionLabel(t, action)}
+                        </Card>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {/* not_understood / advice_refused: the starter chips again, on the latest reply
+                    only. A labelled list, like the empty state's (SC 1.3.1). */}
+                {message.id === lastMessageId &&
+                message.suggestionItems &&
+                message.suggestionItems.length > 0 ? (
+                  <div className="flex flex-col gap-2" data-testid="ai-chat-reply-suggestions">
+                    <Text variant="label" as="p" id={`${message.id}-suggestions-label`}>
+                      {t('suggestedQuestions')}
+                    </Text>
+                    <ul
+                      aria-labelledby={`${message.id}-suggestions-label`}
+                      className="m-0 flex list-none flex-col gap-2 p-0"
+                    >
+                      {message.suggestionItems.map((item, index) => (
+                        <li key={item.id ?? item.text}>
+                          <Card
+                            variant="outlined"
+                            padding="sm"
+                            onPress={() => handleSend(item)}
+                            data-testid={`ai-chat-reply-suggestion-${item.id ?? index}`}
+                            className="min-h-[44px] w-full text-sm text-ink"
+                          >
+                            {item.text}
+                          </Card>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
             ) : (
               <p

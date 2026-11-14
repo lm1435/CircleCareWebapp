@@ -511,11 +511,78 @@ describe('analytics wrapper — active path (key set)', () => {
       latencyMs: 640,
       turnIndex: 1,
     });
+    // An older backend sends no outcome / history_len: 'unreported'; input method and language
+    // fall back to their closed-set defaults (never omitted, never text). Same as mobile.
     expect(capture).toHaveBeenCalledWith('ai_chat_response_received', {
       circle_id: 'circle-123',
       intent: 'GET_ADHERENCE',
       latency_ms: 640,
       turn_index: 1,
+      outcome: 'unreported',
+      input_method: 'typed',
+      language: 'other',
+      history_len: 'unreported',
+    });
+  });
+
+  it('P (1.4.2): ai_chat_response_received carries outcome, reason, input_method, language, history_len, circle_empty', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.aiChatResponseReceived('circle-123', {
+      intent: 'UNKNOWN',
+      latencyMs: 400,
+      turnIndex: 0,
+      outcome: 'not_understood',
+      reason: 'fragment_no_context',
+      inputMethod: 'chip',
+      language: 'pt',
+      historyLen: '1',
+      circleEmpty: false,
+    });
+    expect(capture).toHaveBeenCalledWith('ai_chat_response_received', {
+      circle_id: 'circle-123',
+      intent: 'UNKNOWN',
+      latency_ms: 400,
+      turn_index: 0,
+      outcome: 'not_understood',
+      reason: 'fragment_no_context',
+      input_method: 'chip',
+      language: 'pt',
+      history_len: '1',
+      circle_empty: false,
+    });
+  });
+
+  it('N (1.4.2): free text in any enum slot is replaced by its fallback; reason only on not_understood', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    const leak = 'did mom take her warfarin';
+    Analytics.aiChatResponseReceived('circle-123', {
+      intent: 'GET_DOSES_TODAY',
+      latencyMs: 1,
+      turnIndex: 0,
+      outcome: 'answered',
+      reason: leak,
+      inputMethod: leak,
+      language: leak,
+      historyLen: leak,
+      circleEmpty: null,
+    });
+    const props = capture.mock.calls.find((c: unknown[]) => c[0] === 'ai_chat_response_received')?.[1];
+    expect(JSON.stringify(props)).not.toContain('warfarin');
+    expect(props).not.toHaveProperty('reason');
+    expect(props).not.toHaveProperty('circle_empty');
+  });
+
+  it('P/N (1.4.2): ai_reply_action_tapped carries the action kind and outcome only', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.aiReplyActionTapped({ action: 'open_invite', outcome: 'action_redirect' });
+    expect(capture).toHaveBeenCalledWith('ai_reply_action_tapped', {
+      action: 'open_invite',
+      outcome: 'action_redirect',
+    });
+    Analytics.aiReplyActionTapped({ action: 'Dr Patel', outcome: 'free text' });
+    expect(capture).toHaveBeenLastCalledWith('ai_reply_action_tapped', {
+      action: 'open_notes',
+      outcome: 'unreported',
     });
   });
 

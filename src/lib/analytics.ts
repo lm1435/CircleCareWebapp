@@ -4,6 +4,14 @@ import { analyticsCollectionAllowed } from './analyticsMode';
 import { withPosthog } from './posthogLoader';
 import { getSignupAttributionProps } from './signupAttribution';
 import { DEFAULT_PAYWALL_CONTEXT, type PaywallContext } from './paywallContext';
+import {
+  AI_ANALYTICS_LANGUAGES,
+  AI_HISTORY_LEN_BUCKETS,
+  AI_INPUT_METHODS,
+  AI_OUTCOMES,
+  AI_UNKNOWN_REASONS,
+  REPLY_ACTION_TYPES,
+} from './aiChatSignals';
 
 /**
  * Typed analytics wrapper for the web companion — mirrors mobile's
@@ -541,6 +549,8 @@ export type EntryFormOrigin =
   // One add pattern (owner 2026-11-08): a Care page's header "+" vs the outline "Add ..." under its list.
   | 'header'
   | 'list_button'
+  // 1.4.2: opened from a care-assistant reply button ("I can't add it, but here's where").
+  | 'ai_chat'
   | 'other';
 export type EntryFormStep = 'what' | 'when' | 'how_often' | 'who';
 export type TimeChipId = 'morning' | 'midday' | 'evening' | 'bedtime' | 'other';
@@ -2015,13 +2025,57 @@ export const Analytics = {
    *  assistant cannot yet answer. */
   aiChatResponseReceived: (
     circleId: string,
-    opts: { intent: string; latencyMs: number; turnIndex: number }
-  ) =>
-    capture('ai_chat_response_received', {
+    opts: {
+      intent: string;
+      latencyMs: number;
+      turnIndex: number;
+      /**
+       * 1.4.2 (care-assistant understanding fix §5). Each value is narrowed to a closed enum HERE,
+       * so a caller cannot widen the series or slip text in. Same props as mobile:
+       *   outcome       backend outcome, 'unreported' from an older backend
+       *   reason        only on not_understood ('other' when unrecognised)
+       *   input_method  typed | chip (web has no dictation)
+       *   language      the request's base language, or 'other'
+       *   history_len   0 | 1 | 2-5 | 6+ ('unreported' from an older backend)
+       *   circle_empty  boolean, only when the backend said
+       */
+      outcome?: unknown;
+      reason?: unknown;
+      inputMethod?: unknown;
+      language?: unknown;
+      historyLen?: unknown;
+      circleEmpty?: boolean | null;
+    }
+  ) => {
+    const outcome = pickEnum(opts.outcome, [...AI_OUTCOMES, 'unreported'] as const, 'unreported');
+    return capture('ai_chat_response_received', {
       circle_id: circleId,
       intent: opts.intent,
       latency_ms: opts.latencyMs,
       turn_index: opts.turnIndex,
+      outcome,
+      ...(outcome === 'not_understood'
+        ? { reason: pickEnum(opts.reason, AI_UNKNOWN_REASONS, 'other') }
+        : {}),
+      input_method: pickEnum(opts.inputMethod, AI_INPUT_METHODS, 'typed'),
+      language: pickEnum(opts.language, [...AI_ANALYTICS_LANGUAGES, 'other'] as const, 'other'),
+      history_len: pickEnum(
+        opts.historyLen,
+        [...AI_HISTORY_LEN_BUCKETS, 'unreported'] as const,
+        'unreported'
+      ),
+      ...(typeof opts.circleEmpty === 'boolean' ? { circle_empty: opts.circleEmpty } : {}),
+    });
+  },
+  /**
+   * A button under an assistant reply was tapped (any action type). `action` is the destination
+   * KIND, never a doctor or any record; `outcome` is the reply's outcome enum. No circle_id.
+   * Same name + props as mobile.
+   */
+  aiReplyActionTapped: (opts: { action?: string; outcome?: unknown }) =>
+    capture('ai_reply_action_tapped', {
+      action: pickEnum(opts.action, REPLY_ACTION_TYPES, 'open_notes'),
+      outcome: pickEnum(opts.outcome, [...AI_OUTCOMES, 'unreported'] as const, 'unreported'),
     }),
   /**
    * The assistant answered a notes question (FIND_NOTES) by pointing to where the

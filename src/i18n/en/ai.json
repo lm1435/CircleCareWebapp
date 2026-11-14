@@ -24,6 +24,17 @@
   "actions": {
     "openNotes": "Open Notes",
     "openDoctors": "See Doctors",
-    "openProvider": "{{name}}: Visits & notes"
+    "openProvider": "{{name}}: Visits & notes",
+    "openActivity": "Open Activity",
+    "openMedications": "Open Medications",
+    "openEmergencyInfo": "Open Health info",
+    "openVitals": "Open Vitals",
+    "openMembers": "See Care team",
+    "openAddMedication": "Add a medication",
+    "openAddAppointment": "Add an appointment",
+    "openAddTask": "Add a task",
+    "openInvite": "Invite someone",
+    "openSettingsNotifications": "Alert settings",
+    "openSubscription": "See Subscription"
   }
 }

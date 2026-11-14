@@ -11,7 +11,7 @@ import { StoreReviewBanner } from '@/components/StoreReviewBanner';
 import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { AIChatModal } from '@/components/ai/AIChatModal';
-import { replyActionRoute } from '@/components/ai/aiReplyActions';
+import { replyActionDestination } from '@/components/ai/aiReplyActions';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
 import { CircleAccessLost } from '@/components/circles/CircleAccessLost';
@@ -56,11 +56,12 @@ export function AppLayout(): ReactElement {
   // the circle it was opened for, and a circle change closes it (effect below)
   // so returning to that circle does not pop it back open. Mobile twin:
   // mobile/src/navigation/useCloseOnCircleSwitch.ts.
-  // `entry`: the page control that opened the menu (AddMenuContext), for the form's analytics.
+  // `entry`: the page control that opened the menu (AddMenuContext), for the form's analytics;
+  // 'ai_chat' when an assistant reply button opened the form directly (1.4.2).
   const [createFor, setCreateFor] = useState<{
     kind: AddMenuType;
     circleId: string;
-    entry?: AddMenuEntry;
+    entry?: AddMenuEntry | 'ai_chat';
   } | null>(null);
   const createKind = createFor && createFor.circleId === circleId ? createFor.kind : null;
   const createEntry = createFor?.entry;
@@ -72,9 +73,17 @@ export function AppLayout(): ReactElement {
 
   // Write actions need an editable circle. Resolved once here so the sidebar's
   // New button and the pill's NEW cell share one source of truth.
-  const { circle, canEdit, viewOnly, isPremiumCircle, hasShifts, accessLost, isLoading, isError } = useCircle(
-    circleId ?? ''
-  );
+  const {
+    circle,
+    canEdit,
+    viewOnly,
+    isPremiumCircle,
+    hasShifts,
+    canManageMembers,
+    accessLost,
+    isLoading,
+    isError,
+  } = useCircle(circleId ?? '');
   const [shiftTeaserFor, setShiftTeaserFor] = useState<string | null>(null);
 
   // Email link landing (`?src=`): the circle itself is the link's target unless
@@ -376,11 +385,24 @@ export function AppLayout(): ReactElement {
           circleId={circleId}
           isOpen={aiOpen}
           onClose={() => setAiOpen(false)}
-          // FIND_NOTES reply buttons: close the assistant, then open the place.
+          // What the reply buttons may offer THIS viewer (aiReplyActions.filterReplyActionsForViewer):
+          // the New menu's own gate for add forms, the Members page's own gate for Invite, and the
+          // owner alone for Subscription (owner-aware premium gates). Mobile: CircleTabNavigator.
+          canCreate={canEdit && !viewOnly}
+          canInvite={canEdit && !viewOnly && canManageMembers === true}
+          isOwner={isOwner}
+          // Reply buttons: close the assistant, then open the place (a route), or the New menu's
+          // add form of that type (entry 'ai_chat', for the form funnel).
           onOpenAction={(action) => {
-            const { to, state } = replyActionRoute(action, circleId);
+            const destination = replyActionDestination(action, circleId);
             setAiOpen(false);
-            navigate(to, state ? { state } : undefined);
+            if (destination.kind === 'create') {
+              if (canEdit && !viewOnly) {
+                setCreateFor({ kind: destination.type, circleId, entry: 'ai_chat' });
+              }
+              return;
+            }
+            navigate(destination.to, destination.state ? { state: destination.state } : undefined);
           }}
         />
       )}

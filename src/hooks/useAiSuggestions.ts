@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { getAiSuggestions } from '@/api/ai';
+import { getAiSuggestions, type AISuggestionSet } from '@/api/ai';
 import { isAccessDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { queryKeys } from '@/lib/queryKeys';
@@ -31,6 +31,10 @@ function isTerminalSuggestionsError(err: unknown): boolean {
 /**
  * Suggested questions for the AI Care Assistant's empty state.
  *
+ * 1.4.2: resolves to `{ items: [{ id?, text }], circleEmpty }`. The server picks the set (the
+ * empty-circle starters or the data set); each chip carries the id the modal sends back as
+ * `suggestion_id`. `circleEmpty` rides into `ai_chat_response_received`.
+ *
  * @param circleId - circle whose data personalizes the suggestions
  * @param enabled  - fetch only while the chat modal is open
  *
@@ -38,7 +42,10 @@ function isTerminalSuggestionsError(err: unknown): boolean {
  * rather than reusing the English chips. `staleTime` is generous — the list is
  * built from lightweight DB reads and barely moves within a session.
  */
-export function useAiSuggestions(circleId: string, enabled: boolean): UseQueryResult<string[]> {
+export function useAiSuggestions(
+  circleId: string,
+  enabled: boolean
+): UseQueryResult<AISuggestionSet> {
   const { i18n } = useTranslation();
   const queryClient = useQueryClient();
   const language = baseLanguage(i18n.language);

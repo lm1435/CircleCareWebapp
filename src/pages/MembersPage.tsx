@@ -1,6 +1,6 @@
 import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
-import { useState, type ReactElement } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState, type ReactElement } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCircle } from '@/hooks/useCircle';
 import {
@@ -105,6 +105,19 @@ export default function MembersPage(): ReactElement {
   const setMemberRole = useSetMemberRole(circleId);
 
   const [showInvite, setShowInvite] = useState(false);
+
+  // The assistant's "Invite someone" button (1.4.2, aiReplyActions `open_invite`) lands here with
+  // `state.openInvite`: open the same invite dialog the header button opens, for a viewer who may
+  // invite. The flag is consumed (history entry replaced), so Back / refresh never re-open it. A
+  // viewer who may not invite just sees the roster (the button is not offered to them anyway).
+  const location = useLocation();
+  const openInviteRequested =
+    (location.state as { openInvite?: unknown } | null)?.openInvite === true;
+  useEffect(() => {
+    if (!openInviteRequested || circle == null) return;
+    if (canManageMembers) setShowInvite(true);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [openInviteRequested, circle, canManageMembers, navigate, location.pathname]);
   const [memberToRemove, setMemberToRemove] = useState<CircleMember | null>(null);
   const [inviteToCancel, setInviteToCancel] = useState<PendingCircleInvite | null>(null);
   // Which row is mid-resend. The mutation's own `isPending` is shared by every

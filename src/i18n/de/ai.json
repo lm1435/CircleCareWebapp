@@ -24,6 +24,17 @@
   "actions": {
     "openNotes": "Notizen öffnen",
     "openDoctors": "Ärztinnen und Ärzte ansehen",
-    "openProvider": "{{name}}: Besuche und Notizen"
+    "openProvider": "{{name}}: Besuche und Notizen",
+    "openActivity": "Aktivität öffnen",
+    "openMedications": "Medikamente öffnen",
+    "openEmergencyInfo": "Gesundheitsinfos öffnen",
+    "openVitals": "Vitalwerte öffnen",
+    "openMembers": "Pflegeteam ansehen",
+    "openAddMedication": "Medikament hinzufügen",
+    "openAddAppointment": "Termin hinzufügen",
+    "openAddTask": "Aufgabe hinzufügen",
+    "openInvite": "Jemanden einladen",
+    "openSettingsNotifications": "Hinweis-Einstellungen",
+    "openSubscription": "Abo ansehen"
   }
 }

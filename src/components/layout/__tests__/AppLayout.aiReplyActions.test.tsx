@@ -50,10 +50,42 @@ vi.mock('@/components/NeedsCircleSelectionBanner', () => ({
 // drives the HOST's onOpenAction (the real modal's buttons are pinned in
 // components/ai/__tests__/AIChatModal.replyActions.test.tsx).
 const PATEL = '0b9a1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d';
+// 1.4.2: the stub also exposes the viewer props the layout passes, and one button per new type.
+const NEW_STUB_ACTIONS: Array<[string, unknown]> = [
+  ['stub open activity', { type: 'open_activity' }],
+  ['stub open medications', { type: 'open_medications' }],
+  ['stub open emergency info', { type: 'open_emergency_info' }],
+  ['stub open vitals', { type: 'open_vitals' }],
+  ['stub open members', { type: 'open_members' }],
+  ['stub open invite', { type: 'open_invite' }],
+  ['stub open alerts', { type: 'open_settings_notifications' }],
+  ['stub open subscription', { type: 'open_subscription' }],
+  ['stub add medication', { type: 'open_add_medication' }],
+  ['stub add task', { type: 'open_add_event', event_type: 'task' }],
+];
+let modalViewer: { canCreate?: boolean; canInvite?: boolean; isOwner?: boolean } = {};
 vi.mock('@/components/ai/AIChatModal', () => ({
-  AIChatModal: ({ isOpen, onOpenAction }: { isOpen: boolean; onOpenAction?: (a: unknown) => void }) =>
-    isOpen ? (
+  AIChatModal: ({
+    isOpen,
+    onOpenAction,
+    canCreate,
+    canInvite,
+    isOwner,
+  }: {
+    isOpen: boolean;
+    onOpenAction?: (a: unknown) => void;
+    canCreate?: boolean;
+    canInvite?: boolean;
+    isOwner?: boolean;
+  }) => {
+    modalViewer = { canCreate, canInvite, isOwner };
+    return isOpen ? (
       <div role="dialog" aria-label="Care Assistant" data-testid="ai-chat-modal">
+        {NEW_STUB_ACTIONS.map(([label, action]) => (
+          <button key={label} onClick={() => onOpenAction?.(action)}>
+            {label}
+          </button>
+        ))}
         <button onClick={() => onOpenAction?.({ type: 'open_notes' })}>stub open notes</button>
         <button onClick={() => onOpenAction?.({ type: 'open_doctors' })}>stub open doctors</button>
         <button
@@ -64,11 +96,14 @@ vi.mock('@/components/ai/AIChatModal', () => ({
           stub open provider
         </button>
       </div>
-    ) : null,
+    ) : null;
+  },
 }));
 
 vi.mock('@/components/calendar/AddEventModal', () => ({
-  AddEventModal: () => <div data-testid="add-event-modal" />,
+  AddEventModal: ({ initialType, entry }: { initialType?: string; entry?: string }) => (
+    <div data-testid="add-event-modal" data-type={initialType} data-entry={entry} />
+  ),
 }));
 
 vi.mock('@/lib/onboardingAnalytics', () => ({ trackCirclesLoaded: vi.fn() }));
@@ -141,7 +176,12 @@ function renderAt(): void {
           <Route path="notes" element={<Where />} />
           <Route path="emergency" element={<Where />} />
           <Route path="providers/:providerId" element={<Where />} />
+          <Route path="activity" element={<Where />} />
+          <Route path="meds" element={<Where />} />
+          <Route path="vitals" element={<Where />} />
+          <Route path="members" element={<Where />} />
         </Route>
+        <Route path="/profile/:section" element={<Where />} />
       </Routes>
     </MemoryRouter>
   );
@@ -164,5 +204,52 @@ describe('AppLayout — AI reply actions', () => {
     await openAssistantAndTap(label);
     expect(screen.queryByTestId('ai-chat-modal')).not.toBeInTheDocument();
     expect(screen.getByTestId('where')).toHaveTextContent(where);
+  });
+});
+
+describe('AppLayout — 1.4.2 reply actions', () => {
+  it.each([
+    ['stub open activity', '/circles/c1/activity|null'],
+    ['stub open medications', '/circles/c1/meds|null'],
+    ['stub open emergency info', '/circles/c1/emergency|null'],
+    ['stub open vitals', '/circles/c1/vitals|null'],
+    ['stub open members', '/circles/c1/members|null'],
+    ['stub open invite', '/circles/c1/members|{"openInvite":true}'],
+    ['stub open alerts', '/profile/alerts|null'],
+    ['stub open subscription', '/profile/subscription|null'],
+  ])('P: %s closes the assistant and opens %s', async (label, where) => {
+    await openAssistantAndTap(label);
+    expect(screen.queryByTestId('ai-chat-modal')).not.toBeInTheDocument();
+    expect(screen.getByTestId('where')).toHaveTextContent(where);
+  });
+
+  it.each([
+    ['stub add medication', 'medication'],
+    ['stub add task', 'task'],
+  ])('P: %s opens the New menu form of that type (entry ai_chat), staying on the page', async (label, type) => {
+    await openAssistantAndTap(label);
+    expect(screen.queryByTestId('ai-chat-modal')).not.toBeInTheDocument();
+    const form = screen.getByTestId('add-event-modal');
+    expect(form).toHaveAttribute('data-type', type);
+    expect(form).toHaveAttribute('data-entry', 'ai_chat');
+    expect(screen.getByTestId('where')).toHaveTextContent('/circles/c1/calendar|null');
+  });
+
+  it('P: the owner of an editable circle may be offered add, invite and subscription buttons', async () => {
+    vi.mocked(useCircle).mockReturnValue({
+      ...circleFlags({ canEdit: true, viewOnly: false, isPremiumCircle: true }),
+      canManageMembers: true,
+    } as unknown as ReturnType<typeof useCircle>);
+    await openAssistantAndTap('stub open notes');
+    expect(modalViewer).toEqual({ canCreate: true, canInvite: true, isOwner: true });
+  });
+
+  it('N: a member (not the owner, no manage rights) gets add buttons only: no invite, no subscription', async () => {
+    vi.mocked(useCircle).mockReturnValue({
+      ...circleFlags({ ownerId: 'someone-else', canEdit: true, viewOnly: false, isPremiumCircle: true }),
+      canManageMembers: false,
+    } as unknown as ReturnType<typeof useCircle>);
+    await openAssistantAndTap('stub open notes');
+    expect(modalViewer).toEqual({ canCreate: true, canInvite: false, isOwner: false });
   });
 });

@@ -21,7 +21,14 @@ import { useAiSuggestions } from '@/hooks/useAiSuggestions';
 const CIRCLE_ID = 'circle-1';
 const mockGet = vi.mocked(getAiSuggestions);
 // Server-authored strings — never a hardcoded product list on the client.
-const SUGGESTIONS = ['What medications are due today?', 'How is adherence this week?'];
+// 1.4.2 shape: chips with their ids, plus circle_empty.
+const SUGGESTIONS = {
+  items: [
+    { id: 'medications_today', text: 'What medications are due today?' },
+    { id: 'adherence_trend', text: 'How is adherence this week?' },
+  ],
+  circleEmpty: false,
+};
 
 function setup() {
   const queryClient = new QueryClient({
@@ -99,7 +106,7 @@ describe('useAiSuggestions', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(queryClient.getQueryData(queryKeys.aiSuggestions(CIRCLE_ID, 'en'))).toEqual(SUGGESTIONS);
 
-    const spanish = ['¿Qué medicamentos tocan hoy?'];
+    const spanish = { items: [{ id: 'medications_today', text: '¿Qué medicamentos tocan hoy?' }], circleEmpty: false };
     mockGet.mockResolvedValue(spanish);
     mockLanguage = 'es';
     rerender();

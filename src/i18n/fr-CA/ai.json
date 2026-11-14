@@ -1,1 +1,5 @@
-{}
+{
+  "actions": {
+    "openVitals": "Ouvrir les signes vitaux"
+  }
+}

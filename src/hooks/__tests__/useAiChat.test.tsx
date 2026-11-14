@@ -451,3 +451,109 @@ describe('useAiChat — FIND_NOTES analytics', () => {
     expect(Analytics.aiNotesPathSuggested).not.toHaveBeenCalled();
   });
 });
+
+describe('useAiChat — 1.4.2 understanding fields', () => {
+  it('P: a chip sends its suggestion_id; a typed message never does', async () => {
+    const { wrapper } = setup();
+    mockSend.mockResolvedValue(makeResponse());
+    const { result } = renderHook(() => useAiChat(CIRCLE_ID), { wrapper });
+
+    act(() =>
+      result.current.mutation.mutate({
+        message: 'Did she take her medications today?',
+        usedSuggestion: true,
+        suggestionId: 'doses_today',
+      })
+    );
+    await waitFor(() => expect(result.current.mutation.isSuccess).toBe(true));
+    expect(mockSend).toHaveBeenLastCalledWith(CIRCLE_ID, {
+      message: 'Did she take her medications today?',
+      conversation_id: undefined,
+      language: 'es',
+      suggestion_id: 'doses_today',
+    });
+
+    act(() => result.current.mutation.mutate({ message: 'typed', suggestionId: 'doses_today' }));
+    await waitFor(() => expect(mockSend).toHaveBeenCalledTimes(2));
+    expect(mockSend.mock.calls[1][1]).not.toHaveProperty('suggestion_id');
+  });
+
+  it('N: an unknown (malformed) suggestion id never crashes and is never sent', async () => {
+    const { wrapper } = setup();
+    mockSend.mockResolvedValue(makeResponse());
+    const { result } = renderHook(() => useAiChat(CIRCLE_ID), { wrapper });
+    act(() =>
+      result.current.mutation.mutate({ message: 'Tips?', usedSuggestion: true, suggestionId: 'NOT valid!' })
+    );
+    await waitFor(() => expect(result.current.mutation.isSuccess).toBe(true));
+    expect(mockSend.mock.calls[0][1]).not.toHaveProperty('suggestion_id');
+  });
+
+  it('P: outcome, reason, input_method, language, history_len and circle_empty reach the event', async () => {
+    const { wrapper } = setup();
+    mockSend.mockResolvedValue(
+      makeResponse({
+        intent: 'UNKNOWN',
+        outcome: 'not_understood',
+        reason: 'unsupported_data',
+        history_len: 6,
+      })
+    );
+    const { result } = renderHook(() => useAiChat(CIRCLE_ID), { wrapper });
+    act(() =>
+      result.current.mutation.mutate({
+        message: 'what is her blood type',
+        usedSuggestion: false,
+        circleEmpty: true,
+      })
+    );
+    await waitFor(() => expect(result.current.mutation.isSuccess).toBe(true));
+    expect(Analytics.aiChatResponseReceived).toHaveBeenCalledWith(CIRCLE_ID, {
+      intent: 'UNKNOWN',
+      latencyMs: expect.any(Number),
+      turnIndex: 0,
+      outcome: 'not_understood',
+      reason: 'unsupported_data',
+      inputMethod: 'typed',
+      language: 'es',
+      historyLen: '6+',
+      circleEmpty: true,
+    });
+  });
+
+  it('P: a chip reports input_method chip; a regional language reports its base', async () => {
+    mockLanguage = 'fr-CA';
+    const { wrapper } = setup();
+    mockSend.mockResolvedValue(makeResponse({ outcome: 'answered', history_len: 0 }));
+    const { result } = renderHook(() => useAiChat(CIRCLE_ID), { wrapper });
+    act(() => result.current.mutation.mutate({ message: 'chip', usedSuggestion: true, suggestionId: 'capabilities' }));
+    await waitFor(() => expect(result.current.mutation.isSuccess).toBe(true));
+    const props = vi.mocked(Analytics.aiChatResponseReceived).mock.calls[0][1];
+    expect(props.inputMethod).toBe('chip');
+    expect(props.language).toBe('fr');
+    expect(props.historyLen).toBe('0');
+    expect(props.reason).toBeUndefined();
+  });
+
+  it('N: the message text never reaches analytics', async () => {
+    const { wrapper } = setup();
+    // Every reply shape: a miss (with a reason), an answer (no reason) and an older backend.
+    mockSend
+      .mockResolvedValueOnce(
+        makeResponse({ message: 'I can only read records.', outcome: 'not_understood', reason: 'off_topic' })
+      )
+      .mockResolvedValueOnce(makeResponse({ message: 'I can only read records.', outcome: 'answered' }))
+      .mockResolvedValueOnce(makeResponse({ message: 'I can only read records.' }));
+    const { result } = renderHook(() => useAiChat(CIRCLE_ID), { wrapper });
+    for (let i = 0; i < 3; i += 1) {
+      act(() => result.current.mutation.mutate({ message: 'did mom take her warfarin 5mg' }));
+      await waitFor(() => expect(mockSend).toHaveBeenCalledTimes(i + 1));
+      await waitFor(() => expect(Analytics.aiChatResponseReceived).toHaveBeenCalledTimes(i + 1));
+    }
+    const everything = JSON.stringify(
+      Object.values(Analytics).map((fn) => vi.mocked(fn as (...a: unknown[]) => unknown).mock.calls)
+    );
+    expect(everything).not.toContain('warfarin');
+    expect(everything).not.toContain('I can only read records.');
+  });
+});

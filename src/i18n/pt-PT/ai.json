@@ -9,5 +9,10 @@
     "rateLimited": "Atingiu o limite de perguntas de hoje. O Assistente de cuidado estará disponível novamente amanhã.",
     "unavailable": "O Assistente de cuidado não está disponível neste momento. Tente novamente mais tarde.",
     "invalidMessage": "Não consegui processar essa mensagem. Tente reformular a sua pergunta sobre cuidados ou saúde."
+  },
+  "actions": {
+    "openMembers": "Ver equipa de cuidado",
+    "openSettingsNotifications": "Definições de alertas",
+    "openSubscription": "Ver subscrição"
   }
 }
