@@ -143,7 +143,7 @@ test.describe('dark: onboarding', () => {
     await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(wizard.getByRole('heading', { name: 'Invite someone to help' })).toHaveCount(0);
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
-    await expect(page.getByText('Better care, together.')).toBeVisible();
+    await expect(page.getByText('Share the care with everyone who helps.')).toBeVisible();
     await darkScan(page, 'onboarding paywall', testInfo);
     await page.getByRole('button', { name: /Continue with free plan/ }).click();
     await page.waitForURL(new RegExp(`/circles/${circleId}$`), { timeout: 30_000 });

@@ -1,10 +1,6 @@
 {
   "eyebrow": "CircleCare Premium",
   "headline": {
-    "onboarding": {
-      "lead": "Mais cuidado,",
-      "accent": "em conjunto."
-    },
     "general": {
       "lead": "Desbloqueie a",
       "accent": "experiência completa."
@@ -30,61 +26,58 @@
       "accent": "turno a turno."
     }
   },
-  "subtitle": "Tudo o que você precisa para coordenar o cuidado, em cada círculo de que você participa.",
-  "trialHook": "Comece com um teste grátis: nada a pagar hoje.",
   "benefits": {
     "caregivers": {
       "title": "Cuidadores ilimitados",
-      "sub": "Todos que ajudam, em um só círculo. Só uma pessoa paga."
+      "sub": "Todos que ajudam, em um só círculo. Só você paga."
     },
     "voice": {
       "title": "Adicionar por voz",
-      "sub": "Fale um medicamento, uma tarefa ou uma consulta e nós preenchemos o formulário. Em celulares compatíveis."
+      "sub": "Fale um medicamento, uma consulta ou uma tarefa e o formulário é preenchido. Em celulares compatíveis."
     },
     "exports": {
       "title": "Relatórios de adesão e importação de calendário",
-      "sub": "Compartilhe o histórico de medicamentos com profissionais de saúde e importe consultas do seu calendário"
+      "sub": "Exporte as doses tomadas, puladas e não marcadas. Importe consultas do calendário do seu celular."
     },
     "storage": {
-      "title": "1GB de documentos por círculo",
-      "sub": "Espaço para prontuários, fotos e papéis"
+      "title": "1 GB de documentos por círculo",
+      "sub": "Espaço para prontuários, fotos e papéis. O plano gratuito tem 200 MB."
     },
     "ai": {
-      "title": "Assistente de cuidado com IA",
-      "sub": "Resume consultas e destaca o que importa"
+      "title": "Assistente de cuidado",
+      "sub": "Responde a perguntas sobre a agenda, os medicamentos e as doses. Não pode alterar nada e não dá conselhos médicos."
     },
     "shifts": {
       "title": "Plantões",
-      "sub": "Organize quem cobre cada horário. O círculo todo vê quem está de plantão."
+      "sub": "Organize quem cobre cada horário. Todos veem quem está de plantão."
     },
     "team": {
       "title": "Pessoas gestoras e resumo semanal",
-      "sub": "Alguém pode ajudar você a convidar e gerenciar membros, além de um resumo semanal por e-mail"
+      "sub": "Um membro pode ajudar você a convidar e gerenciar pessoas. Cada membro recebe um e-mail semanal."
     },
     "circles": {
       "title": "Até 5 círculos de cuidado",
-      "sub": "Um para cada pessoa de quem você cuida"
+      "sub": "Um para cada pessoa de quem você cuida."
     }
   },
   "plans": {
     "monthly": "Mensal",
     "annual": "Anual",
-    "perMonth": "por mês",
-    "perYear": "por ano",
-    "bestValue": "Melhor custo-benefício",
-    "savePercent": "Economize {{percent}}%",
-    "perMonthBilled": "{{price}}/mês, cobrado anualmente",
-    "billedMonthly": "Cobrado mensalmente",
-    "trialIncluded": "Teste grátis incluído",
-    "monthlyPerk": "Cancele quando quiser, sem compromisso",
-    "trialWithDuration": "Teste grátis de {{period}}"
+    "perMonth": "/mês",
+    "perYear": "/ano",
+    "savePercent": "{{percent}}% de desconto",
+    "perMonthBilled": "{{price}}/mês cobrados anualmente",
+    "billingAnnual": "Cobrança anual",
+    "billingMonthly": "Cobrança mensal. Sem teste grátis.",
+    "termsAnnual": "{{price}} por ano. Renova todo ano até você cancelar nas configurações da sua conta.",
+    "termsMonthly": "{{price}} por mês. Renova todo mês até você cancelar nas configurações da sua conta.",
+    "billingAnnualTrial": "{{length}} grátis, depois cobrança anual",
+    "billingMonthlyTrial": "{{length}} grátis, depois cobrança mensal",
+    "termsAnnualTrial": "{{length}} grátis, depois {{price}} por ano. Renova todo ano até você cancelar nas configurações da sua conta.",
+    "termsMonthlyTrial": "{{length}} grátis, depois {{price}} por mês. Renova todo mês até você cancelar nas configurações da sua conta."
   },
   "choosePlan": "Escolha um plano",
-  "freeBaseline": "O plano gratuito inclui um círculo de cuidado, você + 1 cuidador e lembretes de medicamentos grátis.",
-  "subscribe": "Assinar",
-  "startTrial": "Começar teste grátis",
   "subscribing": "Abrindo o pagamento…",
-  "cancelAnytime": "Cancele quando quiser.",
   "securedByStripe": "Pagamento seguro pela Stripe.",
   "orUseApp": "Prefere o app? Você também pode fazer o upgrade no app CircleCare e pagar pela loja de aplicativos.",
   "unavailable": "O pagamento online não está disponível no momento. Você também pode fazer o upgrade no app CircleCare.",
@@ -113,12 +106,8 @@
     "body": "Sua assinatura está ativa. Aproveite o acesso completo em todos os seus círculos de cuidado.",
     "cta": "Continuar"
   },
-  "autoRenewNotice": "Sua assinatura é renovada automaticamente pelo preço exibido até você cancelar. Cancele quando quiser em Configurações.",
-  "termsLink": "Termos de Serviço",
-  "privacyLink": "Política de Privacidade",
-  "legalPrefix": "Ao assinar, você concorda com nossos",
-  "legalJoin": "e nossa",
-  "trialHookWithDuration": "Comece com um teste grátis de {{period}}: nada a pagar hoje.",
+  "termsLink": "Termos",
+  "privacyLink": "Privacidade",
   "trialPeriod": {
     "day_one": "{{count}} dia",
     "day_other": "{{count}} dias",
@@ -130,9 +119,24 @@
     "year_other": "{{count}} anos"
   },
   "onboarding": {
-    "subtitle": "Tudo o que você precisa para coordenar o cuidado de quem mais importa.",
     "continueFree": "Continuar com o plano gratuito",
-    "continueFreeSub": "1 círculo, 2 cuidadores: faça o upgrade quando quiser",
+    "continueFreeSub": "1 círculo de cuidado, você + 1 cuidador. Lembretes e alertas continuam grátis.",
     "notNow": "Agora não"
-  }
+  },
+  "headlineOnboarding": "Compartilhe o cuidado com todos que ajudam.",
+  "seeEverything": "Ver tudo o que está incluído",
+  "showLess": "Ver menos",
+  "subscribeAnnual": "Assinar: {{price}}/ano",
+  "subscribeMonthly": "Assinar: {{price}}/mês",
+  "trialLength": {
+    "day_one": "{{count}} dia",
+    "day_other": "{{count}} dias",
+    "week_one": "{{count}} semana",
+    "week_other": "{{count}} semanas",
+    "month_one": "{{count}} mês",
+    "month_other": "{{count}} meses",
+    "year_one": "{{count}} ano",
+    "year_other": "{{count}} anos"
+  },
+  "startTrialWithDuration": "Iniciar teste grátis de {{period}}"
 }

@@ -6,10 +6,10 @@
   "benefits": {
     "shifts": {
       "title": "Quarts",
-      "sub": "Planifiez qui s’occupe de quand. Tout le cercle voit qui est de quart."
+      "sub": "Planifiez qui s’occupe de quand. Tout le monde voit qui est de quart."
     },
     "team": {
-      "sub": "Une personne peut vous aider à inviter et gérer les membres, plus un récapitulatif chaque semaine par courriel"
+      "sub": "Un membre peut vous aider à inviter et gérer les personnes. Chaque membre reçoit un courriel hebdomadaire."
     }
   }
 }

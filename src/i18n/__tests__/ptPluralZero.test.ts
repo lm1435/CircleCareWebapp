@@ -63,8 +63,9 @@ const RENDERED_ONLY_ABOVE_ZERO: Record<string, string> = {
 const NAMESPACES_RENDERED_ONLY_ABOVE_ZERO = ['dailyUpdate:'];
 const neverAtZero = (key: string): boolean =>
   NAMESPACES_RENDERED_ONLY_ABOVE_ZERO.some((ns) => key.startsWith(ns));
-// upgrade:trialPeriod.* is a store trial length spliced as "teste grátis de {{period}}" (UpgradePage):
-// the store never reports a 0-length trial, so its `_one` keeps the natural "{{count}} dia".
+// upgrade:trialPeriod.* / upgrade:trialLength.* are a store trial length spliced as "teste grátis de
+// {{period}}" / "{{length}} grátis" (UpgradePage): the store never reports a 0-length trial (the page
+// shows no trial copy for one), so their `_one` keeps the natural "{{count}} dia".
 const INVARIANT_AFTER_NUMBER = new Set(['min', 'h', 'mg', 'ml', 'em', 'de', 'do', 'da', 'para', 'por', 'a', 'e', 'mais']);
 const VARS = { name: 'Ana', names: 'Ana', zone: 'Lisboa', email: 'a@b.c', times: '08:00', day: 'seg.' };
 
@@ -110,7 +111,7 @@ describe('pt / pt-PT plural keys read correctly at count 0', () => {
       if (neverAtZero(key) || RENDERED_ONLY_ABOVE_ZERO[key]) continue;
       if (/(^|[^\d{])1(\s|$)/.test(out) && !RENDERED_ONLY_ABOVE_ZERO[key]) bad.push(`${key}: "${out}" (hard-coded 1)`);
       const m = /(^|[^\d])0\s+([\p{L}]+)/u.exec(out);
-      if (m && !INVARIANT_AFTER_NUMBER.has(m[2].toLowerCase()) && !/s$/i.test(m[2]) && !key.startsWith('upgrade:trialPeriod.')) {
+      if (m && !INVARIANT_AFTER_NUMBER.has(m[2].toLowerCase()) && !/s$/i.test(m[2]) && !key.startsWith('upgrade:trialPeriod.') && !key.startsWith('upgrade:trialLength.')) {
         bad.push(`${key}: "${out}" (0 + singular "${m[2]}")`);
       }
     }

@@ -35,6 +35,10 @@ vi.mock('@/lib/analytics', () => ({
     planSelectionSubscribed: vi.fn(),
     planSelectionTrialStarted: vi.fn(),
     planSelectionPurchaseCancelled: vi.fn(),
+    planSelectionPlanChanged: vi.fn(),
+    planSelectionDetailsToggled: vi.fn(),
+    planSelectionCtaTapped: vi.fn(),
+    planSelectionLegalOpened: vi.fn(),
     paywallDismissed: vi.fn(),
     paywallShown: vi.fn(),
   },
@@ -122,35 +126,29 @@ beforeEach(() => {
 });
 
 /**
- * TWO-TONE HERO HEADLINE: mobile's PlanSelectionScreen renders `headline` in ink
- * and an ACCENT phrase in coral on its own line. Same words per context, EN+ES
- * (mobile en.json/es.json planSelection.*).
+ * ONE HEADLINE, ONE COLOUR (paywall redesign 1.4.2, spec §5): onboarding has its
+ * own sentence; every other context keeps its own headline, now one plain line
+ * in the page-title style. No coral accent word (one accent = moss, the buy button).
  */
-const CASES: Array<[string, string, string]> = [
-  ['onboarding', 'Better care,', 'together.'],
-  ['general', 'Unlock the full', 'experience.'],
-  ['capacity', 'More people,', 'better care.'],
-  ['invite_cap', 'More people,', 'better care.'],
-  ['feature', 'Get more from', 'CircleCare.'],
-  ['earned_meds', "You're keeping", 'on track.'],
-  ['earned_invite', 'Your circle is', 'growing.'],
+const CASES: Array<[string, string]> = [
+  ['onboarding', 'Share the care with everyone who helps.'],
+  ['general', 'Unlock the full experience.'],
+  ['capacity', 'More people, better care.'],
+  ['invite_cap', 'More people, better care.'],
+  ['feature', 'Get more from CircleCare.'],
+  ['earned_meds', "You're keeping on track."],
+  ['earned_invite', 'Your circle is growing.'],
+  ['shifts', 'Share the care, shift by shift.'],
 ];
-const CASES_ES: Array<[string, string, string]> = [
-  ['onboarding', 'Mejor cuidado,', 'juntos.'],
-  ['general', 'Desbloquea la', 'experiencia completa.'],
-  ['capacity', 'Más personas,', 'mejor cuidado.'],
-  ['invite_cap', 'Más personas,', 'mejor cuidado.'],
-  ['feature', 'Aprovecha todo', 'CircleCare.'],
-  ['earned_meds', 'Vas por', 'buen camino.'],
-  ['earned_invite', 'Tu círculo está', 'creciendo.'],
+const CASES_ES: Array<[string, string]> = [
+  ['onboarding', 'Comparte el cuidado con todos los que ayudan.'],
+  ['general', 'Desbloquea la experiencia completa.'],
+  ['capacity', 'Más personas, mejor cuidado.'],
+  ['invite_cap', 'Más personas, mejor cuidado.'],
+  ['feature', 'Aprovecha todo CircleCare.'],
+  ['earned_meds', 'Vas por buen camino.'],
+  ['earned_invite', 'Tu círculo está creciendo.'],
 ];
-
-function hexLuminance(hex: string): number {
-  const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((x) =>
-    x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4
-  );
-  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-}
 
 afterEach(async () => {
   await i18n.changeLanguage('en');
@@ -159,24 +157,19 @@ afterEach(async () => {
 describe.each([
   ['en', CASES],
   ['es', CASES_ES],
-] as const)('UpgradePage two-tone headline (%s)', (lng, cases) => {
-  it.each(cases)('%s renders lead in ink and the accent in coral inside ONE h1', async (ctx, lead, accent) => {
+] as const)('UpgradePage headline (%s)', (lng, cases) => {
+  it.each(cases)('%s renders ONE h1 in one colour, the page-title style', async (ctx, text) => {
     await i18n.changeLanguage(lng);
     renderAt({ paywallContext: ctx });
 
     const h1s = screen.getAllByRole('heading', { level: 1 });
     expect(h1s).toHaveLength(1);
     const h1 = h1s[0];
-    // One heading, one accessible name: "lead accent" (no double announcement).
-    expect(h1).toHaveAccessibleName(`${lead} ${accent}`);
-    const span = h1.querySelector('[data-headline-accent]') as HTMLElement;
-    expect(span).not.toBeNull();
-    expect(span.textContent).toBe(accent);
-    const cls = span.className.split(/\s+/);
-    expect(cls).toContain('text-coral');
-    expect(cls).toContain('block');
-    // The accent inherits the ONE page title (32/600) from the h1: no size or weight of its own.
-    expect(cls.some((c) => c.startsWith('text-[') || c === 'text-xl' || c === 'text-2xl')).toBe(false);
+    expect(h1).toHaveAccessibleName(text);
+    expect(h1.textContent).toBe(text);
+    // No accent span, no coral anywhere in the heading.
+    expect(h1.querySelector('[data-headline-accent]')).toBeNull();
+    expect(h1.innerHTML).not.toMatch(/coral/);
     expect(h1.className).toContain('text-xl');
     expect(h1.className).toContain('font-semibold');
     expect(h1.className.split(/\s+/)).toContain('text-balance');
@@ -184,24 +177,15 @@ describe.each([
   });
 });
 
-describe('UpgradePage accent contrast', () => {
-  it('coral #C65D54 on the #FBF9F5 page is >= 3:1 (large text only)', () => {
-    const l1 = hexLuminance('#fbf9f5');
-    const l2 = hexLuminance('#c65d54');
-    expect((l1 + 0.05) / (l2 + 0.05)).toBeGreaterThanOrEqual(3);
-  });
-});
-
-// Owner copy 1.4.0: the sub-line under "Better care, together." no longer assumes the buyer
-// is a family, and the circles benefit no longer assumes who the circles are for.
+// Owner copy 1.4.0, kept: the circles row no longer assumes who the circles are for,
+// and the buyer is never assumed to be a family.
 describe.each([
-  ['en', 'Everything you need to coordinate care for the people who matter most.', 'One for each person you care for', /your family needs|Mom, Dad/],
-  ['es', 'Todo lo que necesitas para coordinar el cuidado de quienes más importan.', 'Uno para cada persona que cuidas', /tu familia necesita|mamá, papá/],
-] as const)('UpgradePage onboarding copy (%s)', (lng, subtitle, circlesSub, old) => {
-  it('renders the approved sub-line and circles benefit, not the family-only wording', async () => {
+  ['en', 'One for each person you care for.', /your family needs|Mom, Dad/],
+  ['es', 'Uno para cada persona que cuidas.', /tu familia necesita|mamá, papá/],
+] as const)('UpgradePage onboarding copy (%s)', (lng, circlesSub, old) => {
+  it('renders the approved circles row, not the family-only wording', async () => {
     await i18n.changeLanguage(lng);
     const { container } = renderAt({ paywallContext: 'onboarding' });
-    expect(screen.getByText(subtitle)).toBeInTheDocument();
     expect(screen.getByText(circlesSub)).toBeInTheDocument();
     expect(container.textContent).not.toMatch(old);
   });

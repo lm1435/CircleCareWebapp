@@ -99,42 +99,22 @@ describe('member and role descriptions never assume relatives', () => {
     expect(allStrings(code).filter(([, v]) => OLD_ROLE_NAMES.test(v))).toEqual([]);
   });
 
-  // Paywall (upgrade.json): the circles benefit and the onboarding sub-line under "Better care, together."
-  const PAYWALL: Record<string, { circles: string; subtitle: string }> = {
-    en: {
-      circles: 'One for each person you care for',
-      subtitle: 'Everything you need to coordinate care for the people who matter most.',
-    },
-    es: {
-      circles: 'Uno para cada persona que cuidas',
-      subtitle: 'Todo lo que necesitas para coordinar el cuidado de quienes más importan.',
-    },
-    fr: {
-      circles: 'Un pour chaque personne que vous aidez',
-      subtitle: 'Tout ce dont vous avez besoin pour coordonner les soins des personnes qui comptent le plus.',
-    },
-    de: {
-      circles: 'Einer für jede Person, die Sie betreuen',
-      subtitle: 'Alles, was Sie brauchen, um die Pflege der Menschen zu koordinieren, die Ihnen am meisten bedeuten.',
-    },
-    it: {
-      circles: 'Una per ogni persona di cui ti prendi cura',
-      subtitle: 'Tutto ciò che ti serve per coordinare la cura delle persone più importanti.',
-    },
-    pt: {
-      circles: 'Um para cada pessoa de quem você cuida',
-      subtitle: 'Tudo o que você precisa para coordenar o cuidado de quem mais importa.',
-    },
+  // Paywall (upgrade.json): the circles benefit. The onboarding sub-line was retired with the
+  // compact paywall (1.4.2, docs/plans/paywall-redesign-1-4-2.md §5: header = eyebrow + headline).
+  const PAYWALL: Record<string, { circles: string }> = {
+    en: { circles: 'One for each person you care for.' },
+    es: { circles: 'Uno para cada persona que cuidas.' },
+    fr: { circles: 'Un pour chaque personne que vous aidez.' },
+    de: { circles: 'Einer für jede Person, die Sie betreuen.' },
+    it: { circles: 'Una per ogni persona di cui ti prendi cura.' },
+    pt: { circles: 'Um para cada pessoa de quem você cuida.' },
     // European override: no "você".
-    'pt-PT': {
-      circles: 'Um para cada pessoa de quem cuida',
-      subtitle: 'Tudo o que precisa para coordenar o cuidado de quem mais importa.',
-    },
+    'pt-PT': { circles: 'Um para cada pessoa de quem cuida.' },
   };
   it.each(Object.keys(PAYWALL))('%s: the paywall reads as approved', (code) => {
     const up = load(code, 'upgrade');
     expect(get(up, 'benefits.circles.sub')).toBe(PAYWALL[code].circles);
-    expect(get(up, 'onboarding.subtitle')).toBe(PAYWALL[code].subtitle);
+    expect(get(up, 'onboarding.subtitle')).toBeUndefined();
   });
 
   it('fr-CA inherits the French paywall copy (no override)', () => {
@@ -149,42 +129,20 @@ describe('member and role descriptions never assume relatives', () => {
     expect(get(up, 'benefits.circles.sub') ?? '').not.toMatch(OLD_PAYWALL);
   });
 
-  // The general upgrade subtitle (upgrade:subtitle) and the Profile upgrade benefit
-  // (profile:subscription.upgradeBenefit) no longer assume a family. Mobile pins the same line
-  // in planSelection.upgradeSubtitleGeneral.
-  const GENERAL: Record<string, { subtitle: string; benefit: string }> = {
-    en: {
-      subtitle: "Everything you need to coordinate care, for every circle you're part of.",
-      benefit: "Everything you need to coordinate care, for every circle you're part of.",
-    },
-    es: {
-      subtitle: 'Todo lo que necesitas para coordinar el cuidado, en cada círculo del que formas parte.',
-      benefit: 'Todo lo que necesitas para coordinar el cuidado, en cada círculo del que formas parte.',
-    },
-    fr: {
-      subtitle: 'Tout ce dont vous avez besoin pour coordonner les soins, pour chaque cercle dont vous faites partie.',
-      benefit: 'Tout ce dont vous avez besoin pour coordonner les soins, dans chacun des cercles auxquels vous participez.',
-    },
-    de: {
-      subtitle: 'Alles, was Sie brauchen, um die Pflege zu koordinieren – für jeden Kreis, in dem Sie dabei sind.',
-      benefit: 'Alles, was Sie brauchen, um die Pflege gemeinsam zu organisieren – für jeden Kreis, in dem Sie Mitglied sind.',
-    },
-    it: {
-      subtitle: 'Tutto ciò che ti serve per coordinare la cura, per ogni cerchia di cui fai parte.',
-      benefit: 'Tutto ciò che ti serve per coordinare la cura, per ogni cerchia di cui fai parte.',
-    },
-    pt: {
-      subtitle: 'Tudo o que você precisa para coordenar o cuidado, em cada círculo de que você participa.',
-      benefit: 'Tudo o que você precisa para coordenar o cuidado, em todos os círculos de que faz parte.',
-    },
+  // The Profile upgrade benefit (profile:subscription.upgradeBenefit) no longer assumes a family.
+  // The general upgrade subtitle (upgrade:subtitle) was retired with the compact paywall (1.4.2).
+  const GENERAL: Record<string, { benefit: string }> = {
+    en: { benefit: "Everything you need to coordinate care, for every circle you're part of." },
+    es: { benefit: 'Todo lo que necesitas para coordinar el cuidado, en cada círculo del que formas parte.' },
+    fr: { benefit: 'Tout ce dont vous avez besoin pour coordonner les soins, dans chacun des cercles auxquels vous participez.' },
+    de: { benefit: 'Alles, was Sie brauchen, um die Pflege gemeinsam zu organisieren – für jeden Kreis, in dem Sie Mitglied sind.' },
+    it: { benefit: 'Tutto ciò che ti serve per coordinare la cura, per ogni cerchia di cui fai parte.' },
+    pt: { benefit: 'Tudo o que você precisa para coordenar o cuidado, em todos os círculos de que faz parte.' },
     // European override: no "você".
-    'pt-PT': {
-      subtitle: 'Tudo o que precisa para coordenar o cuidado, em cada círculo de que faz parte.',
-      benefit: 'Tudo o que precisa para coordenar o cuidado, em todos os círculos de que faz parte.',
-    },
+    'pt-PT': { benefit: 'Tudo o que precisa para coordenar o cuidado, em todos os círculos de que faz parte.' },
   };
-  it.each(Object.keys(GENERAL))('%s: the general upgrade subtitle and Profile benefit read as approved', (code) => {
-    expect(get(load(code, 'upgrade'), 'subtitle')).toBe(GENERAL[code].subtitle);
+  it.each(Object.keys(GENERAL))('%s: the general upgrade subtitle is retired and the Profile benefit reads as approved', (code) => {
+    expect(get(load(code, 'upgrade'), 'subtitle')).toBeUndefined();
     expect(get(load(code, 'profile'), 'subscription.upgradeBenefit')).toBe(GENERAL[code].benefit);
   });
 

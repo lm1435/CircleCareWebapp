@@ -163,87 +163,29 @@ beforeEach(() => {
 });
 
 describe('UpgradePage', () => {
-  // The benefits are what Premium ADDS, the same eight, in the same order and
-  // wording, as mobile's paywall (planSelection.feature*). ORDER IS THE POINT
-  // (owner-approved 2026-10-10): people pay for more people in ONE circle (the
-  // capacity paywall converts 2x onboarding), so unlimited family members lead
-  // and the circle-count cap is LAST. The old "Full access to the calendar,
-  // tasks, medications, documents, and vitals" overclaimed: free users have it.
-  // Shifts and managers + the weekly care summary (2026-11-03): Premium-gated on the server
-  // (shiftTier.requirePremiumCircle, the manager-role 402, digestService premium circles).
-  it('lists the eight Premium benefits mobile lists, caregivers first, circles last', () => {
-    renderPage();
-    const items = screen.getAllByRole('listitem').filter((li) => li.closest('[data-benefits]'));
-    expect(items.map((li) => li.textContent)).toEqual([
-      'Unlimited caregiversEveryone who helps, in one circle. One person pays.',
-      'Add by voiceSay a medication, task or appointment and we fill in the form. On supported phones.',
-      'Adherence reports & calendar importShare medication history with providers, import appointments from your calendar',
-      '1GB of documents per circleRoom for records, photos, and paperwork',
-      'AI care assistantSummarizes visits and surfaces what matters',
-      "Care shiftsPlan who covers when. Everyone in the circle sees who's on.",
-      'Managers & weekly care summarySomeone can help you invite and manage members, plus a weekly summary by email',
-      'Up to 5 care circlesOne for each person you care for',
-    ]);
-    expect(screen.queryByText(/Full access to the calendar/)).toBeNull();
+  // The compact paywall (1.4.2): the plan cards, the three reasons and the footer.
+  // Copy, order and the detail rows are pinned in UpgradePage.compact.test.tsx
+  // (spec P1-P11 / N1-N10); this block keeps the plan-card mechanics.
+
+  // The free-plan line must match the free plan everywhere else: owner + 1
+  // caregiver (it once said "two caregivers"), and reminders are never paywalled.
+  it('states the free plan truthfully: you + 1 caregiver, reminders and alerts stay free', () => {
+    expect(i18n.t('upgrade:onboarding.continueFreeSub')).toBe(
+      '1 care circle, you + 1 caregiver. Reminders and alerts stay free.'
+    );
+    expect(i18n.t('upgrade:onboarding.continueFreeSub')).not.toMatch(/two caregivers|2 caregivers/);
   });
 
-  it('lists the same order in Spanish', async () => {
-    await i18n.changeLanguage('es');
-    try {
-      renderPage();
-      const items = screen.getAllByRole('listitem').filter((li) => li.closest('[data-benefits]'));
-      const titles = items.map((li) => li.querySelector('.font-medium')?.textContent);
-      expect(titles).toEqual([
-        'Cuidadores ilimitados',
-        'Agregar por voz',
-        'Informes de adherencia e importación de calendario',
-        '1GB de documentos por círculo',
-        'Asistente de IA',
-        'Turnos de cuidado',
-        'Personas gestoras y resumen semanal',
-        'Hasta 5 círculos de cuidado',
-      ]);
-    } finally {
-      await i18n.changeLanguage('en');
-    }
-  });
-
-  // The free baseline must match the free plan everywhere else: owner + 1
-  // caregiver (it said "two caregivers"), and reminders are never paywalled.
-  it('states the free plan truthfully: you + 1 caregiver, free medication reminders', () => {
+  // The "nothing due today" hero pill is gone (spec §6): the card's line 2 and
+  // the terms line under the button say it, with the length and the price.
+  it('has no trial hero pill; the trial is stated on the card and in the terms line', () => {
     renderPage();
-    expect(
-      screen.getByText(
-        'The free plan includes one care circle, you + 1 caregiver, and free medication reminders.'
-      )
-    ).toBeTruthy();
-    expect(screen.queryByText(/two caregivers/)).toBeNull();
-  });
-
-  // At 390px the ES pill ("Comienza con una prueba gratis de 1 semana: hoy no
-  // pagas nada.") was a nowrap Badge wider than the viewport: horizontal page
-  // scroll. The trial pill must be allowed to wrap inside the viewport, centred.
-  it('lets the trial pill wrap within the viewport (no whitespace-nowrap)', () => {
-    renderPage();
-    const pill = screen.getByText('Start with a 1-week free trial — nothing due today.');
-    const classes = pill.className.split(/\s+/);
-    expect(classes).not.toContain('whitespace-nowrap');
-    expect(classes).toContain('whitespace-normal');
-    expect(classes).toContain('max-w-full');
-    expect(classes).toContain('text-center');
-    expect(classes).toContain('rounded-full');
-  });
-
-  // Coral-deep on coral-soft is the palette's alert look; "nothing due today"
-  // is reassurance, so it wears the same moss as "Save 28%" and the CTA.
-  it('renders the trial pill in moss, not the coral alert tint', () => {
-    renderPage();
-    const classes = screen.getByText(
-      'Start with a 1-week free trial — nothing due today.'
-    ).className;
-    expect(classes).toContain('bg-moss-soft');
-    expect(classes).toContain('text-moss-deep');
-    expect(classes).not.toMatch(/coral/);
+    expect(screen.queryByText(/nothing due today/)).toBeNull();
+    const annualRadio = screen.getByRole('radio', { name: /Annual/ });
+    expect(annualRadio).toHaveTextContent('1 week free, then billed yearly');
+    expect(screen.getByTestId('upgrade-terms')).toHaveTextContent(
+      '1 week free, then $59.99 per year. Renews every year until you cancel in your account settings.'
+    );
   });
 
   it('renders both plans with their Stripe prices', () => {
@@ -253,66 +195,54 @@ describe('UpgradePage', () => {
   });
 
   // All four markets we sell to on the web (US, CA, AU, NZ) use a bare `$` in
-  // their own locale, so the symbol alone never says WHICH dollar. A Canadian
-  // seeing "$79.99" has nothing on the page telling them it is not USD they
-  // will have to convert. The ISO code is the disambiguator.
+  // their own locale, so the symbol alone never says WHICH dollar.
   it('names the currency beside each price', () => {
     renderPage();
     expect(screen.getAllByText('USD').length).toBe(2);
   });
 
-  it('puts the currency in the radio accessible name, not just the visual', () => {
+  // `aria-label` on a button REPLACES its contents, so every line of the card has
+  // to be in the name or a screen reader never hears the trial terms.
+  it('puts the currency AND every card line in the radio accessible name', () => {
     renderPage();
-    // A screen-reader user gets the same disambiguation a sighted user does.
-    expect(screen.getByRole('radio', { name: /Annual, \$59\.99 USD per year/ })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /Monthly, \$6\.99 USD per month/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('radio', {
+        name: 'Annual, $59.99 USD /year, 1 week free, then billed yearly, $5.00/mo billed annually, 28% off',
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('radio', { name: 'Monthly, $6.99 USD /month, Billed monthly. No free trial.' })
+    ).toBeInTheDocument();
   });
 
-  // The duration has to reach the CARD too, not just the hero pill: the card's
-  // trial line is what a user reads while choosing, and "Free trial included"
-  // with no length is exactly the unqualified claim FTC/Play enforcement
-  // targets.
-  it('states the trial length on the annual plan card, not just the hero pill', () => {
-    renderPage();
-    const annualRadio = screen.getByRole('radio', { name: /Annual/ });
-    expect(annualRadio).toHaveTextContent('1-week free trial');
-    expect(annualRadio).not.toHaveTextContent('Free trial included');
-  });
-
-  // WCAG 1.4.3: plain (non-deep) coral is 3.92:1 on the page background at
-  // this 12px/normal-weight eyebrow size — below the 4.5:1 AA text minimum.
-  // `deep` renders coral-deep (5.4:1).
-  it('renders the hero eyebrow in coral-deep, not plain coral (WCAG 1.4.3)', () => {
+  // One accent (moss = the buy button). The eyebrow is neutral grey, never coral.
+  it('renders the eyebrow in neutral ink, not coral', () => {
     renderPage();
     const eyebrow = screen.getByText('CircleCare Premium');
-    expect(eyebrow.className).toContain('text-coral-deep!');
-    expect(eyebrow.className).not.toContain('text-coral!');
+    expect(eyebrow.className).not.toMatch(/coral|moss/);
+    expect(eyebrow.className).toContain('text-ink-3');
   });
 
   it('shows the data-driven annual savings and per-month equivalent', () => {
     renderPage();
     // 59.99 vs 6.99×12 (83.88) → ~28% off; 59.99/12 → $5.00/mo
-    expect(screen.getByText('Save 28%')).toBeInTheDocument();
-    expect(screen.getByText('$5.00/mo, billed yearly')).toBeInTheDocument();
+    expect(screen.getByText('28% off')).toBeInTheDocument();
+    expect(screen.getByText('$5.00/mo billed annually')).toBeInTheDocument();
   });
 
   it('offers both plans as radio options, annual selected by default', () => {
     renderPage();
     expect(screen.getByRole('radio', { name: /Annual/ })).toBeChecked();
     expect(screen.getByRole('radio', { name: /Monthly/ })).not.toBeChecked();
-    // One shared CTA, reflecting the default (annual → free trial)
-    expect(screen.getByRole('button', { name: 'Start free trial' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Subscribe' })).not.toBeInTheDocument();
+    // One shared CTA, reflecting the default (annual → free trial, length from the store)
+    expect(screen.getByRole('button', { name: 'Start 1-week free trial' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Subscribe/ })).not.toBeInTheDocument();
   });
 
-  // The selected card used to be `border-2 border-ink! bg-coral-soft! shadow-sm`:
-  // a pink fill under a heavy black 2px frame read as an error state, was the
-  // heaviest thing on the page, and — because the unselected card kept a 1px
-  // border — the selected card's content sat ~2px lower and jumped on toggle.
-  // Selection is now moss (the primary-action colour), drawn as a border COLOUR
-  // plus a 1px ring (box-shadow, no layout), so both states share one border
-  // width and the box/content never move.
-  it('marks the selected plan card in moss with no layout-shifting border change, and flips on click', () => {
+  // Selection is NEUTRAL (owner rule: one accent; moss only on the buy button).
+  // Drawn as a border COLOUR plus a 1px ring (box-shadow, no layout), so both
+  // states share one border width and the box/content never move.
+  it('marks the selected plan card in neutral ink with no layout-shifting border change, and flips on click', () => {
     renderPage();
     const annualRadio = screen.getByRole('radio', { name: /Annual/ });
     const monthlyRadio = screen.getByRole('radio', { name: /Monthly/ });
@@ -323,23 +253,21 @@ describe('UpgradePage', () => {
     const assertSelected = (el: HTMLElement): void => {
       expect(el).toHaveAttribute('aria-checked', 'true');
       const c = tokens(el);
-      expect(c).toContain('border-moss!');
+      expect(c).toContain('border-selected-fill!');
       expect(c).toContain('ring-1');
-      expect(c).toContain('ring-moss');
-      // Never the old alert-looking treatment.
-      expect(el.className).not.toMatch(/bg-coral-soft|border-ink|border-2/);
+      expect(c).toContain('ring-selected-fill');
+      expect(el.className).not.toMatch(/moss|bg-coral-soft|border-2/);
     };
     const assertUnselected = (el: HTMLElement): void => {
       expect(el).toHaveAttribute('aria-checked', 'false');
       const c = tokens(el);
       expect(c).toContain('border-line!');
       expect(c).not.toContain('ring-1');
-      expect(el.className).not.toMatch(/moss!|bg-coral-soft|border-ink|border-2/);
+      expect(el.className).not.toMatch(/moss|bg-coral-soft|border-2/);
     };
 
     assertSelected(annualRadio);
     assertUnselected(monthlyRadio);
-    // Identical border-width token in both states: box size cannot change.
     expect(borderWidth(annualRadio)).toEqual(['border']);
     expect(borderWidth(monthlyRadio)).toEqual(['border']);
 
@@ -351,24 +279,20 @@ describe('UpgradePage', () => {
     expect(borderWidth(monthlyRadio)).toEqual(['border']);
   });
 
-  it('keeps the plan cards moss/ink, not coral (savings pill + trial line)', () => {
+  it('keeps the plan cards free of moss and coral (savings badge and billing line neutral)', () => {
     renderPage();
-    const save = screen.getByText('Save 28%');
-    expect(save.className).toContain('bg-moss-soft');
-    expect(save.className).toContain('text-moss-deep');
-    expect(save.className).not.toContain('coral');
-
+    const save = screen.getByText('28% off');
+    expect(save.className).not.toMatch(/moss|coral/);
     const annualRadio = screen.getByRole('radio', { name: /Annual/ });
-    const trialLine = annualRadio.querySelector('p:last-of-type') as HTMLElement;
-    expect(trialLine.className).toContain('text-moss-deep');
-    expect(annualRadio.innerHTML).not.toContain('coral');
+    expect(annualRadio.innerHTML).not.toMatch(/moss|coral/);
+    const monthlyRadio = screen.getByRole('radio', { name: /Monthly/ });
+    expect(monthlyRadio.innerHTML).not.toMatch(/moss|coral/);
   });
 
-  // EN desktop broke "…for every circle you're part / of." — a one-word widow.
-  it('balances the subtitle so it never leaves a one-word last line', () => {
+  // The single headline never leaves a one-word last line (pageTitle balances).
+  it('balances the headline so it never leaves a one-word last line', () => {
     renderPage();
-    const subtitle = screen.getByText(/Everything you need to coordinate care, for every circle/);
-    expect(subtitle.className.split(/\s+/)).toContain('text-balance');
+    expect(screen.getByRole('heading', { level: 1 }).className.split(/\s+/)).toContain('text-balance');
   });
 
   it('gives exactly one plan card a tab stop (roving tabindex)', () => {
@@ -376,7 +300,6 @@ describe('UpgradePage', () => {
     const annualRadio = screen.getByRole('radio', { name: /Annual/ });
     const monthlyRadio = screen.getByRole('radio', { name: /Monthly/ });
 
-    // Annual is selected by default.
     expect(annualRadio).toHaveAttribute('tabIndex', '0');
     expect(monthlyRadio).toHaveAttribute('tabIndex', '-1');
 
@@ -401,7 +324,6 @@ describe('UpgradePage', () => {
     expect(annualRadio).toHaveAttribute('tabIndex', '-1');
     expect(monthlyRadio).toHaveFocus();
 
-    // ArrowLeft (or wraparound ArrowRight) brings it back.
     fireEvent.keyDown(monthlyRadio, { key: 'ArrowLeft' });
     expect(annualRadio).toHaveAttribute('aria-checked', 'true');
     expect(annualRadio).toHaveFocus();
@@ -409,7 +331,7 @@ describe('UpgradePage', () => {
 
   it('confirms the selected plan (annual by default) via the shared CTA', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Start free trial' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start 1-week free trial' }));
     expect(mutate).toHaveBeenCalledTimes(1);
     expect(mutate.mock.calls[0][0]).toMatchObject({ identifier: '$rc_annual' });
   });
@@ -417,8 +339,8 @@ describe('UpgradePage', () => {
   it('switches the CTA and the confirmed plan when monthly is selected', () => {
     renderPage();
     fireEvent.click(screen.getByRole('radio', { name: /Monthly/ }));
-    // Monthly has no trial → CTA becomes Subscribe
-    const cta = screen.getByRole('button', { name: 'Subscribe' });
+    // Monthly has no trial → the CTA names the store price per month
+    const cta = screen.getByRole('button', { name: 'Subscribe: $6.99/mo' });
     fireEvent.click(cta);
     expect(mutate).toHaveBeenCalledTimes(1);
     expect(mutate.mock.calls[0][0]).toMatchObject({ identifier: '$rc_monthly' });
@@ -432,9 +354,7 @@ describe('UpgradePage', () => {
     expect(manageMutate).toHaveBeenCalledTimes(1);
   });
 
-  // axe route crawl: page-has-heading-one. The already-premium state renders
-  // only an EmptyState with no other heading on the page, so its title must be
-  // the page's <h1> (EmptyState's titleAs="h1"), not the default <h2>.
+  // axe route crawl: page-has-heading-one.
   it('gives the already-premium state a level-1 heading', () => {
     mockedStatus.mockReturnValue({ data: { tier: 'premium' } });
     renderPage();
@@ -460,8 +380,8 @@ describe('UpgradePage', () => {
     mockedPlans.mockReturnValue({ data: { monthly: null, annual: null }, isLoading: false });
     renderPage();
     expect(screen.getByText(/Online checkout isn't available/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Subscribe' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Start free trial' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Subscribe/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /free trial/ })).not.toBeInTheDocument();
   });
 
   it('degrades to the in-app upgrade notice when the offering query errors', () => {
@@ -489,8 +409,8 @@ describe('UpgradePage — country gate', () => {
   const queryPlanControls = (): HTMLElement[] => [
     ...screen.queryAllByRole('radiogroup'),
     ...screen.queryAllByRole('radio'),
-    ...screen.queryAllByRole('button', { name: 'Subscribe' }),
-    ...screen.queryAllByRole('button', { name: 'Start free trial' }),
+    ...screen.queryAllByRole('button', { name: /^Subscribe/ }),
+    ...screen.queryAllByRole('button', { name: /free trial/ }),
   ];
 
   it('renders the plan selector when both zones are on the allowlist', () => {
@@ -498,7 +418,7 @@ describe('UpgradePage — country gate', () => {
     setBrowserZone('America/Vancouver');
     renderPage();
     expect(screen.getByRole('radio', { name: /Annual/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start free trial' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start 1-week free trial' })).toBeInTheDocument();
   });
 
   // Every country on the allowlist, driven off the constant itself — adding a

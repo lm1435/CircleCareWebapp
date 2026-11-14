@@ -627,11 +627,89 @@ describe('PDF export events mirror mobile exactly (plan pdf-export-parity, decis
 });
 
 describe('paywall events mirror mobile exactly', () => {
-  it('plan_selection_viewed carries paywall_context', async () => {
+  it('plan_selection_viewed carries paywall_context + the compact layout, trial_shown and default_plan', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
-    Analytics.planSelectionViewed('onboarding');
+    Analytics.planSelectionViewed('onboarding', { trialShown: true, defaultPlan: 'annual' });
     expect(capture).toHaveBeenCalledWith('plan_selection_viewed', {
       paywall_context: 'onboarding',
+      layout: 'compact',
+      trial_shown: true,
+      default_plan: 'annual',
+    });
+  });
+
+  it('plan_selection_plan_changed carries plan + paywall_context only', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.planSelectionPlanChanged('monthly', 'capacity');
+    expect(capture).toHaveBeenCalledWith('plan_selection_plan_changed', {
+      plan: 'monthly',
+      paywall_context: 'capacity',
+    });
+  });
+
+  it('plan_selection_details_toggled carries a boolean, the context and WHOLE seconds', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.planSelectionDetailsToggled(true, 'onboarding', 4.6);
+    Analytics.planSelectionDetailsToggled(false, 'feature', -3);
+    Analytics.planSelectionDetailsToggled(false, 'feature', Number.NaN);
+    expect(capture).toHaveBeenNthCalledWith(1, 'plan_selection_details_toggled', {
+      expanded: true,
+      paywall_context: 'onboarding',
+      seconds_since_view: 5,
+    });
+    expect(capture).toHaveBeenNthCalledWith(2, 'plan_selection_details_toggled', {
+      expanded: false,
+      paywall_context: 'feature',
+      seconds_since_view: 0,
+    });
+    expect(capture).toHaveBeenNthCalledWith(3, 'plan_selection_details_toggled', {
+      expanded: false,
+      paywall_context: 'feature',
+      seconds_since_view: 0,
+    });
+  });
+
+  it('plan_selection_cta_tapped (purchase started) carries enums, booleans and an integer only', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.planSelectionCtaTapped({
+      plan: 'annual',
+      paywallContext: 'onboarding',
+      trialShown: true,
+      detailsExpanded: false,
+      secondsSinceView: 12.4,
+    });
+    expect(capture).toHaveBeenCalledWith('plan_selection_cta_tapped', {
+      plan: 'annual',
+      paywall_context: 'onboarding',
+      trial_shown: true,
+      details_expanded: false,
+      seconds_since_view: 12,
+    });
+  });
+
+  it('plan_selection_legal_opened carries the link enum, never a URL', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.planSelectionLegalOpened('privacy');
+    Analytics.planSelectionLegalOpened('https://evil.example/' as never);
+    expect(capture).toHaveBeenNthCalledWith(1, 'plan_selection_legal_opened', { link: 'privacy' });
+    expect(capture).toHaveBeenNthCalledWith(2, 'plan_selection_legal_opened', { link: 'terms' });
+  });
+
+  it('paywall_dismissed with details adds method, whole seconds_visible, details_expanded and scrolled', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.paywallDismissed('onboarding', {
+      method: 'continue_free',
+      secondsVisible: 7.5,
+      detailsExpanded: true,
+      scrolled: false,
+    });
+    expect(capture).toHaveBeenCalledWith('paywall_dismissed', {
+      trigger: 'onboarding',
+      paywall_context: 'onboarding',
+      method: 'continue_free',
+      seconds_visible: 8,
+      details_expanded: true,
+      scrolled: false,
     });
   });
 
@@ -691,6 +769,9 @@ describe('paywall events mirror mobile exactly', () => {
     Analytics.paywallDismissed();
     expect(capture).toHaveBeenCalledWith('plan_selection_viewed', {
       paywall_context: 'general',
+      layout: 'compact',
+      trial_shown: false,
+      default_plan: 'annual',
     });
     expect(capture).toHaveBeenCalledWith('paywall_dismissed', {
       trigger: 'general',

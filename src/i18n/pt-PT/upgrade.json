@@ -8,40 +8,39 @@
       "accent": "a crescer."
     }
   },
-  "subtitle": "Tudo o que precisa para coordenar o cuidado, em cada círculo de que faz parte.",
-  "trialHook": "Comece com um período experimental gratuito: nada a pagar hoje.",
   "benefits": {
     "caregivers": {
-      "sub": "Todos os que ajudam, num só círculo. Só uma pessoa paga."
+      "sub": "Todos os que ajudam, num só círculo. Só paga o titular da conta."
     },
     "voice": {
-      "sub": "Diga um medicamento, uma tarefa ou uma consulta e nós preenchemos o formulário. Em telemóveis compatíveis."
+      "sub": "Diga um medicamento, uma consulta ou uma tarefa e o formulário é preenchido. Em telemóveis compatíveis."
     },
     "exports": {
-      "sub": "Partilhe o histórico de medicamentos com profissionais de saúde e importe consultas do seu calendário"
+      "sub": "Exporte as doses tomadas, saltadas e não marcadas. Importe consultas do calendário do seu telemóvel."
     },
     "storage": {
-      "sub": "Espaço para processos clínicos, fotografias e papéis"
+      "sub": "Espaço para processos clínicos, fotografias e papéis. O plano gratuito tem 200 MB."
     },
     "shifts": {
       "title": "Turnos",
-      "sub": "Organize quem fica com cada horário. Todo o círculo vê quem está de turno."
+      "sub": "Organize quem fica com cada horário. Todos veem quem está de turno."
     },
     "team": {
-      "sub": "Alguém pode ajudar a convidar e gerir membros, além de um resumo semanal por e-mail"
+      "sub": "Um membro pode ajudar a convidar e gerir pessoas. Cada membro recebe um e-mail semanal."
     },
     "circles": {
-      "sub": "Um para cada pessoa de quem cuida"
+      "sub": "Um para cada pessoa de quem cuida."
     }
   },
   "plans": {
-    "savePercent": "Poupe {{percent}}%",
-    "trialIncluded": "Período experimental gratuito incluído",
-    "trialWithDuration": "Período experimental gratuito de {{period}}"
+    "billingMonthly": "Cobrança mensal. Sem período experimental gratuito.",
+    "termsAnnual": "{{price}} por ano. Renova todos os anos até cancelar nas definições da sua conta.",
+    "termsMonthly": "{{price}} por mês. Renova todos os meses até cancelar nas definições da sua conta.",
+    "billingAnnualTrial": "Período experimental gratuito de {{length}}, depois cobrança anual",
+    "billingMonthlyTrial": "Período experimental gratuito de {{length}}, depois cobrança mensal",
+    "termsAnnualTrial": "Período experimental gratuito de {{length}}, depois {{price}} por ano. Renova todos os anos até cancelar nas definições da sua conta.",
+    "termsMonthlyTrial": "Período experimental gratuito de {{length}}, depois {{price}} por mês. Renova todos os meses até cancelar nas definições da sua conta."
   },
-  "freeBaseline": "O plano gratuito inclui um círculo de cuidado, si + 1 cuidador e lembretes de medicamentos gratuitos.",
-  "subscribe": "Subscrever",
-  "startTrial": "Iniciar período experimental gratuito",
   "subscribing": "A abrir o pagamento…",
   "orUseApp": "Prefere a app? Também pode fazer o upgrade na app CircleCare e pagar através da loja de aplicações.",
   "unavailable": "O pagamento online não está disponível neste momento. Também pode fazer o upgrade na app CircleCare.",
@@ -67,11 +66,11 @@
   "success": {
     "body": "A sua subscrição está ativa. Aproveite o acesso completo em todos os seus círculos de cuidado."
   },
-  "autoRenewNotice": "A sua subscrição é renovada automaticamente ao preço apresentado até cancelar. Cancele quando quiser a partir das Definições.",
-  "legalPrefix": "Ao subscrever, concorda com os nossos",
-  "legalJoin": "e a nossa",
-  "trialHookWithDuration": "Comece com um período experimental gratuito de {{period}}: nada a pagar hoje.",
+  "headlineOnboarding": "Partilhe o cuidado com todos os que ajudam.",
   "onboarding": {
-    "subtitle": "Tudo o que precisa para coordenar o cuidado de quem mais importa."
-  }
+    "continueFreeSub": "1 círculo de cuidado, si + 1 cuidador. Lembretes e alertas continuam gratuitos."
+  },
+  "subscribeAnnual": "Subscrever: {{price}}/ano",
+  "subscribeMonthly": "Subscrever: {{price}}/mês",
+  "startTrialWithDuration": "Iniciar período experimental gratuito de {{period}}"
 }

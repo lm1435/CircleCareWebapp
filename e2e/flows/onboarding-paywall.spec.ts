@@ -69,7 +69,7 @@ function planTier(userId: string): string | undefined {
 }
 
 const wizard = (page: Page) => page.getByRole('dialog', { name: 'Circle created' });
-const offerHeading = (page: Page) => page.getByText('Better care, together.');
+const offerHeading = (page: Page) => page.getByText('Share the care with everyone who helps.');
 const skipSetup = (page: Page) => wizard(page).getByRole('button', { name: 'Skip for now' }).click();
 
 test.describe('onboarding paywall (web)', () => {

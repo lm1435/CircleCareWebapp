@@ -449,6 +449,17 @@ function pickEnum<T extends string>(value: unknown, allowed: readonly T[], fallb
     : fallback;
 }
 
+const PLAN_KEYS = ['annual', 'monthly'] as const satisfies readonly PlanKey[];
+
+/** How the paywall was left (`paywall_dismissed.method`, identical on mobile; web never sends 'swipe'). */
+export const PAYWALL_DISMISS_METHODS = ['close', 'continue_free', 'swipe', 'back'] as const;
+export type PaywallDismissMethod = (typeof PAYWALL_DISMISS_METHODS)[number];
+
+/** A duration as a whole, non-negative number of seconds (never a float, never NaN). */
+function wholeSeconds(value: number): number {
+  return Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+}
+
 /** Buckets for `provider_visits_opened.visit_count_bucket` (identical on mobile). */
 export const PROVIDER_VISIT_BUCKETS = ['0', '1-5', '6-20', '21+'] as const;
 export type ProviderVisitBucket = (typeof PROVIDER_VISIT_BUCKETS)[number];
@@ -626,9 +637,66 @@ export const Analytics = {
   // property is never missing on a subset of events (a missing property and a
   // zero are indistinguishable in a PostHog funnel breakdown).
 
-  /** The paywall was shown. The denominator of every conversion rate. */
-  planSelectionViewed: (paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT) =>
-    capture('plan_selection_viewed', { paywall_context: paywallContext }),
+  /**
+   * The paywall was shown. The denominator of every conversion rate.
+   *
+   * 1.4.2 compact layout (docs/plans/paywall-redesign-1-4-2.md §9): also says
+   * which layout was shown, whether trial wording was on screen when the page
+   * settled, and which plan was pre-selected. Fired once the page SETTLES (plans
+   * loaded or a terminal state rendered) so `trial_shown` is a fact, not a guess.
+   */
+  planSelectionViewed: (
+    paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT,
+    details: { trialShown?: boolean; defaultPlan?: PlanKey } = {}
+  ) =>
+    capture('plan_selection_viewed', {
+      paywall_context: paywallContext,
+      layout: 'compact',
+      trial_shown: details.trialShown === true,
+      default_plan: pickEnum(details.defaultPlan, PLAN_KEYS, 'annual'),
+    }),
+
+  /** The user switched the selected plan (only on an actual change). */
+  planSelectionPlanChanged: (plan: PlanKey, paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT) =>
+    capture('plan_selection_plan_changed', {
+      plan: pickEnum(plan, PLAN_KEYS, 'annual'),
+      paywall_context: paywallContext,
+    }),
+
+  /** "See everything included" / "Show less". */
+  planSelectionDetailsToggled: (
+    expanded: boolean,
+    paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT,
+    secondsSinceView = 0
+  ) =>
+    capture('plan_selection_details_toggled', {
+      expanded: expanded === true,
+      paywall_context: paywallContext,
+      seconds_since_view: wholeSeconds(secondsSinceView),
+    }),
+
+  /**
+   * The buy button was pressed: PURCHASE STARTED, before checkout opens. With
+   * `plan_selection_purchase_cancelled` this is the checkout-cancel rate.
+   */
+  planSelectionCtaTapped: (args: {
+    plan: PlanKey;
+    paywallContext?: PaywallContext;
+    trialShown: boolean;
+    detailsExpanded: boolean;
+    secondsSinceView: number;
+  }) =>
+    capture('plan_selection_cta_tapped', {
+      plan: pickEnum(args.plan, PLAN_KEYS, 'annual'),
+      paywall_context: args.paywallContext ?? DEFAULT_PAYWALL_CONTEXT,
+      trial_shown: args.trialShown === true,
+      details_expanded: args.detailsExpanded === true,
+      seconds_since_view: wholeSeconds(args.secondsSinceView),
+    }),
+
+  /** Terms / Privacy opened from the paywall. Enum only, never the URL. */
+  planSelectionLegalOpened: (link: 'terms' | 'privacy') =>
+    capture('plan_selection_legal_opened', { link: pickEnum(link, ['terms', 'privacy'], 'terms') }),
 
   /**
    * The user took the explicit "continue on the free plan" affordance, which
@@ -683,8 +751,29 @@ export const Analytics = {
    * Sending both keeps existing mobile queries working AND lets a single
    * breakdown span all five events. Costs one duplicated short enum.
    */
-  paywallDismissed: (paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT) =>
-    capture('paywall_dismissed', { trigger: paywallContext, paywall_context: paywallContext }),
+  paywallDismissed: (
+    paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT,
+    details?: {
+      /** Web never swipes: browser Back / unmount is 'back'. */
+      method: PaywallDismissMethod;
+      secondsVisible: number;
+      detailsExpanded: boolean;
+      scrolled: boolean;
+    }
+  ) =>
+    capture(
+      'paywall_dismissed',
+      details
+        ? {
+            trigger: paywallContext,
+            paywall_context: paywallContext,
+            method: pickEnum(details.method, PAYWALL_DISMISS_METHODS, 'back'),
+            seconds_visible: wholeSeconds(details.secondsVisible),
+            details_expanded: details.detailsExpanded === true,
+            scrolled: details.scrolled === true,
+          }
+        : { trigger: paywallContext, paywall_context: paywallContext }
+    ),
 
   // --- Circles ---
   circleCreationStarted: () => capture('circle_creation_started'),

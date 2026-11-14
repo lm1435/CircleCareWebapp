@@ -31,6 +31,10 @@ vi.mock('@/lib/analytics', () => ({
     planSelectionSubscribed: vi.fn(),
     planSelectionTrialStarted: vi.fn(),
     planSelectionPurchaseCancelled: vi.fn(),
+    planSelectionPlanChanged: vi.fn(),
+    planSelectionDetailsToggled: vi.fn(),
+    planSelectionCtaTapped: vi.fn(),
+    planSelectionLegalOpened: vi.fn(),
     paywallDismissed: vi.fn(),
     paywallShown: vi.fn(),
     trialChargeNoticeShown: vi.fn(),
@@ -110,7 +114,7 @@ describe('UpgradePage: trial start states the exact charge', () => {
     const user = userEvent.setup();
     mutate.mockImplementation((_plan, opts) => opts?.onSuccess?.(customerInfo('trial')));
     renderPage();
-    await user.click(screen.getByRole('button', { name: 'Start free trial' }));
+    await user.click(screen.getByRole('button', { name: 'Start 7-day free trial' }));
 
     const date = formatTrialDate('2026-11-10T18:00:00.000Z', 'en');
     expect(await screen.findByTestId('upgrade-trial-charge')).toHaveTextContent(
@@ -123,7 +127,7 @@ describe('UpgradePage: trial start states the exact charge', () => {
     const user = userEvent.setup();
     mutate.mockImplementation((_plan, opts) => opts?.onSuccess?.(customerInfo('normal')));
     renderPage();
-    await user.click(screen.getByRole('button', { name: 'Start free trial' }));
+    await user.click(screen.getByRole('button', { name: 'Start 7-day free trial' }));
     expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument();
     expect(screen.queryByTestId('upgrade-trial-charge')).not.toBeInTheDocument();
     expect(Analytics.trialChargeNoticeShown).not.toHaveBeenCalled();

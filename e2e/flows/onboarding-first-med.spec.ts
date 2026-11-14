@@ -23,7 +23,7 @@ async function freeAccount(prefix: string) {
 }
 
 const wizard = (page: Page) => page.getByRole('dialog', { name: 'Circle created' });
-const offerHeading = (page: Page) => page.getByText('Better care, together.');
+const offerHeading = (page: Page) => page.getByText('Share the care with everyone who helps.');
 const ls = (page: Page, key: string) => page.evaluate((k) => window.localStorage.getItem(k), key);
 
 function trackPaths(page: Page): string[] {

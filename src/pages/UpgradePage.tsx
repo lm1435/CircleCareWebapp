@@ -14,9 +14,9 @@ import {
   Badge,
   Button,
   Card,
+  CircleButton,
   EmptyState,
   Eyebrow,
-  Icon,
   Spinner,
   Text,
   useToast,
@@ -33,7 +33,7 @@ import { notePaywallShown } from '@/lib/reviewMoments';
 import { trialChargeFrom, trialStartedMessage } from '@/lib/trialCharge';
 import { isWebBillingConfigured } from '@/lib/webBillingConfig';
 import { legalUrl } from '@/lib/legalLinks';
-import { Analytics } from '@/lib/analytics';
+import { Analytics, type PaywallDismissMethod } from '@/lib/analytics';
 import {
   asOnboardingPaywallTrigger,
   asPaywallContext,
@@ -85,17 +85,36 @@ export default function UpgradePage(): ReactElement {
 
   // ── Analytics ────────────────────────────────────────────────────────────
   //
-  // Mirrors PlanSelectionScreen.tsx:310-318 (viewed on mount) and :432-454
-  // (an idempotent dismissal recorded however the user leaves).
+  // Mirrors mobile's PlanSelectionScreen: one view, then an idempotent
+  // dismissal recorded however the user leaves.
 
-  /** Fired once per view, unconditionally — including the degraded
-   *  "checkout unavailable" render, so the denominator counts every time we
-   *  put this page in front of someone, exactly as mobile does. */
   useEffect(() => {
-    Analytics.planSelectionViewed(paywallContext);
     // No store-review ask in the same tab session as a paywall (lib/reviewMoments.ts).
     notePaywallShown();
-  }, [paywallContext]);
+  }, []);
+
+  /** When the page was put in front of the user: the zero for `seconds_since_view`
+   *  and `seconds_visible`. Set on mount, not during render. */
+  const viewStartRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (viewStartRef.current === null) viewStartRef.current = Date.now();
+  }, []);
+  const secondsSinceView = useCallback((): number => {
+    const start = viewStartRef.current;
+    return start === null ? 0 : (Date.now() - start) / 1000;
+  }, []);
+
+  /** "See everything included" state, mirrored up from PlansView for the dismissal. */
+  const detailsExpandedRef = useRef(false);
+  /** Did the user scroll at all before leaving? (`paywall_dismissed.scrolled`) */
+  const scrolledRef = useRef(false);
+  useEffect(() => {
+    const onScroll = (): void => {
+      if (window.scrollY > 0) scrolledRef.current = true;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   /**
    * `paywall_shown` (onboarding 1.3.1): the onboarding paywall was put on screen, with the
@@ -126,15 +145,40 @@ export default function UpgradePage(): ReactElement {
    * Double-counted dismissals corrupt the exact rate this event exists to
    * measure.
    */
+  /**
+   * `plan_selection_viewed`, ONCE. It waits for the page to SETTLE (plans loaded,
+   * or a terminal state such as store-only or checkout-unavailable rendered) so
+   * `trial_shown` reports what was actually on screen. If the user leaves before
+   * that, the dismissal flushes it first, so a view always precedes its dismissal
+   * and the denominator still counts every time we put this page in front of
+   * someone, as before.
+   */
+  const viewedRef = useRef(false);
+  const viewInfoRef = useRef<{ trialShown: boolean; defaultPlan: PlanKey }>({
+    trialShown: false,
+    defaultPlan: 'annual',
+  });
+  const ensureViewed = useCallback((): void => {
+    if (viewedRef.current) return;
+    viewedRef.current = true;
+    Analytics.planSelectionViewed(paywallContext, viewInfoRef.current);
+  }, [paywallContext]);
+
   const dismissalRecordedRef = useRef(false);
-  const recordDismissal = useCallback((): void => {
+  const recordDismissal = useCallback((method: PaywallDismissMethod): void => {
     if (dismissalRecordedRef.current || purchasedRef.current) return;
     dismissalRecordedRef.current = true;
-    Analytics.paywallDismissed(paywallContext);
+    ensureViewed();
+    Analytics.paywallDismissed(paywallContext, {
+      method,
+      secondsVisible: secondsSinceView(),
+      detailsExpanded: detailsExpandedRef.current,
+      scrolled: scrolledRef.current,
+    });
     // Earned ask only (no-op for every other context): the DURABLE per-trigger
     // dismissal, as mobile's PlanSelectionScreen reports back.
     notifyEarnedPaywallDismissed(paywallContext);
-  }, [paywallContext]);
+  }, [paywallContext, ensureViewed, secondsSinceView]);
 
   /**
    * THE ONLY WAY A BROWSER-BACK IS HEARD. `/upgrade` is a route, not a modal:
@@ -157,7 +201,7 @@ export default function UpgradePage(): ReactElement {
     return () => {
       window.clearTimeout(timer);
       if (armedRef.current) {
-        recordDismissal();
+        recordDismissal('back');
         // A browser-Back exit never went through a control, so the parked return target
         // (onboarding only) is dropped here: it must not outlive the paywall it was for.
         if (isOnboarding) clearDeferredFirstRun();
@@ -186,12 +230,17 @@ export default function UpgradePage(): ReactElement {
   }, [navigate]);
 
   /** Leave without buying. Onboarding goes to Today; every other context
-   *  keeps this page's original destination. */
-  const handleDecline = useCallback((): void => {
-    recordDismissal();
-    if (isOnboarding) goToDeferredFirstRun();
-    else navigate('/profile');
-  }, [recordDismissal, isOnboarding, goToDeferredFirstRun, navigate]);
+   *  keeps this page's original destination. `method` is how they left: the
+   *  close X and every back link are 'close', the free-plan button 'continue_free'. */
+  const handleDecline = useCallback(
+    (method: PaywallDismissMethod = 'close'): void => {
+      recordDismissal(method);
+      if (isOnboarding) goToDeferredFirstRun();
+      else navigate('/profile');
+    },
+    [recordDismissal, isOnboarding, goToDeferredFirstRun, navigate]
+  );
+  const handleClose = useCallback((): void => handleDecline('close'), [handleDecline]);
 
   /**
    * The explicit "continue on the free plan" affordance — mobile shows it on
@@ -201,9 +250,10 @@ export default function UpgradePage(): ReactElement {
    * bounce while still counting in the dismissal rate.
    */
   const handleContinueFree = useCallback((): void => {
+    ensureViewed();
     Analytics.planSelectionFreeSelected(paywallContext);
-    handleDecline();
-  }, [paywallContext, handleDecline]);
+    handleDecline('continue_free');
+  }, [paywallContext, handleDecline, ensureViewed]);
 
   /** Where the post-purchase "Continue" lands: onboarding goes to Today too. */
   const handlePurchasedContinue = useCallback((): void => {
@@ -262,6 +312,31 @@ export default function UpgradePage(): ReactElement {
   // rendering a dead, permanently-disabled Subscribe button.
   const noPlans = isError || !plans || (!plans.monthly && !plans.annual);
 
+  // ── plan_selection_viewed, once the page has SETTLED ───────────────────────
+  const billingConfigured = isWebBillingConfigured();
+  const showsPlans =
+    billingConfigured &&
+    !isPremium &&
+    !countryPending &&
+    !countryUnresolved &&
+    !storeOnly &&
+    !isLoading &&
+    !noPlans;
+  /** What the page settled on: the plans, or a terminal state. Loading is not settled. */
+  const settled =
+    !billingConfigured ||
+    isPremium ||
+    (!countryPending && (countryUnresolved || storeOnly || !isLoading));
+  // The plan PlansView pre-selects (annual; monthly only when there is no annual).
+  const defaultPlan = plans?.annual ?? plans?.monthly ?? null;
+  viewInfoRef.current = {
+    trialShown: showsPlans && trialShownFor(defaultPlan),
+    defaultPlan: plans?.annual ? 'annual' : plans?.monthly ? 'monthly' : 'annual',
+  };
+  useEffect(() => {
+    if (settled) ensureViewed();
+  }, [settled, ensureViewed]);
+
   const handleManage = (): void => {
     manage.mutate(undefined, {
       onSuccess: (url) => {
@@ -273,6 +348,15 @@ export default function UpgradePage(): ReactElement {
 
   const handleSubscribe = (plan: WebPlan, planKey: PlanKey): void => {
     if (purchase.isPending || !purchaseGuard.claim()) return;
+    // PURCHASE STARTED (spec §9): before checkout opens, so a cancelled or failed
+    // checkout still counts as a tap. After the guard, so a double click is one tap.
+    Analytics.planSelectionCtaTapped({
+      plan: planKey,
+      paywallContext,
+      trialShown: trialShownFor(plan),
+      detailsExpanded: detailsExpandedRef.current,
+      secondsSinceView: secondsSinceView(),
+    });
     notifyEarnedPaywallAccepted(paywallContext);
     purchase.mutate(plan, {
       onSettled: purchaseGuard.release,
@@ -330,13 +414,21 @@ export default function UpgradePage(): ReactElement {
       <div className="mt-5 flex justify-center">
         <StoreBadges layout="row" />
       </div>
-      <BackLink onClick={handleDecline}>{declineLabel}</BackLink>
+      <BackLink onClick={handleClose}>{declineLabel}</BackLink>
     </Card>
   );
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-6 py-12 md:py-16">
-      {!isWebBillingConfigured() ? (
+    <section
+      className={
+        showsPlans && !purchased
+          ? // The compact paywall starts close to the header on a phone, and its pinned
+            // footer supplies its own bottom padding.
+            'mx-auto w-full max-w-3xl px-6 pt-4 sm:py-12 md:py-16'
+          : 'mx-auto w-full max-w-3xl px-6 py-12 md:py-16'
+      }
+    >
+      {!billingConfigured ? (
         unavailable
       ) : purchased ? (
         <EmptyState
@@ -377,7 +469,7 @@ export default function UpgradePage(): ReactElement {
               <Button variant="secondary" disabled={manage.isPending} onClick={handleManage}>
                 {t('alreadyPremium.manage')}
               </Button>
-              <BackLink onClick={handleDecline}>{declineLabel}</BackLink>
+              <BackLink onClick={handleClose}>{declineLabel}</BackLink>
             </>
           }
         />
@@ -387,7 +479,7 @@ export default function UpgradePage(): ReactElement {
           <Spinner size={32} />
         </div>
       ) : countryUnresolved ? (
-        <CountryUnresolvedCard onRetry={refetchCountry} onBack={handleDecline} backLabel={declineLabel} />
+        <CountryUnresolvedCard onRetry={refetchCountry} onBack={handleClose} backLabel={declineLabel} />
       ) : storeOnly ? (
         /* AFTER the premium branch on purpose: the gate is about STARTING a
            subscription, never about servicing one, so a subscriber travelling
@@ -395,7 +487,7 @@ export default function UpgradePage(): ReactElement {
            BEFORE the offering's own loading/empty branches, so a blocked user
            never waits on — or is shown a failure of — a RevenueCat fetch whose
            result this page will not use. */
-        <StoreOnlyCard onBack={handleDecline} backLabel={declineLabel} />
+        <StoreOnlyCard onBack={handleClose} backLabel={declineLabel} />
       ) : isLoading ? (
         <div className="flex justify-center py-20">
           <Spinner size={32} />
@@ -410,8 +502,11 @@ export default function UpgradePage(): ReactElement {
           paywallContext={paywallContext}
           onSubscribe={handleSubscribe}
           onContinueFree={handleContinueFree}
-          onBack={handleDecline}
-          backLabel={declineLabel}
+          onClose={handleClose}
+          onDetailsToggled={(expanded) => {
+            detailsExpandedRef.current = expanded;
+          }}
+          secondsSinceView={secondsSinceView}
         />
       )}
     </section>
@@ -547,9 +642,9 @@ function StoreOnlyCard({
 
 /* ------------------------------------------------------------------ */
 
-/** Mobile's headlineKeyMap/accentKeyMap, collapsed to one i18n group per context. */
+/** Mobile's per-context headline keys, collapsed to one i18n group per context.
+ *  Onboarding has its own one-sentence headline (`headlineOnboarding`). */
 const HEADLINE_KEY = {
-  onboarding: 'onboarding',
   general: 'general',
   capacity: 'capacity',
   invite_cap: 'capacity',
@@ -557,24 +652,89 @@ const HEADLINE_KEY = {
   earned_meds: 'earnedMeds',
   earned_invite: 'earnedInvite',
   shifts: 'shifts',
-} as const satisfies Record<PaywallContext, string>;
+} as const satisfies Record<Exclude<PaywallContext, 'onboarding'>, string>;
+
+type PlanKey = 'annual' | 'monthly';
+
+const TRIAL_UNITS = ['day', 'week', 'month', 'year'] as const;
+type TrialUnit = (typeof TRIAL_UNITS)[number];
+type TrialPeriod = { number: number; unit: string } | null | undefined;
+
+function knownTrialUnit(p: TrialPeriod): TrialUnit | null {
+  if (!p || !(p.number > 0)) return null;
+  return (TRIAL_UNITS as readonly string[]).includes(p.unit) ? (p.unit as TrialUnit) : null;
+}
+
+/**
+ * IS TRIAL WORDING ON SCREEN for this plan? Only when the offer has a free trial
+ * AND the store told us how long it is.
+ *
+ * Every trial sentence states the length ("7 days free, then ..."), and a trial
+ * sentence without one is the unqualified claim store review and the FTC target.
+ * So an offer that says "trial" without a usable length (never seen from
+ * RevenueCat Web Billing, but the type allows it) falls back to the plain price
+ * and renewal copy: the price and renewal terms are still true, and the store
+ * granting a trial we did not advertise costs the buyer nothing. The reverse
+ * (advertising a trial that is not there) is the harm, and this rule cannot do it.
+ * Mobile follows the same rule with its eligibility tri-state.
+ */
+export function trialShownFor(plan: WebPlan | null | undefined): boolean {
+  return Boolean(plan?.hasFreeTrial && knownTrialUnit(plan.trialPeriod));
+}
+
+/** The reason rows on the first view: what people pay for (spec §5, three, no icons). */
+const REASONS = ['caregivers', 'shifts', 'circles'] as const;
+/** Behind "See everything included", in this order (spec §6). */
+const DETAILS = ['voice', 'team', 'exports', 'storage', 'ai'] as const;
+type BenefitId = (typeof REASONS)[number] | (typeof DETAILS)[number];
+
+const DETAILS_ID = 'upgrade-details';
+
+/**
+ * THE FOOTER: buy button, terms line, free-plan button, legal links.
+ *
+ * Pinned to the bottom of the screen on a phone-width, normal-height viewport,
+ * so the two buttons the page exists for are on the first view (spec §5,
+ * P6). `pin-footer:` (globals.css) turns OFF on a short viewport (large browser
+ * zoom, landscape): a pinned footer taller than half the screen would cover the
+ * price, so there it flows at the end of the content instead (N8). From `sm` up
+ * the card fits without pinning.
+ */
+const FOOTER_CLASS = [
+  'mt-6 flex w-full flex-col gap-2 border-t border-line bg-bg pt-3 pb-4',
+  'pin-footer:sticky pin-footer:bottom-0 pin-footer:z-10 pin-footer:-mx-6 pin-footer:w-auto pin-footer:px-6',
+].join(' ');
 
 interface PlansViewProps {
   plans: { monthly: WebPlan | null; annual: WebPlan | null } | undefined;
   pending: boolean;
-  /** The once-ever post-first-circle ask. Adds the explicit free-plan
-   *  affordance and swaps in mobile's onboarding headline. */
+  /** The once-ever post-first-circle ask: its own headline and the free-plan button. */
   isOnboarding: boolean;
-  /** Picks the two-tone headline (mobile's per-context headline + accent). */
   paywallContext: PaywallContext;
   /** `planKey` is passed alongside the plan because analytics must send
    *  mobile's `'monthly' | 'annual'`, not RevenueCat's `$rc_*` identifiers. */
   onSubscribe: (plan: WebPlan, planKey: PlanKey) => void;
   onContinueFree: () => void;
-  onBack: () => void;
-  backLabel: string;
+  /** The close X: the exit in every context (onboarding also has the free button). */
+  onClose: () => void;
+  /** Mirrors "See everything included" up to the page for `paywall_dismissed`. */
+  onDetailsToggled: (expanded: boolean) => void;
+  secondsSinceView: () => number;
 }
 
+/**
+ * THE COMPACT PAYWALL (1.4.2, docs/plans/paywall-redesign-1-4-2.md, owner chose
+ * version 1). Web counterpart of mobile's PlanSelectionScreen, same order and
+ * wording: eyebrow with a small decorative logo, one headline, the plan choice
+ * with the billed price as the largest text, three text-only reasons, "See
+ * everything included" (expands in place), and a footer with the buy button,
+ * the renewal terms and the legal links. Moss appears once: the buy button.
+ *
+ * Plan control stays two radio cards on the web (mobile has a segmented toggle).
+ * NO RESTORE LINK ON THE WEB: signing in IS the restore here (the subscription
+ * belongs to the account, and `alreadyPremium` covers a subscriber who lands on
+ * this page), so a Restore control would be a dead link.
+ */
 function PlansView({
   plans,
   pending,
@@ -582,37 +742,51 @@ function PlansView({
   paywallContext,
   onSubscribe,
   onContinueFree,
-  onBack,
-  backLabel,
+  onClose,
+  onDetailsToggled,
+  secondsSinceView,
 }: PlansViewProps): ReactElement {
-  const { t, i18n } = useTranslation('upgrade');
+  const { t, i18n } = useTranslation(['upgrade', 'common']);
 
   // Literal keys (the static key audit cannot resolve a template string).
-  const headlines = {
-    onboarding: { lead: t('headline.onboarding.lead'), accent: t('headline.onboarding.accent') },
-    general: { lead: t('headline.general.lead'), accent: t('headline.general.accent') },
-    capacity: { lead: t('headline.capacity.lead'), accent: t('headline.capacity.accent') },
-    feature: { lead: t('headline.feature.lead'), accent: t('headline.feature.accent') },
-    earnedMeds: { lead: t('headline.earnedMeds.lead'), accent: t('headline.earnedMeds.accent') },
-    earnedInvite: {
-      lead: t('headline.earnedInvite.lead'),
-      accent: t('headline.earnedInvite.accent'),
-    },
-    shifts: { lead: t('headline.shifts.lead'), accent: t('headline.shifts.accent') },
+  const contextHeadlines = {
+    general: `${t('headline.general.lead')} ${t('headline.general.accent')}`,
+    capacity: `${t('headline.capacity.lead')} ${t('headline.capacity.accent')}`,
+    feature: `${t('headline.feature.lead')} ${t('headline.feature.accent')}`,
+    earnedMeds: `${t('headline.earnedMeds.lead')} ${t('headline.earnedMeds.accent')}`,
+    earnedInvite: `${t('headline.earnedInvite.lead')} ${t('headline.earnedInvite.accent')}`,
+    shifts: `${t('headline.shifts.lead')} ${t('headline.shifts.accent')}`,
   };
-  const headline = headlines[HEADLINE_KEY[paywallContext]];
+  const headline =
+    paywallContext === 'onboarding'
+      ? t('headlineOnboarding')
+      : contextHeadlines[HEADLINE_KEY[paywallContext]];
+
+  const benefits: Record<BenefitId, { title: string; sub: string }> = {
+    caregivers: { title: t('benefits.caregivers.title'), sub: t('benefits.caregivers.sub') },
+    shifts: { title: t('benefits.shifts.title'), sub: t('benefits.shifts.sub') },
+    circles: { title: t('benefits.circles.title'), sub: t('benefits.circles.sub') },
+    voice: { title: t('benefits.voice.title'), sub: t('benefits.voice.sub') },
+    team: { title: t('benefits.team.title'), sub: t('benefits.team.sub') },
+    exports: { title: t('benefits.exports.title'), sub: t('benefits.exports.sub') },
+    storage: { title: t('benefits.storage.title'), sub: t('benefits.storage.sub') },
+    ai: { title: t('benefits.ai.title'), sub: t('benefits.ai.sub') },
+  };
+
   const monthly = plans?.monthly ?? null;
   const annual = plans?.annual ?? null;
-  const anyTrial = Boolean(monthly?.hasFreeTrial || annual?.hasFreeTrial);
-  // Trial DURATION from the store's own offer, so the paywall never advertises
-  // a length the store isn't offering (and never omits the length it is).
-  const formatTrialPeriod = (p: { number: number; unit: string } | null): string | null => {
-    if (!p || p.number <= 0) return null;
-    const key = ['day', 'week', 'month', 'year'].includes(p.unit) ? p.unit : null;
-    return key ? t(`trialPeriod.${key}`, { count: p.number }) : null;
+
+  /**
+   * The store's trial length in words. `trialPeriod` = "7-day" (the EN adjective,
+   * for the buy button; other languages' noun phrase), `trialLength` = "7 days"
+   * (the billing and terms lines). ONE dynamic call site for both families.
+   */
+  const trialWords = (family: 'trialPeriod' | 'trialLength', p: TrialPeriod): string => {
+    const unit = knownTrialUnit(p);
+    return unit && p ? t(`${family}.${unit}`, { count: p.number }) : '';
   };
-  const trialPeriodLabel =
-    formatTrialPeriod(annual?.trialPeriod ?? null) ?? formatTrialPeriod(monthly?.trialPeriod ?? null);
+  const trialPeriodLabel = (p: TrialPeriod): string => trialWords('trialPeriod', p);
+  const trialLengthLabel = (p: TrialPeriod): string => trialWords('trialLength', p);
 
   // Honest, data-driven savings + per-month equivalent from the raw amounts.
   const savePercent =
@@ -620,6 +794,32 @@ function PlansView({
       ? Math.round((1 - annual.priceMicros / (monthly.priceMicros * 12)) * 100)
       : null;
   const perMonthEquivalent = annual ? formatMoney(annual.priceMicros / 12, annual.currency) : null;
+
+  /** Line 2 of a plan card (spec §5 row 5). Null = say nothing rather than something false. */
+  const billingLine = (plan: WebPlan, key: PlanKey): string | null => {
+    const trial = trialShownFor(plan);
+    if (key === 'annual') {
+      return trial
+        ? t('plans.billingAnnualTrial', { length: trialLengthLabel(plan.trialPeriod) })
+        : t('plans.billingAnnual');
+    }
+    if (trial) return t('plans.billingMonthlyTrial', { length: trialLengthLabel(plan.trialPeriod) });
+    // "No free trial." would be false for an offer that has one we could not size.
+    return plan.hasFreeTrial ? null : t('plans.billingMonthly');
+  };
+
+  /** Row 9: price, length of any trial, and that it renews until cancelled. */
+  const termsLine = (plan: WebPlan, key: PlanKey): string => {
+    const trial = trialShownFor(plan);
+    const price = plan.formattedPrice;
+    const length = trialLengthLabel(plan.trialPeriod);
+    if (key === 'annual') {
+      return trial
+        ? t('plans.termsAnnualTrial', { length, price })
+        : t('plans.termsAnnual', { price });
+    }
+    return trial ? t('plans.termsMonthlyTrial', { length, price }) : t('plans.termsMonthly', { price });
+  };
 
   // Selection model: pick a plan, then one shared CTA confirms it. Default to
   // annual (best value); fall back to whichever plan actually exists.
@@ -629,7 +829,33 @@ function PlansView({
   // back to the other package when the selected one is missing, and the
   // analytics `plan` property must name what was actually bought.
   const selectedKey: PlanKey = selectedPlan === annual ? 'annual' : 'monthly';
-  const cta = selectedPlan?.hasFreeTrial ? t('startTrial') : t('subscribe');
+  const ctaLabel = selectedPlan
+    ? trialShownFor(selectedPlan)
+      ? t('startTrialWithDuration', { period: trialPeriodLabel(selectedPlan.trialPeriod) })
+      : selectedKey === 'annual'
+        ? t('subscribeAnnual', { price: selectedPlan.formattedPrice })
+        : t('subscribeMonthly', { price: selectedPlan.formattedPrice })
+    : '';
+  // No price, no purchase (N9): a plan without a store price never reaches checkout.
+  const canBuy = Boolean(selectedPlan?.formattedPrice);
+
+  const choose = useCallback(
+    (key: PlanKey) => {
+      setSelected((prev) => {
+        if (prev !== key) Analytics.planSelectionPlanChanged(key, paywallContext);
+        return key;
+      });
+    },
+    [paywallContext]
+  );
+
+  const [expanded, setExpanded] = useState(false);
+  const toggleDetails = (): void => {
+    const next = !expanded;
+    setExpanded(next);
+    onDetailsToggled(next);
+    Analytics.planSelectionDetailsToggled(next, paywallContext, secondsSinceView());
+  };
 
   // ── Roving tabindex (WAI-ARIA APG radiogroup) ─────────────────────────────
   // Exactly one Card is a tab stop (`tabIndex={selected ? 0 : -1}`, set at each
@@ -663,207 +889,187 @@ function PlansView({
       if (nextIndex === null) return;
       event.preventDefault();
       const nextKey = planOrder[nextIndex];
-      setSelected(nextKey);
+      choose(nextKey);
       focusPlan(nextKey);
     },
-    [planOrder, selectedKey, focusPlan]
+    [planOrder, selectedKey, focusPlan, choose]
+  );
+
+  const reasonRow = (id: BenefitId): ReactElement => (
+    <li key={id} data-benefit={id} className="border-b border-line py-3">
+      <span className="block text-md font-semibold text-ink">{benefits[id].title}</span>
+      <span className="block text-sm text-ink-2">{benefits[id].sub}</span>
+    </li>
   );
 
   return (
-    <div className="flex flex-col items-center text-center">
-      <Eyebrow color="coral" deep>
-        {t('eyebrow')}
-      </Eyebrow>
-      {/* Mobile's two-tone hero headline (PlanSelectionScreen headline +
-          headlineAccent), same words per context. ONE <h1>: the accent is a
-          block span inside it so screen readers announce a single heading
-          (the literal space keeps the accessible name "lead accent").
-          Accent = coral #C65D54 on the #FBF9F5 page = 3.9:1; allowed ONLY
-          because it is >= 24px semibold (WCAG large text, >= 3:1); 32px = 0.75 x the 42px lead (mobile 24/32) at every
-          breakpoint -- never shrink it (ADA rule: coral is not small text). */}
-      <Text variant="pageTitle" as="h1" className="mt-5">
-        {headline.lead}{' '}
-        <span data-headline-accent="" className="block text-coral">
-          {headline.accent}
-        </span>
-      </Text>
-      {/* text-balance: EN desktop otherwise orphaned "of." on its own line. */}
-      <Text variant="bodyDense" className="mt-3 max-w-xl text-balance text-ink-2!">
-        {isOnboarding ? t('onboarding.subtitle') : t('subtitle')}
-      </Text>
-      {anyTrial && (
-        // Moss, not coral: coral-deep on coral-soft reads as an alert, and this
-        // line is reassurance ("nothing due today").
-        <Badge variant="primary" wrap className="mt-4">
-          {trialPeriodLabel ? t('trialHookWithDuration', { period: trialPeriodLabel }) : t('trialHook')}
-        </Badge>
-      )}
+    <div className="mx-auto flex w-full max-w-xl flex-col text-left">
+      {/* Eyebrow row: the 22px logo sits INLINE before the eyebrow, in the same
+          row as the close X, so it adds no height (owner decision 2026-11-13).
+          Decorative: alt="" + aria-hidden, so "CircleCare" is not read twice. */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <img
+            src="/logo-mark.png"
+            alt=""
+            aria-hidden="true"
+            width={22}
+            height={22}
+            data-paywall-logo=""
+            className="cc-logo-mark-light h-[22px] w-[22px] shrink-0 rounded-[6px]"
+          />
+          <img
+            src="/logo-mark-dark.png"
+            alt=""
+            aria-hidden="true"
+            width={22}
+            height={22}
+            data-paywall-logo=""
+            className="cc-logo-mark-dark h-[22px] w-[22px] shrink-0 rounded-[6px]"
+          />
+          <Eyebrow className="font-semibold">{t('eyebrow')}</Eyebrow>
+        </div>
+        <CircleButton
+          name="close-outline"
+          label={t('common:close')}
+          shadow={false}
+          onClick={onClose}
+          data-testid="upgrade-close"
+        />
+      </div>
 
-      {/* What Premium ADDS -- the same benefits, in the same order, with the
-          same title + subline as mobile's paywall (PlanSelectionScreen
-          PREMIUM_FEATURES / planSelection.feature*Title/Sub). ORDER IS
-          DELIBERATE (owner-approved 2026-10-10): lead with what people pay for
-          (more people in one circle), the circle-count cap LAST. Shifts and
-          managers + the weekly care summary added 2026-11-03 (Premium-gated on
-          the server but listed nowhere before). Voice is
-          generic Premium copy; its sub carries the "on supported phones"
-          caveat. Literal keys so the static key audit resolves each one. */}
-      <ul
-        data-benefits=""
-        className="mx-auto mt-8 grid w-full max-w-2xl list-none grid-cols-1 gap-x-6 gap-y-3 p-0 text-left sm:grid-cols-2"
-      >
-        {[
-          {
-            id: 'caregivers',
-            title: t('benefits.caregivers.title'),
-            sub: t('benefits.caregivers.sub'),
-          },
-          { id: 'voice', title: t('benefits.voice.title'), sub: t('benefits.voice.sub') },
-          { id: 'exports', title: t('benefits.exports.title'), sub: t('benefits.exports.sub') },
-          { id: 'storage', title: t('benefits.storage.title'), sub: t('benefits.storage.sub') },
-          { id: 'ai', title: t('benefits.ai.title'), sub: t('benefits.ai.sub') },
-          { id: 'shifts', title: t('benefits.shifts.title'), sub: t('benefits.shifts.sub') },
-          { id: 'team', title: t('benefits.team.title'), sub: t('benefits.team.sub') },
-          { id: 'circles', title: t('benefits.circles.title'), sub: t('benefits.circles.sub') },
-        ].map((benefit) => (
-          <li key={benefit.id} className="flex items-start gap-2 text-sm">
-            <Icon name="checkmark" size="inline" className="mt-0.5 shrink-0 text-moss" />
-            <span className="flex min-w-0 flex-col">
-              <span className="font-medium text-ink">{benefit.title}</span>
-              <span className="text-ink-2">{benefit.sub}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
+      {/* ONE <h1>, one colour, the page-title style. Onboarding has its own
+          sentence; every other context keeps its own headline (spec §5). */}
+      <Text variant="pageTitle" as="h1" className="mt-2">
+        {headline}
+      </Text>
 
       {/* Real ARIA radios via the Card primitive (role="radio" + aria-checked),
           not native inputs — the whole card is the hit target and one Card per
-          option is the only focusable control. Roving tabindex: exactly one
-          card is ever a tab stop, and ArrowLeft/Right/Up/Down (plus Home/End)
-          move both the selection and focus, per the WAI-ARIA APG radiogroup
-          pattern (mirrors SegmentedControl.tsx's roving-tabindex approach). */}
+          option is the only focusable control. Roving tabindex per the WAI-ARIA
+          APG radiogroup pattern. */}
       <div
         ref={radioGroupRef}
         role="radiogroup"
         aria-label={t('choosePlan')}
         onKeyDown={handleRadioGroupKeyDown}
-        className="mt-10 grid w-full max-w-2xl grid-cols-1 items-stretch gap-5 sm:grid-cols-2"
+        className="mt-5 grid w-full grid-cols-1 items-stretch gap-3 sm:grid-cols-2"
       >
         {annual && (
           <PlanOption
             planKey="annual"
             selected={selectedPlan === annual}
-            onSelect={() => setSelected('annual')}
+            onSelect={() => choose('annual')}
             label={t('plans.annual')}
             price={annual.formattedPrice}
             currency={annual.currency}
             period={t('plans.perYear')}
-            badge={savePercent ? t('plans.savePercent', { percent: savePercent }) : t('plans.bestValue')}
-            subline={perMonthEquivalent ? t('plans.perMonthBilled', { price: perMonthEquivalent }) : null}
-            feature={
-              annual.hasFreeTrial
-                ? {
-                    text: formatTrialPeriod(annual.trialPeriod)
-                      ? t('plans.trialWithDuration', { period: formatTrialPeriod(annual.trialPeriod) })
-                      : t('plans.trialIncluded'),
-                    tone: 'brand',
-                  }
-                : null
-            }
+            badge={savePercent ? t('plans.savePercent', { percent: savePercent }) : null}
+            billing={billingLine(annual, 'annual')}
+            perMonth={perMonthEquivalent ? t('plans.perMonthBilled', { price: perMonthEquivalent }) : null}
           />
         )}
         {monthly && (
           <PlanOption
             planKey="monthly"
             selected={selectedPlan === monthly}
-            onSelect={() => setSelected('monthly')}
+            onSelect={() => choose('monthly')}
             label={t('plans.monthly')}
             price={monthly.formattedPrice}
             currency={monthly.currency}
             period={t('plans.perMonth')}
-            subline={t('plans.billedMonthly')}
-            feature={
-              monthly.hasFreeTrial
-                ? {
-                    text: formatTrialPeriod(monthly.trialPeriod)
-                      ? t('plans.trialWithDuration', { period: formatTrialPeriod(monthly.trialPeriod) })
-                      : t('plans.trialIncluded'),
-                    tone: 'brand',
-                  }
-                : { text: t('plans.monthlyPerk'), tone: 'muted' }
-            }
+            badge={null}
+            billing={billingLine(monthly, 'monthly')}
+            perMonth={null}
           />
         )}
       </div>
 
-      {/* Free-plan baseline so "unlimited" claims have a reference point. */}
-      <Text variant="caption" className="mt-3">
-        {t('freeBaseline')}
-      </Text>
+      {/* Three reasons, text only: semibold title, one muted line, hairline between. */}
+      <ul data-reasons="" className="m-0 mt-4 list-none p-0">
+        {REASONS.map(reasonRow)}
+      </ul>
 
-      <Button
-        variant="primary"
-        size="lg"
-        fullWidth
-        className="mt-8 sm:w-auto sm:min-w-[18rem]"
-        loading={pending}
-        disabled={!selectedPlan}
-        onClick={() => selectedPlan && onSubscribe(selectedPlan, selectedKey)}
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls={DETAILS_ID}
+        onClick={toggleDetails}
+        className="mt-1 inline-flex min-h-11 items-center self-start text-md font-semibold text-ink underline underline-offset-4 hover:text-ink-2"
       >
-        {cta}
-      </Button>
+        {expanded ? t('showLess') : t('seeEverything')}
+      </button>
+      {/* Expands IN PLACE, below the reasons. The wrapper always exists so
+          `aria-controls` never points at nothing. */}
+      <div id={DETAILS_ID}>
+        {expanded && (
+          <ul data-details="" className="m-0 list-none p-0">
+            {DETAILS.map(reasonRow)}
+          </ul>
+        )}
+      </div>
 
-      <Text variant="caption" className="mt-4">
-        {t('cancelAnytime')} {t('securedByStripe')}
-      </Text>
-
-      {/* Auto-renewal disclosure and legal links must appear before payment
-          details are taken (FTC negative-option rule). This checkout entry
-          point previously carried neither. */}
-      <Text variant="caption" className="mt-2 max-w-md">
-        {t('autoRenewNotice')}
-      </Text>
-
-      <Text variant="caption" className="mt-2 max-w-md">
-        {t('legalPrefix')}{' '}
-        <a
-          href={legalUrl('terms', i18n.language)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-        >
-          {t('termsLink')}
-        </a>{' '}
-        {t('legalJoin')}{' '}
-        <a
-          href={legalUrl('privacy', i18n.language)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-        >
-          {t('privacyLink')}
-        </a>
-        .
-      </Text>
-
-      {/* CONTINUE FREE — onboarding context only, exactly as mobile
-          (PlanSelectionScreen.tsx:733-746). THE USER MUST BE ABLE TO DECLINE:
-          this is a soft paywall shown to someone who has owned a care circle
-          for a few seconds, and the next thing they see is Today either way. Do not remove it or hide it behind the fold. */}
-      {isOnboarding && (
+      <div data-testid="upgrade-footer" className={FOOTER_CLASS}>
         <Button
-          variant="ghost"
+          variant="primary"
+          size="lg"
           fullWidth
-          className="mt-6 max-w-md flex-col gap-1 py-4"
-          onClick={onContinueFree}
+          loading={pending}
+          disabled={!canBuy}
+          onClick={() => selectedPlan && canBuy && onSubscribe(selectedPlan, selectedKey)}
         >
-          <span className="font-semibold text-ink">{t('onboarding.continueFree')}</span>
-          <span className="text-sm text-ink-3">{t('onboarding.continueFreeSub')}</span>
+          {ctaLabel}
         </Button>
-      )}
 
-      {/* The mobile path stays available alongside web checkout. */}
-      <div className="mt-8 w-full max-w-md border-t border-line pt-6">
+        {/* Row 9: ALWAYS on the first view, never behind the details link
+            (Google: terms visible without an extra action). */}
+        {selectedPlan && (
+          <Text variant="caption" data-testid="upgrade-terms" className="text-center">
+            {termsLine(selectedPlan, selectedKey)}
+          </Text>
+        )}
+
+        {/* CONTINUE FREE — onboarding context only, exactly as mobile. THE USER
+            MUST BE ABLE TO DECLINE: this is a soft paywall shown to someone who
+            has owned a care circle for a few seconds. In the pinned footer, so it
+            is on the first view. */}
+        {isOnboarding && (
+          <Button variant="ghost" fullWidth className="flex-col gap-0.5 py-2" onClick={onContinueFree}>
+            <span className="font-semibold text-ink">{t('onboarding.continueFree')}</span>
+            <span className="text-sm font-normal text-ink-2">{t('onboarding.continueFreeSub')}</span>
+          </Button>
+        )}
+
+        <div className="flex items-center justify-center gap-3 text-sm">
+          <a
+            href={legalUrl('terms', i18n.language)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => Analytics.planSelectionLegalOpened('terms')}
+            className="inline-flex min-h-11 items-center text-ink-2 underline hover:text-ink"
+          >
+            {t('termsLink')}
+          </a>
+          <span aria-hidden="true" className="text-ink-3">
+            ·
+          </span>
+          <a
+            href={legalUrl('privacy', i18n.language)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => Analytics.planSelectionLegalOpened('privacy')}
+            className="inline-flex min-h-11 items-center text-ink-2 underline hover:text-ink"
+          >
+            {t('privacyLink')}
+          </a>
+        </div>
+      </div>
+
+      {/* Web-only facts (spec §6): who takes the payment, and the app path. */}
+      <Text variant="caption" className="mt-2 text-center">
+        {t('securedByStripe')}
+      </Text>
+      <div className="mt-6 w-full border-t border-line pt-6 pb-8 text-center">
         <Text variant="caption" className="mb-3">
           {t('orUseApp')}
         </Text>
@@ -871,15 +1077,11 @@ function PlansView({
           <StoreBadges layout="row" />
         </div>
       </div>
-
-      <BackLink onClick={onBack}>{backLabel}</BackLink>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-
-type PlanKey = 'annual' | 'monthly';
 
 interface PlanOptionProps {
   /** DOM anchor for the radiogroup's roving-tabindex focus management. */
@@ -890,27 +1092,32 @@ interface PlanOptionProps {
   price: string;
   /** ISO 4217 code shown beside the price. Every market we sell to on the web
    *  (US/CA/AU/NZ) renders a bare `$` in its own locale, so the symbol alone
-   *  never says WHICH dollar — a Canadian would otherwise have nothing telling
-   *  them "$79.99" is not USD they must convert. */
+   *  never says WHICH dollar. */
   currency: string;
   period: string;
-  badge?: string;
-  subline: string | null;
-  feature: { text: string; tone: 'brand' | 'muted' } | null;
+  badge: string | null;
+  /** Line 2: billing cadence and any trial ("7 days free, then billed yearly"). */
+  billing: string | null;
+  /** Line 3, annual only, smaller: the per-month equivalent. */
+  perMonth: string | null;
 }
 
 /**
  * A real ARIA radio (role="radio" + aria-checked) rendered on the `Card`
- * primitive's own `onPress` button — not a native `<input type="radio">`
- * hidden under a `<label>`. The whole card is the hit target; `RadioDot` is a
- * purely decorative echo of the checked state for sighted users.
+ * primitive's own `onPress` button. The whole card is the hit target;
+ * `RadioDot` is a purely decorative echo of the checked state.
  *
- * Roving tabindex (WAI-ARIA APG): only the SELECTED card is in the tab order
- * (`tabIndex={selected ? 0 : -1}`) — the other option is reached with the
- * arrow keys, handled by the parent radiogroup's `onKeyDown`, which also
- * needs a DOM handle back to "the newly selected card" to move focus. `Card`
- * is not built with `forwardRef`, so that handle is a `data-plan-key`
- * attribute the radiogroup queries for, not a React ref.
+ * SELECTION IS NEUTRAL (one accent: moss is the buy button only). The selected
+ * card recolours its 1px border to the selected-fill ink and adds a 1px ring
+ * (box-shadow, no layout), so both states share one border width and the
+ * content never moves.
+ *
+ * The accessible name carries EVERY line of the card: `aria-label` on a button
+ * replaces its contents, so a name of just "Annual, $59.99" would hide the
+ * trial terms and the per-month price from a screen reader.
+ *
+ * THE BILLED AMOUNT IS THE LARGEST PRICE (Apple 3.1.2, Google): page-title size;
+ * the per-month equivalent is caption size.
  */
 function PlanOption({
   planKey,
@@ -921,9 +1128,12 @@ function PlanOption({
   currency,
   period,
   badge,
-  subline,
-  feature,
+  billing,
+  perMonth,
 }: PlanOptionProps): ReactElement {
+  const name = [`${label}, ${price} ${currency} ${period}`, billing, perMonth, badge]
+    .filter(Boolean)
+    .join(', ');
   return (
     <Card
       variant="outlined"
@@ -931,29 +1141,19 @@ function PlanOption({
       onPress={onSelect}
       role="radio"
       aria-checked={selected}
-      aria-label={`${label}, ${price} ${currency} ${period}`}
+      aria-label={name}
       data-plan-key={planKey}
       tabIndex={selected ? 0 : -1}
       className={[
         'relative flex flex-col text-left transition-shadow',
         'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-coral has-[:focus-visible]:ring-offset-2',
-        // Selection = moss (the primary-action colour), calm and lighter than
-        // the CTA. BOTH states keep Card's 1px `border`; the selected card only
-        // recolours it and adds a 1px `ring` (box-shadow — no layout), so the
-        // box size and content position are identical whichever is selected.
-        // (It used to be `border-2 border-ink! bg-coral-soft!`: an alert-looking
-        // pink/black block whose content sat 2px lower than its neighbour.)
-        // `!` on the colours: Card's own `border-line-2` and `bg-cream` are
-        // emitted LATER in the compiled stylesheet, so a plain override loses
-        // the cascade — same reasoning as Eyebrow.tsx / inputStyles.ts.
+        // `!` on the colours: Card's own `border-line-2` is emitted LATER in the
+        // compiled stylesheet, so a plain override loses the cascade.
         selected
-          ? 'border-moss! ring-1 ring-moss bg-moss-wash!'
+          ? 'border-selected-fill! ring-1 ring-selected-fill'
           : 'border-line! hover:shadow-md',
       ].join(' ')}
     >
-      {/* min-h-6: the Save pill (22px) is taller than the label row (~20.7px),
-          so without a shared floor the card WITH the pill centred its title
-          ~0.7px lower and its price ~1.3px lower than the card without one. */}
       <div className="flex min-h-6 items-center justify-between gap-2">
         <span className="flex items-center gap-2.5">
           <RadioDot selected={selected} />
@@ -962,45 +1162,32 @@ function PlanOption({
           </Text>
         </span>
         {badge && (
-          <Badge variant="primary" size="sm">
+          <Badge variant="default" size="sm">
             {badge}
           </Badge>
         )}
       </div>
 
-      <p className="m-0 mt-4 flex items-baseline gap-1.5">
-        <Text variant="pageTitle" as="span">
+      <p className="m-0 mt-2 flex flex-wrap items-baseline gap-x-1.5">
+        <Text variant="pageTitle" as="span" data-price="">
           {price}
         </Text>
-        <Text variant="caption" as="span" className="text-ink-2!">
+        <Text variant="caption" as="span">
           {currency}
         </Text>
         <Text variant="caption" as="span">
           {period}
         </Text>
       </p>
-      {/* Reserve a line so both cards align even when one has no sub-price. */}
-      <Text variant="caption" className="mt-1 min-h-5">
-        {subline ?? ' '}
-      </Text>
-
-      {feature && (
-        <p
-          className={[
-            // items-start + icon mt-0.5: ES "Cancela cuando quieras, sin
-            // compromiso" wraps at desktop width, and a centred check floated
-            // between its two lines.
-            'm-0 mt-3 flex items-start gap-2 text-sm',
-            feature.tone === 'brand' ? 'font-medium text-moss-deep' : 'text-ink-2',
-          ].join(' ')}
-        >
-          <Icon
-            name="checkmark"
-            size="inline"
-            className={`mt-0.5 shrink-0 ${feature.tone === 'brand' ? 'text-moss' : 'text-ink-3'}`}
-          />
-          {feature.text}
-        </p>
+      {billing && (
+        <span data-billing="" className="block text-sm font-semibold text-ink">
+          {billing}
+        </span>
+      )}
+      {perMonth && (
+        <Text variant="caption" as="span" data-per-month="" className="block">
+          {perMonth}
+        </Text>
       )}
     </Card>
   );

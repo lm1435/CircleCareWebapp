@@ -1,10 +1,6 @@
 {
   "eyebrow": "CircleCare Premium",
   "headline": {
-    "onboarding": {
-      "lead": "Prendre soin,",
-      "accent": "ensemble."
-    },
     "general": {
       "lead": "Profitez de toute",
       "accent": "l’expérience."
@@ -30,61 +26,58 @@
       "accent": "garde par garde."
     }
   },
-  "subtitle": "Tout ce dont vous avez besoin pour coordonner les soins, pour chaque cercle dont vous faites partie.",
-  "trialHook": "Commencez par un essai gratuit : rien à payer aujourd’hui.",
   "benefits": {
     "caregivers": {
       "title": "Aidants en nombre illimité",
-      "sub": "Tous ceux qui aident, dans un seul cercle. Une seule personne paie."
+      "sub": "Tous ceux qui aident, dans un seul cercle. Une seule personne paie : vous."
     },
     "voice": {
       "title": "Ajouter à la voix",
-      "sub": "Dites un médicament, une tâche ou un rendez-vous et nous remplissons le formulaire. Sur les téléphones compatibles."
+      "sub": "Dites un médicament, un rendez-vous ou une tâche et le formulaire se remplit. Sur les téléphones compatibles."
     },
     "exports": {
       "title": "Rapports d’observance et import de calendrier",
-      "sub": "Partagez l’historique des médicaments avec les professionnels de santé, importez les rendez-vous depuis votre calendrier"
+      "sub": "Exportez les doses prises, sautées et non renseignées. Importez les rendez-vous depuis le calendrier de votre téléphone."
     },
     "storage": {
       "title": "1 Go de documents par cercle",
-      "sub": "De la place pour dossiers, photos et papiers"
+      "sub": "De la place pour dossiers, photos et papiers. La formule gratuite offre 200 Mo."
     },
     "ai": {
-      "title": "Assistant de soins IA",
-      "sub": "Résume les visites et fait ressortir l’essentiel"
+      "title": "Assistant de soins",
+      "sub": "Répond aux questions sur le planning, les médicaments et les doses. Il ne peut rien modifier et ne donne pas de conseils médicaux."
     },
     "shifts": {
       "title": "Gardes",
-      "sub": "Planifiez qui s’occupe de quand. Tout le cercle voit qui est de garde."
+      "sub": "Planifiez qui s’occupe de quand. Tout le monde voit qui est de garde."
     },
     "team": {
       "title": "Gestionnaires et récapitulatif hebdomadaire",
-      "sub": "Une personne peut vous aider à inviter et gérer les membres, plus un récapitulatif chaque semaine par e-mail"
+      "sub": "Un membre peut vous aider à inviter et gérer les personnes. Chaque membre reçoit un e-mail hebdomadaire."
     },
     "circles": {
       "title": "Jusqu’à 5 cercles de soins",
-      "sub": "Un pour chaque personne que vous aidez"
+      "sub": "Un pour chaque personne que vous aidez."
     }
   },
   "plans": {
     "monthly": "Mensuel",
     "annual": "Annuel",
-    "perMonth": "par mois",
-    "perYear": "par an",
-    "bestValue": "Meilleur rapport qualité-prix",
-    "savePercent": "Économisez {{percent}} %",
+    "perMonth": "/mois",
+    "perYear": "/an",
+    "savePercent": "{{percent}} % de réduction",
     "perMonthBilled": "{{price}}/mois, facturé annuellement",
-    "billedMonthly": "Facturé mensuellement",
-    "trialIncluded": "Essai gratuit inclus",
-    "monthlyPerk": "Résiliation possible à tout moment, sans engagement",
-    "trialWithDuration": "Essai gratuit de {{period}}"
+    "billingAnnual": "Facturation annuelle",
+    "billingMonthly": "Facturation mensuelle. Pas d’essai gratuit.",
+    "termsAnnual": "{{price}} par an. Renouvellement chaque année jusqu’à résiliation dans les réglages de votre compte.",
+    "termsMonthly": "{{price}} par mois. Renouvellement chaque mois jusqu’à résiliation dans les réglages de votre compte.",
+    "billingAnnualTrial": "Essai gratuit de {{length}}, puis facturation annuelle",
+    "billingMonthlyTrial": "Essai gratuit de {{length}}, puis facturation mensuelle",
+    "termsAnnualTrial": "Essai gratuit de {{length}}, puis {{price}} par an. Renouvellement chaque année jusqu’à résiliation dans les réglages de votre compte.",
+    "termsMonthlyTrial": "Essai gratuit de {{length}}, puis {{price}} par mois. Renouvellement chaque mois jusqu’à résiliation dans les réglages de votre compte."
   },
   "choosePlan": "Choisir une formule",
-  "freeBaseline": "La formule gratuite comprend un cercle de soins, vous + 1 aidant et des rappels de médicaments gratuits.",
-  "subscribe": "S’abonner",
-  "startTrial": "Commencer l’essai gratuit",
   "subscribing": "Ouverture du paiement…",
-  "cancelAnytime": "Résiliation possible à tout moment.",
   "securedByStripe": "Paiement sécurisé par Stripe.",
   "orUseApp": "Vous préférez l’application ? Vous pouvez aussi passer à Premium dans l’application CircleCare et payer via votre boutique d’applications.",
   "unavailable": "Le paiement en ligne n’est pas disponible pour le moment. Vous pouvez aussi passer à Premium dans l’application CircleCare.",
@@ -113,12 +106,8 @@
     "body": "Votre abonnement est actif. Profitez d’un accès complet à tous vos cercles de soins.",
     "cta": "Continuer"
   },
-  "autoRenewNotice": "Votre abonnement se renouvelle automatiquement au tarif indiqué jusqu’à sa résiliation. Vous pouvez résilier à tout moment depuis Paramètres.",
-  "termsLink": "Conditions d’utilisation",
-  "privacyLink": "Politique de confidentialité",
-  "legalPrefix": "En vous abonnant, vous acceptez nos",
-  "legalJoin": "et notre",
-  "trialHookWithDuration": "Commencez par un essai gratuit de {{period}} : rien à payer aujourd’hui.",
+  "termsLink": "Conditions",
+  "privacyLink": "Confidentialité",
   "trialPeriod": {
     "day_one": "{{count}} jour",
     "day_other": "{{count}} jours",
@@ -130,9 +119,24 @@
     "year_other": "{{count}} ans"
   },
   "onboarding": {
-    "subtitle": "Tout ce dont vous avez besoin pour coordonner les soins des personnes qui comptent le plus.",
     "continueFree": "Continuer avec la formule gratuite",
-    "continueFreeSub": "1 cercle, 2 aidants : passez à Premium quand vous voulez",
+    "continueFreeSub": "1 cercle de soins, vous + 1 aidant. Les rappels et les alertes restent gratuits.",
     "notNow": "Pas maintenant"
-  }
+  },
+  "headlineOnboarding": "Partagez les soins avec tous ceux qui aident.",
+  "seeEverything": "Voir tout ce qui est inclus",
+  "showLess": "Voir moins",
+  "subscribeAnnual": "S’abonner : {{price}}/an",
+  "subscribeMonthly": "S’abonner : {{price}}/mois",
+  "trialLength": {
+    "day_one": "{{count}} jour",
+    "day_other": "{{count}} jours",
+    "week_one": "{{count}} semaine",
+    "week_other": "{{count}} semaines",
+    "month_one": "{{count}} mois",
+    "month_other": "{{count}} mois",
+    "year_one": "{{count}} an",
+    "year_other": "{{count}} ans"
+  },
+  "startTrialWithDuration": "Commencer l’essai gratuit de {{period}}"
 }

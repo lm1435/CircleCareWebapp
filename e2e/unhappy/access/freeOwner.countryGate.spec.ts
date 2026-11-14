@@ -44,7 +44,7 @@ async function expectGatePassed(page: Page): Promise<void> {
 /** The gate blocked: store card, and no way to start a purchase. */
 async function expectBlocked(page: Page): Promise<void> {
   await expect(page.getByText(STORE_CARD)).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole('button', { name: 'Subscribe', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Subscribe/ })).toHaveCount(0);
   await expect(page.getByRole('radio')).toHaveCount(0);
   await expect(page.getByText('Choose a plan')).toHaveCount(0);
 }

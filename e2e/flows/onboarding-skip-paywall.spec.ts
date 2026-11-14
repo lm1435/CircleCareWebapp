@@ -44,7 +44,7 @@ async function createFirstCircle(page: Page, recipient: string): Promise<string>
 }
 
 const wizard = (page: Page) => page.getByRole('dialog', { name: 'Circle created' });
-const offerHeading = (page: Page) => page.getByText('Better care, together.');
+const offerHeading = (page: Page) => page.getByText('Share the care with everyone who helps.');
 const ls = (page: Page, key: string) => page.evaluate((k) => window.localStorage.getItem(k), key);
 
 test.describe('onboarding paywall: no first med (web)', () => {

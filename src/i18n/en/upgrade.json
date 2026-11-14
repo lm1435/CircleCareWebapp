@@ -1,10 +1,6 @@
 {
   "eyebrow": "CircleCare Premium",
   "headline": {
-    "onboarding": {
-      "lead": "Better care,",
-      "accent": "together."
-    },
     "general": {
       "lead": "Unlock the full",
       "accent": "experience."
@@ -30,61 +26,58 @@
       "accent": "shift by shift."
     }
   },
-  "subtitle": "Everything you need to coordinate care, for every circle you're part of.",
-  "trialHook": "Start with a free trial — nothing due today.",
   "benefits": {
     "caregivers": {
       "title": "Unlimited caregivers",
-      "sub": "Everyone who helps, in one circle. One person pays."
+      "sub": "Everyone who helps, in one circle. Only you pay."
     },
     "voice": {
       "title": "Add by voice",
-      "sub": "Say a medication, task or appointment and we fill in the form. On supported phones."
+      "sub": "Say a medication, appointment or task and the form fills in. On supported phones."
     },
     "exports": {
-      "title": "Adherence reports & calendar import",
-      "sub": "Share medication history with providers, import appointments from your calendar"
+      "title": "Adherence reports and calendar import",
+      "sub": "Export doses taken, skipped and not marked. Import appointments from your phone's calendar."
     },
     "storage": {
-      "title": "1GB of documents per circle",
-      "sub": "Room for records, photos, and paperwork"
+      "title": "1 GB of documents per circle",
+      "sub": "Room for records, photos and paperwork. The free plan has 200 MB."
     },
     "ai": {
-      "title": "AI care assistant",
-      "sub": "Summarizes visits and surfaces what matters"
+      "title": "Care assistant",
+      "sub": "Answers questions about the schedule, medications and doses. It can't change anything and doesn't give medical advice."
     },
     "shifts": {
       "title": "Care shifts",
-      "sub": "Plan who covers when. Everyone in the circle sees who's on."
+      "sub": "Plan who covers when. Everyone sees who's on."
     },
     "team": {
-      "title": "Managers & weekly care summary",
-      "sub": "Someone can help you invite and manage members, plus a weekly summary by email"
+      "title": "Managers and weekly care summary",
+      "sub": "A member can help you invite and manage people. Each member gets a weekly email."
     },
     "circles": {
       "title": "Up to 5 care circles",
-      "sub": "One for each person you care for"
+      "sub": "One for each person you care for."
     }
   },
   "plans": {
     "monthly": "Monthly",
     "annual": "Annual",
-    "perMonth": "per month",
-    "perYear": "per year",
-    "bestValue": "Best value",
-    "savePercent": "Save {{percent}}%",
-    "perMonthBilled": "{{price}}/mo, billed yearly",
-    "billedMonthly": "Billed monthly",
-    "trialIncluded": "Free trial included",
-    "monthlyPerk": "Cancel anytime, no commitment",
-    "trialWithDuration": "{{period}} free trial"
+    "perMonth": "/month",
+    "perYear": "/year",
+    "savePercent": "{{percent}}% off",
+    "perMonthBilled": "{{price}}/mo billed annually",
+    "billingAnnual": "Billed yearly",
+    "billingMonthly": "Billed monthly. No free trial.",
+    "termsAnnual": "{{price}} per year. Renews every year until you cancel in your account settings.",
+    "termsMonthly": "{{price}} per month. Renews every month until you cancel in your account settings.",
+    "billingAnnualTrial": "{{length}} free, then billed yearly",
+    "billingMonthlyTrial": "{{length}} free, then billed monthly",
+    "termsAnnualTrial": "{{length}} free, then {{price}} per year. Renews every year until you cancel in your account settings.",
+    "termsMonthlyTrial": "{{length}} free, then {{price}} per month. Renews every month until you cancel in your account settings."
   },
   "choosePlan": "Choose a plan",
-  "freeBaseline": "The free plan includes one care circle, you + 1 caregiver, and free medication reminders.",
-  "subscribe": "Subscribe",
-  "startTrial": "Start free trial",
   "subscribing": "Opening checkout…",
-  "cancelAnytime": "Cancel anytime.",
   "securedByStripe": "Secure checkout by Stripe.",
   "orUseApp": "Prefer the app? You can also upgrade in the CircleCare app and pay through your app store.",
   "unavailable": "Online checkout isn't available right now. You can also upgrade in the CircleCare app.",
@@ -113,12 +106,8 @@
     "body": "Your subscription is active. Enjoy full access across your care circles.",
     "cta": "Continue"
   },
-  "autoRenewNotice": "Your subscription renews automatically at the price shown until you cancel. Cancel any time from Settings.",
-  "termsLink": "Terms of Service",
-  "privacyLink": "Privacy Policy",
-  "legalPrefix": "By subscribing you agree to our",
-  "legalJoin": "and",
-  "trialHookWithDuration": "Start with a {{period}} free trial — nothing due today.",
+  "termsLink": "Terms",
+  "privacyLink": "Privacy",
   "trialPeriod": {
     "day_one": "{{count}}-day",
     "day_other": "{{count}}-day",
@@ -130,9 +119,24 @@
     "year_other": "{{count}}-year"
   },
   "onboarding": {
-    "subtitle": "Everything you need to coordinate care for the people who matter most.",
     "continueFree": "Continue with free plan",
-    "continueFreeSub": "1 circle, 2 caregivers — upgrade anytime",
+    "continueFreeSub": "1 care circle, you + 1 caregiver. Reminders and alerts stay free.",
     "notNow": "Not now"
-  }
+  },
+  "headlineOnboarding": "Share the care with everyone who helps.",
+  "seeEverything": "See everything included",
+  "showLess": "Show less",
+  "subscribeAnnual": "Subscribe: {{price}}/yr",
+  "subscribeMonthly": "Subscribe: {{price}}/mo",
+  "trialLength": {
+    "day_one": "{{count}} day",
+    "day_other": "{{count}} days",
+    "week_one": "{{count}} week",
+    "week_other": "{{count}} weeks",
+    "month_one": "{{count}} month",
+    "month_other": "{{count}} months",
+    "year_one": "{{count}} year",
+    "year_other": "{{count}} years"
+  },
+  "startTrialWithDuration": "Start {{period}} free trial"
 }

@@ -53,6 +53,10 @@ vi.mock('@/lib/analytics', () => ({
     planSelectionSubscribed: vi.fn(),
     planSelectionTrialStarted: vi.fn(),
     planSelectionPurchaseCancelled: vi.fn(),
+    planSelectionPlanChanged: vi.fn(),
+    planSelectionDetailsToggled: vi.fn(),
+    planSelectionCtaTapped: vi.fn(),
+    planSelectionLegalOpened: vi.fn(),
     paywallDismissed: vi.fn(),
     paywallShown: vi.fn(),
   },
@@ -204,7 +208,7 @@ describe('UpgradePage — paywall_context', () => {
   it('reports the view with the context it was opened from', () => {
     renderAt({ paywallContext: 'onboarding' });
 
-    expect(Analytics.planSelectionViewed).toHaveBeenCalledWith('onboarding');
+    expect(Analytics.planSelectionViewed).toHaveBeenCalledWith('onboarding', { trialShown: false, defaultPlan: 'annual' });
   });
 
   it.each(['capacity', 'invite_cap', 'feature', 'general'] as const)(
@@ -212,7 +216,7 @@ describe('UpgradePage — paywall_context', () => {
     (context) => {
       renderAt({ paywallContext: context });
 
-      expect(Analytics.planSelectionViewed).toHaveBeenCalledWith(context);
+      expect(Analytics.planSelectionViewed).toHaveBeenCalledWith(context, { trialShown: false, defaultPlan: 'annual' });
     }
   );
 
@@ -224,7 +228,7 @@ describe('UpgradePage — paywall_context', () => {
     const user = userEvent.setup();
     const { unmount } = renderAt({ paywallContext: 'capacity' });
     const capacityHeading = screen.getByRole('heading', { level: 1 }).textContent;
-    const capacitySubscribe = screen.getByRole('button', { name: 'Subscribe' }).textContent;
+    const capacitySubscribe = screen.getByRole('button', { name: 'Subscribe: $59.99/yr' }).textContent;
     unmount();
     vi.clearAllMocks();
 
@@ -233,14 +237,19 @@ describe('UpgradePage — paywall_context', () => {
     const heading = screen.getByRole('heading', { level: 1 });
     expect(heading.textContent).toBe(capacityHeading);
     expect(heading.textContent?.trim()).not.toBe('');
-    expect(screen.getByRole('button', { name: 'Subscribe' }).textContent).toBe(capacitySubscribe);
+    expect(screen.getByRole('button', { name: 'Subscribe: $59.99/yr' }).textContent).toBe(capacitySubscribe);
     expect(screen.queryByRole('button', { name: /Continue with Free plan/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Better care, together.' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Share the care with everyone who helps.' })
+    ).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Back to Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Close' }));
 
     expect(await screen.findByTestId('profile')).toBeInTheDocument();
-    expect(Analytics.paywallDismissed).toHaveBeenCalledWith('invite_cap');
+    expect(Analytics.paywallDismissed).toHaveBeenCalledWith(
+      'invite_cap',
+      expect.objectContaining({ method: 'close' })
+    );
   });
 
   it('falls back to general for an un-instrumented or forged entry', () => {
@@ -248,13 +257,13 @@ describe('UpgradePage — paywall_context', () => {
     // value must land in an EXISTING bucket, never invent a cohort.
     renderAt({ paywallContext: 'not-a-real-context' });
 
-    expect(Analytics.planSelectionViewed).toHaveBeenCalledWith('general');
+    expect(Analytics.planSelectionViewed).toHaveBeenCalledWith('general', { trialShown: false, defaultPlan: 'annual' });
   });
 
   it('falls back to general when the entry carried no state at all', () => {
     renderAt(null);
 
-    expect(Analytics.planSelectionViewed).toHaveBeenCalledWith('general');
+    expect(Analytics.planSelectionViewed).toHaveBeenCalledWith('general', { trialShown: false, defaultPlan: 'annual' });
   });
 });
 
@@ -279,24 +288,31 @@ describe('UpgradePage — declining the onboarding paywall', () => {
 
     expect(Analytics.planSelectionFreeSelected).toHaveBeenCalledWith('onboarding');
     // Mobile fires free_selected and THEN dismisses (PlanSelectionScreen:737).
-    expect(Analytics.paywallDismissed).toHaveBeenCalledWith('onboarding');
+    expect(Analytics.paywallDismissed).toHaveBeenCalledWith(
+      'onboarding',
+      expect.objectContaining({ method: 'continue_free' })
+    );
     // Declining leads to the wizard, not a dead end — the deferral survived a
     // full route change.
     expectToday(await screen.findByTestId('today'));
     expect(peekDeferredFirstRun()).toBeNull();
   });
 
-  it('the back control also reaches the wizard, and is relabelled for onboarding', async () => {
+  it('the close X also reaches Today; the compact paywall has no separate back link', async () => {
     const user = userEvent.setup();
     deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
     renderAt({ paywallContext: 'onboarding' });
 
-    // "Back to Settings" points at a page a brand-new user has never seen.
+    // One free button plus the close control (spec §8): no "Not now" / "Back to Settings".
     expect(screen.queryByRole('button', { name: 'Back to Settings' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Not now' }));
+    expect(screen.queryByRole('button', { name: 'Not now' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Close' }));
 
     expectToday(await screen.findByTestId('today'));
-    expect(Analytics.paywallDismissed).toHaveBeenCalledWith('onboarding');
+    expect(Analytics.paywallDismissed).toHaveBeenCalledWith(
+      'onboarding',
+      expect.objectContaining({ method: 'close' })
+    );
   });
 
   it('records a dismissal exactly ONCE even though the exit also unmounts the page', async () => {
@@ -319,7 +335,10 @@ describe('UpgradePage — declining the onboarding paywall', () => {
     // hears the same exit through `beforeRemove`.
     unmount();
 
-    expect(Analytics.paywallDismissed).toHaveBeenCalledWith('onboarding');
+    expect(Analytics.paywallDismissed).toHaveBeenCalledWith(
+      'onboarding',
+      expect.objectContaining({ method: 'back' })
+    );
   });
 
   it('falls back to the circle picker when the deferral is already gone', async () => {
@@ -338,10 +357,13 @@ describe('UpgradePage — declining the onboarding paywall', () => {
     deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
     renderAt({ paywallContext: 'capacity' });
 
-    await user.click(screen.getByRole('button', { name: 'Back to Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Close' }));
 
     expect(await screen.findByTestId('profile')).toBeInTheDocument();
-    expect(Analytics.paywallDismissed).toHaveBeenCalledWith('capacity');
+    expect(Analytics.paywallDismissed).toHaveBeenCalledWith(
+      'capacity',
+      expect.objectContaining({ method: 'close' })
+    );
     expect(peekDeferredFirstRun()).not.toBeNull();
   });
 });
@@ -352,7 +374,7 @@ describe('UpgradePage — purchase', () => {
     mutate.mockImplementation((_plan, opts) => opts?.onSuccess?.());
     renderAt({ paywallContext: 'onboarding' });
 
-    await user.click(screen.getByRole('button', { name: 'Subscribe' }));
+    await user.click(screen.getByRole('button', { name: 'Subscribe: $59.99/yr' }));
 
     expect(Analytics.planSelectionSubscribed).toHaveBeenCalledWith('annual', 'onboarding');
     // No trial on this offer, so no trial event.
@@ -362,14 +384,14 @@ describe('UpgradePage — purchase', () => {
   it('reports a trial start IN ADDITION to the subscription when the offer has one', async () => {
     const user = userEvent.setup();
     mockedPlans.mockReturnValue({
-      data: { monthly: null, annual: plan({ hasFreeTrial: true }) },
+      data: { monthly: null, annual: plan({ hasFreeTrial: true, trialPeriod: { number: 7, unit: 'day' } }) },
       isLoading: false,
       isError: false,
     });
     mutate.mockImplementation((_plan, opts) => opts?.onSuccess?.());
     renderAt({ paywallContext: 'general' });
 
-    await user.click(screen.getByRole('button', { name: 'Start free trial' }));
+    await user.click(screen.getByRole('button', { name: 'Start 7-day free trial' }));
 
     expect(Analytics.planSelectionSubscribed).toHaveBeenCalledWith('annual', 'general');
     expect(Analytics.planSelectionTrialStarted).toHaveBeenCalledWith('annual', 'general');
@@ -385,7 +407,7 @@ describe('UpgradePage — purchase', () => {
     mutate.mockImplementation((_plan, opts) => opts?.onSuccess?.());
     renderAt({ paywallContext: 'onboarding' });
 
-    await user.click(screen.getByRole('button', { name: 'Subscribe' }));
+    await user.click(screen.getByRole('button', { name: 'Subscribe: $59.99/mo' }));
 
     expect(Analytics.planSelectionSubscribed).toHaveBeenCalledWith('monthly', 'onboarding');
   });
@@ -398,7 +420,7 @@ describe('UpgradePage — purchase', () => {
     renderAt({ paywallContext: 'onboarding' });
     await flushArming();
 
-    await user.click(screen.getByRole('button', { name: 'Subscribe' }));
+    await user.click(screen.getByRole('button', { name: 'Subscribe: $59.99/yr' }));
 
     expect(Analytics.planSelectionPurchaseCancelled).toHaveBeenCalledWith('annual', 'onboarding');
     expect(Analytics.planSelectionSubscribed).not.toHaveBeenCalled();
@@ -413,7 +435,7 @@ describe('UpgradePage — purchase', () => {
     renderAt({ paywallContext: 'onboarding' });
     await flushArming();
 
-    await user.click(screen.getByRole('button', { name: 'Subscribe' }));
+    await user.click(screen.getByRole('button', { name: 'Subscribe: $59.99/yr' }));
     await screen.findByText(/Welcome to Premium/i);
 
     expect(Analytics.paywallDismissed).not.toHaveBeenCalled();
@@ -425,7 +447,7 @@ describe('UpgradePage — purchase', () => {
     mutate.mockImplementation((_plan, opts) => opts?.onSuccess?.());
     renderAt({ paywallContext: 'onboarding' });
 
-    await user.click(screen.getByRole('button', { name: 'Subscribe' }));
+    await user.click(screen.getByRole('button', { name: 'Subscribe: $59.99/yr' }));
     await user.click(await screen.findByRole('button', { name: 'Continue' }));
 
     // A paying first-circle owner needs the setup wizard just as much.
@@ -436,12 +458,14 @@ describe('UpgradePage — purchase', () => {
 describe('UpgradePage — onboarding copy', () => {
   it('uses mobile onboarding headline on the onboarding context only', () => {
     const { unmount } = renderAt({ paywallContext: 'onboarding' });
-    expect(screen.getByRole('heading', { name: 'Better care, together.' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Share the care with everyone who helps.' })
+    ).toBeInTheDocument();
     unmount();
 
     renderAt({ paywallContext: 'general' });
     expect(
-      screen.queryByRole('heading', { name: 'Better care, together.' })
+      screen.queryByRole('heading', { name: 'Share the care with everyone who helps.' })
     ).not.toBeInTheDocument();
   });
 });
@@ -479,7 +503,7 @@ describe('UpgradePage — reports the earned-ask outcome back (PK28(1))', () => 
     markEarnedUpsellPresented('user-1', h);
     renderAt({ paywallContext: 'earned_meds' });
     await flushArming();
-    await user.click(screen.getByRole('button', { name: 'Subscribe' }));
+    await user.click(screen.getByRole('button', { name: 'Subscribe: $59.99/yr' }));
     expect(h.onAccepted).toHaveBeenCalledTimes(1);
     expect(h.onDismissed).not.toHaveBeenCalled();
   });

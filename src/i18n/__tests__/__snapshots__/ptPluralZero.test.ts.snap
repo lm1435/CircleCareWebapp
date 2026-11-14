@@ -412,6 +412,26 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Abertas: 1",
     "2 abertas",
   ],
+  "pt upgrade:trialLength.day": [
+    "0 dia",
+    "1 dia",
+    "2 dias",
+  ],
+  "pt upgrade:trialLength.month": [
+    "0 mês",
+    "1 mês",
+    "2 meses",
+  ],
+  "pt upgrade:trialLength.week": [
+    "0 semana",
+    "1 semana",
+    "2 semanas",
+  ],
+  "pt upgrade:trialLength.year": [
+    "0 ano",
+    "1 ano",
+    "2 anos",
+  ],
   "pt upgrade:trialPeriod.day": [
     "0 dia",
     "1 dia",
@@ -841,6 +861,26 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Abertas: 0",
     "Abertas: 1",
     "2 abertas",
+  ],
+  "pt-PT upgrade:trialLength.day": [
+    "0 dia",
+    "1 dia",
+    "2 dias",
+  ],
+  "pt-PT upgrade:trialLength.month": [
+    "0 mês",
+    "1 mês",
+    "2 meses",
+  ],
+  "pt-PT upgrade:trialLength.week": [
+    "0 semana",
+    "1 semana",
+    "2 semanas",
+  ],
+  "pt-PT upgrade:trialLength.year": [
+    "0 ano",
+    "1 ano",
+    "2 anos",
   ],
   "pt-PT upgrade:trialPeriod.day": [
     "0 dia",

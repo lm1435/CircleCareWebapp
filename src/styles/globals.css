@@ -14,6 +14,13 @@
  * silently win (Toast.test.tsx pins that). */
 @custom-variant modal-open (body:has([aria-modal="true"]) &);
 
+/* `pin-footer:` — the paywall's buy footer is pinned to the bottom of the screen
+ * ONLY on a phone-width viewport that is also tall enough to hold it with room to
+ * spare (UpgradePage.tsx). A short viewport (large browser zoom, landscape) gets
+ * the footer back in the normal flow, so it can never sit on top of the price
+ * (paywall redesign 1.4.2, spec N8). Declared once. */
+@custom-variant pin-footer (@media (max-width: 639.98px) and (min-height: 600px));
+
 /*
  * CircleCare design tokens — mirrored EXACTLY from the mobile app's design
  * system (mobile/src/theme/index.ts: the `CC` palette, `typography`, `spacing`,

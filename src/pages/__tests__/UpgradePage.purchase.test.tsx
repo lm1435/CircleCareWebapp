@@ -57,6 +57,10 @@ vi.mock('@/lib/analytics', () => ({
     planSelectionSubscribed: vi.fn(),
     planSelectionTrialStarted: vi.fn(),
     planSelectionPurchaseCancelled: vi.fn(),
+    planSelectionPlanChanged: vi.fn(),
+    planSelectionDetailsToggled: vi.fn(),
+    planSelectionCtaTapped: vi.fn(),
+    planSelectionLegalOpened: vi.fn(),
     paywallDismissed: vi.fn(),
   },
 }));
@@ -179,14 +183,14 @@ describe('UpgradePage — checkout failure (non-cancel)', () => {
     mutate.mockImplementation((_p, o) => o?.onError?.(new Error('card_declined')));
     renderAt({ paywallContext: 'general' });
 
-    await user.click(screen.getByRole('button', { name: 'Subscribe' }));
+    await user.click(screen.getByRole('button', { name: 'Subscribe: $59.99/yr' }));
 
     const alerts = screen.getAllByRole('alert').filter((a) => a.textContent === EN_ERROR);
     expect(alerts).toHaveLength(1);
     expect(Analytics.planSelectionSubscribed).not.toHaveBeenCalled();
     expect(Analytics.planSelectionPurchaseCancelled).not.toHaveBeenCalled();
     expect(screen.queryByText(/Welcome to Premium/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Subscribe' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Subscribe: $59.99/yr' })).toBeEnabled();
   });
 
   it('shows the Spanish copy', async () => {
@@ -196,7 +200,7 @@ describe('UpgradePage — checkout failure (non-cancel)', () => {
     mutate.mockImplementation((_p, o) => o?.onError?.(new Error('card_declined')));
     renderAt({ paywallContext: 'general' });
 
-    await user.click(screen.getByRole('button', { name: /Suscribirme/i }));
+    await user.click(screen.getByRole('button', { name: /^Suscribirse: /i }));
 
     expect(screen.getAllByRole('alert').filter((a) => a.textContent === ES_ERROR)).toHaveLength(1);
   });
@@ -208,7 +212,7 @@ describe('UpgradePage — same-tick double click', () => {
     // never settles: isPending stays false, as in the frame before React commits.
     mutate.mockImplementation(() => undefined);
     renderAt({ paywallContext: 'general' });
-    const btn = screen.getByRole('button', { name: 'Subscribe' });
+    const btn = screen.getByRole('button', { name: 'Subscribe: $59.99/yr' });
 
     act(() => {
       btn.click();
@@ -222,7 +226,7 @@ describe('UpgradePage — same-tick double click', () => {
       (mutate.mock.calls[0][1] as { onSettled?: () => void }).onSettled?.();
     });
     act(() => {
-      screen.getByRole('button', { name: 'Subscribe' }).click();
+      screen.getByRole('button', { name: 'Subscribe: $59.99/yr' }).click();
     });
     expect(mutate).toHaveBeenCalledTimes(2);
   });
