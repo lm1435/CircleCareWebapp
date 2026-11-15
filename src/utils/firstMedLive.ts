@@ -1,4 +1,4 @@
-import { addDays } from '@/components/calendar/dateMath';
+import { addDays, getDayOfWeek } from '@/components/calendar/dateMath';
 import type { FirstMedLiveRoot } from '@/api/calendarEvents';
 
 /**
@@ -52,6 +52,14 @@ export type FirstMedCardState =
 
 const HIDDEN: FirstMedCardState = { kind: 'hidden' };
 
+/** Weekly series with an explicit weekday set: is `today` (recipient zone) one of its days? */
+function todayOnWeekdaySet(live: FirstMedLiveRoot, today: string): boolean {
+  if (live.recurrence_rule !== 'weekly') return true;
+  const days = live.recurrence_days;
+  if (!Array.isArray(days) || days.length === 0) return true;
+  return days.includes(getDayOfWeek(today));
+}
+
 function startsFrom(date: string, today: string): 'tomorrow' | 'later' {
   return date === addDays(today, 1) ? 'tomorrow' : 'later';
 }
@@ -93,6 +101,10 @@ export function resolveFirstMedCard(args: {
 
   if (!note.marked) {
     if (start <= today) return HIDDEN;
+    // The server's Mark it also demands that TODAY is on the series' own weekday set
+    // (`dateMatchesRecurrence`, 409 NOT_FIRST_DAY otherwise): a Mon/Wed/Fri series saved on a
+    // Tuesday has no dose today to mark. 0=Sun, recipient-zone `today`. Daily / no-days: unaffected.
+    if (!todayOnWeekdaySet(live, today)) return HIDDEN;
     if (!isPastToday(live.scheduled_time)) return HIDDEN;
     return {
       kind: 'rolled',

@@ -1,4 +1,4 @@
-import { addDays } from '@/components/calendar/dateMath';
+import { addDays, getDayOfWeek } from '@/components/calendar/dateMath';
 
 /**
  * What a just-saved NEW medication looks like, handed from the add form to whoever
@@ -40,7 +40,13 @@ export function startRolled(info: SavedMedicationInfo): boolean {
 
 /** "Already given today? Mark it" applies: a root id, a rolled start, a scheduled dose. */
 export function markItEligible(info: SavedMedicationInfo): boolean {
-  return info.eventId !== null && info.doses.length > 0 && startRolled(info);
+  if (info.eventId === null || info.doses.length === 0 || !startRolled(info)) return false;
+  // The server also refuses (409 NOT_FIRST_DAY) when TODAY is not one of a weekly series' chosen
+  // weekdays (Mon/Wed/Fri saved on a Tuesday): no dose today, nothing to mark.
+  if (info.recurrenceRule === 'weekly' && info.recurrenceDays && info.recurrenceDays.length > 0) {
+    return info.recurrenceDays.includes(getDayOfWeek(info.today));
+  }
+  return true;
 }
 
 /** The first dose's date relative to today, for "starts today|tomorrow|<date>". */

@@ -43,9 +43,18 @@ export function useDoseAlerts(circleId: string | undefined): DoseAlertsView {
     retry: false,
   });
   return {
-    state: query.isError ? NOT_PAUSED : (query.data ?? null),
-    settled: !circleId || query.isSuccess || query.isError,
-    isError: query.isError,
+    // Cached data wins over a failed REFETCH (React Query keeps `data` on a refetch error): a real
+    // pause must not vanish because one background read failed. No data + error = not paused.
+    state: query.data ?? (query.isError ? NOT_PAUSED : null),
+    // An OFFLINE first read is paused (fetchStatus 'paused', never success/error): settle as
+    // "not paused" so Today's coaching is not withheld forever (mobile twin).
+    settled:
+      !circleId ||
+      query.isSuccess ||
+      query.isError ||
+      (query.fetchStatus === 'paused' && query.data === undefined),
+    // "Could not load" = a failed read with nothing to show; a failed refetch over cached data is not.
+    isError: query.isError && query.data === undefined,
     refetch: () => void query.refetch(),
   };
 }

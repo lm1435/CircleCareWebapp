@@ -38,6 +38,8 @@ export function useMarkFirstDose(
   mark: (target: MarkFirstDoseTarget) => Promise<boolean>;
   pending: boolean;
   done: boolean;
+  /** The server answered 409 NOT_FIRST_DAY: there is no dose today to mark; the line should go. */
+  refused: boolean;
 } {
   const { t } = useTranslation('meds');
   const { showToast } = useToast();
@@ -45,6 +47,7 @@ export function useMarkFirstDose(
   const guard = useSubmitGuard();
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
+  const [refused, setRefused] = useState(false);
 
   const mark = useCallback(
     async (target: MarkFirstDoseTarget): Promise<boolean> => {
@@ -66,6 +69,11 @@ export function useMarkFirstDose(
         return true;
       } catch (error) {
         Analytics.markItTapped(surface, false);
+        // NOT_FIRST_DAY (e.g. today is not one of the series' weekdays): retrying can never work,
+        // so the caller hides the line after this one generic toast instead of re-offering it.
+        if ((error as { error?: { code?: unknown } } | null)?.error?.code === 'NOT_FIRST_DAY') {
+          setRefused(true);
+        }
         // A permission refusal already toasted (useConfirmMedication); anything else says
         // the generic save error. The line stays either way.
         if (!isPermissionDeniedError(error)) showToast(t('dialog.error'), 'error');
@@ -78,5 +86,5 @@ export function useMarkFirstDose(
     [confirm, done, guard, showToast, surface, t]
   );
 
-  return { mark, pending, done };
+  return { mark, pending, done, refused };
 }

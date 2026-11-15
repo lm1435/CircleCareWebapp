@@ -65,6 +65,24 @@ export function DoseAlertsNotice({
     }
   }, [paused, resumed]);
 
+  // "Alerts are on" lasts for the visit of whichever surface hosts the notice (mobile clears on
+  // blur): leaving Meds must not leave the flag armed, or the role=status line re-announces on every
+  // later Meds visit. DEFERRED and cancelled by a re-run for the same circle, so StrictMode's
+  // mount -> cleanup -> mount does not wipe a flag set just before this page mounted (same pattern
+  // as Today, pages/OverviewPage.tsx).
+  const clearResumed = useDoseAlertsResumedStore((s) => s.clear);
+  const pendingClear = useRef<{ circleId: string; timer: ReturnType<typeof setTimeout> } | null>(null);
+  useEffect(() => {
+    const pending = pendingClear.current;
+    if (pending && pending.circleId === circleId) {
+      clearTimeout(pending.timer);
+      pendingClear.current = null;
+    }
+    return () => {
+      pendingClear.current = { circleId, timer: setTimeout(() => clearResumed(circleId), 0) };
+    };
+  }, [circleId, clearResumed]);
+
   const resume = useGuardedSubmit(async () => {
     setFailed(false);
     // Armed BEFORE the request: the mutation's onSuccess flips the notice to the confirmation

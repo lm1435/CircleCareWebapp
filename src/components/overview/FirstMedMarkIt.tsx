@@ -65,7 +65,7 @@ export function FirstMedMarkIt({
         isPastToday: (time) => isEventPastDue(today, time, timezone),
       })
     : ({ kind: 'hidden' } as const);
-  const offered = state.kind === 'rolled';
+  const offered = state.kind === 'rolled' && !markFirstDose.refused;
 
   useEffect(() => {
     if (offered) Analytics.markItShown('today');
@@ -77,7 +77,7 @@ export function FirstMedMarkIt({
     if (justMarked) takenRowRef.current?.focus({ preventScroll: true });
   }, [justMarked]);
 
-  if (state.kind === 'hidden') return null;
+  if (state.kind === 'hidden' || (state.kind === 'rolled' && markFirstDose.refused)) return null;
 
   const { name, dose, next } = state;
   const time = next

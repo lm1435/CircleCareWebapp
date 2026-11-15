@@ -17,6 +17,7 @@ const markHook = vi.hoisted(() => ({
   mark: vi.fn(),
   pending: false,
   done: false,
+  refused: false,
 }));
 vi.mock('@/hooks/useMarkFirstDose', () => ({ useMarkFirstDose: () => markHook }));
 vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => '12h' }));
@@ -105,6 +106,7 @@ beforeEach(() => {
   window.localStorage.clear();
   markHook.pending = false;
   markHook.done = false;
+  markHook.refused = false;
   markHook.mark.mockResolvedValue(true);
   clock.now = '16:00:00';
   api.getFirstMedRoot.mockReset();
@@ -175,6 +177,48 @@ describe('FirstMedMarkIt', () => {
     // Remembered, so a reload still shows Taken rather than offering the line again.
     expect(readFirstMedNote(CIRCLE_ID, TODAY)?.marked).toBe(true);
   });
+
+  it('N: hides the card on a non-scheduled weekday (Mon/Wed/Fri series on a Tuesday)', async () => {
+    writeFirstMedNote(CIRCLE_ID, NOTE);
+    api.getFirstMedRoot.mockResolvedValue(
+      liveRoot({ recurrence_rule: 'weekly', recurrence_days: [1, 3, 5] }) // 2026-09-01 is a Tuesday
+    );
+    const { container } = renderRow();
+    await settle();
+    expect(container).toBeEmptyDOMElement();
+    expect(analytics.markItShown).not.toHaveBeenCalled();
+  });
+
+  it('P: shows the card when today is one of the series weekdays', async () => {
+    writeFirstMedNote(CIRCLE_ID, NOTE);
+    api.getFirstMedRoot.mockResolvedValue(
+      liveRoot({ recurrence_rule: 'weekly', recurrence_days: [2, 4] })
+    );
+    renderRow();
+    expect(await screen.findByTestId('mark-it-line')).toBeInTheDocument();
+  });
+
+  it('N: hides the line once the server refused it (409 NOT_FIRST_DAY)', async () => {
+    writeFirstMedNote(CIRCLE_ID, NOTE);
+    markHook.refused = true;
+    const { container } = renderRow();
+    await settle();
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('N: a cached root does not survive a failed refetch (the card hides)', async () => {
+    writeFirstMedNote(CIRCLE_ID, NOTE);
+    const { unmount } = renderRow();
+    expect(await screen.findByTestId('mark-it-line')).toBeInTheDocument();
+    unmount();
+    api.getFirstMedRoot.mockRejectedValue({ error: { code: 'INTERNAL_ERROR' } });
+    await queryClient.invalidateQueries({ queryKey: ['calendarEvents', CIRCLE_ID] });
+    renderRow();
+    await settle();
+    await waitFor(() => expect(screen.queryByTestId('mark-it-line')).not.toBeInTheDocument(), {
+      timeout: 4000,
+    });
+  }, 8000);
 
   it('a failed mark leaves the line in place and does not remember anything', async () => {
     const user = userEvent.setup();

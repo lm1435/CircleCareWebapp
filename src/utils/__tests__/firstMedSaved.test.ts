@@ -27,6 +27,20 @@ describe('toWireTime', () => {
   });
 });
 
+describe('markItEligible on a weekly weekday set (2026-09-01 is a Tuesday)', () => {
+  const weekly = { ...base, recurrenceRule: 'weekly', startDate: '2026-09-02' };
+  it('P: offered when today is one of the chosen weekdays', () => {
+    expect(markItEligible({ ...weekly, recurrenceDays: [2, 4] })).toBe(true);
+  });
+  it('N: not offered when today is NOT a chosen weekday (Mon/Wed/Fri saved on a Tuesday)', () => {
+    expect(markItEligible({ ...weekly, recurrenceDays: [1, 3, 5] })).toBe(false);
+  });
+  it('P: daily and an empty/no day set are unaffected', () => {
+    expect(markItEligible({ ...base, recurrenceDays: [1, 3, 5] })).toBe(true);
+    expect(markItEligible({ ...weekly, recurrenceDays: null })).toBe(true);
+  });
+});
+
 describe('startRolled / markItEligible', () => {
   it('is eligible when the first time had passed and the server start is after today', () => {
     expect(startRolled(base)).toBe(true);

@@ -54,6 +54,8 @@ export function useFirstMedRoot(
     staleTime: 60 * 1000,
     retry: 1,
   });
-  if (!eventId || !query.data) return undefined;
+  // A failed (re)fetch hides the card even when an older answer is cached: the card's contract is
+  // "failed to load = hidden" (utils/firstMedLive), and a stale root may offer a dose that is gone.
+  if (!eventId || query.isError || !query.data) return undefined;
   return query.data.root;
 }

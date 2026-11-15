@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useAnswerDoseAlerts, useDoseAlerts } from '@/hooks/useDoseAlerts';
 import { answerDoseAlerts, getDoseAlerts, normalizeDoseAlerts } from '@/api/doseAlerts';
@@ -48,6 +48,46 @@ describe('useDoseAlerts', () => {
     await waitFor(() => expect(result.current.settled).toBe(true));
     expect(result.current.state?.paused).toBe(false);
     expect(result.current.isError).toBe(true);
+  });
+
+  it('P a failed REFETCH keeps the cached pause (a real pause must not vanish)', async () => {
+    const paused = {
+      paused: true,
+      paused_since: '2026-12-01T17:00:00.000Z',
+      answer: null,
+      can_answer: true,
+    };
+    vi.mocked(getDoseAlerts).mockResolvedValueOnce(paused);
+    const { Wrapper, queryClient } = wrapper();
+    const { result } = renderHook(() => useDoseAlerts(CIRCLE), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.state?.paused).toBe(true));
+    vi.mocked(getDoseAlerts).mockRejectedValue({ error: { code: 'INTERNAL_ERROR' } });
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: ['doseAlerts', CIRCLE] });
+    });
+    await waitFor(() => expect(queryClient.getQueryState(['doseAlerts', CIRCLE])?.status).toBe('error'));
+    expect(result.current.state?.paused).toBe(true);
+    // Not a "could not load" page state either: there is data to show.
+    expect(result.current.isError).toBe(false);
+  });
+
+  it('N an offline first read (paused fetch, no data) settles as not paused instead of waiting forever', async () => {
+    vi.mocked(getDoseAlerts).mockResolvedValue({
+      paused: true,
+      paused_since: null,
+      answer: null,
+      can_answer: true,
+    });
+    const { Wrapper } = wrapper();
+    act(() => onlineManager.setOnline(false));
+    try {
+      const { result } = renderHook(() => useDoseAlerts(CIRCLE), { wrapper: Wrapper });
+      await waitFor(() => expect(result.current.settled).toBe(true));
+      expect(result.current.state).toBeNull();
+      expect(getDoseAlerts).not.toHaveBeenCalled();
+    } finally {
+      act(() => onlineManager.setOnline(true));
+    }
   });
 
   it('normalizeDoseAlerts: anything unexpected reads as not paused', () => {

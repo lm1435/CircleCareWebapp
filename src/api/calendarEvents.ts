@@ -624,6 +624,8 @@ export interface FirstMedLiveRoot {
   medication_name: string | null;
   medication_dosage: string | null;
   recurrence_rule: string | null;
+  /** Weekday set of a weekly series, 0=Sun..6=Sat (the server's Mark it checks today is in it). */
+  recurrence_days?: number[] | null;
   discontinued_at: string | null;
   as_needed: boolean;
 }
@@ -649,6 +651,7 @@ export async function getFirstMedRoot(circleId: string, eventId: string): Promis
     medication_name: event.medication_name ?? null,
     medication_dosage: event.medication_dosage ?? null,
     recurrence_rule: event.recurrence_rule ?? null,
+    recurrence_days: event.recurrence_days ?? null,
     discontinued_at: event.discontinued_at ?? null,
     as_needed: event.as_needed === true,
   };

@@ -107,6 +107,8 @@ describe('useMarkFirstDose', () => {
     });
     expect(ok).toBe(false);
     expect(result.current.done).toBe(false);
+    // NOT_FIRST_DAY can never succeed on retry: the caller hides the line.
+    expect(result.current.refused).toBe(true);
     expect(analytics.markItTapped).toHaveBeenCalledWith('payoff', false);
     expect(showToast).toHaveBeenCalledWith("Couldn't save. Please try again.", 'error');
 
@@ -117,6 +119,15 @@ describe('useMarkFirstDose', () => {
     });
     expect(ok).toBe(true);
     expect(result.current.done).toBe(true);
+  });
+
+  it('N: any other failure (a 400 / 500) does NOT mark the line refused', async () => {
+    mockConfirm.mockRejectedValueOnce({ success: false, error: { code: 'INTERNAL_ERROR' } });
+    const { result } = renderHook(() => useMarkFirstDose(CIRCLE_ID, 'today'), { wrapper });
+    await act(async () => {
+      await result.current.mark({ eventId: 'ev-1', time: '08:00:00' });
+    });
+    expect(result.current.refused).toBe(false);
   });
 
   it('an old backend rejecting the unknown key (400) reads as the same generic error', async () => {
