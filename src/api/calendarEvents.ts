@@ -610,6 +610,51 @@ export async function getSeriesRoot(circleId: string, eventId: string): Promise<
 }
 
 /**
+ * The fields of a medication ROOT that Today's first-med card reads
+ * (`utils/firstMedLive`). Narrowed like `getSeriesRoot`: never the signed photo URL.
+ */
+export interface FirstMedLiveRoot {
+  id: string;
+  circle_id: string | null;
+  event_type: string;
+  parent_event_id: string | null;
+  scheduled_date: string;
+  scheduled_time: string | null;
+  title: string;
+  medication_name: string | null;
+  medication_dosage: string | null;
+  recurrence_rule: string | null;
+  discontinued_at: string | null;
+  as_needed: boolean;
+}
+
+/**
+ * GET /circles/:circleId/events/:eventId, NARROWED to `FirstMedLiveRoot`: the medication
+ * Today's first-med card is about, as the server has it NOW. A deleted medication answers 404
+ * (`deleted_at` rows too); the caller turns that into "gone".
+ */
+export async function getFirstMedRoot(circleId: string, eventId: string): Promise<FirstMedLiveRoot> {
+  const response = (await apiClient.get(
+    `/circles/${circleId}/events/${encodeURIComponent(eventId)}`,
+  )) as unknown as SingleEventEnvelope;
+  const event = response.data.event;
+  return {
+    id: event.id,
+    circle_id: event.circle_id ?? null,
+    event_type: event.event_type,
+    parent_event_id: event.parent_event_id ?? null,
+    scheduled_date: String(event.scheduled_date ?? '').slice(0, 10),
+    scheduled_time: event.scheduled_time ?? null,
+    title: event.title ?? '',
+    medication_name: event.medication_name ?? null,
+    medication_dosage: event.medication_dosage ?? null,
+    recurrence_rule: event.recurrence_rule ?? null,
+    discontinued_at: event.discontinued_at ?? null,
+    as_needed: event.as_needed === true,
+  };
+}
+
+/**
  * Fetch the SIGNED medication photo URL for one event, on demand.
  *
  * Two things force this shape:

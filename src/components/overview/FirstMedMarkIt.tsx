@@ -4,18 +4,27 @@ import { Sheet } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { useIsOffline } from '@/hooks/useIsOffline';
 import { useMarkFirstDose } from '@/hooks/useMarkFirstDose';
+import { useFirstMedRoot } from '@/hooks/useFirstMedRoot';
 import { offlineDisabledProps } from '@/lib/offlineWrite';
 import { Analytics } from '@/lib/analytics';
 import { markFirstMedNoteMarked, readFirstMedNote } from '@/lib/firstMedNote';
-import { addDays } from '@/components/calendar/dateMath';
-import { formatEventTimeCompact, zoneReferenceInstant } from '@/utils/timezone';
+import { formatDateForDisplay } from '@/components/calendar/dateMath';
+import { formatEventTimeCompact, isEventPastDue, zoneReferenceInstant } from '@/utils/timezone';
+import { resolveFirstMedCard } from '@/utils/firstMedLive';
 
-// Today's "Tomorrow" row for a FIRST medication whose start rolled, with the
+// Today's next-dose row for a FIRST medication whose start rolled, with the
 // "Already given today? Mark it" line under it (onboarding 1.3.1, spec section 1; boards
 // ObTodayLine / ObTodayMarked). The candidate is the local first-med note the add form wrote
 // (per user + circle + event, expiring at the end of the recipient's day). After a
 // successful tap the line is replaced by the normal Taken state ("Taken by you") and the
 // med's today row. Editors only: a view-only viewer never sees it.
+//
+// LIVE, NOT A SNAPSHOT (prod 1.4.1, 2026-11-14): the note only says WHICH medication and
+// whether Mark it succeeded. The name, dose, time and start date come from the medication as
+// the server has it now (hooks/useFirstMedRoot), and the card shows only while it is still a
+// scheduled, active medication whose start is past today (utils/firstMedLive). Mark it sends
+// the LIVE root and time, never the ones remembered at save. Mobile twin:
+// mobile/src/components/home/FirstMedNoteCard.tsx.
 
 export interface FirstMedMarkItProps {
   circleId: string;
@@ -33,7 +42,7 @@ export function FirstMedMarkIt({
   canEdit,
   stacked,
 }: FirstMedMarkItProps): ReactElement | null {
-  const { t } = useTranslation('overview');
+  const { t, i18n } = useTranslation('overview');
   const hourCycle = useHourCycle();
   const offline = useIsOffline();
   // Bumped after a mark so the note is re-read (marked: true).
@@ -44,10 +53,20 @@ export function FirstMedMarkIt({
   const markFirstDose = useMarkFirstDose(circleId, 'today');
 
   const note = canEdit ? readFirstMedNote(circleId, today) : null;
-  const marked = note?.marked === true || markFirstDose.done;
-  const offered = note !== null && !marked;
-
   const noteEventId = note?.eventId ?? null;
+  const liveRoot = useFirstMedRoot(circleId, noteEventId);
+  const marked = note?.marked === true || markFirstDose.done;
+  const state = note
+    ? resolveFirstMedCard({
+        note: { eventId: note.eventId, marked, startDate: note.startDate },
+        live: liveRoot,
+        circleId,
+        today,
+        isPastToday: (time) => isEventPastDue(today, time, timezone),
+      })
+    : ({ kind: 'hidden' } as const);
+  const offered = state.kind === 'rolled';
+
   useEffect(() => {
     if (offered) Analytics.markItShown('today');
   }, [offered, noteEventId]);
@@ -58,20 +77,29 @@ export function FirstMedMarkIt({
     if (justMarked) takenRowRef.current?.focus({ preventScroll: true });
   }, [justMarked]);
 
-  if (!note) return null;
+  if (state.kind === 'hidden') return null;
 
-  const dose = note.dosage.trim();
-  const time = formatEventTimeCompact(
-    note.time,
-    timezone,
-    hourCycle,
-    zoneReferenceInstant(addDays(today, 1))
-  );
+  const { name, dose, next } = state;
+  const time = next
+    ? formatEventTimeCompact(next.time, timezone, hourCycle, zoneReferenceInstant(next.date))
+    : '';
+  // A later start (weekly, monthly) names its date: "Starts tomorrow" would be false.
+  const when = !next
+    ? ''
+    : next.starts === 'tomorrow'
+      ? t('today.markIt.startsTomorrow')
+      : formatDateForDisplay(
+          next.date,
+          { weekday: 'short', month: 'short', day: 'numeric' },
+          i18n.language
+        );
   const rowClass = stacked ? 'flex flex-col items-stretch gap-1 py-3' : 'flex items-center gap-4 py-3';
   const labelClass = `text-md font-semibold tabular-nums text-ink-2 ${stacked ? '' : 'w-20 flex-none'}`;
 
   const handleMark = async (): Promise<void> => {
-    const ok = await markFirstDose.mark({ eventId: note.eventId, time: note.time });
+    if (state.kind !== 'rolled') return;
+    // The LIVE root and time: an edit since the save must never mark a dose at the old time.
+    const ok = await markFirstDose.mark({ eventId: state.eventId, time: state.next.time });
     if (ok) {
       markFirstMedNoteMarked(circleId, today);
       setTick((n) => n + 1);
@@ -88,7 +116,7 @@ export function FirstMedMarkIt({
         {justMarked ? t('today.markIt.taken') : ''}
       </span>
       <ul className="m-0 list-none p-0">
-        {marked && (
+        {state.kind === 'marked' && (
           <li className="border-t border-line-2 first:border-t-0">
             <div
               ref={takenRowRef}
@@ -98,7 +126,7 @@ export function FirstMedMarkIt({
             >
               <span className={labelClass}>{t('today.markIt.today')}</span>
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className="break-words text-lg font-semibold text-ink xl:text-base">{note.name}</span>
+                <span className="break-words text-lg font-semibold text-ink xl:text-base">{name}</span>
                 <span className="break-words text-sm text-ink-2">
                   {[dose, t('today.markIt.takenByYou')].filter(Boolean).join(' · ')}
                 </span>
@@ -109,36 +137,38 @@ export function FirstMedMarkIt({
             </div>
           </li>
         )}
-        <li className="border-t border-line-2 first:border-t-0">
-          <div className={rowClass}>
-            {/* Time on the left like every other dose row; the day goes under the name as a full
-                phrase. A bare "Mañana" here read as the Morning chip in Spanish (1.4.2). */}
-            <span className={labelClass} data-testid="mark-it-next-label">{time}</span>
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="break-words text-lg font-semibold text-ink xl:text-base">{note.name}</span>
-              <span className="break-words text-sm text-ink-2" data-testid="mark-it-next-sub">
-                {[dose, t('today.markIt.startsTomorrow')].filter(Boolean).join(' · ')}
-              </span>
+        {next && (
+          <li className="border-t border-line-2 first:border-t-0">
+            <div className={rowClass}>
+              {/* Time on the left like every other dose row; the day goes under the name as a full
+                  phrase. A bare "Mañana" here read as the Morning chip in Spanish (1.4.2). */}
+              <span className={labelClass} data-testid="mark-it-next-label">{time}</span>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="break-words text-lg font-semibold text-ink xl:text-base">{name}</span>
+                <span className="break-words text-sm text-ink-2" data-testid="mark-it-next-sub">
+                  {[dose, when].filter(Boolean).join(' · ')}
+                </span>
+              </div>
             </div>
-          </div>
-          {offered && (
-            <p className="m-0 pb-3 text-md text-ink" data-testid="mark-it-line">
-              {t('today.markIt.question')}{' '}
-              <button
-                type="button"
-                // aria-disabled while in flight, not disabled: a disabled button drops
-                // keyboard focus, and on a failed mark the user is left nowhere.
-                aria-disabled={markFirstDose.pending || undefined}
-                {...offlineDisabledProps(offline)}
-                onClick={() => void handleMark()}
-                data-testid="mark-it-button"
-                className="min-h-[44px] cursor-pointer border-0 bg-transparent p-0 text-md font-semibold text-moss-deep underline underline-offset-2 hover:text-moss aria-disabled:cursor-wait"
-              >
-                {t('today.markIt.action')}
-              </button>
-            </p>
-          )}
-        </li>
+            {offered && (
+              <p className="m-0 pb-3 text-md text-ink" data-testid="mark-it-line">
+                {t('today.markIt.question')}{' '}
+                <button
+                  type="button"
+                  // aria-disabled while in flight, not disabled: a disabled button drops
+                  // keyboard focus, and on a failed mark the user is left nowhere.
+                  aria-disabled={markFirstDose.pending || undefined}
+                  {...offlineDisabledProps(offline)}
+                  onClick={() => void handleMark()}
+                  data-testid="mark-it-button"
+                  className="min-h-[44px] cursor-pointer border-0 bg-transparent p-0 text-md font-semibold text-moss-deep underline underline-offset-2 hover:text-moss aria-disabled:cursor-wait"
+                >
+                  {t('today.markIt.action')}
+                </button>
+              </p>
+            )}
+          </li>
+        )}
       </ul>
     </Sheet>
   );
