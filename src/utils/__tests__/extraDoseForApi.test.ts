@@ -2,7 +2,7 @@
  * BC-1: every dose row of one NEW multi-dose medication starts on the SAME circle-zone day (the primary's), at its
  * own circle-clock HH:MM. The extra dose is held as a viewer-frame clock with no day of its own; placing it on the
  * primary's VIEWER day moved a dose whose real instant is on another viewer day one circle day early (and, across a
- * clock change, an hour). The viewer is the process zone (TZ); run under the six zones from the shell.
+ * clock change, an hour). The viewer is the process zone (TZ); run under every sweep zone from the shell.
  */
 import { describe, expect, it } from 'vitest';
 import { eventDatesFromApi, extraDoseForApi } from '@/utils/recipientEventDate';
@@ -11,18 +11,15 @@ import {
   assertTableMatchesRuntime,
   discoverTransitions,
 } from './helpers/dstTransitions';
+import { BC1, ambientZone } from './helpers/zoneTables';
 
-const AMBIENT = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const AMBIENT = ambientZone();
 
-/** [ambient viewer zone(s), circle, primary, extra] on circle day 2026-11-12. */
-const TABLE: Array<{ viewer: string[]; circle: string; primary: string; extra: string }> = [
-  { viewer: ['America/Denver'], circle: 'Asia/Tokyo', primary: '08:00', extra: '21:00' },
-  { viewer: ['UTC', 'Etc/UTC'], circle: 'America/Denver', primary: '08:00', extra: '18:00' },
-  { viewer: ['America/New_York'], circle: 'America/Los_Angeles', primary: '08:00', extra: '21:00' },
-  { viewer: ['Europe/London'], circle: 'America/Denver', primary: '08:00', extra: '18:00' },
-  { viewer: ['Pacific/Auckland'], circle: 'Europe/London', primary: '08:00', extra: '18:00' },
-  { viewer: ['Asia/Kolkata', 'Asia/Calcutta'], circle: 'America/Los_Angeles', primary: '08:00', extra: '21:00' },
-];
+/** [ambient viewer zone, circle, primary, extra] on circle day 2026-11-12: one row per sweep zone (helpers/zoneTables
+ *  BC1, shared with mobile), each one the bug's case (see the "was wrong before" test). */
+const TABLE: Array<{ viewer: string[]; circle: string; primary: string; extra: string }> = Object.entries(BC1).map(
+  ([viewer, r]) => ({ viewer: [viewer], circle: r.circle, primary: '08:00', extra: r.extra })
+);
 
 /** The two rows the form saves: build the inputs the way the form does (chips -> viewer-frame strings). */
 function rows(circle: string, day: string, primary: string, extra: string) {
@@ -41,7 +38,7 @@ function rows(circle: string, day: string, primary: string, extra: string) {
 describe('BC-1 extraDoseForApi', () => {
   it('the ambient zone is in the table', () => {
     if (!TABLE.some((r) => r.viewer.includes(AMBIENT))) {
-      throw new Error(`ambient zone ${AMBIENT} is not in the BC-1 table; run under the six zones`);
+      throw new Error(`ambient zone ${AMBIENT} is not in the BC-1 table (helpers/zoneTables)`);
     }
   });
 

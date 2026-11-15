@@ -5,6 +5,7 @@ import { Analytics } from '@/lib/analytics';
 import { resetLargeTextReports } from '@/lib/largeText';
 import { AddEventModal } from '../AddEventModal';
 import type { CalendarEvent } from '@/api/calendarEvents';
+import { DATE_FRAME_PAIRS, ambientZone } from '@/utils/__tests__/helpers/zoneTables';
 
 // GUARD: EVERY DATE AND TIME THE SIMPLE FORMS SHOW AGREES WITH WHAT THE SAVE SENDS (web twin of mobile's
 // src/__tests__/screens/AddEventDateFrameGuard.test.tsx; the class behind the mobile medication Starts-tile bug).
@@ -12,24 +13,14 @@ import type { CalendarEvent } from '@/api/calendarEvents';
 // Table-driven over the simple MEDICATION, APPOINTMENT and TASK forms, NEW and EDIT, for viewer / circle zone
 // pairs, at instants a minute either side of BOTH zones' midnights on three DST days (US fall back 2026-11-01,
 // US spring forward 2026-03-08, Auckland fall back 2026-04-05). The viewer is the process zone: run
-// `TZ=<zone> npx vitest run <file>` (America/Denver, UTC, America/New_York, Europe/London, Pacific/Auckland,
-// Asia/Kolkata, Pacific/Pago_Pago). After the save, the Starts tile, Repeats until tile, chip / From / To tiles and
-// the zone caption must read what the request body carries, and the body what was picked. Expected values come from
+// `TZ=<zone> npx vitest run <file>` (any zone of the sweep list). After the save, the Starts tile, Repeats until
+// tile, chip / From / To tiles and the zone caption must read what the request body carries, and the body what was picked. Expected values come from
 // the Intl-based oracle below, never the app.
 
-const VIEWER = ((z: string) =>
-  ({ 'Asia/Calcutta': 'Asia/Kolkata', 'Etc/UTC': 'UTC', 'Etc/GMT': 'UTC' } as Record<string, string>)[z] ?? z)(
-  new Intl.DateTimeFormat().resolvedOptions().timeZone
-);
-const PAIRS: Record<string, string[]> = {
-  'America/Denver': ['Asia/Tokyo', 'Pacific/Kiritimati'],
-  'Pacific/Pago_Pago': ['America/Denver'],
-  'Pacific/Auckland': ['Pacific/Honolulu'],
-  'America/New_York': ['Europe/London'],
-  UTC: ['Pacific/Pago_Pago'],
-  'Europe/London': ['America/Denver'],
-  'Asia/Kolkata': ['Pacific/Kiritimati'],
-};
+const VIEWER = ambientZone();
+/** Two circles per viewer, one row per sweep zone (helpers/zoneTables DATE_FRAME_PAIRS, shared with mobile): every
+ *  zone runs the same number of cases. */
+const PAIRS: Record<string, string[]> = DATE_FRAME_PAIRS;
 const DST_DAYS = ['2026-11-01', '2026-03-08', '2026-04-05'];
 
 // ── Oracle (Intl only) ───────────────────────────────────────────────────────

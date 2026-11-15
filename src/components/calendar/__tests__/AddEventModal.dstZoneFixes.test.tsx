@@ -1,15 +1,17 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import { Analytics } from '@/lib/analytics';
 import { resetLargeTextReports } from '@/lib/largeText';
 import { AddEventModal } from '../AddEventModal';
+import { BC1 as SWEEP_BC1, BC8 as SWEEP_BC8, GATE, ambientZone } from '@/utils/__tests__/helpers/zoneTables';
 
 // DST / zone fixes on the web form (FIX-SPEC BC-1, BC-2, BC-3 pin, BC-4, BC-8). The VIEWER is the PROCESS zone (TZ):
 // each test picks its case from the ambient zone and throws when the zone is not in the table, so the file bites
-// under every zone it is run in (`TZ=<zone> npx vitest run <file>`; the six zones of the spec).
+// under every zone it is run in (`TZ=<zone> npx vitest run <file>`; every zone of the sweep list, one row each in
+// utils/__tests__/helpers/zoneTables, shared with mobile).
 
-const AMBIENT = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const AMBIENT = ambientZone();
 const NOW = new Date('2026-11-12T12:00:00Z');
 const CIRCLE_ID = 'circle-1';
 
@@ -90,14 +92,14 @@ async function saveAll(user: User): Promise<Array<Record<string, unknown>>> {
 
 // ── BC-1 ────────────────────────────────────────────────────────────────────────────────────────────────────────
 // ambient viewer zone(s) -> circle, the two chips (circle clock) on circle day 2026-11-12.
-const BC1: Array<{ viewer: string[]; circle: string; first: RegExp; second: RegExp; times: [string, string] }> = [
-  { viewer: ['America/Denver'], circle: 'Asia/Tokyo', first: /Morning$/, second: /Bedtime$/, times: ['08:00', '21:00'] },
-  { viewer: ['UTC', 'Etc/UTC'], circle: 'America/Denver', first: /Morning$/, second: /Evening$/, times: ['08:00', '18:00'] },
-  { viewer: ['America/New_York'], circle: 'America/Los_Angeles', first: /Morning$/, second: /Bedtime$/, times: ['08:00', '21:00'] },
-  { viewer: ['Europe/London'], circle: 'America/Denver', first: /Morning$/, second: /Evening$/, times: ['08:00', '18:00'] },
-  { viewer: ['Pacific/Auckland'], circle: 'Europe/London', first: /Morning$/, second: /Evening$/, times: ['08:00', '18:00'] },
-  { viewer: ['Asia/Kolkata', 'Asia/Calcutta'], circle: 'America/Los_Angeles', first: /Morning$/, second: /Bedtime$/, times: ['08:00', '21:00'] },
-];
+const BC1: Array<{ viewer: string[]; circle: string; first: RegExp; second: RegExp; times: [string, string] }> =
+  Object.entries(SWEEP_BC1).map(([viewer, r]) => ({
+    viewer: [viewer],
+    circle: r.circle,
+    first: /Morning$/,
+    second: r.extra === '18:00' ? /Evening$/ : /Bedtime$/,
+    times: ['08:00', r.extra],
+  }));
 
 describe('BC-1 extra doses start on the primary circle day', () => {
   it('two doses from another zone start on the same circle day', async () => {
@@ -138,17 +140,18 @@ describe('BC-4 caption range, wired in the appointment form', () => {
     ['2026-03-08', '17:00', '19:00'],
     ['2026-11-01', '16:00', '18:00'],
     ['2026-06-10', '17:00', '19:00'],
-  ])('Tokyo circle, %s From %s To %s: the viewer range is the circle end resolved to an instant', async (day, from, to) => {
-    if (AMBIENT === 'Asia/Tokyo') throw new Error('Tokyo ambient: the zones agree, no caption');
+  ])('Tokyo circle (Sydney for a Tokyo viewer), %s From %s To %s: the viewer range is the circle end resolved to an instant', async (day, from, to) => {
+    // A Tokyo viewer of a Tokyo circle sees no caption: that viewer gets a circle on another clock on all three days.
+    const circle = AMBIENT === 'Asia/Tokyo' ? 'Australia/Sydney' : 'Asia/Tokyo';
     vi.setSystemTime(new Date('2026-02-01T12:00:00Z'));
-    useCircleResult.timezone = 'Asia/Tokyo';
+    useCircleResult.timezone = circle;
     render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
     fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: day } });
     await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(screen.getByRole('radio', { name: 'Pick a time' }));
     fireEvent.change(screen.getByLabelText('From', { selector: 'input' }), { target: { value: from } });
     fireEvent.change(screen.getByLabelText('To', { selector: 'input' }), { target: { value: to } });
-    const start = wallIn(AMBIENT, oracleInstant('Asia/Tokyo', day, from));
-    const end = wallIn(AMBIENT, oracleInstant('Asia/Tokyo', day, to));
+    const start = wallIn(AMBIENT, oracleInstant(circle, day, from));
+    const end = wallIn(AMBIENT, oracleInstant(circle, day, to));
     expect(normSpaces(screen.getByTestId('time-zone-caption').textContent)).toContain(
       `${range12(start.time, end.time)} your time`
     );
@@ -157,19 +160,15 @@ describe('BC-4 caption range, wired in the appointment form', () => {
 
 // ── BC-3 (pin): the zone caption / conversion gate is judged at the EVENT instant ────────────────────────────────
 // Web already does this (`showDualTimezone`); the table pins it. Mobile judged it at device midnight.
-const BC3: Array<{ viewer: string[]; circle: string; day: string; deviceTime: string; shown: boolean }> = [
-  { viewer: ['America/Denver'], circle: 'America/Phoenix', day: '2026-03-08', deviceTime: '10:00', shown: true },
-  { viewer: ['America/Denver'], circle: 'America/Phoenix', day: '2026-03-08', deviceTime: '01:00', shown: false },
+type GatePin = { viewer: string[]; circle: string; day: string; deviceTime: string; shown: boolean };
+/** One pair per sweep zone (helpers/zoneTables GATE, shared with mobile), so every zone runs the same tests. */
+const BC3: GatePin[] = Object.entries(GATE).flatMap(([viewer, rows]) =>
+  rows.map((r) => ({ viewer: [viewer], circle: r.circle, day: r.date, deviceTime: r.time, shown: r.shown }))
+);
+/** Denver's second pair, the fall-back side (kept from the six-zone table; runs only under Denver). */
+const DENVER_FALL_BACK: GatePin[] = [
   { viewer: ['America/Denver'], circle: 'America/Regina', day: '2026-11-01', deviceTime: '10:00', shown: true },
   { viewer: ['America/Denver'], circle: 'America/Regina', day: '2026-11-01', deviceTime: '00:30', shown: false },
-  { viewer: ['America/New_York'], circle: 'America/Bogota', day: '2026-11-01', deviceTime: '10:00', shown: false },
-  { viewer: ['America/New_York'], circle: 'America/Bogota', day: '2026-11-01', deviceTime: '00:30', shown: true },
-  { viewer: ['Europe/London'], circle: 'Africa/Abidjan', day: '2026-03-29', deviceTime: '10:00', shown: true },
-  { viewer: ['Europe/London'], circle: 'Africa/Abidjan', day: '2026-03-29', deviceTime: '00:30', shown: false },
-  { viewer: ['Pacific/Auckland'], circle: 'Pacific/Fiji', day: '2026-04-05', deviceTime: '10:00', shown: false },
-  { viewer: ['Pacific/Auckland'], circle: 'Pacific/Fiji', day: '2026-04-05', deviceTime: '00:30', shown: true },
-  { viewer: ['UTC', 'Etc/UTC', 'Asia/Kolkata', 'Asia/Calcutta'], circle: 'America/Denver', day: '2026-03-08', deviceTime: '10:00', shown: true },
-  { viewer: ['UTC', 'Etc/UTC', 'Asia/Kolkata', 'Asia/Calcutta'], circle: 'America/Denver', day: '2026-11-01', deviceTime: '00:30', shown: true },
 ];
 
 describe('BC-3 the zone caption is judged at the event instant', () => {
@@ -177,7 +176,7 @@ describe('BC-3 the zone caption is judged at the event instant', () => {
   it('the ambient zone is in the table', () => {
     if (rows.length === 0) throw new Error(`ambient zone ${AMBIENT} is not in the BC-3 table`);
   });
-  it.each(rows.map((r) => [`${r.circle} ${r.day} device ${r.deviceTime}`, r] as const))('%s', async (_name, row) => {
+  async function expectGate(row: GatePin) {
     vi.setSystemTime(new Date('2026-02-01T12:00:00Z'));
     useCircleResult.timezone = row.circle;
     const [y, m, d] = row.day.split('-').map(Number);
@@ -191,6 +190,16 @@ describe('BC-3 the zone caption is judged at the event instant', () => {
     fireEvent.change(screen.getByLabelText('Other time', { selector: 'input' }), { target: { value: at.time } });
     if (row.shown) expect(screen.getByTestId('time-zone-caption')).toBeInTheDocument();
     else expect(screen.queryByTestId('time-zone-caption')).toBeNull();
+  }
+  it.each([0, 1])('ambient pair, row %i: the caption shows as the table says', async (i) => {
+    await expectGate(rows[i]);
+  });
+  it('Denver viewer, Regina circle, US fall-back day: judged at the event instant', async () => {
+    if (AMBIENT !== 'America/Denver') return;
+    for (const row of DENVER_FALL_BACK) {
+      await expectGate(row);
+      cleanup();
+    }
   });
 });
 
@@ -239,6 +248,10 @@ const BC8: Array<{ viewer: string[]; circle: string; pick: 'Morning' | '20:00'; 
   { viewer: ['Pacific/Auckland'], circle: 'America/Denver', pick: '20:00', time: '20:00', day: '2026-11-12' },
   { viewer: ['Asia/Kolkata', 'Asia/Calcutta'], circle: 'America/Los_Angeles', pick: '20:00', time: '20:00', day: '2026-11-12' },
 ];
+// Every other sweep zone: its BC-8 circle (helpers/zoneTables, shared with mobile), the Morning chip.
+for (const [viewer, circle] of Object.entries(SWEEP_BC8)) {
+  if (!BC8.some((r) => r.viewer.includes(viewer))) BC8.push({ viewer: [viewer], circle, pick: 'Morning', time: '08:00', day: '2026-11-12' });
+}
 
 describe('BC-8 single-time answers are the circle clock', () => {
   it('a time from another zone saves the circle clock and stays selected', async () => {
