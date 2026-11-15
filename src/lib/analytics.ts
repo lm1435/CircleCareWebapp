@@ -1318,13 +1318,6 @@ export const Analytics = {
       starts_next_dose: startsNextDose,
     }),
 
-  /** The user typed into the first meaningful field. Once per entry, never per keystroke. */
-  entryFieldEntered: (circleId: string, entityType: string, source: 'form' | 'wizard' = 'form') =>
-    capture('entry_field_entered', { circle_id: circleId, entity_type: entityType, source }),
-
-  entryScheduleSet: (circleId: string, entityType: string, source: 'form' | 'wizard' = 'form') =>
-    capture('entry_schedule_set', { circle_id: circleId, entity_type: entityType, source }),
-
   /**
    * A save was attempted (fired before validation, so it counts EVERY attempt).
    * `is_editing` separates creates from revisions — the same split mobile uses,
@@ -1557,46 +1550,7 @@ export const Analytics = {
       dose_count: opts.doseCount,
     }),
 
-  /**
-   * The "No medications to track? See what else" toggle on wizard step ①, on
-   * every tap. `open` is the state AFTER the tap. Same name and shape as mobile.
-   */
-  firstRunMoreOptionsToggled: (open: boolean) =>
-    capture('first_run_more_options_toggled', { open }),
-
-  /**
-   * What the user did with the invite prompt after the first medication saved:
-   * 'invite' (primary), 'not_now' (secondary) or 'close' (the X / Escape).
-   */
   onboardingPayoffViewed: () => capture('onboarding_payoff_viewed'),
-
-  /**
-   * The setup invite step (after the first med's payoff, before the onboarding paywall).
-   * Booleans and enums ONLY: no circle_id, no names, no email (CLAUDE.md 4). Mobile parity:
-   * mobile/src/services/analytics.ts, same names and properties.
-   */
-  onboardingInviteStepShown: (props: { freePlan: boolean; selfCare: boolean }) =>
-    capture('onboarding_invite_step_shown', {
-      free_plan: props.freePlan === true,
-      self_care: props.selfCare === true,
-    }),
-
-  onboardingInviteStepSent: (memberType: string) =>
-    capture('onboarding_invite_step_sent', {
-      member_type: pickEnum(memberType, ['caregiver', 'care_recipient'] as const, 'caregiver'),
-    }),
-
-  /**
-   * `via`: 'not_now' (the button), 'close' (the x or Escape), 'form_closed' (the invite form
-   * was opened and left without sending).
-   */
-  onboardingInviteStepSkipped: (via: 'not_now' | 'close' | 'form_closed') =>
-    capture('onboarding_invite_step_skipped', {
-      via: pickEnum(via, ['not_now', 'close', 'form_closed'] as const, 'close'),
-    }),
-
-  firstRunInvitePromptAction: (action: 'invite' | 'not_now' | 'close') =>
-    capture('first_run_invite_prompt_action', { action }),
 
   // --- Onboarding 1.3.1 (web flow: Mark it, suggestion outcome, paywall timing) ---
   // Enums and booleans only: no circle_id, no names, no free text (CLAUDE.md 4).

@@ -91,17 +91,6 @@ describe('Header', () => {
     expect(document.body.querySelector('[aria-controls="mobile-nav"]')).toBeNull();
   });
 
-  it('accepts (and ignores) the deprecated nav props so AppLayout still compiles', () => {
-    render(
-      <MemoryRouter initialEntries={['/circles/c1']}>
-        <Routes>
-          <Route path="/circles/:circleId" element={<Header navOpen onToggleNav={vi.fn()} />} />
-        </Routes>
-      </MemoryRouter>
-    );
-    expect(screen.queryByRole('button', { name: 'Navigation menu' })).not.toBeInTheDocument();
-  });
-
   it('is 60px tall on the cream ground with a hairline rule (spec §5.1)', () => {
     renderHeader();
     const header = document.body.querySelector('header');

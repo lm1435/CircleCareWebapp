@@ -627,8 +627,7 @@ describe('new medication: more than one time (mobile AddEventScreen / first-run 
     expectSibling(third, '18:00'); // Evening 6:00 PM New York
   });
 
-  it('the request sequence equals the first-run wizard / mobile helper for the same answers', async () => {
-    const { buildSiblingDoseRequests } = await import('@/utils/firstRunMedication');
+  it('a two-time medication saves the extra dose on the recipient clock, on the primary day, pointing at its bottle', async () => {
     mutateCreate.mockResolvedValueOnce({ id: 'p' }).mockResolvedValue({ id: 's' });
     const user = userEvent.setup();
     renderMed();
@@ -638,16 +637,9 @@ describe('new medication: more than one time (mobile AddEventScreen / first-run 
     await user.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(2));
     const [primary, sibling] = mutateCreate.mock.calls.map((c) => c[0]);
-    const todayStr = (primary.scheduled_date as string) ?? '';
-    const expected = buildSiblingDoseRequests({
-      primary,
-      additionalTimes: ['10:00'], // the wizard's viewer-frame field: Midday 12:00 New York = 10:00 Denver
-      timezone: RECIPIENT_TZ,
-      // BC-1: the viewer-frame extra is placed on the primary's circle day (the primary: Morning 8:00 New York = 6:00 Denver).
-      viewer: { todayStr, primaryTime: '06:00' },
-      refillGroupId: 'p',
-    })[0];
-    expect(sibling.scheduled_time).toBe(expected.scheduled_time);
+    // Midday is 12:00 on the recipient's (New York) clock, whatever the viewer's zone (BC-1: same circle day).
+    expect(sibling.scheduled_time).toBe('12:00');
+    expect(sibling.scheduled_date).toBe(primary.scheduled_date);
     expect(sibling.refill_group_id).toBe('p');
     expect(sibling.track_refills).toBe(false);
   });

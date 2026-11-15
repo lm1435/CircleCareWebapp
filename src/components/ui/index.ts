@@ -71,10 +71,6 @@ export {
   careCardActionText,
   careCardListGap,
   STATUS_PILL,
-  // Deprecated aliases (removed in Task 24)
-  careCardNameRow,
-  careCardStatusPush,
-  careCardActions,
 } from './careCard';
 
 // ── Wave 1 (mobile-parity) primitives ────────────────────────────────────

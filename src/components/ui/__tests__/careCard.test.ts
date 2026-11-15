@@ -11,10 +11,6 @@ import {
   careCardTitle,
   careCardMeta,
   careCardListGap,
-  // legacy aliases — must still exist so pre-migration callers keep compiling
-  careCardNameRow,
-  careCardStatusPush,
-  careCardActions,
 } from '../careCard';
 
 describe('careCard shell', () => {
@@ -67,13 +63,7 @@ describe('STATUS_PILL', () => {
   });
 });
 
-describe('legacy exports (pre-migration callers)', () => {
-  it('careCardNameRow, careCardStatusPush and careCardActions still exist', () => {
-    expect(typeof careCardNameRow).toBe('string');
-    expect(typeof careCardStatusPush).toBe('string');
-    expect(typeof careCardActions).toBe('string');
-  });
-
+describe('shared row tokens', () => {
   it('careCardTopRow, careCardTitle, careCardMeta, careCardListGap are non-empty strings', () => {
     for (const value of [careCardTopRow, careCardTitle, careCardMeta, careCardListGap]) {
       expect(typeof value).toBe('string');

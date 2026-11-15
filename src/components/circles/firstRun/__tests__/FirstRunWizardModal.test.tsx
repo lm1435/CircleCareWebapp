@@ -137,9 +137,6 @@ const analytics = vi.hoisted(() => ({
   medicationCreationStarted: vi.fn(),
   markItShown: vi.fn(),
   markItTapped: vi.fn(),
-  onboardingInviteStepShown: vi.fn(),
-  onboardingInviteStepSent: vi.fn(),
-  onboardingInviteStepSkipped: vi.fn(),
 }));
 vi.mock('@/lib/analytics', () => ({ Analytics: analytics, default: analytics }));
 
@@ -516,7 +513,6 @@ describe('1.4.2: the payoff ends first run, the invite is NOT part of the flow',
       await user.click(screen.getByRole('button', { name: 'Continue' }));
       expect(screen.queryByTestId('first-run-invite-step')).not.toBeInTheDocument();
       expect(screen.queryByTestId('first-run-invite-send')).not.toBeInTheDocument();
-      expect(analytics.onboardingInviteStepShown).not.toHaveBeenCalled();
       expect(onClose).toHaveBeenCalledTimes(1);
     }
   );
@@ -528,7 +524,6 @@ describe('1.4.2: the payoff ends first run, the invite is NOT part of the flow',
     const { onClose } = renderWizard();
     await saveFirstMed(user);
     expect(screen.queryByTestId('first-run-invite-step')).not.toBeInTheDocument();
-    expect(analytics.onboardingInviteStepShown).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

@@ -357,18 +357,7 @@ export function UserMenu(): ReactElement {
   );
 }
 
-export interface HeaderProps {
-  /**
-   * @deprecated Unused. The hamburger is gone (spec §5.1) — `FloatingNavBar`
-   * replaces the drawer below the sidebar breakpoint. Kept only so `AppLayout`
-   * still type-checks until Task 11 rewrites it; remove both props then.
-   */
-  navOpen?: boolean;
-  /** @deprecated Unused — see `navOpen`. */
-  onToggleNav?: () => void;
-}
-
-export function Header(_props: HeaderProps = {}): ReactElement {
+export function Header(): ReactElement {
   const { circleId } = useParams<{ circleId: string }>();
   // Inside a circle the brand returns to that circle's overview (mirrors mobile's
   // home tab); elsewhere it goes to the circle picker.

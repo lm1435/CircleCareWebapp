@@ -123,34 +123,3 @@ export const STATUS_PILL = {
   skipped: `${careCardStatusPill} bg-line-2 text-ink-2`,
   inactive: `${careCardStatusPill} bg-line-2 text-ink-2`,
 } as const;
-
-// ── Backward-compatible aliases for existing importers ─────────────────────
-// `TodaysMeds.tsx` imports `careCardNameRow`, `careCardStatusPush` and
-// `careCardActions`; `TaskRow.tsx` imports `careCardActions` only.
-// (`VitalsPage.tsx` and `MedicationsPage.tsx` import neither — they only use
-// `careCardSurface`, unaffected by this block.) Neither has migrated to the
-// new inline/stacked action split above (that migration is a later task), so
-// these names stay exported and keep those two files behaving the way they
-// do today.
-//
-// `careCardActions` in particular cannot simply become an alias of
-// `careCardActionsRow`: that class is `hidden` by default and only turns on
-// (`flex`) once its `[container-type:inline-size]` ancestor's content-box
-// narrows below 360px. `TodaysMeds.tsx` DOES render inside such an ancestor
-// (its `<li>` uses `careCardShell`, which carries `[container-type:inline-
-// size]`) but only renders the ONE action slot — never the inline
-// (`careCardActionsInline`) counterpart alongside it — so at every width
-// above 360px both would be invisible and the Skip/Take pair would vanish at
-// normal card widths. `TaskRow.tsx` renders inside `careCardSurface`, which
-// carries no container-type at all, so the same alias would hide its Done
-// button unconditionally. Remove this block once each caller renders BOTH
-// `careCardActionsInline` and `careCardActionsRow` (planned Task 24).
-export const careCardNameRow = careCardTopRow;
-export const careCardStatusPush = 'ml-auto shrink-0';
-/**
- * NOT an alias of `careCardActionsRow` — see the block comment above. This
- * keeps the OLD always-visible layout (never `hidden`) so today's callers
- * keep showing their action pills; only the gap is updated to the new 4px
- * (`gap-1`) figure since that carries no visibility risk.
- */
-export const careCardActions = 'mt-2 flex items-center justify-end gap-1';
