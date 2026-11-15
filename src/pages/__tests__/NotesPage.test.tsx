@@ -15,7 +15,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { submitFormTwice } from '@/test/doubleSubmit';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import '@/i18n';
 import i18n from '@/i18n';
 import { ToastProvider } from '@/components/ui';
@@ -23,6 +23,7 @@ import NotesPage from '../NotesPage';
 import type { CareNote } from '@/api/careNotes';
 import { daysBetween, olderPageRange, olderPagesNeeded } from '@/lib/noteDate';
 import { __resetEmailLinkLandingForTests } from '@/lib/emailLinkLanding';
+import { clearParkedNoteDrafts } from '@/lib/parkedNoteDraft';
 
 function shiftIso(date: string, days: number): string {
   const d = new Date(`${date}T12:00:00Z`);
@@ -41,7 +42,19 @@ const mockDelete = vi.fn();
 
 vi.mock('@/hooks/useCareNotes', () => ({
   useCareNotes: (circleId: string, params: unknown) => mockUseCareNotes(circleId, params),
-  useCreateCareNote: () => ({ mutate: mockCreate, isPending: false }),
+  // The page settles on mutateAsync's promise (BH-024). The adapter hands the legacy
+  // (vars, {onSuccess,onError,onSettled}) mock shape the resolve/reject of that promise.
+  useCreateCareNote: () => ({
+    mutateAsync: (vars: unknown) =>
+      new Promise((resolve, reject) => {
+        mockCreate(vars, {
+          onSuccess: resolve,
+          onError: reject,
+          onSettled: () => {},
+        });
+      }),
+    isPending: false,
+  }),
   useUpdateCareNote: () => ({ mutate: mockUpdate, isPending: false }),
   useDeleteCareNote: () => ({ mutate: mockDelete, isPending: false }),
   useOlderCareNotes: (circleId: string, today: string | undefined, pages: number) =>
@@ -1404,5 +1417,114 @@ describe('NotesPage — Show older notes with the server\'s oldest_note_date', (
     expect(screen.queryByText('Over a year ago')).not.toBeInTheDocument();
     expect(screen.getByTestId('notes-no-older')).toBeInTheDocument();
     expect(mockCareNotesOlderLoaded).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+// BH-024: the post settles AFTER the user left the Notes page. Per-call mutate callbacks are not
+// delivered to an unmounted component, so the failure used to vanish: no toast, draft gone.
+describe('NotesPage — a post that settles after leaving the page (BH-024)', () => {
+  type Opts = { onSuccess?: (v?: unknown) => void; onError?: (e: unknown) => void };
+
+  function renderWithNav() {
+    return render(
+      <ToastProvider>
+        <MemoryRouter initialEntries={[`/circles/${CIRCLE_ID}/notes`]}>
+          <Link to={`/circles/${CIRCLE_ID}/today`}>go-today</Link>
+          <Link to={`/circles/${CIRCLE_ID}/notes`}>go-notes</Link>
+          <Routes>
+            <Route path="/circles/:circleId/notes" element={<NotesPage />} />
+            <Route path="/circles/:circleId/today" element={<div>Today page</div>} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
+    );
+  }
+
+  async function postThenLeave(): Promise<Opts> {
+    const user = userEvent.setup();
+    let opts: Opts = {};
+    mockCreate.mockImplementation((_v, o: Opts) => {
+      opts = o;
+    });
+    renderWithNav();
+    fireEvent.click(screen.getByTestId('note-composer-expand'));
+    await user.type(screen.getByRole('textbox', { name: /^Add a note/ }), 'Skipped dinner');
+    await user.click(screen.getByRole('button', { name: 'Post' }));
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByText('go-today'));
+    expect(screen.getByText('Today page')).toBeInTheDocument();
+    return opts;
+  }
+
+  beforeEach(() => clearParkedNoteDrafts());
+
+  it('positive: a failure after leaving shows an error toast', async () => {
+    const opts = await postThenLeave();
+    await act(async () => {
+      opts.onError?.(new Error('network'));
+    });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(document.body.textContent).toMatch(i18n.t('notes:composer.errorPosting') as string);
+  });
+
+  it('positive: the unsent draft is back in the composer when the user returns', async () => {
+    const user = userEvent.setup();
+    const opts = await postThenLeave();
+    await act(async () => {
+      opts.onError?.(new Error('network'));
+    });
+    await user.click(screen.getByText('go-notes'));
+    expect(screen.getByRole('textbox', { name: /^Add a note/ })).toHaveValue('Skipped dinner');
+  });
+
+  it('positive: a success after leaving still fires care_note_added (once, counts only)', async () => {
+    const opts = await postThenLeave();
+    await act(async () => {
+      opts.onSuccess?.();
+    });
+    expect(mockCareNoteAdded).toHaveBeenCalledTimes(1);
+    expect(mockCareNoteAdded).toHaveBeenCalledWith(CIRCLE_ID, {
+      categoryCount: 0,
+      backdated: false,
+      daysBack: 0,
+    });
+  });
+
+  it('negative: a success after leaving shows no error toast and parks no draft', async () => {
+    const user = userEvent.setup();
+    const opts = await postThenLeave();
+    await act(async () => {
+      opts.onSuccess?.();
+    });
+    expect(document.body.textContent).not.toMatch(i18n.t('notes:composer.errorPosting') as string);
+    await user.click(screen.getByText('go-notes'));
+    expect(screen.queryByDisplayValue('Skipped dinner')).not.toBeInTheDocument();
+  });
+
+  it('negative: a failure after leaving fires no care_note_added', async () => {
+    const opts = await postThenLeave();
+    await act(async () => {
+      opts.onError?.(new Error('network'));
+    });
+    expect(mockCareNoteAdded).not.toHaveBeenCalled();
+  });
+
+  it('negative: a failure while STILL on the page keeps the inline error, not a toast', async () => {
+    const user = userEvent.setup();
+    let opts: Opts = {};
+    mockCreate.mockImplementation((_v, o: Opts) => {
+      opts = o;
+    });
+    renderPage();
+    await user.type(screen.getByRole('textbox', { name: /^Add a note/ }), 'Still here');
+    await user.click(screen.getByRole('button', { name: 'Post' }));
+    await act(async () => {
+      opts.onError?.(new Error('network'));
+    });
+    const form = screen.getByRole('textbox', { name: /^Add a note/ }).closest('form') as HTMLElement;
+    // Exactly one alert, and it lives in the composer (a toast would be a second, outside it).
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(within(form).getByRole('alert')).toBeInTheDocument();
   });
 });

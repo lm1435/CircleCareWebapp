@@ -148,12 +148,17 @@ export function useTaskCompletion(
             scheduledDate ? { scheduled_date: scheduledDate } : undefined
           )
         : null;
-      const sendOrdinary = (): void =>
-        completeMutationRef.current.mutate(vars, {
-          onSuccess: () => {
+      // mutateAsync, never mutate(vars, {callbacks}): the observer is shared, so a second
+      // mutate() replaces the first call's per-call callbacks (BH-009). Failure is already
+      // reported by useCompleteEvent's hook-level onError; the catch only swallows the rethrow.
+      const sendOrdinary = (): void => {
+        completeMutationRef.current.mutateAsync(vars).then(
+          () => {
             if (shiftLinked) Analytics.shiftTaskCompleted({ surface: surfaceRef.current });
           },
-        });
+          () => {}
+        );
+      };
       if (!request) {
         sendOrdinary();
         return;
@@ -255,53 +260,27 @@ export function useTaskCompletion(
 
     const timer = startUndoTimer(() => {
       timersRef.current.delete(eventId);
-      completeMutationRef.current.mutate({ ...target, circleId: sentCircleId, source: 'tasks', occurrence }, {
-        // SUCCESS: hold the pending id until the TASK ROWS THEMSELVES have
-        // refetched, not until the POST settles.
-        //
-        // `useCompleteEvent`'s own `onSuccess` (useCalendarEvents.ts) already
-        // fires `void invalidateEventQueries(...)`, fire-and-forget, because it
-        // is shared with callers (EventDetailActions) that must not be slowed
-        // down by a refetch they never render. That left a gap here: this
-        // hook's OWN onSettled used to clear the pending id the instant the
-        // POST resolved, before that fire-and-forget refetch had landed —
-        // pendingIds lost the row's "Completing…" entry AND the cached task
-        // list was still the pre-completion snapshot, so the row's default
-        // "Done" button flashed back for the length of one refetch (and could
-        // be tapped again). Web's medication confirm hit the identical shape
-        // (see useMedConfirmation.ts's `useConfirmMedication` onSuccess).
-        //
-        // `refetchQueries` rather than a second `invalidateQueries` — the
-        // hook-level onSuccess above already started the tasks refetch (its
-        // `invalidateQueries` call performs the same `refetchQueries` under
-        // the hood). Calling `invalidateQueries` again here would race it:
-        // `Query.fetch` (node_modules/@tanstack/query-core) cancels an
-        // in-flight fetch and restarts it whenever `cancelRefetch` (the
-        // default) is true — a second real request for the same list.
-        // `cancelRefetch: false` takes the other branch instead: no cancel,
-        // and `query.fetch` hands back the SAME in-flight promise, so this is
-        // only ever waiting on the request `onSuccess` already began.
-        // `type: 'active'` matches what `invalidateQueries` itself refetches —
-        // only the list(s) actually mounted (OpenTasksCard's and/or
-        // TasksPage's), never a background one nothing on screen reads.
-        onSuccess: () => {
-          if (shiftLinked) Analytics.shiftTaskCompleted({ surface: surfaceRef.current });
-          const rowsRefetched = queryClient.refetchQueries(
-            { queryKey: queryKeys.tasks(sentCircleId), type: 'active' },
-            { cancelRefetch: false }
-          );
-          // Capped — see withRefetchCap: `networkMode: 'online'` pauses a
-          // refetch started while offline, which would otherwise strand this
-          // row in "Completing…" forever. On timeout the pending id clears
-          // anyway, exactly the behavior that shipped before this wait existed.
-          void withRefetchCap(rowsRefetched).then(() => clearPendingId(eventId));
-        },
-        // ERROR: unchanged — clear the pending id immediately. There is no
-        // fresher row to wait for; the completion never happened, and
-        // `useCompleteEvent`'s own onError already reports it (toast + refetch
-        // of the current state).
-        onError: () => clearPendingId(eventId),
-      });
+      // SUCCESS: hold the pending id until the TASK ROWS THEMSELVES have refetched, not until
+      // the POST settles (useCompleteEvent's onSuccess invalidates fire-and-forget, so clearing
+      // on POST would flash the Done button over stale rows). `cancelRefetch: false` joins the
+      // in-flight refetch instead of restarting it; `type: 'active'` = only mounted lists.
+      // mutateAsync + per-call settle (BH-009): see flushPending. Per-call mutate callbacks are
+      // dropped when a second completion starts on the shared observer.
+      completeMutationRef.current
+        .mutateAsync({ ...target, circleId: sentCircleId, source: 'tasks', occurrence })
+        .then(
+          () => {
+            if (shiftLinked) Analytics.shiftTaskCompleted({ surface: surfaceRef.current });
+            const rowsRefetched = queryClient.refetchQueries(
+              { queryKey: queryKeys.tasks(sentCircleId), type: 'active' },
+              { cancelRefetch: false }
+            );
+            // Capped (withRefetchCap): an offline-paused refetch must not strand the row.
+            void withRefetchCap(rowsRefetched).then(() => clearPendingId(eventId));
+          },
+          // ERROR: clear at once; useCompleteEvent's onError already reported it.
+          () => clearPendingId(eventId)
+        );
     }, UNDO_DELAY_MS);
 
     timersRef.current.set(eventId, { timer, circleId: sentCircleId, target, occurrence, shiftLinked });

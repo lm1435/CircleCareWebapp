@@ -47,6 +47,7 @@ import { useCircle } from '@/hooks/useCircle';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { useAuthStore } from '@/store/authStore';
 import { Analytics } from '@/lib/analytics';
+import { parkNoteDraft, takeParkedNoteDraft } from '@/lib/parkedNoteDraft';
 import type { CareNote, CareNoteInput } from '@/api/careNotes';
 import { blockOfflineWrite } from '@/lib/offlineWrite';
 
@@ -209,6 +210,17 @@ export default function NotesPage(): ReactElement {
   // post settles; the forced-sign-out snapshot falls back to it.
   const inFlightDraftRef = useRef<NoteDraft | null>(null);
   const draftRef = useRef(draft);
+  // False once the page is gone; a post that settles after that cannot touch composer state.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    // A note that failed to post after the user left comes back, once, on return (BH-024).
+    const parked = circleId ? takeParkedNoteDraft(circleId) : null;
+    if (parked) setDraft(parked);
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [circleId]);
   draftRef.current = draft;
   useSessionDraft<NoteDraft>(
     circleId ? `notes:create:${circleId}` : null,
@@ -365,7 +377,7 @@ export default function NotesPage(): ReactElement {
   }
 
   // ── Composer (create) ──────────────────────────────────────────────────────
-  function handlePost(): void {
+  async function handlePost(): Promise<void> {
     const submitted = draft;
     const input = draftToInput(submitted, today);
     const sentDate = input.note_date ?? null;
@@ -390,40 +402,46 @@ export default function NotesPage(): ReactElement {
     // Optimistic: the hook prepends the note; clear the composer now.
     setDraft(EMPTY_NOTE_DRAFT);
     setComposerOpen(false);
-    createMutation.mutate(
-      { circleId, input },
-      {
-        onSuccess: () => {
-          inFlightDraftRef.current = null;
-          // WB8: mood dropped from the payload — "ids only, never content" for
-          // this event family (careNotesViewed docstring), and mood is
-          // user-authored health content, not an id/count/enum-of-fixed-shape.
-          Analytics.careNoteAdded(circleId, {
-            categoryCount: submitted.categories.length,
-            backdated: sentDate !== null,
-            daysBack: sentDate && today ? daysBetween(sentDate, today) : 0,
-          });
-          // Filed under another day: widen to it and bring it into view.
-          if (sentDate) {
-            scrolledForDateRef.current = false;
-            setPendingDate(sentDate);
-          }
-        },
-        onError: () => {
-          inFlightDraftRef.current = null;
-          // INLINE in the composer, not a toast — see NoteComposer's `error`.
-          setPostError(t('notes:composer.errorPosting'));
-          // Preserve the input: restore the submitted draft unless the user
-          // has already started composing a new note.
-          setDraft((current) =>
-            current.body === '' && current.mood === null && current.categories.length === 0
-              ? submitted
-              : current
-          );
-        },
-        onSettled: postGuard.release,
+    // mutateAsync, settled on the promise, NOT mutate(vars, {callbacks}): per-call mutate
+    // callbacks are only delivered while this component is still mounted, so leaving the page
+    // mid-post dropped both the failure surface and the analytics event (BH-024). The promise
+    // settles regardless; only the local UI updates are gated on `mountedRef`.
+    try {
+      await createMutation.mutateAsync({ circleId, input });
+      inFlightDraftRef.current = null;
+      // WB8: mood dropped from the payload — "ids only, never content" for
+      // this event family (careNotesViewed docstring), and mood is
+      // user-authored health content, not an id/count/enum-of-fixed-shape.
+      Analytics.careNoteAdded(circleId, {
+        categoryCount: submitted.categories.length,
+        backdated: sentDate !== null,
+        daysBack: sentDate && today ? daysBetween(sentDate, today) : 0,
+      });
+      // Filed under another day: widen to it and bring it into view.
+      if (sentDate && mountedRef.current) {
+        scrolledForDateRef.current = false;
+        setPendingDate(sentDate);
       }
-    );
+    } catch {
+      inFlightDraftRef.current = null;
+      if (!mountedRef.current) {
+        // The composer is gone: say so in a toast and park the draft for the next visit.
+        showToast(t('notes:composer.errorPosting'), 'error');
+        parkNoteDraft(circleId, submitted);
+      } else {
+        // INLINE in the composer, not a toast — see NoteComposer's `error`.
+        setPostError(t('notes:composer.errorPosting'));
+        // Preserve the input: restore the submitted draft unless the user
+        // has already started composing a new note.
+        setDraft((current) =>
+          current.body === '' && current.mood === null && current.categories.length === 0
+            ? submitted
+            : current
+        );
+      }
+    } finally {
+      postGuard.release();
+    }
   }
 
   // ── Inline edit (own notes) ────────────────────────────────────────────────

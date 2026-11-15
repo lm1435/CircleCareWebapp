@@ -18,7 +18,7 @@ import type { CircleMember } from '@/api/circleMembers';
 const mockUseTasks = vi.fn();
 const mockMutate = vi.fn();
 const mockUseCompleteEvent = vi.fn((_circleId: string) => ({
-  mutate: mockMutate,
+  mutateAsync: mockMutate,
   isPending: false,
 }));
 const mockUseCircle = vi.fn();
@@ -224,6 +224,7 @@ function renderCard(limit = 3) {
 beforeEach(() => {
   mockUseTasks.mockReset();
   mockMutate.mockReset();
+  mockMutate.mockResolvedValue({});
   mockUseCompleteEvent.mockClear();
   mockUseCircle.mockReset();
   homeEmptyCtaTapped.mockReset();

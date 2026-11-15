@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -24,9 +24,9 @@ vi.mock('@/store/authStore', () => ({
     selector({ user: { id: 'user-1', email: 'a@b.com' } }),
 }));
 
-import { getWebOffering, purchasePackage } from '@/lib/purchases';
+import { getWebOffering, purchasePackage, getManagementUrl } from '@/lib/purchases';
 import { refreshSubscriptionStatus } from '@/api/users';
-import { useWebPlans, usePurchasePlan } from '@/hooks/useWebBilling';
+import { useWebPlans, usePurchasePlan, useManageSubscription } from '@/hooks/useWebBilling';
 
 const mockedGetOffering = getWebOffering as unknown as ReturnType<typeof vi.fn>;
 const mockedPurchase = purchasePackage as unknown as ReturnType<typeof vi.fn>;
@@ -112,5 +112,67 @@ describe('usePurchasePlan', () => {
     ).resolves.toBeNull();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['subscription-status'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['circles'] });
+  });
+});
+
+// BH-025: window.open returns null whenever 'noopener'/'noreferrer' is in the features
+// string (HTML spec), even when the tab opened. The old code read that null as "popup
+// blocked" and ALSO navigated the app tab. The stub below follows the spec.
+describe('useManageSubscription (BH-025)', () => {
+  const URL_ = 'https://billing.example.com/portal';
+  const assign = vi.fn();
+  let openSpy: ReturnType<typeof vi.fn>;
+  const realLocation = window.location;
+  const tab: { opener: unknown } = { opener: 'sentinel' };
+
+  async function run() {
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    const { result } = renderHook(() => useManageSubscription(), { wrapper: wrapper(client) });
+    await act(async () => {
+      await result.current.mutateAsync();
+    });
+  }
+
+  beforeEach(() => {
+    assign.mockReset();
+    tab.opener = 'sentinel';
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...realLocation, assign },
+    });
+    openSpy = vi.fn((_u: string, _t?: string, features?: string) =>
+      features && /noopener|noreferrer/.test(features) ? null : tab
+    );
+    vi.stubGlobal('open', openSpy);
+    (getManagementUrl as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(URL_);
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, 'location', { configurable: true, value: realLocation });
+    vi.unstubAllGlobals();
+  });
+
+  it('positive: opens the billing page in a new tab and severs the opener', async () => {
+    await run();
+    expect(openSpy).toHaveBeenCalledWith(URL_, '_blank');
+    expect(tab.opener).toBeNull();
+  });
+
+  it('negative: does NOT navigate the current tab when the new tab opened', async () => {
+    await run();
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it('positive: falls back to same-tab navigation when the popup is blocked', async () => {
+    openSpy.mockImplementation(() => null);
+    await run();
+    expect(assign).toHaveBeenCalledWith(URL_);
+  });
+
+  it('negative: no open and no navigation when there is no management URL', async () => {
+    (getManagementUrl as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    await run();
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(assign).not.toHaveBeenCalled();
   });
 });

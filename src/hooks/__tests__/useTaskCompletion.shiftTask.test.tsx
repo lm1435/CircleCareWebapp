@@ -8,7 +8,7 @@ import type { CalendarEvent } from '@/api/calendarEvents';
 // shift is measured (`shift_task_completed`, surface only); a plain task never is.
 
 const mutate = vi.hoisted(() => vi.fn());
-vi.mock('@/hooks/useCalendarEvents', () => ({ useCompleteEvent: () => ({ mutate }) }));
+vi.mock('@/hooks/useCalendarEvents', () => ({ useCompleteEvent: () => ({ mutateAsync: mutate }) }));
 vi.mock('@/lib/analytics', () => ({
   Analytics: { shiftTaskCompleted: vi.fn(), taskUndone: vi.fn() },
 }));
@@ -51,7 +51,7 @@ function setup(surface?: Parameters<typeof useTaskCompletion>[1]) {
 beforeEach(() => {
   vi.useFakeTimers();
   mutate.mockReset();
-  mutate.mockImplementation((_vars, opts) => opts?.onSuccess?.());
+  mutate.mockImplementation(() => Promise.resolve({}));
   vi.mocked(Analytics.shiftTaskCompleted).mockClear();
 });
 afterEach(() => vi.useRealTimers());
@@ -74,8 +74,7 @@ describe('useTaskCompletion: shift tasks', () => {
           parent_event_id: 'task-root',
           scheduled_date: '2026-11-10',
         }),
-      },
-      expect.anything()
+      }
     );
     mutate.mockClear();
     act(() => result.current.handleComplete(task({ id: 'physical-1', shift: link })));
@@ -87,13 +86,12 @@ describe('useTaskCompletion: shift tasks', () => {
         circleId: 'c',
         source: 'tasks',
         occurrence: expect.objectContaining({ id: 'physical-1' }),
-      },
-      expect.anything()
+      }
     );
     expect(mutate.mock.calls[0][0]).not.toHaveProperty('scheduledDate');
   });
 
-  it('fires shift_task_completed with the surface once the completion lands (never before, never on undo)', () => {
+  it('fires shift_task_completed with the surface once the completion lands (never before, never on undo)', async () => {
     const { result } = setup('today');
     act(() => result.current.handleComplete(task({ id: 'a', shift: link })));
     expect(Analytics.shiftTaskCompleted).not.toHaveBeenCalled();
@@ -103,8 +101,8 @@ describe('useTaskCompletion: shift tasks', () => {
     });
     expect(Analytics.shiftTaskCompleted).not.toHaveBeenCalled();
     act(() => result.current.handleComplete(task({ id: 'b', shift: link })));
-    act(() => {
-      vi.advanceTimersByTime(UNDO_DELAY_MS + 10);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(UNDO_DELAY_MS + 10);
     });
     expect(Analytics.shiftTaskCompleted).toHaveBeenCalledTimes(1);
     expect(Analytics.shiftTaskCompleted).toHaveBeenCalledWith({ surface: 'today' });

@@ -27,7 +27,7 @@ import type { CircleMember } from '@/api/circleMembers';
 const mockUseTasks = vi.fn();
 const mockMutate = vi.fn();
 const mockUseCompleteEvent = vi.fn((_circleId: string) => ({
-  mutate: mockMutate,
+  mutateAsync: mockMutate,
   isPending: false,
 }));
 const mockUseMedicationStatus = vi.fn((_circleId: string) => ({
@@ -222,6 +222,7 @@ const action = (name: string | RegExp): HTMLElement =>
 beforeEach(() => {
   mockUseTasks.mockReset();
   mockMutate.mockReset();
+  mockMutate.mockResolvedValue({});
   mockUseCompleteEvent.mockClear();
   mockUseMedicationStatus.mockClear();
   mockUseCircle.mockReset();

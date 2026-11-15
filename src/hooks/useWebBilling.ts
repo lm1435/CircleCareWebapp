@@ -128,8 +128,21 @@ export function useManageSubscription(): UseMutationResult<string | null, Error,
         // then returns null and, before this check existed, the button
         // silently did nothing — a cancellation dead-end. Fall back to
         // same-tab navigation, which popup blockers never intercept.
-        const win = window.open(url, '_blank', 'noopener,noreferrer');
-        if (!win) window.location.assign(url);
+        //
+        // NO 'noopener'/'noreferrer' feature string: per the HTML spec it makes
+        // window.open return null even when the tab opened, so the fallback below
+        // ran every time and the app tab navigated away too (BH-025). Sever the
+        // opener by hand instead, which keeps the same isolation.
+        const win = window.open(url, '_blank');
+        if (win) {
+          try {
+            win.opener = null;
+          } catch {
+            // cross-origin tab already detached
+          }
+        } else {
+          window.location.assign(url);
+        }
       }
       return url;
     },
