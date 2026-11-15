@@ -74,9 +74,12 @@ describe('FirstMedMarkIt', () => {
     writeFirstMedNote(CIRCLE_ID, NOTE);
     renderRow();
     const card = screen.getByTestId('first-med-mark-it');
-    expect(within(card).getByText('Tomorrow')).toBeInTheDocument();
+    // 1.4.2: time on the left like every other dose row, the day as a phrase under the name.
+    expect(screen.getByTestId('mark-it-next-label')).toHaveTextContent(/^8:00\sAM$/);
     expect(within(card).getByText('Lisinopril')).toBeInTheDocument();
-    expect(within(card).getByText('10mg · 8:00 AM')).toBeInTheDocument();
+    expect(screen.getByTestId('mark-it-next-sub')).toHaveTextContent('10mg · Starts tomorrow');
+    // NEGATIVE: no bare day word in the left column (a bare "Mañana" read as the Morning chip in Spanish).
+    expect(within(card).queryByText('Tomorrow')).toBeNull();
     expect(screen.getByTestId('mark-it-line')).toHaveTextContent('Already given today? Mark it');
     expect(analytics.markItShown).toHaveBeenCalledTimes(1);
     expect(analytics.markItShown).toHaveBeenCalledWith('today');
@@ -113,7 +116,7 @@ describe('FirstMedMarkIt', () => {
     expect(screen.getByTestId('mark-it-announcer')).toHaveTextContent('Taken');
     expect(screen.getByTestId('mark-it-taken-row')).toHaveFocus();
     // ...and the Tomorrow row stays.
-    expect(within(card).getByText('Tomorrow')).toBeInTheDocument();
+    expect(screen.getByTestId('mark-it-next-sub')).toHaveTextContent('Starts tomorrow');
     // Remembered, so a reload still shows Taken rather than offering the line again.
     expect(readFirstMedNote(CIRCLE_ID, TODAY)?.marked).toBe(true);
   });

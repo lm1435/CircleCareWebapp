@@ -129,7 +129,7 @@
       "gotIt": "Got it"
     },
     "markIt": {
-      "tomorrow": "Tomorrow",
+      "startsTomorrow": "Starts tomorrow",
       "today": "Today",
       "question": "Already given today?",
       "action": "Mark it",

@@ -111,11 +111,13 @@ export function FirstMedMarkIt({
         )}
         <li className="border-t border-line-2 first:border-t-0">
           <div className={rowClass}>
-            <span className={labelClass}>{t('today.markIt.tomorrow')}</span>
+            {/* Time on the left like every other dose row; the day goes under the name as a full
+                phrase. A bare "Mañana" here read as the Morning chip in Spanish (1.4.2). */}
+            <span className={labelClass} data-testid="mark-it-next-label">{time}</span>
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="break-words text-lg font-semibold text-ink xl:text-base">{note.name}</span>
-              <span className="break-words text-sm text-ink-2">
-                {[dose, time].filter(Boolean).join(' · ')}
+              <span className="break-words text-sm text-ink-2" data-testid="mark-it-next-sub">
+                {[dose, t('today.markIt.startsTomorrow')].filter(Boolean).join(' · ')}
               </span>
             </div>
           </div>

@@ -132,7 +132,7 @@
       "gotIt": "Entendi"
     },
     "markIt": {
-      "tomorrow": "Amanhã",
+      "startsTomorrow": "Começa amanhã",
       "today": "Hoje",
       "question": "Já foi dado hoje?",
       "action": "Marcar",
