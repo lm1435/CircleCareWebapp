@@ -1,9 +1,4 @@
 {
-  "adherence": {
-    "eyebrow": "Past 7 days",
-    "label": "Medications on schedule",
-    "chartSummary": "Daily adherence for the past 7 days: {{values}}"
-  },
   "quickAccess": {
     "title": "Quick access",
     "notes": "Notes",
@@ -32,40 +27,6 @@
     "today": "Today",
     "tomorrow": "Tomorrow",
     "viewAll": "View all"
-  },
-  "tasks": {
-    "title": "Open tasks",
-    "empty": "You're all caught up — no open tasks.",
-    "emptyFirstRun": "Coordinate the to-dos that keep care on track — errands, refills, follow-ups — and share them with everyone helping.",
-    "addFirst": "Add your first task",
-    "loadError": "Couldn't load open tasks",
-    "showAll": "Show all {{count}}",
-    "viewAll": "View all tasks"
-  },
-  "team": {
-    "title": "Care team",
-    "myTitle": "My care team",
-    "count_one": "{{count}} member",
-    "count_other": "{{count}} members",
-    "invite": "Invite member",
-    "careRecipient": "Care recipient",
-    "circleAdmin": "Circle owner",
-    "familyMember": "Member",
-    "you": "(You)",
-    "recipientBadge": "Care recipient",
-    "medManagerBadge": "Med reminders"
-  },
-  "solo": {
-    "title": "Care is easier together",
-    "body": "Invite a family member or caregiver to help coordinate {{name}}'s care: share tasks, appointments, and updates so no one carries it alone.",
-    "bodySelfCare": "Invite a family member or caregiver to help: share tasks, appointments, and updates so you don't carry it alone.",
-    "cta": "Invite your first caregiver"
-  },
-  "settings": {
-    "title": "Manage",
-    "editCircle": "Edit circle",
-    "members": "Members",
-    "deleteCircle": "Delete circle"
   },
   "today": {
     "title": "Today for {{name}}",

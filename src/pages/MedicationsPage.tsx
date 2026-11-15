@@ -896,7 +896,7 @@ export default function MedicationsPage(): ReactElement {
   // `[start_date, end_date]` pair and that pair IS the query key, so a
   // 'America/New_York' placeholder would fetch a 30-day window anchored on the
   // wrong day and then fetch a SECOND one under a different key the moment the
-  // real zone landed — the same double-read that `GettingStartedChecklist` was
+  // real zone landed — the same double-read that the retired Getting Started checklist was
   // fixed for. `useCircle` reports null until the circle detail resolves.
   const historyWindow = timezone ? historyParams(timezone) : undefined;
   const historyQuery = useMedicationConfirmations(circleId, historyWindow, {

@@ -13,7 +13,6 @@ const ALLOW_TITLE_STEPS = [
   'components/ui/Text.tsx',
   'components/auth/AuthShell.tsx', // signed-out photo wordmark
   'components/auth/OtpInput.tsx', // code digits
-  'components/overview/AdherenceCard.tsx', // numeral
   'pages/VitalsPage.tsx', // numeral
 ];
 const RETIRED_VARIANTS = /\b(?:editorialTitle|editorialTitleCompact|heroName|authTitle)\b|variant="(?:display|h1)"/;

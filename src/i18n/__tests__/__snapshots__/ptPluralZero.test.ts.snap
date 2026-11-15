@@ -342,11 +342,6 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "1 em aberto",
     "2 em aberto",
   ],
-  "pt overview:team.count": [
-    "Membros: 0",
-    "Membros: 1",
-    "2 membros",
-  ],
   "pt overview:today.nextUp.allOfToday": [
     "Tudo de hoje · itens: 0",
     "Tudo de hoje · itens: 1",
@@ -816,11 +811,6 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "0 em aberto",
     "1 em aberto",
     "2 em aberto",
-  ],
-  "pt-PT overview:team.count": [
-    "Membros: 0",
-    "Membros: 1",
-    "2 membros",
   ],
   "pt-PT overview:today.nextUp.allOfToday": [
     "Tudo de hoje · itens: 0",

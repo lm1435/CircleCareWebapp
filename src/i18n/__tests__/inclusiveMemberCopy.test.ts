@@ -86,12 +86,7 @@ describe('member and role descriptions never assume relatives', () => {
     pt: { caregiver: 'Pessoa cuidadora', member: 'Membro' },
   };
   it.each(Object.keys(ROLE_NAMES))('%s: role names are "Caregiver" / "Member", never family-only', (code) => {
-    expect(get(load(code, 'overview'), 'team.familyMember')).toBe(ROLE_NAMES[code].member);
     expect(get(load(code, 'members'), 'roles.caregiver')).toBe(ROLE_NAMES[code].caregiver);
-  });
-
-  it.each(['fr-CA', 'pt-PT'])('%s: does not re-override the care-team role line', (code) => {
-    expect(get(load(code, 'overview'), 'team.familyMember')).toBeUndefined();
   });
 
   const OLD_ROLE_NAMES = /^(Family caregiver|Family member|Cuidador familiar|Familiar|Aidant familial|Proche|Membre de la famille|Pflegeperson aus der Familie|Familienmitglied|Caregiver familiare|Familiare)$/;

@@ -54,7 +54,7 @@ import { blockOfflineWrite, offlineDisabledProps } from '@/lib/offlineWrite';
 // `aria-describedby` pointing at the meta row's id, so a keyboard/screen-
 // reader user tabbing to the button still hears the assignee/due-date/overdue
 // text as its DESCRIPTION — additive, so it never changes the accessible
-// NAME (OpenTasksCard's pinned aria-label stays byte-identical).
+// NAME (the pinned aria-label stays byte-identical).
 
 function memberDisplayName(member: CircleMember): string {
   const name = [member.first_name, member.last_name].filter(Boolean).join(' ');
@@ -204,7 +204,7 @@ export function TaskRow({
   // below, so a Tab/screen-reader user hears the assignee/due-date/overdue
   // text as the button's DESCRIPTION without it becoming part of the
   // accessible NAME (aria-describedby is additive; it never touches the name
-  // computation). This is what keeps OpenTasksCard's pinned aria-label
+  // computation). This is what keeps the pinned aria-label
   // constant identical while still surfacing this content to keyboard users.
   const metaRowId = `task-meta-${task.id}`;
 

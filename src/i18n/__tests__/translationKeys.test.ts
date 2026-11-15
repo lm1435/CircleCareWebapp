@@ -578,6 +578,9 @@ describe('W5: no unreferenced en keys', () => {
    * going dead that is NOT already here does — that's the guard.
    */
   const DEAD_KEY_ALLOWLIST = [
+    // 2026-11-15 cleanup: the retired CareTeam card was its last reader. Kept because mobile's
+    // esLeaveRemoveWording.test.ts reads it to pin the shared Spanish "Eliminar" verb.
+    'members:manage.removeMemberLabel',
     // Build 2 (2026-11-07): the Day hero summary moved to the page header (`shifts:pageSummary.*`).
     // The old key stays: mobile's copy and shiftsCopy.test.ts still pin it for parity.
     'shifts:summary_one',

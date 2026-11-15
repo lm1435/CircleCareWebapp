@@ -2,7 +2,7 @@ import { scopedKey } from '@/lib/storageScope';
 
 // Persistence for Today's coaching elements (docs/plans/simple-ui-1-3-1.md,
 // "Coaching"). Same mechanism the web already uses for similar UI state
-// (HelpHomeCard, GettingStartedChecklist): localStorage, namespaced by the
+// (the retired Home help card and Getting Started checklist): localStorage, namespaced by the
 // signed-in user through `scopedKey`, every read and write inside try/catch
 // (storage throws in private mode / when blocked; the card then lasts for the
 // page view only). Non-sensitive UI preference, never a secret.

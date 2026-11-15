@@ -16,7 +16,7 @@ const WEB_ONLY_ICONS: Partial<Record<(typeof ICON_NAMES)[number], string>> = {
   // The Emergency Info "Print" action became "Share" (docs/plans/pdf-export-parity.md,
   // B3) — `share-outline` has mobile precedent.
   'settings-outline':
-    'Circle settings entry in the web Sidebar / Header switcher / SettingsRows; mobile has no nav item for it (reached from the circle screen), and its last gear (medication "Manage" group) left in mobile e06dee30',
+    'Circle settings entry in the web Sidebar / Header switcher; mobile has no nav item for it (reached from the circle screen), and its last gear (medication "Manage" group) left in mobile e06dee30',
 };
 
 function walkMobileSrc(dir: string, out: string[] = []): string[] {
@@ -40,7 +40,6 @@ const SVG_ALLOWLIST = [
   'components/auth/OAuthButtons.tsx',
   'components/meds/AdherenceRing.tsx',
   'components/vitals/VitalsChart.tsx',
-  'components/overview/AdherenceCard.tsx',
 ];
 
 function walk(dir: string, out: string[] = []): string[] {

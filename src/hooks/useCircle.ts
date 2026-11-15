@@ -50,7 +50,7 @@ export interface UseCircleResult {
    * consumer that computed a DATE from it before the detail query resolved got
    * a New-York-anchored answer, then a DIFFERENT answer once the real zone
    * arrived — two renders, two different "today"s, and two of whatever request
-   * that date keyed. `GettingStartedChecklist` fired its 211-day presence read
+   * that date keyed. The retired Getting Started checklist fired its 211-day presence read
    * twice (two windows one day apart whenever New York and the recipient's zone
    * straddle midnight); the e2e spec
    * `e2e/unhappy/writes/home-events-requests.spec.ts` ("exactly one presence

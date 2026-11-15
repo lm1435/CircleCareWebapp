@@ -1,9 +1,4 @@
 {
-  "adherence": {
-    "eyebrow": "Últimos 7 días",
-    "label": "Medicamentos al día",
-    "chartSummary": "Cumplimiento diario de los últimos 7 días: {{values}}"
-  },
   "quickAccess": {
     "title": "Acceso rápido",
     "notes": "Notas",
@@ -32,40 +27,6 @@
     "today": "Hoy",
     "tomorrow": "Mañana",
     "viewAll": "Ver todo"
-  },
-  "tasks": {
-    "title": "Tareas pendientes",
-    "empty": "Están al día: no hay tareas pendientes.",
-    "emptyFirstRun": "Coordina los pendientes que mantienen el cuidado en marcha —mandados, resurtidos y seguimientos— y compártelos con quienes ayudan.",
-    "addFirst": "Agrega tu primera tarea",
-    "loadError": "No se pudieron cargar las tareas pendientes",
-    "showAll": "Ver las {{count}}",
-    "viewAll": "Ver todas las tareas"
-  },
-  "team": {
-    "title": "Equipo de cuidado",
-    "myTitle": "Mi equipo de cuidado",
-    "count_one": "{{count}} miembro",
-    "count_other": "{{count}} miembros",
-    "invite": "Invitar miembro",
-    "careRecipient": "Persona cuidada",
-    "circleAdmin": "Titular del círculo",
-    "familyMember": "Miembro",
-    "you": "(Tú)",
-    "recipientBadge": "Persona cuidada",
-    "medManagerBadge": "Recordatorios"
-  },
-  "solo": {
-    "title": "Cuidar es más fácil en equipo",
-    "body": "Invita a un familiar o cuidador a ayudar a coordinar el cuidado de {{name}}: compartan tareas, citas y novedades para que nadie lo lleve solo.",
-    "bodySelfCare": "Invita a un familiar o cuidador a ayudarte: compartan tareas, citas y novedades para que no lleves todo por tu cuenta.",
-    "cta": "Invita a tu primer cuidador"
-  },
-  "settings": {
-    "title": "Administrar",
-    "editCircle": "Editar círculo",
-    "members": "Miembros",
-    "deleteCircle": "Eliminar círculo"
   },
   "today": {
     "title": "Hoy para {{name}}",
