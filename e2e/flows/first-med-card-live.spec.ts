@@ -36,14 +36,24 @@ interface RootRow {
   later_time: string;
 }
 
+// The circle's clock, exactly as the backend resolves it (utils/recipientTimezone.ts
+// pickCircleTimezone; reminder SQL tz_for_scheduling): care_circles.timezone -> care recipient's
+// users.timezone -> circle OWNER's users.timezone -> America/New_York. New test circles have a NULL
+// circle zone and a name-only recipient, so the owner's profile zone (the browser zone) rules; a
+// bare New York fallback disagrees with the server from 22:00 to 24:00 Denver.
+const CIRCLE_TZ = `tz_for_scheduling(
+  coalesce(c.timezone, (select u.timezone from circle_memberships m join users u on u.id = m.user_id
+                         where m.circle_id = c.id and m.is_care_recipient limit 1)),
+  (select u.timezone from users u where u.id = c.owner_id))`;
+
 function rootMed(circleId: string): RootRow {
   const rows = dbQuery<RootRow>(
     `select e.id, e.scheduled_date::text as scheduled_date, e.scheduled_time::text as scheduled_time,
             e.recurrence_rule,
-            coalesce(c.timezone, 'America/New_York') as tz,
-            (now() at time zone coalesce(c.timezone, 'America/New_York'))::date::text as local_today,
-            to_char(now() at time zone coalesce(c.timezone, 'America/New_York'), 'HH24:MI') as local_time,
-            to_char((now() at time zone coalesce(c.timezone, 'America/New_York')) + interval '10 minutes', 'HH24:MI:00') as later_time
+            ${CIRCLE_TZ} as tz,
+            (now() at time zone ${CIRCLE_TZ})::date::text as local_today,
+            to_char(now() at time zone ${CIRCLE_TZ}, 'HH24:MI') as local_time,
+            to_char((now() at time zone ${CIRCLE_TZ}) + interval '10 minutes', 'HH24:MI:00') as later_time
        from calendar_events e join care_circles c on c.id = e.circle_id
       where e.circle_id = ${sqlStr(circleId)}::uuid and e.event_type = 'medication'
         and e.parent_event_id is null`
