@@ -39,10 +39,6 @@ vi.mock('@/hooks/useCircles', () => ({
   })),
 }));
 
-vi.mock('@/components/meds/TodaysMeds', () => ({
-  TodaysMeds: () => <div data-testid="todays-meds" />,
-}));
-
 vi.mock('@/hooks/useCircle', () => ({
   useCircle: vi.fn(() => ({
     circle: { id: 'c1', owner_id: 'u1', is_self_care: false },

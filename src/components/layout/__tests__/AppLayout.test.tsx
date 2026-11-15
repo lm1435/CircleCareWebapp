@@ -24,10 +24,6 @@ vi.mock('@/hooks/useCircles', () => ({
   })),
 }));
 
-vi.mock('@/components/meds/TodaysMeds', () => ({
-  TodaysMeds: () => <div data-testid="todays-meds" />,
-}));
-
 // useCircle is React Query-backed; this layout test has no QueryClientProvider,
 // so stub it with the gating fields the create + assistant surfaces read.
 //
