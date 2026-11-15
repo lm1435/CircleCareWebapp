@@ -54,7 +54,7 @@ test.describe('create circle: Who are you caring for? (1.4.2, mobile parity)', (
     await page.waitForURL(/\/circles\/[0-9a-f-]{36}/, { timeout: 30_000 });
     const circleId = /\/circles\/([0-9a-f-]{36})/.exec(page.url())![1];
     const rows = dbQuery<{ recipient_name: string; is_self_care: boolean }>(
-      `select recipient_name, is_self_care from circles where id = ${sqlStr(circleId)}::uuid`
+      `select recipient_name, is_self_care from care_circles where id = ${sqlStr(circleId)}::uuid`
     );
     expect(rows).toEqual([{ recipient_name: recipient, is_self_care: false }]);
   });
@@ -70,7 +70,7 @@ test.describe('create circle: Who are you caring for? (1.4.2, mobile parity)', (
     await page.waitForURL(/\/circles\/[0-9a-f-]{36}/, { timeout: 30_000 });
     const circleId = /\/circles\/([0-9a-f-]{36})/.exec(page.url())![1];
     const rows = dbQuery<{ is_self_care: boolean }>(
-      `select is_self_care from circles where id = ${sqlStr(circleId)}::uuid`
+      `select is_self_care from care_circles where id = ${sqlStr(circleId)}::uuid`
     );
     expect(rows).toEqual([{ is_self_care: true }]);
   });

@@ -76,7 +76,7 @@ test('ES: a member removed while the tab is open sees "Acceso eliminado", the Sp
   await expect(h1).toBeFocused();
   await expect(
     page.getByText(
-      'Ya no tienes acceso a este círculo. Es posible que el dueño te haya eliminado de él o que haya eliminado el círculo.',
+      'Ya no tienes acceso a este círculo. Es posible que la persona titular te haya eliminado de él o que haya eliminado el círculo.',
       { exact: true }
     )
   ).toBeVisible();

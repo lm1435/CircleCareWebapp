@@ -130,7 +130,12 @@ test('a grouped "not marked" row lands on Today on its slot; doses are marked on
     await expect(
       page.locator('[data-testid="next-up-row"]').filter({ hasText: otherSlot }).locator('[data-highlighted="true"]')
     ).toHaveCount(0);
-    await expect(page.getByRole('button', { name: new RegExp(`^Taken, ${slotNames[0]}`) })).toBeFocused();
+    // Focus is on the FIRST dose of the slot as SHOWN. Same-time doses are tie-broken by item
+    // key (a random med id, nextUpItems.ts), so creation order says nothing about which is first.
+    const shown = await page.locator('[data-testid="next-up-row"]').allTextContents();
+    const firstShown = shown.map((text) => slotNames.find((n) => text.includes(n))).find(Boolean);
+    expect(firstShown, `a slot dose is on Next up: ${shown.join(' | ')}`).toBeTruthy();
+    await expect(page.getByRole('button', { name: new RegExp(`^Taken, ${firstShown}`) })).toBeFocused();
     await expect(page.getByRole('status').filter({ hasText: "3 doses aren't marked yet" })).toHaveCount(1);
 
     // No mark-all anywhere on the page.

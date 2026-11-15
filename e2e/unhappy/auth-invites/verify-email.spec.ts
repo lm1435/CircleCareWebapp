@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../../fixtures';
-import { runScopedEmail } from '../../isolation';
+import { adminFetch, runScopedEmail } from '../../isolation';
 import { countRequests, generateSignupOtp, holdRequest } from '../../unhappy';
 import { authUser, gotoWithRouterState, hasRefreshCookie, stubJson, typeOtp, uniq } from './_helpers';
 
@@ -112,6 +112,12 @@ test('resend hitting the real 429 EMAIL_RATE_LIMIT says "we just sent one" and a
   await gotoWithRouterState(page, '/verify-email', { email });
   await expectVerifyPage(page);
   const resends = countRequests(page, 'POST', RESEND);
+  // The LOCAL per-address cooldown is 1s (backend/supabase/config.toml [auth.email]
+  // max_frequency), so re-arm it right before the click: armed before the page load, a loaded
+  // host (full suite) let it lapse, the resend reached the unreachable send-email hook (422) and
+  // the backend answered 400 RESEND_FAILED instead of the 429 under test.
+  const rearm = await adminFetch('POST', '/auth/v1/admin/generate_link', { type: 'signup', email });
+  expect(rearm.status, JSON.stringify(rearm.json)).toBeLessThan(300);
   const [res] = await Promise.all([
     page.waitForResponse((r) => new URL(r.url()).pathname === RESEND),
     page.getByRole('button', { name: 'Send a new code' }).click(),
