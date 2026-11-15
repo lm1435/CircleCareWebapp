@@ -178,7 +178,11 @@ export default function RoutineCheckInPage(): ReactElement {
                   data-testid={`routine-checkin-${option.answer}`}
                 >
                   <span className="block">{option.label}</span>
-                  <span className="block text-sm font-normal opacity-90">{option.hint}</span>
+                  {/* Full button colour, never dimmed: opacity-90 on the outline buttons' moss
+                      label measured 4.4:1 on the page (axe, e2e quiet-circle-checkin). */}
+                  <span className="block text-sm font-normal" data-checkin-hint="">
+                    {option.hint}
+                  </span>
                 </Button>
               </li>
             ))}

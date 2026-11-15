@@ -93,6 +93,23 @@ describe('RoutineCheckInPage', () => {
     expect(Analytics.routineCheckinOpened).toHaveBeenCalledWith({ source: 'inbox', isOwner: true });
   });
 
+  // Contrast (WCAG 1.4.3). jsdom cannot compute it; the real measurement is axe in
+  // e2e/flows/quiet-circle-checkin.spec.ts (4.4:1 with the dimmed hint). This pins the cause.
+  it('P every answer carries its hint; N no hint is dimmed with an opacity utility', () => {
+    renderAt({ checkinSource: 'inbox' });
+    const hints = Array.from(
+      screen.getByTestId('routine-checkin-answers').querySelectorAll<HTMLElement>('[data-checkin-hint]')
+    );
+    expect(hints.map((h) => h.textContent)).toEqual([
+      'Alerts come back right away.',
+      'Update or discontinue medications',
+      'Turn them back on anytime from Today.',
+    ]);
+    for (const hint of hints) {
+      expect(hint.className).not.toMatch(/(^|\s)opacity-/);
+    }
+  });
+
   it("self-care: \"your routine\" and \"I'm still taking these\"", () => {
     circle({ is_self_care: true });
     renderAt();

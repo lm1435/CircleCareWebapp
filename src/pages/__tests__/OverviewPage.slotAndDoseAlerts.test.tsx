@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { StrictMode, useSyncExternalStore } from 'react';
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
@@ -312,5 +312,62 @@ describe('Today quiet-circle notice', () => {
       .map((b) => b.textContent);
     expect(names).toEqual(['Turn alerts back on', 'Has the routine changed?']);
     expect(document.body.textContent ?? '').not.toMatch(/mark all|all taken/i);
+  });
+});
+
+// The check-in page marks the resume and THEN navigates to Today, so Today mounts with the flag
+// already set. The dev server renders under StrictMode, whose mount -> cleanup -> mount used to
+// run Today's "visit ended" cleanup on mount and wipe the flag (e2e quiet-circle-checkin
+// still_giving: no "Alerts are on").
+describe('Today "Alerts are on" after a resume made on the check-in page', () => {
+  // The previous test's unmount scheduled its (deferred) visit-end clear; let it run first.
+  beforeEach(async () => {
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    useDoseAlertsResumedStore.setState({ resumed: {} });
+  });
+
+  function renderStrict(url: string) {
+    return render(
+      <StrictMode>
+        <MemoryRouter initialEntries={[url]}>
+          <Routes>
+            <Route path="/circles/:circleId" element={<OverviewPage />} />
+            <Route path="/elsewhere" element={<div data-testid="elsewhere" />} />
+          </Routes>
+        </MemoryRouter>
+      </StrictMode>
+    );
+  }
+
+  it('P arriving on Today with the resume marked (StrictMode) shows "Alerts are on"', async () => {
+    useDoseAlertsResumedStore.getState().markResumed('c1');
+    renderStrict('/circles/c1');
+    // Past any deferred work the mount scheduled.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    expect(screen.getByTestId('dose-alerts-resumed-today')).toHaveTextContent('Alerts are on');
+    expect(useDoseAlertsResumedStore.getState().resumed.c1).toBe(true);
+  });
+
+  it('N leaving Today ends the visit: the flag is cleared and the next visit shows nothing', async () => {
+    useDoseAlertsResumedStore.getState().markResumed('c1');
+    const view = renderStrict('/circles/c1');
+    expect(screen.getByTestId('dose-alerts-resumed-today')).toBeInTheDocument();
+    view.unmount();
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    expect(useDoseAlertsResumedStore.getState().resumed.c1).toBeUndefined();
+    renderStrict('/circles/c1');
+    expect(screen.queryByTestId('dose-alerts-resumed-today')).not.toBeInTheDocument();
+  });
+
+  it("N another circle's resume never shows on this circle's Today", () => {
+    useDoseAlertsResumedStore.getState().markResumed('c2');
+    renderStrict('/circles/c1');
+    expect(screen.queryByTestId('dose-alerts-resumed-today')).not.toBeInTheDocument();
   });
 });

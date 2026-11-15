@@ -255,8 +255,26 @@ export default function OverviewPage(): ReactElement {
   const doseAlerts = useDoseAlerts(circleId);
   const doseAlertsPaused = doseAlerts.state?.paused === true;
   // "Alerts are on" after a resume lasts for this Today visit only.
+  // The clear is DEFERRED and cancelled by a re-run for the same circle: StrictMode's
+  // mount -> cleanup -> mount (the dev server) otherwise ran it on mount and wiped the flag the
+  // check-in page set just before navigating here. A real unmount or circle switch still clears.
   const clearResumed = useDoseAlertsResumedStore((st) => st.clear);
-  useEffect(() => () => clearResumed(circleId), [circleId, clearResumed]);
+  const pendingResumedClear = useRef<{ circleId: string; timer: ReturnType<typeof setTimeout> } | null>(
+    null
+  );
+  useEffect(() => {
+    const pending = pendingResumedClear.current;
+    if (pending && pending.circleId === circleId) {
+      clearTimeout(pending.timer);
+      pendingResumedClear.current = null;
+    }
+    return () => {
+      pendingResumedClear.current = {
+        circleId,
+        timer: setTimeout(() => clearResumed(circleId), 0),
+      };
+    };
+  }, [circleId, clearResumed]);
 
   // Shifts nudge (mobile's rule): PREMIUM circles (a setup prompt) and the OWNER of a FREE circle
   // (they just hit the caregiver cap: "Set up shifts" opens the existing shifts teaser -> paywall,
