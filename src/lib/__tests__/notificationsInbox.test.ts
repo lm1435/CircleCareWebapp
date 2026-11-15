@@ -20,10 +20,14 @@ describe('inboxFlagValue', () => {
     expect(inboxFlagValue('on', true)).toBe(true);
     expect(inboxFlagValue('off', false)).toBe(false);
   });
-  it('unset: ON outside production, OFF in production', () => {
+  it('POSITIVE: unset is ON in every environment, production included', () => {
     expect(inboxFlagValue(undefined, false)).toBe(true);
-    expect(inboxFlagValue(undefined, true)).toBe(false);
-    expect(inboxFlagValue('', true)).toBe(false);
+    expect(inboxFlagValue(undefined, true)).toBe(true);
+    expect(inboxFlagValue('', true)).toBe(true);
+  });
+  it('NEGATIVE: the kill switch "off" hides it in production and elsewhere', () => {
+    expect(inboxFlagValue('off', true)).toBe(false);
+    expect(inboxFlagValue('off', false)).toBe(false);
   });
 });
 

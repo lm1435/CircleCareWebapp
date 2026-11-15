@@ -11,14 +11,17 @@ import type { InboxSource } from '@/lib/analytics';
 // ── Flag ──────────────────────────────────────────────────────────────────
 
 /**
- * `VITE_NOTIFICATIONS_INBOX` ('on' | 'off'). Unset => ON in non-production
- * builds, OFF in production. Off means: no bell, no route content, no request.
+ * `VITE_NOTIFICATIONS_INBOX` ('on' | 'off'). Unset => ON everywhere (the inbox is
+ * live; production web shipped without it from 1.3.1 to 1.4.2 because the prod env
+ * never set the flag). 'off' is the kill switch: no bell, no route content, no request.
+ * `isProd` is kept in the signature so the kill switch is testable per environment.
  * Read at call time (not module load) so tests can stub the env per case.
  */
 export function inboxFlagValue(value: string | undefined, isProd: boolean): boolean {
   if (value === 'on') return true;
   if (value === 'off') return false;
-  return !isProd;
+  void isProd;
+  return true;
 }
 
 export function isInboxEnabled(): boolean {
