@@ -38,6 +38,8 @@ export interface PdfEmergencyContact {
   name: string;
   relationship: string;
   phone?: string | null;
+  /** Calling code ("+49"); printed before the phone ("+49 030 12345678"). */
+  country_code?: string | null;
   is_primary?: boolean | null;
 }
 
@@ -45,6 +47,7 @@ export interface PdfDoctor {
   name: string;
   specialty?: string | null;
   phone?: string | null;
+  country_code?: string | null;
   /** 1-10 digits; printed after the phone ("ext. 42"). */
   phone_extension?: string | null;
 }
@@ -55,6 +58,7 @@ export interface PdfInsurancePlan {
   policy_number?: string | null;
   group_number?: string | null;
   phone?: string | null;
+  country_code?: string | null;
   phone_extension?: string | null;
   rx_bin?: string | null;
   rx_pcn?: string | null;
@@ -67,6 +71,7 @@ export interface PdfEmergencyInfo {
   primary_doctor_name?: string | null;
   primary_doctor_specialty?: string | null;
   primary_doctor_phone?: string | null;
+  primary_doctor_country_code?: string | null;
   primary_doctor_phone_extension?: string | null;
   additional_doctors?: PdfDoctor[] | null;
   allergies?: string[] | null;

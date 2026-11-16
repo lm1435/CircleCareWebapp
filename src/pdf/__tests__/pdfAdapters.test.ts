@@ -147,6 +147,40 @@ describe('generateCareSummaryHtml (web adapter)', () => {
     expect(html).not.toMatch(/careSummary\./);
   });
 
+  // Same rule as PhoneLink: a stored calling code prints before the phone (1.4.2 device bug).
+  it('prints "<code> <phone>" when a country code is stored; the bare phone when not', () => {
+    const base = {
+      recipientName: 'Ada Lovelace',
+      recipientDob: null,
+      recipientConditions: [],
+      medications: [],
+      careRecipientTimezone: DENVER,
+    };
+    const withCode: EmergencyInfo = {
+      ...emergencyInfo,
+      primary_doctor_phone: '030 11111111',
+      primary_doctor_country_code: '+49',
+      primary_doctor_phone_extension: '12',
+      additional_doctors: [{ name: 'Dr. Ada', phone: '06 1234 5678', country_code: '+39' }],
+      emergency_contacts: [
+        { name: 'Anna', relationship: 'Daughter', phone: '030 33333333', country_code: '+49' },
+        { name: 'Bob', relationship: 'Son', phone: '555-0199' },
+      ],
+      insurance_plans: [{ carrier: 'AOK', phone: '030 44444444', country_code: '+49' }],
+    };
+    for (const out of [
+      generateCareSummaryHtml({ ...base, emergencyInfo: withCode }),
+      generateCareSummaryText({ ...base, emergencyInfo: withCode }),
+    ]) {
+      expect(out).toContain('+49 030 11111111 ext. 12');
+      expect(out).toContain('+39 06 1234 5678');
+      expect(out).toContain('+49 030 33333333');
+      expect(out).toContain('+49 030 44444444');
+      expect(out).toContain('555-0199');
+      expect(out).not.toMatch(/\+\d+ 555-0199/);
+    }
+  });
+
   it('renders the plain-text variant with the same anchors', () => {
     const text = generateCareSummaryText({
       recipientName: 'Ada Lovelace',

@@ -286,15 +286,24 @@ function formatTimestamp(timezone: string, env: PdfEnv): string {
   return zone ? `${stamp} (${zone})` : stamp;
 }
 
-/** "<phone> ext. <digits>" (i18n pattern, so languages can differ); the bare phone when there is
- *  no extension. An extension without a phone is never printed. */
+/** "<code> <phone>" when a calling code is stored ("+49 030 12345678"), else the phone as stored.
+ *  Same rule as the emergency screens (mobile `phoneDisplay`, web PhoneLink). */
+function phoneWithCode(phone?: string | null, countryCode?: string | null): string {
+  if (!phone) return '';
+  return countryCode ? `${countryCode} ${phone}` : phone;
+}
+
+/** "<code> <phone> ext. <digits>" (i18n pattern, so languages can differ); the bare phone when
+ *  there is no extension. An extension without a phone is never printed. */
 function phoneWithExt(
   t: PdfEnv['t'],
   phone?: string | null,
   ext?: string | null,
+  countryCode?: string | null,
 ): string {
+  const shown = phoneWithCode(phone, countryCode);
   const digits = (ext ?? '').replace(/\D/g, '');
-  return phone && digits ? t('careSummary.pdf.phoneWithExtension', { phone, extension: digits }) : (phone ?? '');
+  return shown && digits ? t('careSummary.pdf.phoneWithExtension', { phone: shown, extension: digits }) : shown;
 }
 
 /**
@@ -378,18 +387,18 @@ export function renderCareSummaryHtml(options: CareSummaryTemplateOptions, env: 
     : '';
 
   // Doctors rows
-  const withExt = (phone?: string | null, ext?: string | null) => phoneWithExt(t, phone, ext);
+  const withExt = (phone?: string | null, ext?: string | null, cc?: string | null) => phoneWithExt(t, phone, ext, cc);
   const doctors: { name: string; specialty?: string | null; phone?: string | null; isPrimary?: boolean }[] = [];
   if (emergencyInfo?.primary_doctor_name) {
     doctors.push({
       name: emergencyInfo.primary_doctor_name,
       specialty: emergencyInfo.primary_doctor_specialty,
-      phone: withExt(emergencyInfo.primary_doctor_phone, emergencyInfo.primary_doctor_phone_extension),
+      phone: withExt(emergencyInfo.primary_doctor_phone, emergencyInfo.primary_doctor_phone_extension, emergencyInfo.primary_doctor_country_code),
       isPrimary: true,
     });
   }
   (emergencyInfo?.additional_doctors || []).forEach(d => {
-    doctors.push({ name: d.name, specialty: d.specialty, phone: withExt(d.phone, d.phone_extension) });
+    doctors.push({ name: d.name, specialty: d.specialty, phone: withExt(d.phone, d.phone_extension, d.country_code) });
   });
   const doctorRows = doctors
     .map(d => `
@@ -406,7 +415,7 @@ export function renderCareSummaryHtml(options: CareSummaryTemplateOptions, env: 
       <tr>
         <td>${escapeHtml(c.name)}${c.is_primary ? ` <span class="badge-primary">(${t('careSummary.pdf.primary')})</span>` : ''}</td>
         <td>${escapeHtml(c.relationship)}</td>
-        <td>${escapeHtml(displayValue(c.phone))}</td>
+        <td>${escapeHtml(displayValue(phoneWithCode(c.phone, c.country_code)))}</td>
       </tr>`)
     .join('');
 
@@ -425,7 +434,7 @@ export function renderCareSummaryHtml(options: CareSummaryTemplateOptions, env: 
         <td>${escapeHtml(p.carrier)}${p.label ? ` <span class="badge-info">(${escapeHtml(p.label)})</span>` : ''}${rx ? `<span class="sub">${rx}</span>` : ''}</td>
         <td class="nowrap">${escapeHtml(displayValue(p.policy_number))}</td>
         <td class="nowrap">${escapeHtml(displayValue(p.group_number))}</td>
-        <td class="nowrap">${escapeHtml(displayValue(withExt(p.phone, p.phone_extension)))}</td>
+        <td class="nowrap">${escapeHtml(displayValue(withExt(p.phone, p.phone_extension, p.country_code)))}</td>
       </tr>`;
     })
     .join('');
@@ -718,7 +727,7 @@ export function renderCareSummaryText(options: CareSummaryTemplateOptions, env: 
   if (emergencyInfo?.emergency_contacts?.length) {
     emergencyInfo.emergency_contacts.forEach(c => {
       const primary = c.is_primary ? ` (${t('careSummary.pdf.primary')})` : '';
-      lines.push(`${c.name}${primary} — ${c.relationship} — ${displayValue(c.phone)}`);
+      lines.push(`${c.name}${primary} — ${c.relationship} — ${displayValue(phoneWithCode(c.phone, c.country_code))}`);
     });
   } else {
     lines.push(t('careSummary.empty.noContacts'));
@@ -767,12 +776,12 @@ export function renderCareSummaryText(options: CareSummaryTemplateOptions, env: 
     if (emergencyInfo?.primary_doctor_name) {
       const primary = `(${t('careSummary.pdf.primary')})`;
       const specialty = displayValue(emergencyInfo.primary_doctor_specialty);
-      const phone = displayValue(phoneWithExt(t, emergencyInfo.primary_doctor_phone, emergencyInfo.primary_doctor_phone_extension));
+      const phone = displayValue(phoneWithExt(t, emergencyInfo.primary_doctor_phone, emergencyInfo.primary_doctor_phone_extension, emergencyInfo.primary_doctor_country_code));
       lines.push(`${emergencyInfo.primary_doctor_name} ${primary}${specialty !== PLACEHOLDER_DISPLAY ? ` — ${specialty}` : ''}${phone !== PLACEHOLDER_DISPLAY ? ` — ${phone}` : ''}`);
     }
     emergencyInfo?.additional_doctors?.forEach(d => {
       const specialty = displayValue(d.specialty);
-      const phone = displayValue(phoneWithExt(t, d.phone, d.phone_extension));
+      const phone = displayValue(phoneWithExt(t, d.phone, d.phone_extension, d.country_code));
       lines.push(`${d.name}${specialty !== PLACEHOLDER_DISPLAY ? ` — ${specialty}` : ''}${phone !== PLACEHOLDER_DISPLAY ? ` — ${phone}` : ''}`);
     });
   } else {
@@ -787,7 +796,7 @@ export function renderCareSummaryText(options: CareSummaryTemplateOptions, env: 
       lines.push(`${p.carrier}${p.label ? ` (${p.label})` : ''}`);
       const policyNumber = displayValue(p.policy_number);
       const groupNumber = displayValue(p.group_number);
-      const phone = displayValue(phoneWithExt(t, p.phone, p.phone_extension));
+      const phone = displayValue(phoneWithExt(t, p.phone, p.phone_extension, p.country_code));
       if (policyNumber !== PLACEHOLDER_DISPLAY) lines.push(`  ${t('careSummary.fields.policyNumber')}: ${policyNumber}`);
       if (groupNumber !== PLACEHOLDER_DISPLAY) lines.push(`  ${t('careSummary.fields.groupNumber')}: ${groupNumber}`);
       if (phone !== PLACEHOLDER_DISPLAY) lines.push(`  ${t('careSummary.fields.phone')}: ${phone}`);
