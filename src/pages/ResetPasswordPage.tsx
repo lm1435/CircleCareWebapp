@@ -6,6 +6,12 @@ import { Analytics } from '@/lib/analytics';
 import { isRateLimitError } from '@/lib/apiErrors';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { utf8ByteLength } from '@/lib/utf8ByteLength';
+import {
+  PASSWORD_LOWERCASE,
+  PASSWORD_NUMBER,
+  PASSWORD_SPECIAL,
+  PASSWORD_UPPERCASE,
+} from '@/lib/passwordPolicy';
 import { Button, Card, Text, TextField } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthTopBar } from '@/components/auth/AuthTopBar';
@@ -57,10 +63,10 @@ export default function ResetPasswordPage(): ReactElement {
   const validatePassword = (value: string): string | undefined => {
     if (value.length < 8) return t('validation.passwordMinLength');
     if (value.length > 72) return t('validation.passwordMaxLength');
-    if (!/[A-Z]/.test(value)) return t('validation.passwordUppercase');
-    if (!/[a-z]/.test(value)) return t('validation.passwordLowercase');
-    if (!/[0-9]/.test(value)) return t('validation.passwordNumber');
-    if (!/[^A-Za-z0-9]/.test(value)) return t('validation.passwordSpecial');
+    if (!PASSWORD_UPPERCASE.test(value)) return t('validation.passwordUppercase');
+    if (!PASSWORD_LOWERCASE.test(value)) return t('validation.passwordLowercase');
+    if (!PASSWORD_NUMBER.test(value)) return t('validation.passwordNumber');
+    if (!PASSWORD_SPECIAL.test(value)) return t('validation.passwordSpecial');
     if (utf8ByteLength(value) > 72) return t('validation.passwordMaxLength');
     return undefined;
   };

@@ -25,6 +25,12 @@ import {
 } from '@/lib/apiErrors';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { utf8ByteLength } from '@/lib/utf8ByteLength';
+import {
+  PASSWORD_LOWERCASE,
+  PASSWORD_NUMBER,
+  PASSWORD_SPECIAL,
+  PASSWORD_UPPERCASE,
+} from '@/lib/passwordPolicy';
 import { Button, Card, Icon, Text, TextField } from '@/components/ui';
 import { validateWithZod, focusFirstError, type FieldErrors } from '@/components/ui/useZodForm';
 import { AuthShell } from '@/components/auth/AuthShell';
@@ -67,10 +73,10 @@ const signUpSchema = z
       .string()
       .min(8)
       .max(72, PASSWORD_MAX_LENGTH_ISSUE)
-      .regex(/[A-Z]/)
-      .regex(/[a-z]/)
-      .regex(/[0-9]/)
-      .regex(/[^A-Za-z0-9]/)
+      .regex(PASSWORD_UPPERCASE)
+      .regex(PASSWORD_LOWERCASE)
+      .regex(PASSWORD_NUMBER)
+      .regex(PASSWORD_SPECIAL)
       .refine((value) => utf8ByteLength(value) <= 72, PASSWORD_MAX_LENGTH_ISSUE),
     confirmPassword: z.string().min(1),
   })

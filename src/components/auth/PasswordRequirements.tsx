@@ -1,6 +1,12 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, Eyebrow, Icon } from '@/components/ui';
+import {
+  PASSWORD_LOWERCASE,
+  PASSWORD_NUMBER,
+  PASSWORD_SPECIAL,
+  PASSWORD_UPPERCASE,
+} from '@/lib/passwordPolicy';
 
 /** How long to wait for typing to pause before announcing the met count — long
  * enough that a screen reader isn't re-reading it on every keystroke, short
@@ -15,10 +21,10 @@ export interface PasswordRequirementsProps {
 /** The five rules, matching mobile + the backend Zod policy exactly. */
 export const passwordRules = [
   { key: 'minLength', test: (v: string): boolean => v.length >= 8 },
-  { key: 'uppercase', test: (v: string): boolean => /[A-Z]/.test(v) },
-  { key: 'lowercase', test: (v: string): boolean => /[a-z]/.test(v) },
-  { key: 'number', test: (v: string): boolean => /[0-9]/.test(v) },
-  { key: 'special', test: (v: string): boolean => /[^A-Za-z0-9]/.test(v) },
+  { key: 'uppercase', test: (v: string): boolean => PASSWORD_UPPERCASE.test(v) },
+  { key: 'lowercase', test: (v: string): boolean => PASSWORD_LOWERCASE.test(v) },
+  { key: 'number', test: (v: string): boolean => PASSWORD_NUMBER.test(v) },
+  { key: 'special', test: (v: string): boolean => PASSWORD_SPECIAL.test(v) },
 ] as const;
 
 /**
