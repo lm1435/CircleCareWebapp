@@ -156,7 +156,10 @@ test('out-of-range readings are refused in the form and nothing is stored', asyn
   await dialog.locator('#vital_type').selectOption('temperature');
   await dialog.locator('#value1').fill('37');
   await dialog.getByRole('button', { name: 'Save reading', exact: true }).click();
-  await expect(dialog.getByText('That looks outside the expected range. Double-check the number.')).toBeVisible();
+  // 1.4.2: the message names the unit and where to change it.
+  await expect(
+    dialog.getByText('37 looks like °C, but your units are °F. You can change them in Settings, under Units.')
+  ).toBeVisible();
   await expect(dialog).toBeVisible();
   expect(rowFor(circleId, note)).toHaveLength(0);
 });

@@ -12,7 +12,7 @@ import {
   type UpdateProfileRequest,
 } from '@/api/users';
 import { queryKeys } from '@/lib/queryKeys';
-import { resolveTemperatureUnit } from '@/lib/vitals';
+import { browserDefaultUnits, resolveTemperatureUnit } from '@/lib/vitals';
 import { failureContext } from '@/lib/apiErrors';
 import { getAnalyticsConsent } from '@/lib/analyticsConsent';
 import { recordAnalyticsConsentDecision } from '@/lib/analyticsConsentDecision';
@@ -536,9 +536,11 @@ export default function ProfilePage(): ReactElement {
   const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
   const quietEnabled = Boolean(user.quiet_hours_start && user.quiet_hours_end);
   const quietWarning = quietEnabled && quietHoursCoverAlmostAllDay(quietStart, quietEnd);
-  const weightUnit = unitsQuery.data?.weight_unit ?? 'lbs';
-  const glucoseUnit = unitsQuery.data?.glucose_unit ?? 'mg/dL';
-  const temperatureUnit = resolveTemperatureUnit(unitsQuery.data);
+  // Shown while the units load (or if the read fails): the browser region's, not a hardcoded lbs.
+  const regionUnits = browserDefaultUnits();
+  const weightUnit = unitsQuery.data?.weight_unit ?? regionUnits.weight_unit;
+  const glucoseUnit = unitsQuery.data?.glucose_unit ?? regionUnits.glucose_unit;
+  const temperatureUnit = resolveTemperatureUnit(unitsQuery.data, regionUnits.temperature_unit);
 
   const dayOptions: SelectOption[] = Array.from({ length: 7 }, (_, i) => ({
     value: String(i),

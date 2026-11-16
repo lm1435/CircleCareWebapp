@@ -322,6 +322,26 @@ describe('analytics wrapper — active path (key set)', () => {
     expect(capture).toHaveBeenCalledWith('vital_deleted', { circle_id: 'circle-123' });
   });
 
+  it('vital_units_auto_set carries enums and a boolean only (no country, no circle)', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.vitalUnitsAutoSet({
+      applied: false,
+      region_group: 'metric_mg_dl',
+      skip_reason: 'has_logged_vitals',
+      weight_unit: 'lbs',
+      glucose_unit: 'mg/dL',
+      temperature_unit: '°F',
+    });
+    expect(capture).toHaveBeenCalledWith('vital_units_auto_set', {
+      applied: false,
+      region_group: 'metric_mg_dl',
+      skip_reason: 'has_logged_vitals',
+      weight_unit: 'lbs',
+      glucose_unit: 'mg/dL',
+      temperature_unit: '°F',
+    });
+  });
+
   it('document_updated carries only circle_id', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
     Analytics.documentUpdated('circle-123');

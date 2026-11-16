@@ -23,7 +23,9 @@ import { useCreateVital, useUpdateVital } from '@/hooks/useVitals';
 import type { HealthVital, UpdateVitalRequest, VitalType } from '@/api/vitals';
 import { parseVitalNumber } from '@/lib/vitalNumber';
 import {
-  DEFAULT_UNIT_PREFERENCES,
+  browserDefaultUnits,
+  formatVitalNumber,
+  vitalUnitRangeHint,
   buildCreateVitalRequest,
   buildUpdateVitalRequest,
   fromCanonicalValue,
@@ -98,6 +100,34 @@ export interface VitalFormModalProps {
 // decimal comma; null when blank / non-numeric); range checks run after it.
 const parseNumber = parseVitalNumber;
 
+/**
+ * The out-of-range message for a weight / glucose / temperature: names the unit the value was read
+ * in and where to change it, and says so when the number fits the OTHER unit ("37.5 looks like °C,
+ * but your units are °F"). Null for the other types (their unit is fixed): the plain range message.
+ * Mobile twin: `vitalRangeErrorMessage` in mobile/src/screens/vitals/VitalFormScreen.tsx.
+ */
+export function vitalRangeErrorMessage(
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  type: VitalType,
+  value: number,
+  unit: string
+): string | null {
+  const hint = vitalUnitRangeHint(type, value, unit);
+  if (!hint) return null;
+  if (hint.otherUnit) {
+    return t('validation.looksLikeOtherUnit', {
+      value: formatVitalNumber(value),
+      otherUnit: hint.otherUnit,
+      unit: hint.unit,
+    });
+  }
+  return t('validation.rangeUnit', {
+    min: formatVitalNumber(hint.min),
+    max: formatVitalNumber(hint.max),
+    unit: hint.unit,
+  });
+}
+
 interface VitalDraft {
   vitalType: VitalType;
   value1: string;
@@ -120,10 +150,11 @@ export function VitalFormModal({
   const { circle, timezone, canEdit } = useCircle(circleId);
   const { data: unitPrefs } = useUnitPreferences();
 
-  const weightUnit: WeightUnit = unitPrefs?.weight_unit ?? DEFAULT_UNIT_PREFERENCES.weight_unit;
-  const glucoseUnit: GlucoseUnit =
-    unitPrefs?.glucose_unit ?? DEFAULT_UNIT_PREFERENCES.glucose_unit;
-  const temperatureUnit: TemperatureUnit = resolveTemperatureUnit(unitPrefs);
+  // No profile units yet (loading / failed read): the browser region's, never a hardcoded lbs.
+  const [regionUnits] = useState(browserDefaultUnits);
+  const weightUnit: WeightUnit = unitPrefs?.weight_unit ?? regionUnits.weight_unit;
+  const glucoseUnit: GlucoseUnit = unitPrefs?.glucose_unit ?? regionUnits.glucose_unit;
+  const temperatureUnit: TemperatureUnit = resolveTemperatureUnit(unitPrefs, regionUnits.temperature_unit);
 
   const isEditing = !!vital;
   const createVital = useCreateVital(circleId);
@@ -374,6 +405,11 @@ export function VitalFormModal({
       const mapped: FieldErrors = {};
       for (const [field, msg] of Object.entries(result.errors)) {
         mapped[field] = messageFor(msg);
+      }
+      // Weight / glucose / temperature: name the unit and where to change it ("37,5 looks like °C").
+      if (result.errors.value1 === 'valueOutOfRange') {
+        const unitMessage = vitalRangeErrorMessage(t, vitalType, numericValue1 as number, displayUnit);
+        if (unitMessage) mapped.value1 = unitMessage;
       }
       return { ok: false, errors: mapped };
     }

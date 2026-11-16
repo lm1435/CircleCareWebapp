@@ -128,6 +128,8 @@
     "dateRequired": "Please choose a date.",
     "timeRequired": "Please choose a time.",
     "valueOutOfRange": "That looks outside the expected range. Double-check the number.",
+    "rangeUnit": "Must be between {{min}} and {{max}} {{unit}}. You can change units in Settings, under Units.",
+    "looksLikeOtherUnit": "{{value}} looks like {{otherUnit}}, but your units are {{unit}}. You can change them in Settings, under Units.",
     "diastolicRequired": "Please enter the diastolic value.",
     "value2NotAllowed": "This reading takes a single value.",
     "invalidUnit": "That unit isn't valid for this reading.",

@@ -12,6 +12,7 @@ import { useAuthStore } from '@/store/authStore';
 import { router } from '@/router';
 import i18n from '@/i18n';
 import { DeviceTimezoneSync } from '@/components/DeviceTimezoneSync';
+import { RegionUnitsAutoSet } from '@/components/RegionUnitsAutoSet';
 
 /**
  * Applies the signed-in user's saved language preference to i18n. The detector
@@ -95,6 +96,7 @@ export default function App(): ReactElement {
           <QueryClientProvider client={queryClient}>
             <LanguageSync />
             <DeviceTimezoneSync />
+            <RegionUnitsAutoSet />
             <ToastProvider>
               {/*
                 v7_startTransition: navigating to a not-yet-loaded lazy page

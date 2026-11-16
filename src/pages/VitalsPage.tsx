@@ -37,7 +37,7 @@ import { useCircle } from '@/hooks/useCircle';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import type { HealthVital, VitalType } from '@/api/vitals';
 import {
-  DEFAULT_UNIT_PREFERENCES,
+  browserDefaultUnits,
   formatVitalValue,
   fromCanonicalValue,
   getDisplayUnit,
@@ -479,9 +479,11 @@ export default function VitalsPage(): ReactElement {
   const { canEdit, timezone } = useCircle(circleId);
   const hourCycle = useHourCycle();
   const { data: unitPrefs } = useUnitPreferences();
-  const weightUnit: WeightUnit = unitPrefs?.weight_unit ?? DEFAULT_UNIT_PREFERENCES.weight_unit;
-  const glucoseUnit: GlucoseUnit = unitPrefs?.glucose_unit ?? DEFAULT_UNIT_PREFERENCES.glucose_unit;
-  const temperatureUnit: TemperatureUnit = resolveTemperatureUnit(unitPrefs);
+  // No profile units yet (loading / failed read): the browser region's, never a hardcoded lbs.
+  const [regionUnits] = useState(browserDefaultUnits);
+  const weightUnit: WeightUnit = unitPrefs?.weight_unit ?? regionUnits.weight_unit;
+  const glucoseUnit: GlucoseUnit = unitPrefs?.glucose_unit ?? regionUnits.glucose_unit;
+  const temperatureUnit: TemperatureUnit = resolveTemperatureUnit(unitPrefs, regionUnits.temperature_unit);
 
   const [typeFilter, setTypeFilter] = useState<VitalType | 'all'>('all');
   const [range, setRange] = useState<RangeChoice>('30d');

@@ -42,6 +42,8 @@
     "deleted": "Medição eliminada"
   },
   "validation": {
+    "rangeUnit": "Deve estar entre {{min}} e {{max}} {{unit}}. Pode alterar as unidades em Definições, na secção Unidades.",
+    "looksLikeOtherUnit": "{{value}} parece estar em {{otherUnit}}, mas as suas unidades estão em {{unit}}. Pode alterá-las em Definições, na secção Unidades.",
     "valueRequired": "Introduza um valor.",
     "diastolicRequired": "Introduza o valor da diastólica."
   },

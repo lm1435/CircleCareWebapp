@@ -128,6 +128,8 @@
     "dateRequired": "Escolha uma data.",
     "timeRequired": "Escolha uma hora.",
     "valueOutOfRange": "Isso parece fora da faixa esperada. Confira o número.",
+    "rangeUnit": "Deve estar entre {{min}} e {{max}} {{unit}}. Você pode alterar as unidades em Configurações, na seção Unidades.",
+    "looksLikeOtherUnit": "{{value}} parece estar em {{otherUnit}}, mas suas unidades estão em {{unit}}. Você pode alterá-las em Configurações, na seção Unidades.",
     "diastolicRequired": "Informe o valor da diastólica.",
     "value2NotAllowed": "Esta medição aceita um único valor.",
     "invalidUnit": "Essa unidade não é válida para esta medição.",

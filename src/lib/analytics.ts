@@ -1840,6 +1840,18 @@ export const Analytics = {
     capture('vital_logged', { circle_id: circleId, vital_type: vitalType }),
   vitalUpdated: (circleId: string) => capture('vital_updated', { circle_id: circleId }),
   vitalDeleted: (circleId: string) => capture('vital_deleted', { circle_id: circleId }),
+  /**
+   * The once-per-account region units decision (lib/regionUnitsAutoSet). Same event and props as
+   * mobile: enums and a boolean only, never the country, never a reading.
+   */
+  vitalUnitsAutoSet: (props: {
+    applied: boolean;
+    region_group: 'metric_mg_dl' | 'metric_mmol_l';
+    skip_reason: 'has_logged_vitals' | 'units_already_set' | null;
+    weight_unit: 'lbs' | 'kg';
+    glucose_unit: 'mg/dL' | 'mmol/L';
+    temperature_unit: '°F' | '°C';
+  }) => capture('vital_units_auto_set', { ...props }),
 
   // --- Emergency info (web-new) — never the contents, only that a view/edit
   // happened and WHICH top-level fields changed. ---

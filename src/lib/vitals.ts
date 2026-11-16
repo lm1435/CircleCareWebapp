@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import type { CreateVitalRequest, UpdateVitalRequest, VitalType } from '@/api/vitals';
+import { formatVitalNumber, getDefaultUnits, type DefaultUnits } from './vitalUnitsLocale';
+import { browserRegion } from './regionResolver';
 
 // Web vitals form schema + unit-conversion helpers (Plan Task 6.2).
 //
@@ -30,24 +32,49 @@ export interface UnitPreferences {
   temperature_unit: TemperatureUnit;
 }
 
-/** Default display units when the user has no saved preference (free fall-back). */
+/**
+ * What every account starts on (the DB defaults), and the last fallback for an unknown region.
+ * Screens fall back to `browserDefaultUnits()` (the browser region's units) instead.
+ */
 export const DEFAULT_UNIT_PREFERENCES: UnitPreferences = {
   weight_unit: 'lbs',
   glucose_unit: 'mg/dL',
   temperature_unit: '°F',
 };
 
+// Region -> units table, the locale number format and the out-of-range hint: ./vitalUnitsLocale.
+export {
+  US_DEFAULT_UNITS,
+  US_CUSTOMARY_REGIONS,
+  MMOL_GLUCOSE_REGIONS,
+  regionFromLocale,
+  unitRegionGroup,
+  getDefaultUnits,
+  isUntouchedDefaultUnits,
+  formatVitalNumber,
+  VITAL_UNIT_RANGES,
+  isConvertibleVitalType,
+  vitalUnitRangeHint,
+} from './vitalUnitsLocale';
+export type { DefaultUnits, UnitRegionGroup, ConvertibleVitalType } from './vitalUnitsLocale';
+
+/** The units the browser's region measures in (`browserRegion` -> `getDefaultUnits`); unknown -> US. */
+export function browserDefaultUnits(): DefaultUnits {
+  return getDefaultUnits(browserRegion());
+}
+
 /**
  * The temperature unit to show and accept. A current backend always returns a
  * resolved `temperature_unit`; one that predates it returns none, and then the
  * unit follows the weight unit (kg → °C, otherwise °F) — the SAME rule the
  * server applies, so the answer does not change when the backend catches up.
- * Preferences not loaded yet → °F, matching the 'lbs' fallback.
+ * Preferences not loaded yet → `fallback` (the browser region's unit at the screens; else °F).
  */
 export function resolveTemperatureUnit(
-  prefs: { weight_unit?: WeightUnit; temperature_unit?: TemperatureUnit } | null | undefined
+  prefs: { weight_unit?: WeightUnit; temperature_unit?: TemperatureUnit } | null | undefined,
+  fallback: TemperatureUnit = DEFAULT_UNIT_PREFERENCES.temperature_unit
 ): TemperatureUnit {
-  if (!prefs) return DEFAULT_UNIT_PREFERENCES.temperature_unit;
+  if (!prefs) return fallback;
   return prefs.temperature_unit ?? (prefs.weight_unit === 'kg' ? '°C' : '°F');
 }
 
@@ -169,7 +196,8 @@ export function formatVitalValue(
   if (type === 'oxygen_saturation') {
     return `${Math.round(value1)}${showUnit ? unit : ''}`;
   }
-  return `${Number(value1.toFixed(1))}${suffix}`;
+  // The app language's decimal mark: "37,5 °C" in de/fr/it/pt/es.
+  return `${formatVitalNumber(value1)}${suffix}`;
 }
 
 // ── Display-unit validation ranges (mirror mobile VitalFormScreen RANGES) ──────

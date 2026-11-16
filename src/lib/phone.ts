@@ -11,6 +11,7 @@
  * Neither is E.164.
  */
 import { AsYouType, parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js/min';
+import { LANGUAGE_DEFAULT_COUNTRY as SHARED_LANGUAGE_DEFAULT_COUNTRY, browserRegion } from './regionResolver';
 
 export interface PhoneCountry {
   /** ISO 3166-1 alpha-2, and the `CountryCode` libphonenumber-js expects. */
@@ -99,18 +100,8 @@ export function findPhoneCountryByCallingCode(
   return PHONE_COUNTRIES.find((c) => c.callingCode === callingCode);
 }
 
-/**
- * A locale language with no (offered) region -> its country. Bare "es" / "en"
- * stay on the US default; bare "pt" is Brazil (the `pt` bundle is pt-BR).
- * Mobile twin: same table in components/common/phoneCountries.ts.
- */
-const LANGUAGE_DEFAULT_COUNTRY: Readonly<Record<string, CountryCode>> = {
-  de: 'DE',
-  fr: 'FR',
-  it: 'IT',
-  nl: 'NL',
-  pt: 'BR',
-};
+/** Bare language -> its country: the shared table in ./regionResolver (mobile reads the same). */
+const LANGUAGE_DEFAULT_COUNTRY = SHARED_LANGUAGE_DEFAULT_COUNTRY as Readonly<Record<string, CountryCode>>;
 
 /**
  * The country a NEW (empty) phone field starts on, from a locale tag: the
@@ -134,9 +125,13 @@ export function phoneCountryForLocale(
   return DEFAULT_PHONE_COUNTRY_ISO2;
 }
 
-/** `phoneCountryForLocale` for the browser's first preferred language. */
+/** The new-number country for this browser: the shared region resolver, else `phoneCountryForLocale`. */
 export function browserDefaultPhoneCountry(): CountryCode {
   if (typeof navigator === 'undefined') return DEFAULT_PHONE_COUNTRY_ISO2;
+  // The shared region resolver first (an "en-US" browser in Europe/Berlin is in Germany; the
+  // vitals units read the same), when the picker offers that country.
+  const resolved = findPhoneCountryByIso2(browserRegion());
+  if (resolved) return resolved.iso2;
   return phoneCountryForLocale(navigator.languages?.[0] ?? navigator.language);
 }
 

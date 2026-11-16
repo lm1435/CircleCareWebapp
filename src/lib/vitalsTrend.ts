@@ -1,4 +1,5 @@
 import type { VitalType } from '@/api/vitals';
+import { formatVitalNumber } from '@/lib/vitals';
 
 // PORT of mobile/src/utils/vitalsChart.ts's `formatAverageDelta` (+ its private
 // helpers). Web parity task: replace VitalsPage's percent-of-average trend
@@ -39,7 +40,8 @@ function roundForType(type: VitalType, value: number): number {
  */
 function formatSignedNumber(value: number): string {
   if (value === 0) return '0';
-  return value > 0 ? `+${value}` : `−${Math.abs(value)}`;
+  // The app language's decimal mark ("+0,5 kg" in German), like `formatVitalValue`.
+  return value > 0 ? `+${formatVitalNumber(value)}` : `−${formatVitalNumber(Math.abs(value))}`;
 }
 
 /**

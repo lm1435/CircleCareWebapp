@@ -128,6 +128,8 @@
     "dateRequired": "Elige una fecha.",
     "timeRequired": "Elige una hora.",
     "valueOutOfRange": "Ese valor parece fuera del rango esperado. Verifica el número.",
+    "rangeUnit": "Debe estar entre {{min}} y {{max}} {{unit}}. Puedes cambiar las unidades en Configuración, en la sección Unidades.",
+    "looksLikeOtherUnit": "{{value}} parece estar en {{otherUnit}}, pero tus unidades son {{unit}}. Puedes cambiarlas en Configuración, en la sección Unidades.",
     "diastolicRequired": "Ingresa el valor diastólico.",
     "value2NotAllowed": "Esta lectura admite un solo valor.",
     "invalidUnit": "Esa unidad no es válida para esta lectura.",
