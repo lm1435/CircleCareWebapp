@@ -1,7 +1,12 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TextField, Text } from '@/components/ui';
-import { formatDateForDisplay, getWeekdayName, orderedWeekdays } from '@/components/calendar/dateMath';
+import {
+  browserRegion,
+  formatDateForDisplay,
+  getWeekdayName,
+  orderedWeekdays,
+} from '@/components/calendar/dateMath';
 import { buildCyclePreview, parseCycleCount, previewRange } from './shiftRotation';
 
 export interface ShiftCyclePanelProps {
@@ -43,7 +48,7 @@ export function ShiftCyclePanel({
   const on = parseCycleCount(daysOn);
   const off = parseCycleCount(daysOff);
   const valid = on !== null && off !== null && !!startDate;
-  const weekdays = orderedWeekdays(language);
+  const weekdays = orderedWeekdays(language, browserRegion());
   const preview = valid ? buildCyclePreview(startDate, on, off, weekdays[0]) : null;
   // "Nov 7 – Dec 18"; both ends carry the year only when the range crosses one.
   let range = '';

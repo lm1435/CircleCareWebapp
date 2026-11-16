@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { Text } from '@/components/ui';
 import { chipClass } from '@/components/ui/inputStyles';
-import { getWeekdayName, orderedWeekdays } from './dateMath';
+import { browserRegion, getWeekdayName, orderedWeekdays } from './dateMath';
 
 export interface DaysOfWeekPickerProps {
   /** Id of the group — also the focus target when the field errors. */
@@ -94,7 +94,7 @@ export function DaysOfWeekPicker({
         tabIndex={-1}
         className="flex flex-wrap gap-2"
       >
-        {orderedWeekdays(language).map((day) => {
+        {orderedWeekdays(language, browserRegion()).map((day) => {
           const checked = isSelected(day);
           const locked = day === lockedDay;
           const inert = disabled || locked;

@@ -1,6 +1,6 @@
 import i18n from '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { getWeekdayName, orderedWeekdays } from './dateMath';
+import { browserRegion, getWeekdayName, orderedWeekdays } from './dateMath';
 
 // Local translate-fn type (mirrors mobile/src/utils/recurrenceFormat.ts) —
 // avoids coupling to i18next's generic TFunction signature.
@@ -19,7 +19,8 @@ export function formatWeekdayList(
 ): string {
   if (!days || days.length === 0) return '';
   const set = new Set(days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6));
-  return orderedWeekdays(locale)
+  // Week order follows the browser's REGION (en-GB Monday, es-MX Sunday).
+  return orderedWeekdays(locale, browserRegion())
     .filter((d) => set.has(d))
     .map((d) => getWeekdayName(d, 'short', locale))
     .join(', ');

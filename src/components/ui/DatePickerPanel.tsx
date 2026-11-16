@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { addDaysToIsoDay } from '@/utils/recipientEventDate';
-import { firstDayOfWeek } from '@/components/calendar/dateMath';
+import { browserRegion, firstDayOfWeek } from '@/components/calendar/dateMath';
 import { getCachedDateTimeFormat, getDateInTimezone, getDeviceTimezone } from '@/utils/timezone';
 import { Button } from './Button';
 import { Icon } from './Icon';
@@ -302,7 +302,8 @@ export function DatePickerPanel({
     // focused (Home at the start of a week) cannot leave it armed for later.
   });
 
-  const first = firstDayOfWeek(language);
+  // Week order follows the browser's REGION (en-GB Monday, es-MX Sunday).
+  const first = firstDayOfWeek(language, browserRegion());
 
   const formats = useMemo(
     () => ({

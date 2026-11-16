@@ -1,5 +1,17 @@
 import { formatRecurrenceLabel, formatWeekdayList } from '../recurrenceLabel';
-import { nextDateOnWeekdays, orderedWeekdays } from '../dateMath';
+import { browserRegion, firstDayForRegion, firstDayOfWeek, nextDateOnWeekdays, orderedWeekdays } from '../dateMath';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+
+/** The browser's preferred languages for one test (jsdom says en-US). */
+function stubBrowserLanguages(languages: string[]) {
+  vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(languages);
+  vi.spyOn(window.navigator, 'language', 'get').mockReturnValue(languages[0] ?? '');
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 /** Passes the key through with its interpolations, so the exact output is visible. */
 const t = (key: string, opts?: Record<string, unknown>): string =>
@@ -25,7 +37,8 @@ describe('formatWeekdayList', () => {
     expect(formatWeekdayList([5, 1, 3], 'es')).toBe('lun, mié, vie');
   });
 
-  it('puts Sunday LAST in Spanish and FIRST in English', () => {
+  it('puts Sunday LAST in Spanish and FIRST in English (browser with no region)', () => {
+    stubBrowserLanguages(['es']);
     expect(formatWeekdayList([0, 3], 'en')).toBe('Sun, Wed');
     expect(formatWeekdayList([0, 3], 'es')).toBe('mié, dom');
   });
@@ -34,6 +47,76 @@ describe('formatWeekdayList', () => {
     expect(formatWeekdayList([7, -1, 2, 2, 1.5], 'en')).toBe('Tue');
     expect(formatWeekdayList([], 'en')).toBe('');
     expect(formatWeekdayList(null, 'en')).toBe('');
+  });
+});
+
+describe('week start follows the browser REGION (1.4.2 i18n audit D)', () => {
+  // POSITIVE
+  it('en-GB browser: Monday first, Sunday last; es-MX: Sunday first', () => {
+    stubBrowserLanguages(['en-GB', 'en']);
+    expect(browserRegion()).toBe('GB');
+    expect(formatWeekdayList([0, 3], 'en')).toBe('Wed, Sun');
+    stubBrowserLanguages(['es-MX']);
+    expect(formatWeekdayList([0, 3], 'es')).toBe('dom, mié');
+    stubBrowserLanguages(['es-ES']);
+    expect(formatWeekdayList([0, 3], 'es')).toBe('mié, dom');
+  });
+
+  it.each([
+    ['GB', 1], ['IE', 1], ['AU', 1], ['NZ', 1], ['DE', 1], ['FR', 1], ['ES', 1], ['AR', 1],
+    ['US', 0], ['CA', 0], ['MX', 0], ['BR', 0], ['PT', 0], ['CO', 0], ['EG', 6], ['MV', 5],
+  ])('%s starts on %i whatever the language', (region, day) => {
+    expect(firstDayOfWeek('en', region)).toBe(day);
+    expect(firstDayOfWeek('es', region)).toBe(day);
+  });
+
+  it('agrees with the runtime CLDR for every region', () => {
+    const DEPRECATED = new Set(['BU', 'JT', 'MI', 'NT', 'PU', 'PZ', 'RH', 'WK', 'YD']);
+    type WeekLocale = Intl.Locale & { getWeekInfo?: () => { firstDay: number }; weekInfo?: { firstDay: number } };
+    if (!(new Intl.Locale('und-GB') as WeekLocale).getWeekInfo && !(new Intl.Locale('und-GB') as WeekLocale).weekInfo) return;
+    const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (const a of A) {
+      for (const b of A) {
+        const region = a + b;
+        if (DEPRECATED.has(region)) continue;
+        const loc = new Intl.Locale(`und-${region}`) as WeekLocale;
+        const info = loc.getWeekInfo ? loc.getWeekInfo() : loc.weekInfo!;
+        expect([region, firstDayForRegion(region)]).toEqual([region, info.firstDay % 7]);
+      }
+    }
+  });
+
+  it('is the same table as mobile (utils/weekStart.ts)', () => {
+    const mobile = join(__dirname, '../../../../../mobile/src/utils/weekStart.ts');
+    if (!existsSync(mobile)) return;
+    const web = readFileSync(join(__dirname, '../dateMath.ts'), 'utf8');
+    const src = readFileSync(mobile, 'utf8');
+    const lists = (s: string) =>
+      ['SUNDAY_FIRST_REGIONS', 'SATURDAY_FIRST_REGIONS', 'FRIDAY_FIRST_REGIONS'].map((name) => {
+        const block = s.slice(s.indexOf(`const ${name}`), s.indexOf(');', s.indexOf(`const ${name}`)));
+        return (block.match(/\b[A-Z]{2}\b/g) ?? []).sort().join(' ');
+      });
+    expect(lists(web)).toEqual(lists(src));
+  });
+
+  // NEGATIVE
+  it('a browser with no usable region keeps the language order exactly as before', () => {
+    for (const langs of [['es'], ['es-419'], [], ['zz-ZZZ']]) {
+      stubBrowserLanguages(langs);
+      expect(browserRegion()).toBeNull();
+      expect(formatWeekdayList([0, 3], 'es')).toBe('mié, dom');
+      expect(formatWeekdayList([0, 3], 'en')).toBe('Sun, Wed');
+    }
+    for (const r of [null, undefined, '', '419', 'GBR']) {
+      expect(firstDayForRegion(r)).toBeNull();
+      expect(firstDayOfWeek('es', r)).toBe(firstDayOfWeek('es'));
+    }
+  });
+
+  it('never emits 7 and keeps every stored day number', () => {
+    for (const region of ['US', 'GB', 'EG', 'MV']) {
+      expect([...orderedWeekdays('en', region)].sort()).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    }
   });
 });
 

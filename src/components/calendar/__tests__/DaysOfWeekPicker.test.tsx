@@ -37,6 +37,18 @@ function Harness({
 }
 
 describe('DaysOfWeekPicker', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('en-GB browser: the chips start on Monday in English (1.4.2 i18n audit D)', () => {
+    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['en-GB']);
+    render(<Harness initial={[]} />);
+    const chips = within(screen.getByRole('group', { name: 'Repeat on' })).getAllByRole('checkbox');
+    expect(chips.map((c) => c.textContent)).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+    expect(chips[6]).toHaveAttribute('data-day', '0');
+  });
+
   it('is a labelled group of seven checkboxes in the EN week order (Sunday first)', () => {
     render(<Harness initial={[]} />);
     const group = screen.getByRole('group', { name: 'Repeat on' });
@@ -53,7 +65,8 @@ describe('DaysOfWeekPicker', () => {
     ]);
   });
 
-  it('starts the week on Monday in Spanish, full names as the accessible names', () => {
+  it('starts the week on Monday in Spanish (browser with no region), full names as the accessible names', () => {
+    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['es']);
     render(<Harness initial={[]} language="es" />);
     const chips = within(screen.getByRole('group', { name: 'Repeat on' })).getAllByRole('checkbox');
     expect(chips.map((c) => c.getAttribute('aria-label'))).toEqual([

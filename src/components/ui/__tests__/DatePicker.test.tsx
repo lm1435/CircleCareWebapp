@@ -660,7 +660,17 @@ describe('DatePickerPanel keyboard', () => {
 
 describe('DatePickerPanel locale', () => {
   afterEach(async () => {
+    vi.restoreAllMocks();
     await i18n.changeLanguage('en');
+  });
+
+  it('starts the week on Monday in English for an en-GB browser (1.4.2 i18n audit D)', async () => {
+    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['en-GB']);
+    render(<Host initial="2026-09-11" />);
+    await openPicker();
+    const headers = screen.getAllByRole('columnheader');
+    expect(headers[0]).toHaveAccessibleName('Monday');
+    expect(headers[6]).toHaveAccessibleName('Sunday');
   });
 
   it('starts the week on Sunday in English', async () => {
@@ -672,7 +682,8 @@ describe('DatePickerPanel locale', () => {
   });
 
   // THE ONE THING A HARDCODED CALENDAR ALWAYS GETS WRONG.
-  it('starts the week on Monday in Spanish, and names the month the CLDR way', async () => {
+  it('starts the week on Monday in Spanish (browser with no region), and names the month the CLDR way', async () => {
+    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['es']);
     await i18n.changeLanguage('es');
     render(<Host initial="2026-09-11" />);
 

@@ -41,6 +41,55 @@ export function getDayOfWeek(dateStr: string): number {
 }
 
 /**
+ * FIRST DAY OF THE WEEK BY REGION (1.4.2 i18n audit D), CLDR 48 `weekData`
+ * `firstDay` (checked against ICU 78 / CLDR 48 `Intl.Locale#getWeekInfo`). Every
+ * region not listed starts on Monday (CLDR `001`). A TABLE, not the runtime
+ * `Intl`, so every browser and mobile's Hermes agree.
+ * VERBATIM PORT of mobile/src/utils/weekStart.ts (parity-tested).
+ */
+const SUNDAY_FIRST_REGIONS: ReadonlySet<string> = new Set(
+  ('AG AS BD BR BS BT BW BZ CA CO DM DO ET GT GU HK HN ID IL IN IS JM JP KE KH KR LA MH MM MO ' +
+    'MT MX MZ NI NP PA PE PH PK PR PT PY SA SG SV TH TT TW UM US VE VI WS YE ZA ZW').split(' ')
+);
+const SATURDAY_FIRST_REGIONS: ReadonlySet<string> = new Set(
+  'AF BH DJ DZ EG IQ IR JO KW LY OM QA SD SY'.split(' ')
+);
+const FRIDAY_FIRST_REGIONS: ReadonlySet<string> = new Set(['MV']);
+
+/**
+ * The first day of the week in `region` (ISO 3166-1 alpha-2), 0 = Sunday; null
+ * when there is no usable region (none, "419", malformed), so the caller falls
+ * back to the language.
+ */
+export function firstDayForRegion(region: string | null | undefined): number | null {
+  if (!region || !/^[A-Za-z]{2}$/.test(region)) return null;
+  const r = region.toUpperCase();
+  if (SUNDAY_FIRST_REGIONS.has(r)) return 0;
+  if (SATURDAY_FIRST_REGIONS.has(r)) return 6;
+  if (FRIDAY_FIRST_REGIONS.has(r)) return 5;
+  return 1;
+}
+
+/**
+ * The browser's region: the region subtag of its first preferred language
+ * ("en-GB" -> GB), or null ("es", "es-419", no navigator). Never throws.
+ */
+export function browserRegion(): string | null {
+  try {
+    if (typeof navigator === 'undefined') return null;
+    const tag = navigator.languages?.[0] || navigator.language || '';
+    const region = tag
+      .replace(/_/g, '-')
+      .split('-')
+      .slice(1)
+      .find((p) => /^[A-Za-z]{2}$/.test(p));
+    return region ? region.toUpperCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * WHICH DAY THE WEEK STARTS ON, per locale — 0 = Sunday.
  *
  * Read from CLDR through `Intl.Locale`, not hardcoded and not keyed off a
@@ -60,7 +109,12 @@ export function getDayOfWeek(dateStr: string): number {
  * non-UI modules — `recurrenceLabel`, and through it the care-summary PDF — can
  * order weekdays without importing a React component file.
  */
-export function firstDayOfWeek(language: string): number {
+export function firstDayOfWeek(language: string, region?: string | null): number {
+  // REGION FIRST (1.4.2 i18n audit D): en-GB / en-AU / en-IE / en-NZ start Monday,
+  // es-MX / es-US / pt-BR Sunday, whatever the app language. Display order only:
+  // stored `recurrence_days` and the calendar week view's own math never read it.
+  const byRegion = firstDayForRegion(region);
+  if (byRegion !== null) return byRegion;
   try {
     // The REGISTERED locale (normalizeLocale: exact registry code, else its base,
     // else en), matching mobile `utils/weekStart.ts`: every es tag starts Monday and
@@ -88,8 +142,8 @@ export function firstDayOfWeek(language: string): number {
  * starts on Sunday) while the app UI speaks bare `es`, and a day list must read the
  * same in both and the same as mobile; a registered variant (fr-CA) keeps its own.
  */
-export function orderedWeekdays(language: string): number[] {
-  const first = firstDayOfWeek(language);
+export function orderedWeekdays(language: string, region?: string | null): number[] {
+  const first = firstDayOfWeek(language, region);
   return Array.from({ length: 7 }, (_, i) => (first + i) % 7);
 }
 
