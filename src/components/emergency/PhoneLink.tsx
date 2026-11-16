@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '@/components/ui';
+import { internationalDialNumber } from '@/lib/phone';
 
 // Same sanity check mobile uses before opening tel: URLs
 // (mobile/src/screens/emergency/EmergencyInfoScreen.tsx).
@@ -15,6 +16,10 @@ export function telHref(phone: string, countryCode?: string | null): string | nu
   if (!phone || !PHONE_RE.test(phone)) return null;
   const digits = phone.replace(/[^\d+]/g, '');
   if (!digits.replace(/\D/g, '')) return null;
+  // E.164 when the pair parses: drops a national trunk "0" (DE "030 …" +
+  // "+49" must dial +4930…, not +49030…). Otherwise the old join.
+  const e164 = internationalDialNumber(phone, countryCode);
+  if (e164) return `tel:${e164}`;
   const prefix =
     countryCode && !digits.startsWith('+') ? countryCode.replace(/[^\d+]/g, '') : '';
   return `tel:${prefix}${digits}`;

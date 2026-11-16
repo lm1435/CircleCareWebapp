@@ -19,7 +19,11 @@ export interface PhoneCountry {
   callingCode: string;
 }
 
-/** Same 23 countries, same order, as mobile's picker. */
+/**
+ * Same countries, same order, as mobile's picker (phoneCountries.ts): the US
+ * + Latin America + Spain, then (1.4.2) the countries the other store locales
+ * are sold in. IT stays before VA: "+39" is shared and the FIRST match wins.
+ */
 export const PHONE_COUNTRIES: readonly PhoneCountry[] = [
   { iso2: 'US', callingCode: '+1' },
   { iso2: 'CA', callingCode: '+1' },
@@ -44,8 +48,32 @@ export const PHONE_COUNTRIES: readonly PhoneCountry[] = [
   { iso2: 'BR', callingCode: '+55' },
   { iso2: 'ES', callingCode: '+34' },
   { iso2: 'CU', callingCode: '+53' },
+  // Europe (1.4.2).
+  { iso2: 'GB', callingCode: '+44' },
+  { iso2: 'IE', callingCode: '+353' },
+  { iso2: 'FR', callingCode: '+33' },
+  { iso2: 'BE', callingCode: '+32' },
+  { iso2: 'LU', callingCode: '+352' },
+  { iso2: 'MC', callingCode: '+377' },
+  { iso2: 'DE', callingCode: '+49' },
+  { iso2: 'AT', callingCode: '+43' },
+  { iso2: 'CH', callingCode: '+41' },
+  { iso2: 'LI', callingCode: '+423' },
+  { iso2: 'NL', callingCode: '+31' },
+  { iso2: 'IT', callingCode: '+39' },
+  { iso2: 'SM', callingCode: '+378' },
+  { iso2: 'VA', callingCode: '+39' },
+  { iso2: 'PT', callingCode: '+351' },
+  { iso2: 'AD', callingCode: '+376' },
+  // Oceania (1.4.2).
+  { iso2: 'AU', callingCode: '+61' },
+  { iso2: 'NZ', callingCode: '+64' },
 ];
 
+/**
+ * The LEGACY default: how a stored number with no usable `country_code` is
+ * read (always the US), and the last fallback for a new number.
+ */
 export const DEFAULT_PHONE_COUNTRY_ISO2: CountryCode = 'US';
 
 /** Backend `phone` max length. */
@@ -63,12 +91,53 @@ export function findPhoneCountryByIso2(iso2: string | undefined | null): PhoneCo
   return PHONE_COUNTRIES.find((c) => c.iso2 === upper);
 }
 
-/** FIRST country with this calling code — "+1" is shared, so it is the US. */
+/** FIRST country with this calling code — "+1" is shared, so it is the US; "+39" is IT. */
 export function findPhoneCountryByCallingCode(
   callingCode: string | undefined | null
 ): PhoneCountry | undefined {
   if (!callingCode) return undefined;
   return PHONE_COUNTRIES.find((c) => c.callingCode === callingCode);
+}
+
+/**
+ * A locale language with no (offered) region -> its country. Bare "es" / "en"
+ * stay on the US default; bare "pt" is Brazil (the `pt` bundle is pt-BR).
+ * Mobile twin: same table in components/common/phoneCountries.ts.
+ */
+const LANGUAGE_DEFAULT_COUNTRY: Readonly<Record<string, CountryCode>> = {
+  de: 'DE',
+  fr: 'FR',
+  it: 'IT',
+  nl: 'NL',
+  pt: 'BR',
+};
+
+/**
+ * The country a NEW (empty) phone field starts on, from a locale tag: the
+ * region when the picker offers it (de-DE -> DE, en-GB -> GB, pt-PT -> PT),
+ * else the language's own country (de -> DE), else the US. Never used for a
+ * stored number — see {@link DEFAULT_PHONE_COUNTRY_ISO2}.
+ * Mobile twin: `phoneCountryForLocale` in components/common/phoneCountries.ts.
+ */
+export function phoneCountryForLocale(
+  languageTag: string | null | undefined,
+  regionCode?: string | null
+): CountryCode {
+  const parts = (languageTag || '').replace(/_/g, '-').split('-');
+  const region = regionCode || parts.slice(1).find((p) => /^[A-Za-z]{2}$/.test(p));
+  const byRegion = findPhoneCountryByIso2(region);
+  if (byRegion) return byRegion.iso2;
+  const language = (parts[0] || '').toLowerCase();
+  if (Object.prototype.hasOwnProperty.call(LANGUAGE_DEFAULT_COUNTRY, language)) {
+    return LANGUAGE_DEFAULT_COUNTRY[language];
+  }
+  return DEFAULT_PHONE_COUNTRY_ISO2;
+}
+
+/** `phoneCountryForLocale` for the browser's first preferred language. */
+export function browserDefaultPhoneCountry(): CountryCode {
+  if (typeof navigator === 'undefined') return DEFAULT_PHONE_COUNTRY_ISO2;
+  return phoneCountryForLocale(navigator.languages?.[0] ?? navigator.language);
 }
 
 export function digitsOf(text: string): string {
@@ -128,12 +197,12 @@ export function isPossibleForCountry(digits: string, iso2: CountryCode): boolean
 }
 
 /**
- * A STORED number of a country the picker does not offer ("+44 20 7946 0958",
- * or digits with `country_code: "+44"`) that is a possible number THERE. The
+ * A STORED number of a country the picker does not offer ("+81 3 1234 5678",
+ * or digits with `country_code: "+81"`) that is a possible number THERE. The
  * field can only show it as digits under the default country, where it reads
  * as the wrong length — but the stored value is correct and `initialPhoneValue`
  * saves it verbatim while untouched, so it must not block a save (nor could the
- * user "fix" it: there is no United Kingdom to pick). Mobile twin: same name in
+ * user "fix" it: there is no Japan to pick). Mobile twin: same name in
  * components/common/PhoneInput.tsx.
  */
 export function isUnofferedInternationalNumber(
@@ -293,4 +362,31 @@ export function initialPhoneValue(
   const country = findPhoneCountryByIso2(iso2);
   if (!country || !seed.digits) return verbatim;
   return { phone: storedPhone(seed.digits, country.iso2), countryCode: country.callingCode };
+}
+
+/**
+ * The E.164 number to DIAL for a stored national `phone` + `country_code`, or
+ * null when there is nothing safe to build (no code, a "+"-prefixed value, a
+ * code the picker does not offer, a number not possible there) — the caller
+ * then keeps its old string concatenation.
+ *
+ * Why not just "<code><phone>": most of the 1.4.2 countries write their
+ * national number with a trunk "0" (DE "030 12345678", GB "020 7946 0958",
+ * FR, AT, CH, NL, BE, IE, AU, NZ), and "+49030…" is not a valid number.
+ * Parsing nationally drops the trunk prefix where the country has one and
+ * keeps Italy's leading 0, which is part of the number.
+ * Mobile twin: same name in components/common/phoneCountries.ts.
+ */
+export function internationalDialNumber(
+  phone: string | null | undefined,
+  countryCode: string | null | undefined
+): string | null {
+  const trimmed = (phone || '').trim();
+  if (!trimmed || trimmed.startsWith('+')) return null;
+  const country = findPhoneCountryByCallingCode((countryCode || '').trim());
+  if (!country) return null;
+  const parsed = parsePhoneNumberFromString(digitsOf(trimmed), country.iso2);
+  if (!parsed || !parsed.isPossible()) return null;
+  if (`+${parsed.countryCallingCode}` !== country.callingCode) return null;
+  return parsed.number;
 }

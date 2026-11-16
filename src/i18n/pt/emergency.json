@@ -374,7 +374,25 @@
       "PY": "Paraguai",
       "BR": "Brasil",
       "ES": "Espanha",
-      "CU": "Cuba"
+      "CU": "Cuba",
+      "GB": "Reino Unido",
+      "IE": "Irlanda",
+      "FR": "França",
+      "BE": "Bélgica",
+      "LU": "Luxemburgo",
+      "MC": "Mônaco",
+      "DE": "Alemanha",
+      "AT": "Áustria",
+      "CH": "Suíça",
+      "LI": "Liechtenstein",
+      "NL": "Países Baixos",
+      "IT": "Itália",
+      "SM": "San Marino",
+      "VA": "Cidade do Vaticano",
+      "PT": "Portugal",
+      "AD": "Andorra",
+      "AU": "Austrália",
+      "NZ": "Nova Zelândia"
     }
   },
   "conflict": {

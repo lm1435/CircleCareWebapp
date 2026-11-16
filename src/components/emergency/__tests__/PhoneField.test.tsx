@@ -46,13 +46,16 @@ afterEach(async () => {
 });
 
 describe('PhoneField', () => {
-  it('offers all 23 countries in mobile order, labelled, with calling codes', () => {
+  it('offers every country in mobile order, labelled, with calling codes', () => {
     render(field('', null));
     const options = Array.from(country().options);
-    expect(options).toHaveLength(23);
+    expect(options).toHaveLength(41);
     expect(options[0]).toHaveTextContent('United States (+1)');
     expect(options[2]).toHaveTextContent('Mexico (+52)');
     expect(options[22]).toHaveTextContent('Cuba (+53)');
+    expect(options[23]).toHaveTextContent('United Kingdom (+44)');
+    expect(options[29]).toHaveTextContent('Germany (+49)');
+    expect(options[40]).toHaveTextContent('New Zealand (+64)');
     expect(country().value).toBe('US');
   });
 
@@ -181,8 +184,8 @@ describe('PhoneField', () => {
       expect(screen.getByText(HINT)).toBeInTheDocument();
     });
 
-    it('a stored number of a country the picker does not offer ("+44 …") is never flagged', () => {
-      render(field('+44 20 7946 0958', null));
+    it('a stored number of a country the picker does not offer ("+81 …") is never flagged', () => {
+      render(field('+81 3 1234 5678', null));
       fireEvent.focus(phone());
       fireEvent.blur(phone());
       expect(screen.queryByText(HINT)).toBeNull();
@@ -302,9 +305,9 @@ describe('PhoneField', () => {
     });
 
     it('a stored number of an un-offered country passes untouched, fails once edited to a bad length', () => {
-      const ref = gated('+44 20 7946 0958', null);
+      const ref = gated('+81 3 1234 5678', null);
       expect(verdict(ref)).toBe(true);
-      fireEvent.change(phone(), { target: { value: '44207946095' } });
+      fireEvent.change(phone(), { target: { value: '813123456789' } });
       expect(verdict(ref)).toBe(false);
     });
   });
@@ -332,11 +335,11 @@ describe('PhoneField', () => {
       expect(onChange).not.toHaveBeenCalled();
     });
 
-    it('a UK "+44…" record falls back to the default country, unchanged digits', () => {
+    it('a Japanese "+81…" record (not offered) falls back to the default country, unchanged digits', () => {
       const onChange = vi.fn();
-      render(field('+44 20 7946 0958', null, onChange));
+      render(field('+81 3 1234 5678', null, onChange));
       expect(country().value).toBe('US');
-      expect(phone().value.replace(/\D/g, '')).toBe('442079460958');
+      expect(phone().value.replace(/\D/g, '')).toBe('81312345678');
       expect(onChange).not.toHaveBeenCalled();
     });
 
@@ -375,5 +378,120 @@ describe('PhoneField', () => {
       fireEvent.change(phone(), { target: { value: '(303) 5' } });
       expect(phone().value).toBe('(303) 5');
     });
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// 1.4.2 — a German caregiver could not pick +49, and every NEW number started
+// on +1. Mobile twin: mobile/src/__tests__/components/PhoneInput.europeCountries.test.tsx.
+// ────────────────────────────────────────────────────────────────────────────
+describe('PhoneField — 1.4.2 countries and the browser-locale seed', () => {
+  function browser(languages: readonly string[]): void {
+    vi.spyOn(navigator, 'languages', 'get').mockReturnValue(languages);
+    vi.spyOn(navigator, 'language', 'get').mockReturnValue(languages[0] ?? '');
+  }
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('P: Germany is selectable and a typed German number is emitted as +49', () => {
+    const onChange = vi.fn();
+    render(field('', null, onChange));
+    fireEvent.change(country(), { target: { value: 'DE' } });
+    fireEvent.change(phone(), { target: { value: '03012345678' } });
+    expect(phone().value).toBe('030 12345678');
+    expect(onChange).toHaveBeenLastCalledWith('030 12345678', '+49');
+  });
+
+  it('P: German country name in German', async () => {
+    await i18n.changeLanguage('de');
+    render(<PhoneField id="p" label="Telefon" value="" countryCode="+49" onChange={vi.fn()} />);
+    const select = screen.getByLabelText('Ländervorwahl') as HTMLSelectElement;
+    expect(select.selectedOptions[0]).toHaveTextContent('Deutschland (+49)');
+  });
+
+  it.each([
+    ['030 12345678', '+49', 'DE', '030 12345678'],
+    ['020 7946 0958', '+44', 'GB', '020 7946 0958'],
+    ['044 123 45 67', '+41', 'CH', '044 123 45 67'],
+    ['+49 30 12345678', null, 'DE', '3012345678'], // AsYouType DE: no trunk 0, left as typed
+  ])('P: stored %s (cc %s) seeds %s, never writes back', (value, cc, iso2, display) => {
+    const onChange = vi.fn();
+    render(field(value, cc, onChange));
+    expect(country().value).toBe(iso2);
+    expect(phone().value).toBe(display);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [['de-DE'], 'DE'],
+    [['de'], 'DE'],
+    [['de-AT', 'de'], 'AT'],
+    [['en-GB'], 'GB'],
+    [['en-AU'], 'AU'],
+    [['fr-FR'], 'FR'],
+    [['it-IT'], 'IT'],
+    [['pt-PT'], 'PT'],
+  ])('P: a new field in a %j browser starts on %s', (languages, iso2) => {
+    browser(languages);
+    const onChange = vi.fn();
+    render(field('', null, onChange));
+    expect(country().value).toBe(iso2);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['(303) 555-1234', '+1', 'US', '(303) 555-1234'],
+    ['55 1234 5678', '+52', 'MX', '55 1234 5678'],
+    ['612 34 56 78', '+34', 'ES', '612 34 56 78'],
+    ['(303) 555-1234', null, 'US', '(303) 555-1234'], // no code: legacy US, not DE
+  ])('N: in a de-DE browser stored %s (cc %s) stays %s, unchanged', (value, cc, iso2, display) => {
+    browser(['de-DE']);
+    const onChange = vi.fn();
+    render(field(value, cc, onChange));
+    expect(country().value).toBe(iso2);
+    expect(phone().value).toBe(display);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('N: a no-code record arriving after mount is read as US, not the empty field\'s DE', () => {
+    browser(['de-DE']);
+    const { rerender } = render(field('', undefined));
+    expect(country().value).toBe('DE');
+    rerender(field('(303) 555-1234', undefined));
+    expect(country().value).toBe('US');
+    expect(phone().value).toBe('(303) 555-1234');
+  });
+
+  it('N: "+1" still resolves to US, not CA, in a fr-CA browser', () => {
+    browser(['fr-CA']);
+    render(field('3035551234', '+1'));
+    expect(country().value).toBe('US');
+  });
+
+  it.each([[['ja-JP']], [['es-419']], [['en']], [[]]])(
+    'N: a %j browser starts a new field on the US',
+    (languages) => {
+      browser(languages);
+      render(field('', null));
+      expect(country().value).toBe('US');
+    }
+  );
+
+  it('N: a stored unsupported "+81" record does not crash and falls back to US digits', () => {
+    const onChange = vi.fn();
+    render(field('03 1234 5678', '+81', onChange));
+    expect(country().value).toBe('US');
+    expect(phone().value.replace(/\D/g, '')).toBe('0312345678');
+    expect(screen.queryByText('Enter a valid phone number')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('a pasted "+49 …" number switches the picker to DE (it fell through to +1 before 1.4.2)', () => {
+    const onChange = vi.fn();
+    render(field('', null, onChange));
+    fireEvent.change(phone(), { target: { value: '+49 30 12345678' } });
+    expect(country().value).toBe('DE');
+    expect(onChange).toHaveBeenLastCalledWith(expect.any(String), '+49');
   });
 });

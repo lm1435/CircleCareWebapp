@@ -725,7 +725,7 @@ describe('emergency modals — phone country_code', () => {
       { name: 'Ana', relationship: 'Daughter', phone: '+52 55 1234 5678', is_primary: true },
     ],
     insurance_plans: [
-      { carrier: 'GNP', phone: '+44 20 7946 0958', country_code: null, rx_bin: '123' },
+      { carrier: 'GNP', phone: '+81 3 1234 5678', country_code: null, rx_bin: '123' },
     ],
   };
 
@@ -785,12 +785,12 @@ describe('emergency modals — phone country_code', () => {
     });
   });
 
-  it('insurance: an unresolvable UK number is saved verbatim; OCR fields survive', async () => {
+  it('insurance: an unresolvable Japanese number is saved verbatim; OCR fields survive', async () => {
     render(wrap(<EditInsuranceModal circleId={CIRCLE_ID} info={mxInfo} index={0} onClose={vi.fn()} />));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
     const plan = mockUpdate.mock.calls[0][1].insurance_plans?.[0];
-    expect(plan).toMatchObject({ phone: '+44 20 7946 0958', rx_bin: '123' });
+    expect(plan).toMatchObject({ phone: '+81 3 1234 5678', rx_bin: '123' });
     expect(plan?.country_code).toBeUndefined();
   });
 

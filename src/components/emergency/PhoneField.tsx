@@ -12,6 +12,7 @@ import { Select, TextField } from '@/components/ui';
 import {
   DEFAULT_PHONE_COUNTRY_ISO2,
   PHONE_COUNTRIES,
+  browserDefaultPhoneCountry,
   digitsOf,
   findPhoneCountryByIso2,
   formatNational,
@@ -53,7 +54,7 @@ export interface PhoneFieldHandle {
 
 /**
  * A LITERAL key per country (not `t(\`phone.countries.${iso2}\`)`), so
- * `translationKeys.test.ts` statically verifies all 23 in EN and ES instead of
+ * `translationKeys.test.ts` statically verifies every one in EN and ES instead of
  * adding a dynamic call site to its pinned count. Same choice as mobile.
  */
 function countryName(t: TFunction<'emergency'>, iso2: string): string {
@@ -81,13 +82,31 @@ function countryName(t: TFunction<'emergency'>, iso2: string): string {
     case 'BR': return t('phone.countries.BR');
     case 'ES': return t('phone.countries.ES');
     case 'CU': return t('phone.countries.CU');
+    case 'GB': return t('phone.countries.GB');
+    case 'IE': return t('phone.countries.IE');
+    case 'FR': return t('phone.countries.FR');
+    case 'BE': return t('phone.countries.BE');
+    case 'LU': return t('phone.countries.LU');
+    case 'MC': return t('phone.countries.MC');
+    case 'DE': return t('phone.countries.DE');
+    case 'AT': return t('phone.countries.AT');
+    case 'CH': return t('phone.countries.CH');
+    case 'LI': return t('phone.countries.LI');
+    case 'NL': return t('phone.countries.NL');
+    case 'IT': return t('phone.countries.IT');
+    case 'SM': return t('phone.countries.SM');
+    case 'VA': return t('phone.countries.VA');
+    case 'PT': return t('phone.countries.PT');
+    case 'AD': return t('phone.countries.AD');
+    case 'AU': return t('phone.countries.AU');
+    case 'NZ': return t('phone.countries.NZ');
     default: return iso2;
   }
 }
 
 /**
  * Phone number with a country picker — the web twin of mobile's
- * `components/common/PhoneInput.tsx`: same 23 countries in the same order,
+ * `components/common/PhoneInput.tsx`: same countries in the same order,
  * same stored shape (`phone` = live-formatted national number via
  * libphonenumber-js `AsYouType`, `country_code` = "+NN"), same seeding rules
  * (`resolveSeed` in `@/lib/phone`).
@@ -114,10 +133,18 @@ export const PhoneField = forwardRef<PhoneFieldHandle, PhoneFieldProps>(function
   ref
 ) {
   const { t } = useTranslation('emergency');
+  // TWO defaults (1.4.2 — mobile twin in PhoneInput.tsx):
+  // - `defaultIso2`: how a STORED number with no usable country_code is read —
+  //   still the US, so no existing record changes meaning;
+  // - `newNumberIso2`: where an EMPTY field starts — the browser's country
+  //   (de-DE -> DE, en-GB -> GB), falling back to the US.
   const defaultIso2 = DEFAULT_PHONE_COUNTRY_ISO2;
+  const [newNumberIso2] = useState<CountryCode>(() => browserDefaultPhoneCountry());
 
   const [initialSeed] = useState(() => resolveSeed(value, countryCode, defaultIso2));
-  const [iso2, setIso2] = useState<CountryCode>(initialSeed.iso2 ?? defaultIso2);
+  const [iso2, setIso2] = useState<CountryCode>(
+    () => initialSeed.iso2 ?? (initialSeed.digits ? defaultIso2 : newNumberIso2)
+  );
   const [nationalDigits, setNationalDigits] = useState(initialSeed.digits);
   // WHEN THE ERROR SHOWS. It is a save blocker now (see `PhoneFieldHandle`),
   // so it is never hidden from a user who is about to be refused:
@@ -130,7 +157,7 @@ export const PhoneField = forwardRef<PhoneFieldHandle, PhoneFieldProps>(function
   // - a refused Save (`validateForSave`) forces it visible either way.
   const [seeded, setSeeded] = useState(() => ({
     digits: initialSeed.digits,
-    iso2: initialSeed.iso2 ?? defaultIso2,
+    iso2: initialSeed.iso2 ?? (initialSeed.digits ? defaultIso2 : newNumberIso2),
     unoffered: isUnofferedInternationalNumber(value, countryCode),
   }));
   const [hintArmed, setHintArmed] = useState(false);
@@ -147,11 +174,14 @@ export const PhoneField = forwardRef<PhoneFieldHandle, PhoneFieldProps>(function
     setSeenCountryCode(countryCode);
     if (!userEdited && nationalDigits === '') {
       const seed = resolveSeed(value, countryCode, defaultIso2);
-      if (seed.iso2) setIso2(seed.iso2);
+      // A stored number with no code is read as the legacy default, same as at
+      // mount — not as the browser country the empty field started on.
+      const seedIso2 = seed.iso2 ?? (seed.digits ? defaultIso2 : undefined);
+      if (seedIso2) setIso2(seedIso2);
       setNationalDigits(seed.digits);
       setSeeded({
         digits: seed.digits,
-        iso2: seed.iso2 ?? iso2,
+        iso2: seedIso2 ?? iso2,
         unoffered: isUnofferedInternationalNumber(value, countryCode),
       });
     }

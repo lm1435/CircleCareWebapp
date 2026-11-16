@@ -130,7 +130,12 @@
     "extension": "Extensão",
     "extensionNeedsPhone": "Introduza primeiro um número de telefone",
     "extensionShort": "ext. {{ext}}",
-    "extensionAria": "extensão {{ext}}"
+    "extensionAria": "extensão {{ext}}",
+    "countries": {
+      "MC": "Mónaco",
+      "LI": "Listenstaine",
+      "SM": "São Marinho"
+    }
   },
   "conflict": {
     "message": "Outro cuidador alterou esta secção enquanto editava. Carregámos a versão mais recente. Reveja-a e faça novamente a sua alteração."

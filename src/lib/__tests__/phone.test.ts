@@ -17,10 +17,13 @@ import {
 // mobile/src/__tests__/components/PhoneInput.test.tsx "seeding" block.
 
 describe('PHONE_COUNTRIES — mirrors mobile exactly', () => {
-  it('has the same 23 countries in the same order', () => {
+  it('has the same countries in the same order (1.4.2: + Europe, Oceania)', () => {
+    // Same literal as mobile's PhoneInput.europeCountries.test.tsx.
     expect(PHONE_COUNTRIES.map((c) => c.iso2)).toEqual([
       'US', 'CA', 'MX', 'PR', 'DO', 'GT', 'HN', 'SV', 'NI', 'CR', 'PA', 'CO',
       'VE', 'EC', 'PE', 'BO', 'CL', 'AR', 'UY', 'PY', 'BR', 'ES', 'CU',
+      'GB', 'IE', 'FR', 'BE', 'LU', 'MC', 'DE', 'AT', 'CH', 'LI', 'NL', 'IT',
+      'SM', 'VA', 'PT', 'AD', 'AU', 'NZ',
     ]);
   });
 
@@ -35,7 +38,7 @@ describe('PHONE_COUNTRIES — mirrors mobile exactly', () => {
     expect(DEFAULT_PHONE_COUNTRY_ISO2).toBe('US');
     expect(findPhoneCountryByCallingCode('+1')?.iso2).toBe('US');
     expect(findPhoneCountryByIso2('mx')?.callingCode).toBe('+52');
-    expect(findPhoneCountryByIso2('GB')).toBeUndefined();
+    expect(findPhoneCountryByIso2('JP')).toBeUndefined();
   });
 });
 
@@ -75,9 +78,9 @@ describe('resolveSeed', () => {
     expect(resolveSeed('5140145210', undefined, 'US').iso2).toBeUndefined();
   });
 
-  it('a UK "+44…" number (not offered) falls back unchanged', () => {
-    expect(resolveSeed('+44 20 7946 0958', undefined, 'US')).toEqual({
-      digits: '442079460958',
+  it('a Japanese "+81…" number (not offered) falls back unchanged', () => {
+    expect(resolveSeed('+81 3 1234 5678', undefined, 'US')).toEqual({
+      digits: '81312345678',
       iso2: undefined,
     });
   });
@@ -118,14 +121,14 @@ describe('initialPhoneValue — what a modal saves when the phone is untouched',
     });
   });
 
-  it('keeps an unresolvable record VERBATIM (never rewrites a UK number as US)', () => {
-    expect(initialPhoneValue('+44 20 7946 0958', null)).toEqual({
-      phone: '+44 20 7946 0958',
+  it('keeps an unresolvable record VERBATIM (never rewrites a Japanese number as US)', () => {
+    expect(initialPhoneValue('+81 3 1234 5678', null)).toEqual({
+      phone: '+81 3 1234 5678',
       countryCode: null,
     });
-    expect(initialPhoneValue('020 7946 0958', '+44')).toEqual({
-      phone: '020 7946 0958',
-      countryCode: '+44',
+    expect(initialPhoneValue('03 1234 5678', '+81')).toEqual({
+      phone: '03 1234 5678',
+      countryCode: '+81',
     });
   });
 
@@ -224,25 +227,27 @@ describe('phoneNumberBlocksSave — the stored-number exceptions', () => {
   });
 
   it('a stored number of an un-offered country does not block while untouched', () => {
-    const uk = { digits: '442079460958', iso2: 'US' as const };
-    expect(phoneNumberBlocksSave({ ...uk, changed: false, required: false, seededUnoffered: true })).toBe(false);
-    expect(phoneNumberBlocksSave({ ...uk, changed: true, required: false, seededUnoffered: true })).toBe(true);
+    const jp = { digits: '81312345678', iso2: 'US' as const };
+    expect(phoneNumberBlocksSave({ ...jp, changed: false, required: false, seededUnoffered: true })).toBe(false);
+    expect(phoneNumberBlocksSave({ ...jp, changed: true, required: false, seededUnoffered: true })).toBe(true);
   });
 });
 
 // Same rows as mobile's PhoneInput.saveGate.test.tsx.
 describe('isUnofferedInternationalNumber', () => {
   it.each([
-    ['+44 20 7946 0958', null, true],
-    ['020 7946 0958', '+44', true],
-    ['+49 30 123456', undefined, true],
-    ['+44 20 79', null, false], // not a possible UK number
+    ['+81 3 1234 5678', null, true],
+    ['03 1234 5678', '+81', true],
+    ['+91 98765 43210', undefined, true],
+    ['+44 20 7946 0958', null, false], // GB is offered since 1.4.2
+    ['+49 30 12345678', undefined, false], // DE is offered since 1.4.2
+    ['+81 3 12', null, false], // not a possible Japanese number
     ['+52 55 1234 5678', null, false], // Mexico is offered
     ['55 1234 5678', '+52', false],
     ['(303) 555-1234', '+1', false],
     ['(303) 555-1234', null, false], // no "+" and no code: nothing says it is foreign
-    ['+44 20 7946 0958 ext 4', null, false], // non-phone text
-    ['', '+44', false],
+    ['+81 3 1234 5678 ext 4', null, false], // non-phone text
+    ['', '+81', false],
   ] as const)('%s / %s → %s', (value, countryCode, expected) => {
     expect(isUnofferedInternationalNumber(value, countryCode)).toBe(expected);
   });
