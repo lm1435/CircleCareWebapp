@@ -17,6 +17,7 @@ import '@/i18n'; // Initialize i18n (side effect)
 import { initAnalytics } from '@/lib/posthog';
 import { installDomExtensionGuard } from '@/lib/domExtensionGuard';
 import { installBootErrorBuffer } from '@/lib/bootErrorBuffer';
+import { installChunkReloadListener } from '@/lib/chunkReload';
 import { captureSignupAttribution } from '@/lib/signupAttribution';
 import { initTheme } from '@/lib/theme';
 import App from '@/App';
@@ -33,6 +34,10 @@ installDomExtensionGuard();
 // lib/bootErrorBuffer.ts. Errors thrown while the imports ABOVE evaluate are
 // still out of reach (ESM hoists them ahead of this line) — accepted.
 installBootErrorBuffer();
+
+// Stale lazy chunk after a deploy (`vite:preloadError`): reload once, guarded
+// against loops. ErrorBoundary covers imports Vite does not wrap. lib/chunkReload.ts.
+installChunkReloadListener();
 
 // Theme: public/theme-init.js already set <html data-theme> before first paint;
 // this hydrates the store from the same sources, follows the device live

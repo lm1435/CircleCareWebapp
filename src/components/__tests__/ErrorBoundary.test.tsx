@@ -6,6 +6,7 @@ import { createInstance } from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { ErrorBoundary, truncateComponentStack } from '@/components/ErrorBoundary';
 import * as analytics from '@/lib/posthog';
+import { CHUNK_RELOAD_STORAGE_KEY, resetChunkReloadStateForTests } from '@/lib/chunkReload';
 
 // A child that throws on demand so we can drive the boundary into and out of its
 // error state.
@@ -195,9 +196,17 @@ describe('ErrorBoundary', () => {
         writable: true,
       });
       reload.mockClear();
+      // These cases exercise the MANUAL "Try again" path, i.e. the state after
+      // the automatic one-time reload (lib/chunkReload.ts) already happened:
+      // the guard is set, so componentDidCatch falls through to the fallback.
+      // The automatic path is covered in ErrorBoundaryChunkReload.test.tsx.
+      resetChunkReloadStateForTests();
+      window.sessionStorage.setItem(CHUNK_RELOAD_STORAGE_KEY, String(Date.now()));
     });
 
     afterEach(() => {
+      window.sessionStorage.removeItem(CHUNK_RELOAD_STORAGE_KEY);
+      resetChunkReloadStateForTests();
       Object.defineProperty(window, 'location', {
         configurable: true,
         value: { ...window.location, reload: originalReload },

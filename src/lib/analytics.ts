@@ -2264,6 +2264,25 @@ export const Analytics = {
       surface: pickEnum(props.surface, ['today', 'meds'] as const, 'today'),
       can_answer: props.canAnswer === true,
     }),
+
+  /**
+   * A stale lazy chunk (tab opened before a deploy) failed to load. `source` is
+   * where it was caught; `outcome` is whether we auto-reloaded or fell through
+   * to the ErrorBoundary UI (loop guard hit / sessionStorage unavailable).
+   * Enums only: never the chunk URL or the error text.
+   */
+  chunkReload: (props: {
+    source: 'preload_error' | 'error_boundary';
+    outcome: 'reloaded' | 'suppressed_loop' | 'suppressed_no_storage';
+  }) =>
+    capture('chunk_reload', {
+      source: pickEnum(props.source, ['preload_error', 'error_boundary'] as const, 'error_boundary'),
+      outcome: pickEnum(
+        props.outcome,
+        ['reloaded', 'suppressed_loop', 'suppressed_no_storage'] as const,
+        'reloaded'
+      ),
+    }),
 };
 
 export type RoutineCheckinSource = 'push' | 'inbox' | 'notice' | 'link';

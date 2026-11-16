@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { captureException } from '@/lib/posthog';
 import { noteReviewBlockingError } from '@/lib/reviewMoments';
 import { Button, Text } from '@/components/ui';
+import { isChunkLoadError, tryChunkReload } from '@/lib/chunkReload';
 
 // Web ErrorBoundary (parity with mobile's components/ui/ErrorBoundary). Without
 // one, any render error unmounts the whole React tree → blank white screen.
@@ -35,17 +36,9 @@ interface ErrorBoundaryState {
 // exact same error again immediately. Resetting `hasError` (the ordinary
 // retry path) therefore does nothing for this case; only a full reload, which
 // re-fetches the current index.html and its up-to-date chunk manifest, can
-// recover. Matches the message Vite/Rollup-built apps throw (Chromium/Firefox
-// phrasing) plus webpack's older `ChunkLoadError` name for parity with any
-// non-Vite tooling in the pipeline (e.g. a Playwright-bundled helper).
-const CHUNK_LOAD_ERROR_PATTERN =
-  /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError/;
-
-function isChunkLoadError(error: Error | undefined): boolean {
-  if (!error) return false;
-  return CHUNK_LOAD_ERROR_PATTERN.test(`${error.name} ${error.message}`);
-}
-
+// recover. `componentDidCatch` reloads automatically ONCE (lib/chunkReload.ts,
+// sessionStorage-guarded so it cannot loop); if that guard already fired, the
+// fallback below shows and its "Try again" still reloads on a user tap.
 /**
  * `useSuspense: false` is load-bearing, same reasoning as `Spinner`'s: the
  * ROOT `ErrorBoundary` (App.tsx) sits OUTSIDE the app's `<Suspense>`
@@ -118,7 +111,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (import.meta.env.DEV) {
       // eslint-disable-next-line no-console
       console.error(`ErrorBoundary [${this.props.boundary}] caught:`, error, errorInfo);
-    }
+    }    // Stale chunk after a deploy: reload once without making the user tap Retry.
+    // When the loop guard says no, the fallback below stays up as before.
+    if (isChunkLoadError(error)) tryChunkReload('error_boundary');
   }
 
   handleRetry = (): void => {
