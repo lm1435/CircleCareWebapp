@@ -124,7 +124,7 @@
       "addTitle": "Versicherung hinzufügen",
       "editTitle": "Versicherung bearbeiten",
       "label": "Bezeichnung",
-      "labelPlaceholder": "Krankenversicherung, Zahnzusatz …",
+      "labelPlaceholder": "z. B. Krankenversicherung, Zahnzusatz",
       "carrier": "Versicherer",
       "carrierPlaceholder": "Name der Krankenkasse",
       "policyNumber": "Versicherungsnummer",

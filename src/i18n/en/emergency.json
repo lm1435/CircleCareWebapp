@@ -124,7 +124,7 @@
       "addTitle": "Add insurance",
       "editTitle": "Edit insurance",
       "label": "Label",
-      "labelPlaceholder": "Medical, Dental…",
+      "labelPlaceholder": "e.g., health, dental",
       "carrier": "Carrier",
       "carrierPlaceholder": "Blue Cross",
       "policyNumber": "Policy number",

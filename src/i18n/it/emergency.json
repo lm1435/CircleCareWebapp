@@ -124,7 +124,7 @@
       "addTitle": "Aggiungi assicurazione",
       "editTitle": "Modifica assicurazione",
       "label": "Etichetta",
-      "labelPlaceholder": "Sanitaria, Dentistica…",
+      "labelPlaceholder": "es. sanitaria, dentale",
       "carrier": "Compagnia",
       "carrierPlaceholder": "Generali",
       "policyNumber": "Numero di polizza",

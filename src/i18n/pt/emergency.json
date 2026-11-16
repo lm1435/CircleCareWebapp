@@ -124,7 +124,7 @@
       "addTitle": "Adicionar plano de saúde",
       "editTitle": "Editar plano de saúde",
       "label": "Rótulo",
-      "labelPlaceholder": "Médico, Odontológico…",
+      "labelPlaceholder": "ex.: saúde, odontológico",
       "carrier": "Operadora",
       "carrierPlaceholder": "Unimed",
       "policyNumber": "Número da apólice",

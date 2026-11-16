@@ -124,7 +124,7 @@
       "addTitle": "Ajouter une assurance",
       "editTitle": "Modifier l’assurance",
       "label": "Intitulé",
-      "labelPlaceholder": "Maladie, dentaire…",
+      "labelPlaceholder": "p. ex. santé, dentaire",
       "carrier": "Assureur ou mutuelle",
       "carrierPlaceholder": "Nom de l’assureur ou de la mutuelle",
       "policyNumber": "Numéro de contrat",

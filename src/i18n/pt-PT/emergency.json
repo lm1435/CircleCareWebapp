@@ -55,7 +55,7 @@
     "insurance": {
       "addTitle": "Adicionar seguro de saúde",
       "editTitle": "Editar seguro de saúde",
-      "labelPlaceholder": "Saúde, Dentário…",
+      "labelPlaceholder": "ex.: saúde, dentário",
       "carrier": "Seguradora",
       "carrierPlaceholder": "Medis",
       "primary": "Seguro de saúde principal",
