@@ -336,6 +336,23 @@ const RECURRENCE_DAYS_LOCK_ID = 'recurrence_days-lock';
 const RECURRENCE_DAYS_NOTE_ID = 'recurrence_days-tznote';
 
 /**
+ * A NEW medication dose on circle pair (`scheduledDate`, `scheduledTime`) starts with the next dose (the backend
+ * rolls it, `medicationStartRoll.ts`): its day is TODAY on the circle's calendar and its time already passed on the
+ * circle's clock. Both are read in the circle (recipient) zone, never the viewer's device zone.
+ */
+function circleDosePassedToday(
+  scheduledDate: string,
+  scheduledTime: string | null | undefined,
+  timezone: string
+): boolean {
+  return (
+    !!scheduledTime &&
+    scheduledDate === getDateInTimezone(timezone) &&
+    isEventPastDue(scheduledDate, scheduledTime, timezone)
+  );
+}
+
+/**
  * The viewer's end time for a stored `duration_minutes`, ROLLING OVER midnight.
  *
  * Deliberately NOT `addMinutesToTimeStr`, which clamps at 23:59. That clamp is
@@ -1333,29 +1350,47 @@ function AddEventForm({
    * `medicationStartRoll.ts`) because its time already passed today in the recipient's zone.
    * Drives the inline note under the time field; never blocks Save. One time field on this surface.
    */
-  const doseStartsNext = useCallback(
-    (time: string): boolean => {
-      if (isEditing || !isMedication || isAsNeeded || !timezone || !dateStr || !time) return false;
+  const startsNextDose = useMemo((): boolean => {
+    if (isEditing || !isMedication || isAsNeeded || !timezone || !dateStr || !timeStr) return false;
+    try {
+      const api = eventDatesForApi({
+        dateStr,
+        timeStr,
+        recurrenceEndDateStr: null,
+        timezone,
+        heldInstant,
+      });
+      return circleDosePassedToday(api.scheduledDate, api.scheduledTime, timezone);
+    } catch {
+      return false;
+    }
+  }, [isEditing, isMedication, isAsNeeded, timezone, dateStr, timeStr, heldInstant]);
+  /**
+   * The same for an EXTRA dose ("+ Another dose" / a second chip): judged on the circle pair the SAVE sends for it
+   * (`extraDoseForApi`: the PRIMARY's circle day at the extra's own circle clock). Re-placing the extra's viewer clock
+   * on the primary's VIEWER day instead (what this did before) lands a whole circle day off when the viewer is far
+   * from the circle: a Berlin viewer of a New York circle at 12:30 there, Evening (6 PM NY = midnight Berlin, the
+   * NEXT viewer day) plus 9:00 AM read 9:00 AM as tomorrow's and never said it had passed.
+   */
+  const extraDoseStartsNext = useCallback(
+    (time: string, instant: Date | null): boolean => {
+      if (isEditing || !isMedication || isAsNeeded || !timezone || !dateStr || !timeStr || !time) return false;
       try {
-        const api = eventDatesForApi({
+        const api = extraDoseForApi({
           dateStr,
-          timeStr: time,
-          recurrenceEndDateStr: null,
+          timeStr,
+          extraTimeStr: time,
           timezone,
           heldInstant,
+          heldExtraInstant: instant,
         });
-        return (
-          !!api.scheduledTime &&
-          api.scheduledDate === getDateInTimezone(timezone) &&
-          isEventPastDue(api.scheduledDate, api.scheduledTime, timezone)
-        );
+        return circleDosePassedToday(api.scheduledDate, api.scheduledTime, timezone);
       } catch {
         return false;
       }
     },
-    [isEditing, isMedication, isAsNeeded, timezone, dateStr, heldInstant]
+    [isEditing, isMedication, isAsNeeded, timezone, dateStr, timeStr, heldInstant]
   );
-  const startsNextDose = useMemo(() => doseStartsNext(timeStr), [doseStartsNext, timeStr]);
   /** "Today" in the circle's (recipient's) timezone — never the device's. */
   const recipientToday = timezone ? getDateInTimezone(timezone) : null;
   /**
@@ -2959,7 +2994,12 @@ function AddEventForm({
   const pastDoseClocks = [
     ...new Set(
       doseRecipientTimes.flatMap((clock, slot) =>
-        clock && (slot === 0 ? startsNextDose : doseStartsNext(extraTimes[slot - 1] ?? '')) ? [clock.slice(0, 5)] : []
+        clock &&
+        (slot === 0
+          ? startsNextDose
+          : extraDoseStartsNext(extraDoses[slot - 1]?.time ?? '', extraDoses[slot - 1]?.instant ?? null))
+          ? [clock.slice(0, 5)]
+          : []
       )
     ),
   ].sort();
