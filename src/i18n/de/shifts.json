@@ -45,9 +45,9 @@
     "night": "Nacht",
     "personA": "Ana",
     "personB": "Luis",
-    "morningTime": "8:00 – 14:00 Uhr",
-    "afternoonTime": "14:00 – 20:00 Uhr",
-    "nightTime": "20:00 – 8:00 Uhr",
+    "morningTime": "{{start}} – {{end}}",
+    "afternoonTime": "{{start}} – {{end}}",
+    "nightTime": "{{start}} – {{end}}",
     "previewA11y": "Beispiel: Eine Früh- und eine Nachmittagsschicht sind besetzt, die Nachtschicht ist offen."
   },
   "take": {

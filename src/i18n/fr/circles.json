@@ -212,7 +212,7 @@
     "automaticRecipient": "Suivre l’appareil de {{name}} · actuellement {{city}}",
     "automaticOwn": "Suivre votre appareil · actuellement {{city}}",
     "helper": "Les heures des médicaments suivent ce fuseau",
-    "wallClockNote": "Les heures restent les mêmes — une dose de 8 h reste à 8 h dans le nouveau fuseau horaire.",
+    "wallClockNote": "Les heures restent les mêmes — une dose prévue à {{time}} reste à {{time}} dans le nouveau fuseau horaire.",
     "mismatch": "Le téléphone de {{name}} indique {{city}}. Votre réglage l’emporte — le planning suit l’heure de {{setCity}}.",
     "createLabel": "Où vit {{name}} ?",
     "createLabelNoName": "Où vit la personne que vous aidez ?",

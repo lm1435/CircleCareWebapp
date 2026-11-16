@@ -17,6 +17,10 @@ vi.mock('@/hooks/useCircleAdmin', () => ({
   useUpdateCircle: () => ({ mutate: updateMutate, isPending: updatePending }),
 }));
 
+// The viewer's clock, switchable per test (1.4.2 i18n audit C).
+let mockHourCycle: '12h' | '24h' = '12h';
+vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => mockHourCycle }));
+
 const showToast = vi.fn();
 vi.mock('@/components/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/ui')>();
@@ -75,6 +79,7 @@ let tzSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
   vi.clearAllMocks();
   updatePending = false;
+  mockHourCycle = '12h';
   tzSpy = vi.spyOn(Analytics, 'circleTimezoneSet').mockImplementation(() => {});
 });
 
@@ -115,11 +120,19 @@ describe('CircleTimezoneCard', () => {
     expect(screen.getByText('Medication times follow this zone')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Times keep their clock time — an 8:00 AM dose stays 8:00 AM in the new time zone.'
+        'Times keep their clock time — a dose at 8:00 AM stays at 8:00 AM in the new time zone.'
       )
     ).toBeInTheDocument();
     // The helper lines describe the field for assistive tech.
     expect(combobox()).toHaveAccessibleDescription(/Set by you/);
+  });
+
+  it('the wall-clock note example follows a 24-hour clock: 08:00, no AM/PM (positive + negative)', () => {
+    mockHourCycle = '24h';
+    renderCard(makeCircle());
+    const note = screen.getByText(/^Times keep their clock time/);
+    expect(note).toHaveTextContent('Times keep their clock time — a dose at 08:00 stays at 08:00 in the new time zone.');
+    expect(note.textContent).not.toMatch(/\b[AP]M\b|\{\{/);
   });
 
   it.each([

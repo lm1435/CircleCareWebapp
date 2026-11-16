@@ -67,9 +67,8 @@ test.describe('circle time zone (owner, Circle settings)', () => {
     await expect(field).toHaveValue(/^.+ \(GMT([+-]\d{1,2}(:\d{2})?)?\)$/);
     await expect(card.getByText('Medication times follow this zone', { exact: true })).toBeVisible();
     await expect(
-      card.getByText('Times keep their clock time — an 8:00 AM dose stays 8:00 AM in the new time zone.', {
-        exact: true,
-      })
+      // The example time follows the viewer's clock (12h "8:00 AM" / 24h "08:00").
+      card.getByText(/^Times keep their clock time — a dose at (8:00 AM|08:00) stays at (8:00 AM|08:00) in the new time zone\.$/)
     ).toBeVisible();
 
     // Open the picker: automatic first, regions grouped. Axe with it open.

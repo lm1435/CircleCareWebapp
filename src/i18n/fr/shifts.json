@@ -45,9 +45,9 @@
     "night": "Nuit",
     "personA": "Ana",
     "personB": "Luis",
-    "morningTime": "8 h – 14 h",
-    "afternoonTime": "14 h – 20 h",
-    "nightTime": "20 h – 8 h",
+    "morningTime": "{{start}} – {{end}}",
+    "afternoonTime": "{{start}} – {{end}}",
+    "nightTime": "{{start}} – {{end}}",
     "previewA11y": "Exemple : une garde du matin et une de l’après-midi ont chacune quelqu’un, et la garde de nuit est à pourvoir."
   },
   "take": {

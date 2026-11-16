@@ -212,7 +212,7 @@
     "automaticRecipient": "Dem Gerät von {{name}} folgen · derzeit {{city}}",
     "automaticOwn": "Ihrem Gerät folgen · derzeit {{city}}",
     "helper": "Medikamentenzeiten richten sich nach dieser Zeitzone",
-    "wallClockNote": "Uhrzeiten bleiben gleich — eine Dosis um 8:00 bleibt in der neuen Zeitzone um 8:00.",
+    "wallClockNote": "Uhrzeiten bleiben gleich — eine Dosis um {{time}} bleibt in der neuen Zeitzone um {{time}}.",
     "mismatch": "Das Telefon von {{name}} meldet {{city}}. Ihre Einstellung hat Vorrang — der Plan richtet sich nach der Uhrzeit in {{setCity}}.",
     "createLabel": "Wo lebt {{name}}?",
     "createLabelNoName": "Wo lebt die Person, die Sie betreuen?",

@@ -45,9 +45,9 @@
     "night": "Noite",
     "personA": "Ana",
     "personB": "Luis",
-    "morningTime": "8h – 14h",
-    "afternoonTime": "14h – 20h",
-    "nightTime": "20h – 8h",
+    "morningTime": "{{start}} – {{end}}",
+    "afternoonTime": "{{start}} – {{end}}",
+    "nightTime": "{{start}} – {{end}}",
     "previewA11y": "Exemplo: um plantão da manhã e um da tarde têm alguém, e o plantão da noite está em aberto."
   },
   "take": {

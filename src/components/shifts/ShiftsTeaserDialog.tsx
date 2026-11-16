@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Avatar, Badge, Button, Card, Modal } from '@/components/ui';
 import { Analytics } from '@/lib/analytics';
+import { useHourCycle } from '@/hooks/useHourCycle';
+import { formatTimeDisplay } from '@/utils/timezone';
 
 export interface ShiftsTeaserDialogProps {
   /** Where it was opened from (analytics enum). */
@@ -19,6 +21,10 @@ export interface ShiftsTeaserDialogProps {
 export function ShiftsTeaserDialog({ source, onClose }: ShiftsTeaserDialogProps): ReactElement {
   const { t } = useTranslation('shifts');
   const navigate = useNavigate();
+  // Example times in the viewer's own clock (12h / 24h) and language, never a
+  // hardcoded "8:00 AM" a 24-hour reader has to convert.
+  const hourCycle = useHourCycle();
+  const clock = (hour: number) => formatTimeDisplay(hour, 0, hourCycle);
 
   useEffect(() => {
     Analytics.shiftsTeaserShown({ source });
@@ -27,9 +33,9 @@ export function ShiftsTeaserDialog({ source, onClose }: ShiftsTeaserDialogProps)
   }, []);
 
   const rows = [
-    { name: t('teaser.morning'), time: t('teaser.morningTime'), who: t('teaser.personA'), open: false },
-    { name: t('teaser.afternoon'), time: t('teaser.afternoonTime'), who: t('teaser.personB'), open: false },
-    { name: t('teaser.night'), time: t('teaser.nightTime'), who: '', open: true },
+    { name: t('teaser.morning'), time: t('teaser.morningTime', { start: clock(8), end: clock(14) }), who: t('teaser.personA'), open: false },
+    { name: t('teaser.afternoon'), time: t('teaser.afternoonTime', { start: clock(14), end: clock(20) }), who: t('teaser.personB'), open: false },
+    { name: t('teaser.night'), time: t('teaser.nightTime', { start: clock(20), end: clock(8) }), who: '', open: true },
   ];
 
   return (

@@ -45,9 +45,9 @@
     "night": "Night",
     "personA": "Ana",
     "personB": "Luis",
-    "morningTime": "8:00 AM – 2:00 PM",
-    "afternoonTime": "2:00 PM – 8:00 PM",
-    "nightTime": "8:00 PM – 8:00 AM",
+    "morningTime": "{{start}} – {{end}}",
+    "afternoonTime": "{{start}} – {{end}}",
+    "nightTime": "{{start}} – {{end}}",
     "previewA11y": "Example: a morning and an afternoon shift each have someone on them, and the night shift is open."
   },
   "take": {

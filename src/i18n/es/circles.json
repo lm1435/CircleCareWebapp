@@ -212,7 +212,7 @@
     "automaticRecipient": "Seguir el dispositivo de {{name}} · actualmente {{city}}",
     "automaticOwn": "Seguir tu dispositivo · actualmente {{city}}",
     "helper": "Los horarios de los medicamentos siguen esta zona",
-    "wallClockNote": "Los horarios conservan su hora de reloj — una dosis de las 8:00 a. m. sigue a las 8:00 a. m. en la nueva zona horaria.",
+    "wallClockNote": "Los horarios conservan su hora de reloj — una dosis de las {{time}} sigue a las {{time}} en la nueva zona horaria.",
     "mismatch": "El teléfono de {{name}} indica {{city}}. Tu configuración tiene prioridad — el horario se rige por la hora de {{setCity}}.",
     "createLabel": "¿Dónde vive {{name}}?",
     "createLabelNoName": "¿Dónde vive la persona que cuidas?",

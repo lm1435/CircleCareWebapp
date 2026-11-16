@@ -45,9 +45,9 @@
     "night": "Notte",
     "personA": "Ana",
     "personB": "Luis",
-    "morningTime": "8:00 – 14:00",
-    "afternoonTime": "14:00 – 20:00",
-    "nightTime": "20:00 – 8:00",
+    "morningTime": "{{start}} – {{end}}",
+    "afternoonTime": "{{start}} – {{end}}",
+    "nightTime": "{{start}} – {{end}}",
     "previewA11y": "Esempio: un turno del mattino e uno del pomeriggio hanno qualcuno assegnato, mentre il turno di notte è scoperto."
   },
   "take": {

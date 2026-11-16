@@ -212,7 +212,7 @@
     "automaticRecipient": "Segui il dispositivo di {{name}} · attualmente {{city}}",
     "automaticOwn": "Segui il tuo dispositivo · attualmente {{city}}",
     "helper": "Gli orari dei farmaci seguono questo fuso",
-    "wallClockNote": "Gli orari restano gli stessi — una dose delle 8:00 resta alle 8:00 nel nuovo fuso orario.",
+    "wallClockNote": "Gli orari restano invariati — una dose delle {{time}} resta alle {{time}} nel nuovo fuso orario.",
     "mismatch": "Il telefono di {{name}} indica {{city}}. Vale la tua impostazione — il programma segue l’ora di {{setCity}}.",
     "createLabel": "Dove vive {{name}}?",
     "createLabelNoName": "Dove vive la persona di cui ti prendi cura?",

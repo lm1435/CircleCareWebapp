@@ -4,7 +4,8 @@ import type { CircleDetail, CircleTimezoneSource } from '@/api/circleMembers';
 import { useUpdateCircle } from '@/hooks/useCircleAdmin';
 import { Analytics } from '@/lib/analytics';
 import { zoneCity } from '@/lib/timezoneOptions';
-import { isSameTimezone } from '@/utils/timezone';
+import { formatTimeDisplay, isSameTimezone } from '@/utils/timezone';
+import { useHourCycle } from '@/hooks/useHourCycle';
 import { Card, Icon, useToast } from '@/components/ui';
 import { TimezoneCombobox } from './TimezoneCombobox';
 
@@ -39,6 +40,8 @@ export function resolveTimezoneSource(
 
 export function CircleTimezoneCard({ circleId, circle }: CircleTimezoneCardProps): ReactElement {
   const { t } = useTranslation('circles');
+  // The example time in the note is shown in the viewer's own clock (12h / 24h).
+  const hourCycle = useHourCycle();
   const { showToast } = useToast();
   const update = useUpdateCircle(circleId);
 
@@ -123,7 +126,7 @@ export function CircleTimezoneCard({ circleId, circle }: CircleTimezoneCardProps
         {t('timezone.helper')}
       </p>
       <p id={ids.note} className="m-0 mt-1 text-sm text-ink-3">
-        {t('timezone.wallClockNote')}
+        {t('timezone.wallClockNote', { time: formatTimeDisplay(8, 0, hourCycle) })}
       </p>
       {showMismatch && recipientZone && override ? (
         <p
