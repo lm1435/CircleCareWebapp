@@ -261,6 +261,7 @@ export function FirstRunWizardModal({
         viewerIsOwner={isOwner}
         ownerName={getCircleOwnerName(circle)}
         canSuggestManager={viewerCanSuggestManager(circle, currentUserId)}
+        circle={circle}
         onInvited={handleHandoffSaved}
         onClose={handleHandoffClose}
       />

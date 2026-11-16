@@ -974,7 +974,31 @@ export const Analytics = {
    * carries NO properties (no circle_id: founder rule, memory
    * feedback_conservative_analytics_identifiers).
    */
-  inviteCapReached: () => capture('invite_cap_reached'),
+  inviteCapReached: (precheck?: {
+    caregiverCount: number;
+    reason: 'pending_invite_seat' | 'members_full';
+  }) =>
+    // The PRE-CHECK card (shown before submit, from the circle's members +
+    // live pending invites) carries the same enum/count props as mobile, with
+    // `source: 'precheck'`. The post-402 note keeps the original prop-less call.
+    precheck
+      ? capture('invite_cap_reached', {
+          caregiver_count: precheck.caregiverCount,
+          reason: precheck.reason,
+          source: 'precheck',
+        })
+      : capture('invite_cap_reached'),
+  /**
+   * Upgrade tapped on the pre-submit invite cap card (owner only). Enum
+   * properties only; `paywall_context` is the INVITE_CAP context the upgrade
+   * page opens with. Same name and shape as mobile.
+   */
+  inviteCapUpgradeTapped: (reason: 'pending_invite_seat' | 'members_full') =>
+    capture('invite_cap_upgrade_tapped', {
+      reason,
+      source: 'precheck',
+      paywall_context: 'invite_cap',
+    }),
   /**
    * The inviter handed the link to someone directly rather than relying on our
    * email being the only delivery channel. Event names MIRROR mobile so the

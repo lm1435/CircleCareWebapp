@@ -107,6 +107,13 @@
     "success": "Partagez le lien pour que cette personne puisse rejoindre le cercle tout de suite.",
     "capReached": "Les cercles gratuits incluent jusqu’à deux aidants. Passez à Premium pour en ajouter d’autres.",
     "pendingSeat": "Votre invitation gratuite est déjà utilisée : la place est réservée par une invitation en attente pour {{email}}. Annulez-la dans Invitations en attente pour libérer la place, ou passez à Premium pour ajouter d’autres aidants.",
+    "capCardTitle": "Passez à Premium pour inviter plus d’aidants",
+    "capCardTitleAskOwner": "Ce cercle est complet",
+    "capCardMessage": "Les cercles gratuits acceptent jusqu’à {{limit}} aidants. Passez à Premium pour en ajouter d’autres.",
+    "capCardUpgrade": "Passer à Premium",
+    "pendingSeatCardTitle": "Votre invitation gratuite est déjà utilisée",
+    "pendingSeatCardMessage": "Votre cercle gratuit inclut une invitation d’aidant, et elle est occupée par une invitation en attente à {{email}}. Annulez cette invitation pour libérer la place, ou passez à Premium pour ajouter d’autres aidants.",
+    "pendingSeatCardMessageAskOwner": "La place d’aidant de ce cercle gratuit est occupée par une invitation en attente à {{email}}. Annulez cette invitation pour libérer la place, ou demandez au propriétaire du cercle de passer à Premium.",
     "pendingSeatUnknown": "Votre invitation gratuite est déjà utilisée : la place est réservée par une autre invitation en attente. Annulez-la dans Invitations en attente pour libérer la place, ou passez à Premium pour ajouter d’autres aidants.",
     "errors": {
       "emailInvalid": "Saisissez une adresse e-mail valide.",

@@ -107,6 +107,13 @@
     "success": "Comparte el enlace para que puedan unirse de inmediato.",
     "capReached": "Los círculos gratuitos incluyen hasta dos cuidadores. Mejora a Premium para agregar más.",
     "pendingSeat": "Ya usaste tu invitación: el lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancélala en Invitaciones pendientes para liberar el lugar o mejora a Premium para agregar más cuidadores.",
+    "capCardTitle": "Mejora tu plan para invitar más cuidadores",
+    "capCardTitleAskOwner": "Este círculo está completo",
+    "capCardMessage": "Los círculos gratuitos permiten hasta {{limit}} cuidadores. Mejora tu plan para agregar más.",
+    "capCardUpgrade": "Mejorar plan",
+    "pendingSeatCardTitle": "Tu invitación gratuita está en uso",
+    "pendingSeatCardMessage": "Tu círculo gratuito incluye una invitación de cuidador, y la ocupa una invitación pendiente para {{email}}. Cancela esa invitación para liberar el lugar, o mejora tu plan para agregar más cuidadores.",
+    "pendingSeatCardMessageAskOwner": "El lugar de cuidador de este círculo gratuito lo ocupa una invitación pendiente para {{email}}. Cancela esa invitación para liberar el lugar, o pide a la persona titular del círculo que mejore el plan.",
     "pendingSeatUnknown": "Ya usaste tu invitación: el lugar gratuito lo tiene otra invitación pendiente. Cancélala en Invitaciones pendientes para liberar el lugar o mejora a Premium para agregar más cuidadores.",
     "errors": {
       "emailInvalid": "Por favor ingresa un correo electrónico válido.",

@@ -18,8 +18,9 @@ import {
 //             /ai/ endpoint (counted from before the page loads).
 //   circles   creating a second circle on the free tier is a real 402; the app
 //             shows the upgrade prompt and the database still holds ONE circle.
-//   invites   the free caregiver cap (owner + 1) is a real 402; the modal keeps
-//             the cap notice, never "Invitation sent", and no invite row exists.
+//   invites   the free caregiver cap (owner + 1) is caught BEFORE the form: the
+//             modal opens on the cap card with Upgrade, no POST is sent, and no
+//             invite row exists (the real 402 stays the fallback).
 //
 // The same three flows succeed for the premium owner in
 // `premiumOwner.controls.spec.ts`.
@@ -89,35 +90,32 @@ test('create circle at the free cap: real 402, the upgrade prompt, and still exa
   await expect(page).toHaveURL(/\/upgrade$/, { timeout: 15_000 });
 });
 
-test('invite at the free caregiver cap: real 402, cap notice in the modal, no invite row', async ({
+test('invite at the free caregiver cap: the cap card shows BEFORE the form, Upgrade, no POST, no invite row', async ({
   page,
   personaHandle: h,
 }) => {
-  const email = `e2e-cap-${Date.now()}-${Math.floor(Math.random() * 1e4)}@example.com`;
+  // The seat pre-check (lib/inviteSeatPrecheck): owner + 1 active caregiver
+  // fill a free circle, so the modal opens on the cap card instead of an email
+  // field the owner would fill only to be refused with a 402. The 402 itself
+  // stays the fallback (unit-tested in InviteMemberModal.test.tsx).
   await gotoCirclePage(page, h.circleId, 'members');
   await expect(page.getByText(h.email).first()).toBeVisible({ timeout: 20_000 });
 
+  const posts = countRequests(page, 'POST', '/api/circles/:id/invites');
   await page.getByRole('button', { name: 'Invite member' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('heading', { name: 'Invite a member' })).toBeVisible();
-  await dialog.locator('#invite-email').fill(email);
+  const card = dialog.getByTestId('invite-cap-card');
+  await expect(card).toContainText('Upgrade to invite more caregivers');
+  await expect(dialog.locator('#invite-email')).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Send invitation' })).toHaveCount(0);
+  await posts.expectCount(0, { settleMs: 500 });
 
-  const posts = countRequests(page, 'POST', '/api/circles/:id/invites');
-  const refused = page.waitForResponse(
-    (r) => r.request().method() === 'POST' && new URL(r.url()).pathname === `/api/circles/${h.circleId}/invites`,
-    { timeout: 20_000 }
-  );
-  await dialog.getByRole('button', { name: 'Send invitation' }).click();
-  expect((await refused).status(), 'POST invites at the cap').toBe(402);
-
-  await expect(dialog.getByRole('alert')).toContainText(
-    'Free circles include up to two caregivers. Upgrade to Premium to add more.'
-  );
-  await expect(page.getByText(UPGRADE_GATE_MESSAGE)).toBeVisible();
-  await expect(dialog.getByText('Invitation sent')).toHaveCount(0);
-  await posts.expectCount(1);
+  await card.getByRole('button', { name: 'Upgrade', exact: true }).click();
+  await expect(page).toHaveURL(/\/upgrade$/, { timeout: 15_000 });
+  await posts.expectCount(0);
   expect(
-    dbCount(`select 1 from invites where circle_id = ${sqlStr(h.circleId)}::uuid and invited_email = ${sqlStr(email)}`),
+    dbCount(`select 1 from invites where circle_id = ${sqlStr(h.circleId)}::uuid and status = 'pending' and created_at > now() - interval '1 minute'`),
     'no invite row'
   ).toBe(0);
 });

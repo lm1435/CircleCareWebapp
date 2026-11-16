@@ -107,6 +107,13 @@
     "success": "Share the link so they can join right away.",
     "capReached": "Free circles include up to two caregivers. Upgrade to Premium to add more.",
     "pendingSeat": "You've already used your invitation — the free spot is held by a pending invite to {{email}}. Cancel it under Pending invites to free the spot, or upgrade to Premium to add more caregivers.",
+    "capCardTitle": "Upgrade to invite more caregivers",
+    "capCardTitleAskOwner": "This circle is full",
+    "capCardMessage": "Free circles support up to {{limit}} caregivers. Upgrade to add more.",
+    "capCardUpgrade": "Upgrade",
+    "pendingSeatCardTitle": "Your free invitation is in use",
+    "pendingSeatCardMessage": "Your free circle includes one caregiver invitation, and it is held by a pending invite to {{email}}. Cancel that invite to free the spot, or upgrade to add more caregivers.",
+    "pendingSeatCardMessageAskOwner": "This free circle's caregiver spot is held by a pending invite to {{email}}. Cancel that invite to free the spot, or ask the circle owner to upgrade.",
     "pendingSeatUnknown": "You've already used your invitation — the free spot is held by another pending invite. Cancel it under Pending invites to free the spot, or upgrade to Premium to add more caregivers.",
     "errors": {
       "emailInvalid": "Please enter a valid email address.",

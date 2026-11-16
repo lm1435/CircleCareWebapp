@@ -11,6 +11,8 @@ import { Analytics } from '@/lib/analytics';
 import { isWebBillingConfigured } from '@/lib/webBillingConfig';
 import { getPendingInviteSeat, isSubscriptionRequiredError } from '@/lib/apiErrors';
 import { withInviteLocale } from '@/utils/inviteShareUrl';
+import { getInviteSeatPrecheck } from '@/lib/inviteSeatPrecheck';
+import type { CircleDetail } from '@/api/circleMembers';
 import {
   Button,
   Card,
@@ -86,6 +88,13 @@ export interface InviteMemberModalProps {
    * the invite just sent makes the team non-empty as soon as the parent refetches.
    */
   showHelpLink?: boolean;
+  /**
+   * The circle detail the parent already holds (GET /circles/:id). Feeds the
+   * free-tier seat PRE-CHECK: active caregivers + live pending caregiver
+   * invites, the backend's exact rule (lib/inviteSeatPrecheck). Absent = no
+   * pre-check; the post-402 note below remains the fallback either way.
+   */
+  circle?: Pick<CircleDetail, 'members' | 'pending_invites' | 'is_premium_circle'>;
 }
 
 export function InviteMemberModal({
@@ -99,6 +108,7 @@ export function InviteMemberModal({
   ownerName,
   canSuggestManager = false,
   showHelpLink = false,
+  circle,
 }: InviteMemberModalProps): ReactElement {
   const { t, i18n } = useTranslation('members');
   const dailyUpdateOn = useDailyUpdateEnabled(circleId);
@@ -133,6 +143,17 @@ export function InviteMemberModal({
     if (capNotice) Analytics.inviteCapReached();
   }, [capNotice]);
 
+  // PRE-CHECK (mobile parity: InviteMemberScreen `isCaregiverAtLimit`). The
+  // seats are the OWNER's plan: `is_premium_circle` is the owner's tier as the
+  // server computes it, for the owner and a manager alike. Only a Family
+  // caregiver invite takes a seat; a care-recipient invite is never capped.
+  const seatPrecheck = getInviteSeatPrecheck(circle);
+  const precheckBlocked =
+    circle?.is_premium_circle === false && memberType === 'caregiver' && seatPrecheck.atLimit;
+  const precheckReason = seatPrecheck.reason ?? 'members_full';
+  const pendingSeatEmail =
+    seatPrecheck.reason === 'pending_invite_seat' ? seatPrecheck.blockingEmail : null;
+
   // The name the subtitle, the recipient description and the daily-update line speak of.
   const careForName = recipientName?.trim() || circleName?.trim() || '';
 
@@ -155,6 +176,20 @@ export function InviteMemberModal({
     if (sentInvite) sentHeadingRef.current?.focus();
   }, [sentInvite]);
   const [copied, setCopied] = useState(false);
+
+  // Once per mount, on the false→true transition of the card actually being on
+  // screen. Not while "Invitation sent" is up: the parent's refetch after a
+  // send fills the seat, but the card only appears after "Send another".
+  const precheckFiredRef = useRef(false);
+  useEffect(() => {
+    if (precheckBlocked && !sentInvite && !precheckFiredRef.current) {
+      precheckFiredRef.current = true;
+      Analytics.inviteCapReached({
+        caregiverCount: seatPrecheck.activeCaregivers,
+        reason: precheckReason,
+      });
+    }
+  }, [precheckBlocked, sentInvite, seatPrecheck.activeCaregivers, precheckReason]);
 
   /**
    * THE ONE URL. Everything that surfaces the link — the selectable text on
@@ -318,15 +353,17 @@ export function InviteMemberModal({
             <Button variant="ghost" onClick={onClose} disabled={createInvite.isPending}>
               {t('common:cancel')}
             </Button>
-            <Button
-              type="submit"
-              offlineKind="save"
-              form="invite-member-form"
-              loading={createInvite.isPending}
-              disabled={createInvite.isPending || email.trim().length === 0}
-            >
-              {createInvite.isPending ? t('invite.sending') : t('invite.send')}
-            </Button>
+            {precheckBlocked ? null : (
+              <Button
+                type="submit"
+                offlineKind="save"
+                form="invite-member-form"
+                loading={createInvite.isPending}
+                disabled={createInvite.isPending || email.trim().length === 0}
+              >
+                {createInvite.isPending ? t('invite.sending') : t('invite.send')}
+              </Button>
+            )}
           </div>
         )
       }
@@ -471,6 +508,53 @@ export function InviteMemberModal({
           </div>
         ) : null}
 
+        {precheckBlocked ? (
+          // The seat cap, BEFORE the form is filled (mobile InviteMemberScreen
+          // cap card: same title, message and Upgrade, same order). The owner
+          // gets Upgrade; a manager is told who can upgrade and is NEVER sold
+          // a paywall (memory project_owner_aware_premium_gates).
+          <Card
+            variant="filled"
+            className="flex flex-col items-start gap-3 text-sm"
+            data-testid={viewerIsOwner ? 'invite-cap-card' : 'invite-owner-limit-card'}
+          >
+            <div className="flex items-start gap-2">
+              <Icon name="lock-closed-outline" size="inline" className="mt-0.5 shrink-0 text-moss" />
+              <div className="min-w-0">
+                <h3 className="m-0 text-base font-semibold text-ink">
+                  {viewerIsOwner
+                    ? pendingSeatEmail
+                      ? t('invite.pendingSeatCardTitle')
+                      : t('invite.capCardTitle')
+                    : t('invite.capCardTitleAskOwner')}
+                </h3>
+                <p className="m-0 mt-1 text-ink-2">
+                  {viewerIsOwner
+                    ? pendingSeatEmail
+                      ? t('invite.pendingSeatCardMessage', { email: pendingSeatEmail })
+                      : t('invite.capCardMessage', { limit: 2 })
+                    : pendingSeatEmail
+                      ? t('invite.pendingSeatCardMessageAskOwner', { email: pendingSeatEmail })
+                      : ownerName
+                        ? t('invite.capReachedAskOwnerNamed', { ownerName })
+                        : t('invite.capReachedAskOwner')}
+                </p>
+              </div>
+            </div>
+            {viewerIsOwner && isWebBillingConfigured() ? (
+              <Button
+                size="sm"
+                data-testid="invite-cap-upgrade-button"
+                onClick={() => {
+                  Analytics.inviteCapUpgradeTapped(precheckReason);
+                  navigate('/upgrade', { state: { paywallContext: 'invite_cap' } });
+                }}
+              >
+                {t('invite.capCardUpgrade')}
+              </Button>
+            ) : null}
+          </Card>
+        ) : (
         <TextField
           id="invite-email"
           required
@@ -485,6 +569,7 @@ export function InviteMemberModal({
           }}
           error={errors['invite-email'] || undefined}
         />
+        )}
 
         {capNotice ? (
           <Card variant="filled" role="alert" className="flex flex-col items-start gap-3 text-sm">

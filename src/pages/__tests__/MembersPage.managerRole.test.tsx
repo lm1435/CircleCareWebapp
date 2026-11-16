@@ -430,7 +430,9 @@ describe('MembersPage — invite manager hint (on "Invitation sent")', () => {
   });
 
   it('is absent for a FREE owner (assign_manager is still served)', async () => {
-    setCircle(roster(), { ...OWNER_ON, is_premium_circle: false });
+    // Owner alone: a free circle already at its caregiver cap now shows the
+    // seat pre-check card instead of the form (lib/inviteSeatPrecheck).
+    setCircle([roster()[0]], { ...OWNER_ON, is_premium_circle: false });
     await openInvite();
     await send();
     expect(screen.queryByText(HINT)).toBeNull();

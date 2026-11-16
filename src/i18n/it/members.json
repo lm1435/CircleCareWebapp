@@ -107,6 +107,13 @@
     "success": "Condividi il link così potrà entrare subito.",
     "capReached": "Le cerchie gratuite includono fino a due caregiver. Passa a Premium per aggiungerne altri.",
     "pendingSeat": "Hai già usato il tuo invito: il posto gratuito è occupato da un invito in sospeso per {{email}}. Annullalo in Inviti in sospeso per liberare il posto, oppure passa a Premium per aggiungere altri caregiver.",
+    "capCardTitle": "Fai l'upgrade per invitare altri caregiver",
+    "capCardTitleAskOwner": "Questa cerchia è al completo",
+    "capCardMessage": "Le cerchie gratuite prevedono fino a {{limit}} caregiver. Fai l'upgrade per aggiungerne altri.",
+    "capCardUpgrade": "Fai l'upgrade",
+    "pendingSeatCardTitle": "Il tuo invito gratuito è già in uso",
+    "pendingSeatCardMessage": "La tua cerchia gratuita include un invito per un caregiver, ed è occupato da un invito in sospeso a {{email}}. Annulla quell'invito per liberare il posto, oppure fai l'upgrade per aggiungere altri caregiver.",
+    "pendingSeatCardMessageAskOwner": "Il posto da caregiver di questa cerchia gratuita è occupato da un invito in sospeso a {{email}}. Annulla quell'invito per liberare il posto, oppure chiedi al titolare della cerchia di passare a Premium.",
     "pendingSeatUnknown": "Hai già usato il tuo invito: il posto gratuito è occupato da un altro invito in sospeso. Annullalo in Inviti in sospeso per liberare il posto, oppure passa a Premium per aggiungere altri caregiver.",
     "errors": {
       "emailInvalid": "Inserisci un indirizzo email valido.",

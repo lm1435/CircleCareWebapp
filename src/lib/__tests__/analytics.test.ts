@@ -265,6 +265,26 @@ describe('analytics wrapper — active path (key set)', () => {
     expect(props ?? {}).not.toHaveProperty('circle_id');
   });
 
+  it('invite_cap_reached from the pre-check carries enum/count props only', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.inviteCapReached({ caregiverCount: 1, reason: 'pending_invite_seat' });
+    expect(capture).toHaveBeenCalledWith('invite_cap_reached', {
+      caregiver_count: 1,
+      reason: 'pending_invite_seat',
+      source: 'precheck',
+    });
+  });
+
+  it('invite_cap_upgrade_tapped carries enums only (no circle_id, no email)', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.inviteCapUpgradeTapped('members_full');
+    expect(capture).toHaveBeenCalledWith('invite_cap_upgrade_tapped', {
+      reason: 'members_full',
+      source: 'precheck',
+      paywall_context: 'invite_cap',
+    });
+  });
+
   it('invite_cap_reached no-ops without a key', async () => {
     const { Analytics } = await loadWithKey(undefined);
     Analytics.inviteCapReached();

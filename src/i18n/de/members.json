@@ -107,6 +107,13 @@
     "success": "Teilen Sie den Link, damit die Person sofort beitreten kann.",
     "capReached": "Kostenlose Kreise bieten Platz für bis zu zwei Pflegepersonen. Wechseln Sie zu Premium, um weitere hinzuzufügen.",
     "pendingSeat": "Sie haben Ihre Einladung bereits verwendet – der kostenlose Platz ist durch eine ausstehende Einladung an {{email}} belegt. Ziehen Sie sie unter „Ausstehende Einladungen“ zurück, um den Platz freizugeben, oder wechseln Sie zu Premium, um weitere Pflegepersonen hinzuzufügen.",
+    "capCardTitle": "Upgrade, um mehr Pflegepersonen einzuladen",
+    "capCardTitleAskOwner": "Dieser Kreis ist voll",
+    "capCardMessage": "Kostenlose Kreise unterstützen bis zu {{limit}} Pflegepersonen. Führen Sie ein Upgrade durch, um weitere hinzuzufügen.",
+    "capCardUpgrade": "Upgrade",
+    "pendingSeatCardTitle": "Ihre kostenlose Einladung ist vergeben",
+    "pendingSeatCardMessage": "Ihr kostenloser Kreis enthält eine Einladung für eine Pflegeperson, und sie ist durch eine ausstehende Einladung an {{email}} belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder führen Sie ein Upgrade durch, um weitere Pflegepersonen hinzuzufügen.",
+    "pendingSeatCardMessageAskOwner": "Der Platz für eine Pflegeperson in diesem kostenlosen Kreis ist durch eine ausstehende Einladung an {{email}} belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Inhaber um ein Upgrade.",
     "pendingSeatUnknown": "Sie haben Ihre Einladung bereits verwendet – der kostenlose Platz ist durch eine andere ausstehende Einladung belegt. Ziehen Sie sie unter „Ausstehende Einladungen“ zurück, um den Platz freizugeben, oder wechseln Sie zu Premium, um weitere Pflegepersonen hinzuzufügen.",
     "errors": {
       "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",

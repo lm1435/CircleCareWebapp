@@ -107,6 +107,13 @@
     "success": "Compartilhe o link para que a pessoa possa entrar agora mesmo.",
     "capReached": "Círculos gratuitos incluem até dois cuidadores. Faça upgrade para o Premium para adicionar mais.",
     "pendingSeat": "Você já usou o seu convite — a vaga gratuita está ocupada por um convite pendente para {{email}}. Cancele-o em Convites pendentes para liberar a vaga ou faça upgrade para o Premium para adicionar mais cuidadores.",
+    "capCardTitle": "Faça upgrade para convidar mais cuidadores",
+    "capCardTitleAskOwner": "Este círculo está completo",
+    "capCardMessage": "Círculos gratuitos comportam até {{limit}} cuidadores. Faça upgrade para adicionar mais.",
+    "capCardUpgrade": "Fazer upgrade",
+    "pendingSeatCardTitle": "Seu convite gratuito está em uso",
+    "pendingSeatCardMessage": "Seu círculo gratuito inclui um convite de cuidador, e ele está ocupado por um convite pendente para {{email}}. Cancele esse convite para liberar a vaga ou faça upgrade para adicionar mais cuidadores.",
+    "pendingSeatCardMessageAskOwner": "A vaga de cuidador deste círculo gratuito está ocupada por um convite pendente para {{email}}. Cancele esse convite para liberar a vaga ou peça ao proprietário do círculo para fazer upgrade.",
     "pendingSeatUnknown": "Você já usou o seu convite — a vaga gratuita está ocupada por outro convite pendente. Cancele-o em Convites pendentes para liberar a vaga ou faça upgrade para o Premium para adicionar mais cuidadores.",
     "errors": {
       "emailInvalid": "Insira um endereço de e-mail válido.",
