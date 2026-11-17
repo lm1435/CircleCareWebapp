@@ -1026,6 +1026,18 @@ export const Analytics = {
   // circle_id stay clean. `source` separates the landing page ('invite_link'),
   // the pending-invites list ('in_app'), and the join-by-code modal
   // ('code_entry') — WB4: the code-entry path previously fired no event at all.
+  // --- Invite decline (1.4.3) — same names/props as mobile. Enums and booleans
+  // only: never circle_id, ids or emails. ---
+  inviteDeclineTapped: (memberType: 'caregiver' | 'care_recipient') =>
+    capture('invite_decline_tapped', { member_type: memberType }),
+  inviteDeclineConfirmed: (memberType: 'caregiver' | 'care_recipient', alreadyDeclined: boolean) =>
+    capture('invite_decline_confirmed', { member_type: memberType, already_declined: alreadyDeclined }),
+  inviteDeclineFailed: (errorCode: string) => capture('invite_decline_failed', { error_code: errorCode }),
+  declinedInviteReinvited: (memberType: 'caregiver' | 'care_recipient') =>
+    capture('declined_invite_reinvited', { member_type: memberType }),
+  declinedInviteRemoved: (memberType: 'caregiver' | 'care_recipient') =>
+    capture('declined_invite_removed', { member_type: memberType }),
+
   inviteAccepted: (circleId?: string, source?: 'invite_link' | 'in_app' | 'code_entry') =>
     capture('invite_accepted', {
       ...(circleId ? { circle_id: circleId } : {}),

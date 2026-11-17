@@ -45,6 +45,17 @@ export interface CircleMember {
  * inviter/owner perspective — shape from backend/src/routes/circles.ts GET
  * /:circleId (`select('id, invited_email, created_at, expires_at')`).
  */
+/** A declined invite on the circle detail (`declined_invites`, 1.4.3). */
+export interface DeclinedCircleInvite {
+  id: string;
+  invited_email: string;
+  member_type: 'caregiver' | 'care_recipient';
+  created_at: string;
+  status: 'declined';
+  /** When it was declined; null when unknown (render "Declined" without a date). */
+  declined_at: string | null;
+}
+
 export interface PendingCircleInvite {
   id: string;
   invited_email: string;
@@ -163,6 +174,12 @@ export interface CircleDetail {
   /** Pending invites for this circle. Optional — only returned to viewers who
    *  can manage members (owner, managers); consumers default to []. */
   pending_invites?: PendingCircleInvite[];
+  /**
+   * ADDITIVE (1.4.3 invite decline): invites the invitee declined. Owner and
+   * current managers only; ABSENT when there are none and on an older backend
+   * (read as `declined_invites ?? EMPTY`). Holds no seat; never Resend / Copy link.
+   */
+  declined_invites?: DeclinedCircleInvite[];
   // Subscription-aware access info (requester's perspective)
   access_level: 'full' | 'edit' | 'view';
   is_premium_circle: boolean;

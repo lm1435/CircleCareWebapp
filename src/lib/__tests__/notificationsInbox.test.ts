@@ -263,6 +263,9 @@ describe('resolveInboxDestination (same place a push tap goes)', () => {
   it('member_joined / invite_nudge -> members; other circle-level types and unknown types -> the circle', () => {
     expect(dest({ type: 'member_joined' })).toEqual({ kind: 'route', to: `${base}/members` });
     expect(dest({ type: 'invite_nudge' })).toEqual({ kind: 'route', to: `${base}/members` });
+    // 1.4.3: the inviter's "X declined your invite" lands where the declined row is.
+    expect(dest({ type: 'invite_declined' })).toEqual({ kind: 'route', to: `${base}/members` });
+    expect(inboxTypeEnum('invite_declined')).toBe('invite_declined');
     for (const type of ['recognition', 'tier_downgrade_view_only', 'member_role_changed', 'future_type']) {
       expect(dest({ type })).toEqual({ kind: 'route', to: base });
     }

@@ -181,7 +181,18 @@
     "removeManagerConfirmTitle": "Remove {{name}} as manager?",
     "removeManagerConfirmBody": "{{name}} will stay in the circle as a caregiver, but won't be able to invite or remove people anymore.",
     "madeManager": "{{name}} is now a manager.",
-    "removedManager": "{{name}} is no longer a manager."
+    "removedManager": "{{name}} is no longer a manager.",
+    "declinedHeading": "Declined invites",
+    "inviteDeclined": "Declined",
+    "inviteDeclinedOn": "Declined {{date}}",
+    "inviteAgain": "Invite again",
+    "inviteAgainLabel": "Invite again: {{email}}",
+    "inviteAgainConfirmTitle": "Invite again?",
+    "inviteAgainConfirmBody": "{{email}} declined the last invite. They'll get a new invitation email.",
+    "inviteAgainSuccess": "Invitation sent to {{email}}.",
+    "removeDeclined": "Remove",
+    "removeDeclinedLabel": "Remove declined invite for {{email}}",
+    "removeDeclinedSuccess": "Declined invite removed."
   },
   "pending": {
     "heading": "Your invitations",
@@ -202,6 +213,18 @@
       "review": "Review invitation",
       "reviewPlural": "Review invitations"
     },
-    "expiresLabel": "Expires"
+    "expiresLabel": "Expires",
+    "decline": "Decline",
+    "declineLabel": "Decline invite to {{name}}",
+    "declining": "Declining…",
+    "declineTitle": "Decline this invite?",
+    "declineMessage": "We'll let {{inviter}} know. To join later, you'll need a new invite.",
+    "declineKeep": "Keep invite",
+    "declineSuccess": "Invite declined",
+    "declineErrorUsed": "This invite was already used.",
+    "declineErrorInactive": "This invite is no longer active.",
+    "declineErrorExpired": "This invite has expired.",
+    "declineErrorRateLimit": "Too many tries. Please wait a few minutes and try again.",
+    "declineErrorGeneric": "We couldn't decline this invite. Please try again."
   }
 }

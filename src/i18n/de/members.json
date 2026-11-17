@@ -181,7 +181,18 @@
     "removeManagerConfirmTitle": "{{name}} die Mitverwaltung entziehen?",
     "removeManagerConfirmBody": "{{name}} bleibt als Pflegeperson im Kreis, kann aber keine Personen mehr einladen oder entfernen.",
     "madeManager": "{{name}} verwaltet den Kreis jetzt mit.",
-    "removedManager": "{{name}} verwaltet den Kreis nicht mehr mit."
+    "removedManager": "{{name}} verwaltet den Kreis nicht mehr mit.",
+    "declinedHeading": "Abgelehnte Einladungen",
+    "inviteDeclined": "Abgelehnt",
+    "inviteDeclinedOn": "Abgelehnt am {{date}}",
+    "inviteAgain": "Erneut einladen",
+    "inviteAgainLabel": "Erneut einladen: {{email}}",
+    "inviteAgainConfirmTitle": "Erneut einladen?",
+    "inviteAgainConfirmBody": "{{email}} hat die letzte Einladung abgelehnt. Es wird eine neue Einladungs-E-Mail gesendet.",
+    "inviteAgainSuccess": "Einladung an {{email}} gesendet.",
+    "removeDeclined": "Entfernen",
+    "removeDeclinedLabel": "Abgelehnte Einladung für {{email}} entfernen",
+    "removeDeclinedSuccess": "Abgelehnte Einladung entfernt."
   },
   "pending": {
     "heading": "Ihre Einladungen",
@@ -202,6 +213,18 @@
       "review": "Einladung ansehen",
       "reviewPlural": "Einladungen ansehen"
     },
-    "expiresLabel": "Läuft ab"
+    "expiresLabel": "Läuft ab",
+    "decline": "Ablehnen",
+    "declineLabel": "Einladung zu {{name}} ablehnen",
+    "declining": "Wird abgelehnt…",
+    "declineTitle": "Diese Einladung ablehnen?",
+    "declineMessage": "Wir benachrichtigen {{inviter}}. Um später beizutreten, brauchen Sie eine neue Einladung.",
+    "declineKeep": "Einladung behalten",
+    "declineSuccess": "Einladung abgelehnt",
+    "declineErrorUsed": "Diese Einladung wurde bereits verwendet.",
+    "declineErrorInactive": "Diese Einladung ist nicht mehr gültig.",
+    "declineErrorExpired": "Diese Einladung ist abgelaufen.",
+    "declineErrorRateLimit": "Zu viele Versuche. Bitte warten Sie ein paar Minuten und versuchen Sie es erneut.",
+    "declineErrorGeneric": "Die Einladung konnte nicht abgelehnt werden. Bitte versuchen Sie es erneut."
   }
 }

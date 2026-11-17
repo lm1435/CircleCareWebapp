@@ -181,7 +181,18 @@
     "removeManagerConfirmTitle": "Togliere il ruolo di gestore a {{name}}?",
     "removeManagerConfirmBody": "{{name}} resterà nella cerchia come caregiver, ma non potrà più invitare né rimuovere persone.",
     "madeManager": "{{name}} ora aiuta a gestire la cerchia.",
-    "removedManager": "{{name}} non aiuta più a gestire la cerchia."
+    "removedManager": "{{name}} non aiuta più a gestire la cerchia.",
+    "declinedHeading": "Inviti rifiutati",
+    "inviteDeclined": "Rifiutato",
+    "inviteDeclinedOn": "Rifiutato il {{date}}",
+    "inviteAgain": "Invita di nuovo",
+    "inviteAgainLabel": "Invita di nuovo: {{email}}",
+    "inviteAgainConfirmTitle": "Invitare di nuovo?",
+    "inviteAgainConfirmBody": "{{email}} ha rifiutato l’ultimo invito. Riceverà una nuova email di invito.",
+    "inviteAgainSuccess": "Invito inviato a {{email}}.",
+    "removeDeclined": "Rimuovi",
+    "removeDeclinedLabel": "Rimuovi l’invito rifiutato di {{email}}",
+    "removeDeclinedSuccess": "Invito rifiutato rimosso."
   },
   "pending": {
     "heading": "I tuoi inviti",
@@ -202,6 +213,18 @@
       "review": "Rivedi l'invito",
       "reviewPlural": "Rivedi gli inviti"
     },
-    "expiresLabel": "Scade"
+    "expiresLabel": "Scade",
+    "decline": "Rifiuta",
+    "declineLabel": "Rifiuta l’invito a {{name}}",
+    "declining": "Rifiuto in corso…",
+    "declineTitle": "Rifiutare questo invito?",
+    "declineMessage": "Avviseremo {{inviter}}. Per unirti più tardi ti servirà un nuovo invito.",
+    "declineKeep": "Tieni l’invito",
+    "declineSuccess": "Invito rifiutato",
+    "declineErrorUsed": "Questo invito è già stato usato.",
+    "declineErrorInactive": "Questo invito non è più attivo.",
+    "declineErrorExpired": "Questo invito è scaduto.",
+    "declineErrorRateLimit": "Troppi tentativi. Attendi qualche minuto e riprova.",
+    "declineErrorGeneric": "Non è stato possibile rifiutare l’invito. Riprova."
   }
 }

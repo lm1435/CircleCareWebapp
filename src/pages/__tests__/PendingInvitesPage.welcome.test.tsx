@@ -10,6 +10,7 @@ import { peekPendingInviteeWelcome } from '@/lib/inviteeWelcome';
 
 const acceptMutate = vi.fn();
 vi.mock('@/hooks/useInvites', () => ({
+  useDeclineInvite: () => ({ mutate: vi.fn(), isPending: false }),
   usePendingInvites: () => ({
     data: [
       {

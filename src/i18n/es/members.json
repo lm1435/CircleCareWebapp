@@ -181,7 +181,18 @@
     "removeManagerConfirmTitle": "¿Quitarle a {{name}} el rol de gestor?",
     "removeManagerConfirmBody": "{{name}} seguirá en el círculo como cuidador, pero ya no podrá invitar ni quitar personas.",
     "madeManager": "{{name}} ahora ayuda a administrar el círculo.",
-    "removedManager": "{{name}} ya no ayuda a administrar el círculo."
+    "removedManager": "{{name}} ya no ayuda a administrar el círculo.",
+    "declinedHeading": "Invitaciones rechazadas",
+    "inviteDeclined": "Rechazada",
+    "inviteDeclinedOn": "Rechazada el {{date}}",
+    "inviteAgain": "Invitar de nuevo",
+    "inviteAgainLabel": "Invitar de nuevo: {{email}}",
+    "inviteAgainConfirmTitle": "¿Invitar de nuevo?",
+    "inviteAgainConfirmBody": "{{email}} rechazó la última invitación. Recibirá un nuevo correo de invitación.",
+    "inviteAgainSuccess": "Invitación enviada a {{email}}.",
+    "removeDeclined": "Quitar",
+    "removeDeclinedLabel": "Quitar la invitación rechazada de {{email}}",
+    "removeDeclinedSuccess": "Se quitó la invitación rechazada."
   },
   "pending": {
     "heading": "Tus invitaciones",
@@ -202,6 +213,18 @@
       "review": "Revisar invitación",
       "reviewPlural": "Revisar invitaciones"
     },
-    "expiresLabel": "Vence"
+    "expiresLabel": "Vence",
+    "decline": "Rechazar",
+    "declineLabel": "Rechazar la invitación a {{name}}",
+    "declining": "Rechazando…",
+    "declineTitle": "¿Rechazar esta invitación?",
+    "declineMessage": "Le avisaremos a {{inviter}}. Para unirte más adelante, necesitarás una nueva invitación.",
+    "declineKeep": "Conservar invitación",
+    "declineSuccess": "Invitación rechazada",
+    "declineErrorUsed": "Esta invitación ya se usó.",
+    "declineErrorInactive": "Esta invitación ya no está activa.",
+    "declineErrorExpired": "Esta invitación venció.",
+    "declineErrorRateLimit": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
+    "declineErrorGeneric": "No pudimos rechazar esta invitación. Inténtalo de nuevo."
   }
 }

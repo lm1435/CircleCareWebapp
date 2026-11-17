@@ -9,5 +9,8 @@
     "errors": {
       "emailInvalid": "Saisissez une adresse courriel valide."
     }
+  },
+  "manage": {
+    "inviteAgainConfirmBody": "{{email}} a refusé la dernière invitation. Un nouveau courriel d’invitation sera envoyé."
   }
 }

@@ -88,6 +88,8 @@ const PUSH_TYPES: readonly string[] = [
   'invite_nudge',
   'invite_expiry_nudge',
   'invite_undelivered',
+  // 1.4.3: the invitee declined (to the inviter). data { circleId, inviteId }.
+  'invite_declined',
   'member_joined',
   'member_role_changed',
   'member_removed_by_manager',
@@ -484,6 +486,8 @@ export function resolveInboxDestination(item: InboxItem): InboxDestination {
       };
     case 'member_joined':
     case 'invite_nudge':
+    // 1.4.3: the declined row (Invite again / Remove) lives on Members.
+    case 'invite_declined':
       return { kind: 'route', to: `${base}/members` };
     default:
       // onboarding_nudge, invite_expiry_nudge, invite_undelivered, member_role_changed,

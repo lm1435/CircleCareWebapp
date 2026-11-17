@@ -70,8 +70,9 @@ export async function previewInviteByCode(code: string): Promise<InvitePreview> 
 //       link to join. 402 SUBSCRIPTION_REQUIRED when a free-tier circle already
 //       has ≥2 active+pending caregivers.
 //   - DELETE /invites/:inviteId          (requireAuth, inviter/owner = CANCEL).
-//       NOTE: there is NO "decline invite" endpoint for the invitee — mobile's
-//       Decline is a client-only dismiss. We deliberately do NOT add one here.
+//       On a DECLINED row (1.4.3) the same call dismisses it ("Remove").
+//   - POST   /invites/:inviteId/decline  (requireAuth, the INVITEE, 1.4.3):
+//       see `declineInvite` below and docs/plans/invite-decline-1-4-3.md.
 //   - POST   /invites/:inviteId/resend   (requireAuth + inviteRateLimit,
 //       inviter/owner). Extends the SAME row by 7 days and re-sends the email;
 //       the invite_code is deliberately NOT rotated, so a link the recipient
@@ -135,11 +136,34 @@ export async function createInvite(
 }
 
 /**
- * DELETE /invites/:inviteId — CANCEL a pending invite (inviter/owner only).
- * This is the inviter-side cancel, NOT an invitee decline (no such endpoint).
+ * DELETE /invites/:inviteId — CANCEL a pending invite (inviter/owner only), or
+ * dismiss a declined one. The invitee's "no" is `declineInvite`.
  */
 export async function cancelInvite(inviteId: string): Promise<void> {
   await apiClient.delete(`/invites/${inviteId}`);
+}
+
+export interface DeclineInviteResult {
+  invite: { id: string; status: 'declined' };
+  /** A repeat decline (double click, retry after a timeout). Treat it as success. */
+  already_declined: boolean;
+}
+
+interface DeclineInviteEnvelope {
+  success: boolean;
+  data: DeclineInviteResult;
+}
+
+/**
+ * POST /invites/:inviteId/decline (1.4.3) — the INVITEE declines. Email-matched
+ * like accept-by-id; idempotent. Mirrors mobile/src/api/invites.ts.
+ */
+export async function declineInvite(inviteId: string): Promise<DeclineInviteResult> {
+  const response = (await apiClient.post(
+    `/invites/${inviteId}/decline`,
+    {}
+  )) as unknown as DeclineInviteEnvelope;
+  return response.data;
 }
 
 /** The refreshed invite returned by the resend endpoint. */

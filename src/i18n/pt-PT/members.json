@@ -77,7 +77,10 @@
     "madeManager": "{{name}} agora ajuda a gerir o círculo.",
     "removedManager": "{{name}} já não ajuda a gerir o círculo.",
     "medRemindersDesc": "{{name}} recebe os lembretes de {{recipientName}} e assinala as doses",
-    "medRemindersSetDescSelf": "Toque para devolver os lembretes a si"
+    "medRemindersSetDescSelf": "Toque para devolver os lembretes a si",
+    "inviteAgain": "Convidar novamente",
+    "inviteAgainLabel": "Convidar novamente: {{email}}",
+    "inviteAgainConfirmTitle": "Convidar novamente?"
   },
   "pending": {
     "heading": "Os seus convites",
@@ -87,6 +90,12 @@
     "banner": {
       "count_one": "Tem 1 convite pendente"
     },
-    "invitedYouRecipient": "{{inviter}} convidou-o para se juntar ao seu círculo de cuidado no CircleCare"
+    "invitedYouRecipient": "{{inviter}} convidou-o para se juntar ao seu círculo de cuidado no CircleCare",
+    "declining": "A recusar…",
+    "declineMessage": "Vamos avisar {{inviter}}. Para entrar mais tarde, vai precisar de um novo convite.",
+    "declineErrorUsed": "Este convite já foi utilizado.",
+    "declineErrorInactive": "Este convite já não está ativo.",
+    "declineErrorRateLimit": "Demasiadas tentativas. Aguarde alguns minutos e tente novamente.",
+    "declineErrorGeneric": "Não foi possível recusar o convite. Tente novamente."
   }
 }

@@ -8,6 +8,7 @@ const result: { data: PendingInvite[]; isPending: boolean; isError: boolean; ref
   { data: [], isPending: false, isError: false, refetch: vi.fn() };
 
 vi.mock('@/hooks/useInvites', () => ({
+  useDeclineInvite: () => ({ mutate: vi.fn(), isPending: false }),
   usePendingInvites: () => result,
   useAcceptInvite: () => ({ mutate: vi.fn(), isPending: false }),
 }));

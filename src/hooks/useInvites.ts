@@ -10,15 +10,18 @@ import {
   acceptInvite,
   cancelInvite,
   createInvite,
+  declineInvite,
   getPendingInvites,
   resendInvite,
   type AcceptInviteResponse,
   type CreateInviteRequest,
   type CreateInviteResponse,
+  type DeclineInviteResult,
   type PendingInvite,
   type ResendInviteResult,
 } from '@/api/invites';
 import { queryKeys } from '@/lib/queryKeys';
+import { readDeclineError } from '@/lib/inviteDecline';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import {
   getPendingInviteSeat,
@@ -243,6 +246,36 @@ export function useAcceptInvite(): UseMutationResult<
       ]);
     },
     onError,
+  });
+}
+
+export interface DeclineInviteVariables {
+  inviteId: string;
+}
+
+/**
+ * POST /invites/:inviteId/decline (1.4.3) — the invitee declines. The page owns
+ * the copy (toast per backend code, see lib/inviteDecline.ts), so there is no
+ * shared onError toast here. The pending list is refetched on success and on the
+ * stale-row refusals (used / cancelled / expired / gone); a rate limit or server
+ * error keeps the row for a retry. Mirrors mobile useDeclineInvite.
+ */
+export function useDeclineInvite(): UseMutationResult<
+  DeclineInviteResult,
+  unknown,
+  DeclineInviteVariables
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ inviteId }: DeclineInviteVariables) => declineInvite(inviteId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invitesPending });
+    },
+    onError: (error: unknown) => {
+      if (readDeclineError(error).refetch) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.invitesPending });
+      }
+    },
   });
 }
 

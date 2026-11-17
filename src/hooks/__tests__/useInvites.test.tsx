@@ -16,6 +16,7 @@ vi.mock('@/api/invites', async (importOriginal) => {
     resendInvite: vi.fn(),
     acceptInvite: vi.fn(),
     getPendingInvites: vi.fn(),
+    declineInvite: vi.fn(),
   };
 });
 
@@ -57,6 +58,7 @@ import {
   resendInvite,
   acceptInvite,
   getPendingInvites,
+  declineInvite,
   type AcceptInviteResponse,
   type CreateInviteResponse,
   type PendingInvite,
@@ -70,6 +72,7 @@ import {
   useResendInvite,
   useAcceptInvite,
   usePendingInvites,
+  useDeclineInvite,
 } from '@/hooks/useInvites';
 
 const CIRCLE_ID = 'circle-1';
@@ -675,5 +678,38 @@ describe('usePendingInvites', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockPending).toHaveBeenCalledTimes(1);
     expect(result.current.data).toEqual(invites);
+  });
+});
+
+// 1.4.3 invite decline — mobile parity with hooks/useInvites.test.ts useDeclineInvite.
+describe('useDeclineInvite', () => {
+  it('P: posts the decline by id and refetches the pending list; no shared toast', async () => {
+    vi.mocked(declineInvite).mockResolvedValue({ invite: { id: INVITE_ID, status: 'declined' }, already_declined: false });
+    const { invalidateSpy, wrapper } = setup();
+    const { result } = renderHook(() => useDeclineInvite(), { wrapper });
+    result.current.mutate({ inviteId: INVITE_ID });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(declineInvite).toHaveBeenCalledWith(INVITE_ID);
+    expect(invalidatedWith(invalidateSpy, queryKeys.invitesPending)).toBe(true);
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('P: a stale-row refusal (INVITE_CANCELLED) refetches the pending list', async () => {
+    vi.mocked(declineInvite).mockRejectedValue({ success: false, error: { code: 'INVITE_CANCELLED' } });
+    const { invalidateSpy, wrapper } = setup();
+    const { result } = renderHook(() => useDeclineInvite(), { wrapper });
+    result.current.mutate({ inviteId: INVITE_ID });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(invalidatedWith(invalidateSpy, queryKeys.invitesPending)).toBe(true);
+  });
+
+  it('N: a rate limit keeps the row (no refetch) and the hook toasts nothing itself', async () => {
+    vi.mocked(declineInvite).mockRejectedValue({ success: false, error: { code: 'RATE_LIMIT' } });
+    const { invalidateSpy, wrapper } = setup();
+    const { result } = renderHook(() => useDeclineInvite(), { wrapper });
+    result.current.mutate({ inviteId: INVITE_ID });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(invalidatedWith(invalidateSpy, queryKeys.invitesPending)).toBe(false);
+    expect(showToast).not.toHaveBeenCalled();
   });
 });

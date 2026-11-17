@@ -18,6 +18,7 @@ const usePendingInvitesResult: {
 } = { data: [], isPending: false, isError: false, refetch: vi.fn() };
 
 vi.mock('@/hooks/useInvites', () => ({
+  useDeclineInvite: () => ({ mutate: vi.fn(), isPending: false }),
   usePendingInvites: () => usePendingInvitesResult,
   useAcceptInvite: () => ({ mutate: acceptMutate, isPending: acceptPending }),
 }));

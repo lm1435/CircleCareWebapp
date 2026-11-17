@@ -181,7 +181,18 @@
     "removeManagerConfirmTitle": "Remover o papel de gestor de {{name}}?",
     "removeManagerConfirmBody": "{{name}} continuará no círculo como cuidador, mas não poderá mais convidar nem remover pessoas.",
     "madeManager": "{{name}} agora ajuda a gerenciar o círculo.",
-    "removedManager": "{{name}} não ajuda mais a gerenciar o círculo."
+    "removedManager": "{{name}} não ajuda mais a gerenciar o círculo.",
+    "declinedHeading": "Convites recusados",
+    "inviteDeclined": "Recusado",
+    "inviteDeclinedOn": "Recusado em {{date}}",
+    "inviteAgain": "Convidar de novo",
+    "inviteAgainLabel": "Convidar de novo: {{email}}",
+    "inviteAgainConfirmTitle": "Convidar de novo?",
+    "inviteAgainConfirmBody": "{{email}} recusou o último convite. Um novo e-mail de convite será enviado.",
+    "inviteAgainSuccess": "Convite enviado para {{email}}.",
+    "removeDeclined": "Remover",
+    "removeDeclinedLabel": "Remover o convite recusado de {{email}}",
+    "removeDeclinedSuccess": "Convite recusado removido."
   },
   "pending": {
     "heading": "Seus convites",
@@ -202,6 +213,18 @@
       "review": "Ver convite",
       "reviewPlural": "Ver convites"
     },
-    "expiresLabel": "Expira"
+    "expiresLabel": "Expira",
+    "decline": "Recusar",
+    "declineLabel": "Recusar o convite para {{name}}",
+    "declining": "Recusando…",
+    "declineTitle": "Recusar este convite?",
+    "declineMessage": "Vamos avisar {{inviter}}. Para entrar depois, você vai precisar de um novo convite.",
+    "declineKeep": "Manter convite",
+    "declineSuccess": "Convite recusado",
+    "declineErrorUsed": "Este convite já foi usado.",
+    "declineErrorInactive": "Este convite não está mais ativo.",
+    "declineErrorExpired": "Este convite expirou.",
+    "declineErrorRateLimit": "Muitas tentativas. Aguarde alguns minutos e tente de novo.",
+    "declineErrorGeneric": "Não foi possível recusar o convite. Tente de novo."
   }
 }

@@ -181,7 +181,18 @@
     "removeManagerConfirmTitle": "Retirer le rôle de gestionnaire à {{name}} ?",
     "removeManagerConfirmBody": "{{name}} restera dans le cercle en tant qu’aidant, mais ne pourra plus inviter ni retirer de personnes.",
     "madeManager": "{{name}} aide désormais à gérer le cercle.",
-    "removedManager": "{{name}} n’aide plus à gérer le cercle."
+    "removedManager": "{{name}} n’aide plus à gérer le cercle.",
+    "declinedHeading": "Invitations refusées",
+    "inviteDeclined": "Refusée",
+    "inviteDeclinedOn": "Refusée le {{date}}",
+    "inviteAgain": "Réinviter",
+    "inviteAgainLabel": "Réinviter : {{email}}",
+    "inviteAgainConfirmTitle": "Réinviter ?",
+    "inviteAgainConfirmBody": "{{email}} a refusé la dernière invitation. Un nouvel e-mail d’invitation sera envoyé.",
+    "inviteAgainSuccess": "Invitation envoyée à {{email}}.",
+    "removeDeclined": "Retirer",
+    "removeDeclinedLabel": "Retirer l’invitation refusée de {{email}}",
+    "removeDeclinedSuccess": "Invitation refusée retirée."
   },
   "pending": {
     "heading": "Vos invitations",
@@ -202,6 +213,18 @@
       "review": "Consulter l’invitation",
       "reviewPlural": "Consulter les invitations"
     },
-    "expiresLabel": "Expiration"
+    "expiresLabel": "Expiration",
+    "decline": "Refuser",
+    "declineLabel": "Refuser l’invitation pour {{name}}",
+    "declining": "Refus en cours…",
+    "declineTitle": "Refuser cette invitation ?",
+    "declineMessage": "Nous préviendrons {{inviter}}. Pour rejoindre le cercle plus tard, il vous faudra une nouvelle invitation.",
+    "declineKeep": "Garder l’invitation",
+    "declineSuccess": "Invitation refusée",
+    "declineErrorUsed": "Cette invitation a déjà été utilisée.",
+    "declineErrorInactive": "Cette invitation n’est plus active.",
+    "declineErrorExpired": "Cette invitation a expiré.",
+    "declineErrorRateLimit": "Trop de tentatives. Patientez quelques minutes, puis réessayez.",
+    "declineErrorGeneric": "Impossible de refuser cette invitation. Veuillez réessayer."
   }
 }

@@ -1,7 +1,19 @@
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, Card, EmptyState, Eyebrow, Skeleton, Text } from '@/components/ui';
-import { usePendingInvites, useAcceptInvite } from '@/hooks/useInvites';
+import {
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  Eyebrow,
+  Skeleton,
+  Text,
+  useToast,
+} from '@/components/ui';
+import { usePendingInvites, useAcceptInvite, useDeclineInvite } from '@/hooks/useInvites';
+import { readDeclineError, type DeclineErrorReading } from '@/lib/inviteDecline';
+import { blockOfflineWrite } from '@/lib/offlineWrite';
 import { useOpenJoinedCircle } from '@/hooks/useOpenJoinedCircle';
 import type { PendingInvite } from '@/api/invites';
 import { formatInviteExpiryDate } from '@/lib/inviteExpiry';
@@ -10,9 +22,9 @@ import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 
 // Task 5.5 — list the current user's pending invites with Accept.
 //
-// MIRRORS mobile/src/screens/invite/PendingInvitesScreen.tsx. NOTE: there is NO
-// decline endpoint (mobile's "Decline" is a client-only dismiss), so this page
-// offers Accept only — no decline UI.
+// MIRRORS mobile/src/screens/invite/PendingInvitesScreen.tsx: Accept, and (1.4.3)
+// Decline through POST /invites/:id/decline with an in-page confirm dialog
+// (docs/plans/invite-decline-1-4-3.md).
 //
 // Built on Stage 0 primitives (Card, Button, Badge, EmptyState, Skeleton) +
 // design tokens. Owner gating is not relevant here — these are invites
@@ -45,6 +57,61 @@ export default function PendingInvitesPage(): ReactElement {
   const { data: invites, isPending, isError, refetch } = usePendingInvites();
   const acceptInvite = useAcceptInvite();
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const declineInvite = useDeclineInvite();
+  const { showToast } = useToast();
+  // The invite whose decline confirm is open.
+  const [inviteToDecline, setInviteToDecline] = useState<PendingInvite | null>(null);
+  const [decliningId, setDecliningId] = useState<string | null>(null);
+
+  // Static keys (the translation-key audit cannot follow a template literal).
+  const declineErrorCopy = (key: DeclineErrorReading['messageKey']): string => {
+    switch (key) {
+      case 'declineErrorUsed':
+        return t('pending.declineErrorUsed');
+      case 'declineErrorInactive':
+        return t('pending.declineErrorInactive');
+      case 'declineErrorExpired':
+        return t('pending.declineErrorExpired');
+      case 'declineErrorRateLimit':
+        return t('pending.declineErrorRateLimit');
+      default:
+        return t('pending.declineErrorGeneric');
+    }
+  };
+
+  const openDecline = (invite: PendingInvite): void => {
+    if (blockOfflineWrite('change')) return;
+    if (decliningId) return;
+    Analytics.inviteDeclineTapped(invite.member_type === 'care_recipient' ? 'care_recipient' : 'caregiver');
+    setInviteToDecline(invite);
+  };
+
+  const handleDecline = (): void => {
+    const invite = inviteToDecline;
+    // Guard in-handler: `disabled` lands a render later, so a double click would
+    // otherwise send two declines.
+    if (!invite || decliningId) return;
+    const memberType = invite.member_type === 'care_recipient' ? 'care_recipient' : 'caregiver';
+    setDecliningId(invite.id);
+    declineInvite.mutate(
+      { inviteId: invite.id },
+      {
+        onSuccess: (result) => {
+          Analytics.inviteDeclineConfirmed(memberType, result?.already_declined === true);
+          showToast(t('pending.declineSuccess'), 'success');
+          setDecliningId(null);
+          setInviteToDecline(null);
+        },
+        onError: (error) => {
+          const reading = readDeclineError(error);
+          Analytics.inviteDeclineFailed(reading.code);
+          showToast(declineErrorCopy(reading.messageKey), 'error');
+          setDecliningId(null);
+          setInviteToDecline(null);
+        },
+      }
+    );
+  };
 
   const handleAccept = (invite: PendingInvite): void => {
     setAcceptingId(invite.id);
@@ -156,7 +223,7 @@ export default function PendingInvitesPage(): ReactElement {
                   </p>
                 ) : null}
               </div>
-              <div>
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={invite.id === firstAcceptId ? 'primary' : 'outline'}
                   onClick={() => handleAccept(invite)}
@@ -166,6 +233,23 @@ export default function PendingInvitesPage(): ReactElement {
                   {acceptInvite.isPending && acceptingId === invite.id
                     ? t('pending.accepting')
                     : t('pending.accept')}
+                </Button>
+                {/* Quiet (ghost): one accent per page, and saying no must never
+                    look like the suggested action. Mobile order differs only by
+                    layout (side-by-side cells); the actions are the same. */}
+                <Button
+                  variant="ghost"
+                  onClick={() => openDecline(invite)}
+                  offlineKind="change"
+                  disabled={decliningId === invite.id || (acceptInvite.isPending && acceptingId === invite.id)}
+                  aria-label={t('pending.declineLabel', {
+                    name:
+                      invite.member_type === 'care_recipient'
+                        ? t('pending.yourCareCircle')
+                        : invite.circle.name,
+                  })}
+                >
+                  {decliningId === invite.id ? t('pending.declining') : t('pending.decline')}
                 </Button>
               </div>
             </Card>
@@ -187,6 +271,20 @@ export default function PendingInvitesPage(): ReactElement {
       </Text>
       {content}
       {hasInvites ? <p className="mt-6 text-sm text-ink-3">{t('pending.ignoreHint')}</p> : null}
+      {inviteToDecline ? (
+        <ConfirmDialog
+          offlineKind="change"
+          icon="mail-outline"
+          title={t('pending.declineTitle')}
+          message={t('pending.declineMessage', { inviter: inviterName(inviteToDecline) })}
+          confirmLabel={t('pending.decline')}
+          cancelLabel={t('pending.declineKeep')}
+          destructive
+          confirmDisabled={decliningId != null}
+          onConfirm={handleDecline}
+          onCancel={() => setInviteToDecline(null)}
+        />
+      ) : null}
     </section>
   );
 }
