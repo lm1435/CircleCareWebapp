@@ -62,7 +62,7 @@ export function ShiftReminderChoices({
         aria-describedby={describedBy}
         aria-disabled={rowsDisabled ? true : undefined}
         data-testid={testIdPrefix}
-        className={`flex flex-col gap-2 rounded-xl border border-line-2 p-3 ${rowsDisabled ? 'opacity-60' : ''}`}
+        className={`flex flex-col gap-2 rounded-xl border border-line-2 p-3 ${rowsDisabled ? 'opacity-50' : ''}`}
       >
         <Text variant="label" as="span" id={`${idPrefix}-label`}>
           {t('shifts:form.remindBefore')}

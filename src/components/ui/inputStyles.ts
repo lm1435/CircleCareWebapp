@@ -67,6 +67,13 @@ export const INPUT_SHELL_ERROR =
 /** Spec §4.5: disabled is 50% opacity everywhere. */
 export const INPUT_SHELL_DISABLED = 'opacity-50';
 
+/**
+ * A field box that cannot be used yet (the Reminders summary before a time is picked): the
+ * same geometry as the field, the softer `line` edge on the page tone, no focus edge.
+ */
+export const FIELD_BOX_OFF =
+  'flex items-center gap-2.5 rounded-md border border-line bg-bg px-3.5 min-h-[44px] py-2';
+
 export interface FieldShellOptions {
   error?: boolean;
   disabled?: boolean;

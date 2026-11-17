@@ -1,7 +1,7 @@
 import { useId, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '@/components/ui';
-import { fieldShell } from '@/components/ui/inputStyles';
+import { FIELD_BOX_OFF, fieldShell } from '@/components/ui/inputStyles';
 import {
   reminderSummaryLabel,
   reminderSummaryText,
@@ -59,7 +59,7 @@ export function RemindersSummaryRow(props: RemindersSummaryRowProps): ReactEleme
         data-testid="reminders-summary-row"
         data-variant="off"
         // The field box with the softer `line` edge on the page tone instead of the strong field edge.
-        className="flex min-h-[44px] w-full items-center gap-2.5 rounded-md border border-line bg-bg px-3.5 py-2"
+        className={`${FIELD_BOX_OFF} w-full`}
       >
         <span className="shrink-0 text-ink-3" aria-hidden="true" data-testid="reminders-summary-off-icon">
           <Icon name="notifications-off-outline" size="inline" />
