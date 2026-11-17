@@ -88,6 +88,12 @@ async function setRecordedTo(user: ReturnType<typeof userEvent.setup>, date: str
 }
 
 describe('AddVitalModal', () => {
+  it('is titled "Add reading" with no plain "New" eyebrow', () => {
+    render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
+    expect(screen.getByRole('dialog', { name: 'Add reading' })).toBeInTheDocument();
+    expect(screen.queryByText(/^[•·]?\s*(NEW|EDIT)$/i)).not.toBeInTheDocument();
+  });
+
   it('marks the validated fields required (asterisk + aria-required): both BP values, date, time', () => {
     render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
     for (const id of ['value1', 'value2', 'recorded_at', 'recorded_time']) {

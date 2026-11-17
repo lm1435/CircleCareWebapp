@@ -71,6 +71,12 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('shift task form', () => {
+  it('is titled "Add a task" with no plain "New" eyebrow', () => {
+    setup();
+    expect(screen.getByRole('dialog', { name: 'Add a task' })).toBeInTheDocument();
+    expect(screen.queryByText(/^[•·]?\s*(NEW|EDIT)$/i)).not.toBeInTheDocument();
+  });
+
   it('has a required name (asterisk), a time defaulting to the shift start with the window hint, and no assignee', () => {
     setup();
     const name = screen.getByLabelText(/Task name/);

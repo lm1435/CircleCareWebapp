@@ -94,6 +94,12 @@ async function saveNoteOnly(v: HealthVital) {
 }
 
 describe('VitalFormModal edit: weight (kg stored, viewer lbs)', () => {
+  it('is titled "Edit reading" with no plain "Edit" eyebrow', () => {
+    render(<VitalFormModal circleId={CIRCLE_ID} vital={vital({})} onClose={vi.fn()} />);
+    expect(screen.getByRole('dialog', { name: 'Edit reading' })).toBeInTheDocument();
+    expect(screen.queryByText(/^[•·]?\s*(NEW|EDIT)$/i)).not.toBeInTheDocument();
+  });
+
   it('shows the canonical value in the viewer unit, rounded to one decimal', () => {
     render(<VitalFormModal circleId={CIRCLE_ID} vital={vital({})} onClose={vi.fn()} />);
     expect(screen.getByLabelText(/^Weight/)).toHaveValue('159.8');

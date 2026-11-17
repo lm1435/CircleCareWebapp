@@ -171,6 +171,7 @@ describe('simple shift form: header, sections, button', () => {
   it('an edit is titled "Edit shift" and saves with "Save changes"', () => {
     open({ shift: shift() });
     expect(screen.getByRole('dialog', { name: 'Edit shift' })).toBeInTheDocument();
+    expect(screen.queryByText(/^[•·]?\s*(NEW|EDIT)$/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Save shift' })).not.toBeInTheDocument();
   });

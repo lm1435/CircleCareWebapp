@@ -118,6 +118,8 @@ describe('first-run mode', () => {
   it('is headed by the first-med eyebrow, the big question and the hint; Skip for now replaces Cancel', () => {
     renderForm({ firstRun: true });
     expect(screen.getByText("ROSA'S FIRST MED")).toBeInTheDocument();
+    // The first-run eyebrow is the only one: no plain "New" beside it.
+    expect(screen.queryByText(/^[•·]?\s*(NEW|EDIT)$/i)).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'What does Rosa take?' })).toBeInTheDocument();
     expect(
       screen.getByText('Just the name, the big word on the bottle. Dose is optional.')
@@ -141,6 +143,9 @@ describe('first-run mode', () => {
   it('outside first-run mode there is no first-med heading and the footer says Cancel', () => {
     renderForm();
     expect(screen.queryByTestId('first-run-form-heading')).toBeNull();
+    // The normal form is titled "New medication" and carries no plain "New" eyebrow.
+    expect(screen.getByRole('dialog', { name: 'New medication' })).toBeInTheDocument();
+    expect(screen.queryByText(/^[•·]?\s*(NEW|EDIT)$/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     expect(screen.queryByText('Skip for now')).toBeNull();
   });
