@@ -187,13 +187,19 @@ describe('Shift detail', () => {
     expect(within(dialog).getByTestId('shift-detail-repeat')).toHaveTextContent('Never');
   });
 
-  it('actions read Take, Drop, Edit, Assign, Delete (mobile order)', async () => {
+  it('actions: Edit, Assign, Delete in the content, then ONE action (Drop shift) in the footer beside Close', async () => {
     const { dialog } = await openDetail(shift());
     const names = within(dialog)
       .getAllByRole('button')
       .map((b) => b.textContent)
-      .filter((n) => ['Take', 'Drop shift', 'Edit', 'Assign', 'Delete'].includes(n ?? ''));
-    expect(names).toEqual(['Drop shift', 'Edit', 'Assign', 'Delete']);
+      .filter((n) => ['Take shift', 'Drop shift', 'Edit', 'Assign', 'Delete'].includes(n ?? ''));
+    expect(names).toEqual(['Edit', 'Assign', 'Delete', 'Drop shift']);
+    const footer = dialog.querySelector('[data-modal-footer]') as HTMLElement;
+    expect(within(footer).getByRole('button', { name: 'Drop shift' })).toBeInTheDocument();
+    expect(within(footer).getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    for (const name of ['Edit', 'Assign', 'Delete']) {
+      expect(within(footer).queryByRole('button', { name })).not.toBeInTheDocument();
+    }
   });
 
   it('Edit / Assign / Delete are 44px buttons; Delete is the destructive (danger) variant', async () => {
@@ -211,13 +217,16 @@ describe('Shift detail', () => {
     );
   });
 
-  it('an open shift: Take, Edit, Assign, Delete', async () => {
+  it('an open shift: Edit, Assign, Delete, then "Take shift" in the footer', async () => {
     const open = await openDetail(shift({ id: 'o2', assigned_to: null }));
     const order = within(open.dialog)
       .getAllByRole('button')
       .map((b) => b.textContent)
-      .filter((n) => ['Take', 'Drop shift', 'Edit', 'Assign', 'Delete'].includes(n ?? ''));
-    expect(order).toEqual(['Take', 'Edit', 'Assign', 'Delete']);
+      .filter((n) => ['Take shift', 'Drop shift', 'Edit', 'Assign', 'Delete'].includes(n ?? ''));
+    expect(order).toEqual(['Edit', 'Assign', 'Delete', 'Take shift']);
+    const footer = open.dialog.querySelector('[data-modal-footer]') as HTMLElement;
+    expect(within(footer).getByRole('button', { name: 'Take shift' })).toBeInTheDocument();
+    expect(within(footer).queryByRole('button', { name: 'Drop shift' })).not.toBeInTheDocument();
   });
 
   it('a care-recipient viewer gets no Take on an open shift (the rest stays); a normal member keeps it', async () => {
@@ -225,14 +234,14 @@ describe('Shift detail', () => {
       members: [...members, { id: 'u-rosa', first_name: 'Rosa', last_name: 'G', email: 'r@x.test', role: 'member', is_care_recipient: true }],
     });
     const normal = await openDetail(shift({ id: 'o3', assigned_to: null }));
-    expect(within(normal.dialog).getByRole('button', { name: 'Take' })).toBeInTheDocument();
+    expect(within(normal.dialog).getByRole('button', { name: 'Take shift' })).toBeInTheDocument();
     cleanup();
     useAuthStore.setState({
       user: { id: 'u-rosa', email: 'r@x.test', first_name: 'Rosa', last_name: 'G' },
       isAuthenticated: true,
     } as never);
     const rosa = await openDetail(shift({ id: 'o4', assigned_to: null }));
-    expect(within(rosa.dialog).queryByRole('button', { name: 'Take' })).not.toBeInTheDocument();
+    expect(within(rosa.dialog).queryByRole('button', { name: 'Take shift' })).not.toBeInTheDocument();
     expect(within(rosa.dialog).getByRole('button', { name: 'Edit' })).toBeInTheDocument();
     expect(within(rosa.dialog).getByRole('button', { name: 'Assign' })).toBeInTheDocument();
   });
@@ -240,7 +249,7 @@ describe('Shift detail', () => {
   it('an open shift offers Take; a plain member cannot assign or drop someone else', async () => {
     circle({ canManageMembers: false, viewerRole: 'member' });
     const { dialog } = await openDetail(shift({ assigned_to: null }));
-    expect(within(dialog).getByRole('button', { name: 'Take' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Take shift' })).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: 'Assign' })).not.toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: 'Drop shift' })).not.toBeInTheDocument();
   });
@@ -254,7 +263,7 @@ describe('Shift detail', () => {
   it('no actions without edit rights', async () => {
     circle({ canEdit: false });
     const { dialog } = await openDetail(shift({ assigned_to: null }));
-    expect(within(dialog).queryByRole('button', { name: 'Take' })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Take shift' })).not.toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
   });
 });
@@ -264,7 +273,7 @@ describe('Shift detail on a lapsed circle (readonly)', () => {
     circle({ isPremiumCircle: false, hasShifts: true, canEdit: true, canManageMembers: true });
     const { dialog } = await openDetail(shift({ assigned_to: null }));
     expect(within(dialog).getByTestId('shift-detail-who')).toBeInTheDocument();
-    for (const name of ['Take', 'Drop shift', 'Edit', 'Assign', 'Delete']) {
+    for (const name of ['Take shift', 'Drop shift', 'Edit', 'Assign', 'Delete']) {
       expect(within(dialog).queryByRole('button', { name })).not.toBeInTheDocument();
     }
   });
@@ -556,7 +565,7 @@ describe('Shift detail: an ended shift is read-only', () => {
     within(dialog)
       .getAllByRole('button')
       .map((b) => b.textContent)
-      .filter((n) => ['Take', 'Drop shift', 'Edit', 'Assign', 'Delete'].includes(n ?? ''));
+      .filter((n) => ['Take shift', 'Drop shift', 'Edit', 'Assign', 'Delete'].includes(n ?? ''));
   const sunday = (over: Partial<CalendarEvent> = {}) =>
     shift({ id: 'root_2026-11-01', scheduled_date: '2026-11-01', scheduled_time: '14:00:00', duration_minutes: 360, ...over });
 
@@ -586,7 +595,7 @@ describe('Shift detail: an ended shift is read-only', () => {
   it('in progress (one minute before the end): Take and Assign are still offered', async () => {
     vi.setSystemTime(new Date('2026-11-01T10:59:00Z'));
     const { dialog } = await openDetail(sunday({ assigned_to: null }));
-    expect(actionNames(dialog)).toEqual(['Take', 'Edit', 'Assign', 'Delete']);
+    expect(actionNames(dialog)).toEqual(['Edit', 'Assign', 'Delete', 'Take shift']);
     expect(within(dialog).getByTestId('shift-detail-status')).toHaveTextContent('Open');
   });
 });

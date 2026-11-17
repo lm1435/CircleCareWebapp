@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import type { CircleMember } from '@/api/circleMembers';
 import { isPermissionDeniedError } from '@/api/medicationConfirmations';
-import { Button, Icon, Skeleton, UndoBadge, useToast } from '@/components/ui';
+import { Button, Card, Icon, Skeleton, UndoBadge, useToast } from '@/components/ui';
 import { useMedicationUndo } from '@/components/meds/useMedicationUndo';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { useIsOffline } from '@/hooks/useIsOffline';
@@ -35,7 +35,9 @@ export interface ShiftTaskListProps {
 }
 
 /**
- * The shift detail's list (docs/plans/shift-tasks.md section 1): "<Name>'s list · n of N done".
+ * The shift detail's list (docs/plans/shift-tasks.md section 1): "<Name>'s list · n of N done"
+ * (just "<Name>'s list" while it is empty: never "0 of 0 done"). An empty list is ONE card: the empty
+ * line and an outlined "Add a task" (1.4.3, mobile parity).
  * It holds the shift's own tasks, the doses due in the window and the on-shift person's regular
  * tasks in the window. Only the FIRST actionable row is moss-filled; the rest are outlines (the
  * one-accent rule). Other people's and Anyone's items sit in a folded "Also happening" group.
@@ -92,11 +94,18 @@ export function ShiftTaskList({
   }, [loaded, shift.id, shift.scheduled_date, model.taskTotal, model.done, model.total]);
 
   const progress = { done: model.done, total: model.total };
+  const empty = model.total === 0;
   const title = model.open
-    ? t('shifts:tasks.list.titleOpen', progress)
+    ? empty
+      ? t('shifts:tasks.list.titleOpenEmpty')
+      : t('shifts:tasks.list.titleOpen', progress)
     : assignee?.isYou
-      ? t('shifts:tasks.list.titleYou', progress)
-      : t('shifts:tasks.list.titleNamed', { ...progress, name: assignee?.name || t('shifts:someone') });
+      ? empty
+        ? t('shifts:tasks.list.titleYouEmpty')
+        : t('shifts:tasks.list.titleYou', progress)
+      : empty
+        ? t('shifts:tasks.list.titleNamedEmpty', { name: assignee?.name || t('shifts:someone') })
+        : t('shifts:tasks.list.titleNamed', { ...progress, name: assignee?.name || t('shifts:someone') });
 
   const time = (event: CalendarEvent): string =>
     event.scheduled_time
@@ -184,14 +193,15 @@ export function ShiftTaskList({
   const addButton = canAdd ? (
     <div>
       <Button
-        variant="secondary"
+        variant="outline"
         size="sm"
         offlineKind="change"
         data-testid="shift-detail-add-task"
+        data-variant="outline"
         leftIcon={<Icon name="add-outline" size="row" />}
         onClick={onAdd}
       >
-        {t('shifts:tasks.addTask')}
+        {t('shifts:tasks.form.title')}
       </Button>
     </div>
   ) : null;
@@ -217,9 +227,17 @@ export function ShiftTaskList({
     );
   } else if (model.rows.length === 0) {
     body = (
-      <p className="m-0 text-sm text-ink-2" data-testid="shift-task-list-empty">
-        {t('shifts:tasks.list.empty')}
-      </p>
+      <Card
+        variant="outlined"
+        padding="none"
+        className="flex flex-col items-start gap-3 p-4"
+        data-testid="shift-task-list-empty-card"
+      >
+        <p className="m-0 text-base text-ink-2" data-testid="shift-task-list-empty">
+          {t('shifts:tasks.list.empty')}
+        </p>
+        {addButton}
+      </Card>
     );
   } else {
     body = (
@@ -256,7 +274,7 @@ export function ShiftTaskList({
         {title}
       </h3>
       {body}
-      {addButton}
+      {loaded && model.rows.length === 0 ? null : addButton}
       {loaded && model.also.length > 0 ? (
         <div className="border-t border-line-2 pt-3">
           <button

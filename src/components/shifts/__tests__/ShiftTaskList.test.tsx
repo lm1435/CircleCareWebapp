@@ -258,13 +258,43 @@ describe('shift detail list: a dose nobody answered', () => {
 });
 
 describe('shift detail list: states', () => {
-  it('empty: "Nothing on this shift\'s list yet." and the add control', async () => {
+  it('empty: ONE card with "Nothing on this shift\'s list yet." and an outlined "Add a task" inside it', async () => {
     const onAdd = vi.fn();
     eventsHook.value = { ...eventsHook.value, events: [] };
     renderList({ onAdd });
-    expect(screen.getByTestId('shift-task-list-empty')).toHaveTextContent("Nothing on this shift's list yet.");
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Add a task to this shift' }));
+    const card = screen.getByTestId('shift-task-list-empty-card');
+    expect(within(card).getByTestId('shift-task-list-empty')).toHaveTextContent("Nothing on this shift's list yet.");
+    const add = within(card).getByRole('button', { name: 'Add a task' });
+    expect(add).toHaveAttribute('data-variant', 'outline');
+    await userEvent.setup().click(add);
     expect(onAdd).toHaveBeenCalledTimes(1);
+    // ONE Add control, inside the card
+    expect(screen.getAllByTestId('shift-detail-add-task')).toHaveLength(1);
+  });
+
+  it('P: empty titles drop the counter ("Lucia\'s list" / "Your list" / "This shift\'s list")', () => {
+    eventsHook.value = { ...eventsHook.value, events: [] };
+    renderList();
+    expect(screen.getByTestId('shift-task-list-title')).toHaveTextContent(/^Lucia's list$/);
+    cleanup();
+    renderList({ shift: { ...shift, assigned_to: 'u-me' } as CalendarEvent });
+    expect(screen.getByTestId('shift-task-list-title')).toHaveTextContent(/^Your list$/);
+    cleanup();
+    renderList({ shift: { ...shift, assigned_to: null } as CalendarEvent });
+    expect(screen.getByTestId('shift-task-list-title')).toHaveTextContent(/^This shift's list$/);
+  });
+
+  it('N: with rows the counter stays and the Add button sits under the list (no empty card)', () => {
+    renderList();
+    expect(screen.getByTestId('shift-task-list-title')).toHaveTextContent(/ · \d of \d done$/);
+    expect(screen.queryByTestId('shift-task-list-empty-card')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add a task' })).toHaveAttribute('data-variant', 'outline');
+  });
+
+  it('N: an empty list never says "0 of 0 done"', () => {
+    eventsHook.value = { ...eventsHook.value, events: [] };
+    renderList();
+    expect(screen.getByTestId('shift-task-section').textContent).not.toMatch(/0 of 0/);
   });
 
   it('loading shows a skeleton and no count claim', () => {

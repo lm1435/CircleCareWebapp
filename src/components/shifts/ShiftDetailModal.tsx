@@ -41,8 +41,9 @@ export interface ShiftDetailModalProps {
 
 /**
  * Shift detail (step 4): name, date, times (dual when zones differ), repeat,
- * who is on it, reminder. Actions by role: Take (open), Drop (the assignee, or
- * an owner / manager), Edit, Assign (owner / manager), Delete (mobile's order).
+ * who is on it, reminder. Actions by role (1.4.3 redesign, mobile parity): ONE action in the
+ * footer beside Close: Take shift (open, primary) or Drop shift (the assignee, or an owner /
+ * manager; secondary). Edit, Assign (owner / manager), Delete in a quieter row at the end.
  * An ENDED shift (recipient zone, naive start + duration) is history: no Take,
  * Drop or Assign (the server answers 409 SHIFT_ENDED), and an unfilled one reads
  * "Not covered". Edit and Delete stay. In progress is not ended.
@@ -160,6 +161,49 @@ export function ShiftDetailModal({
   );
 
   const cellLabel = 'm-0';
+  const leads = shiftReminderLeads(shift);
+  // Two or more leads do not fit half a row: Repeats and Reminder each take a full-width row.
+  const multiLead = (leads?.length ?? 0) > 1;
+  const repeatCell = (
+    <div className="flex min-w-0 flex-col gap-1">
+      <Eyebrow as="dt" className={cellLabel}>
+        {t('shifts:detail.repeats')}
+      </Eyebrow>
+      <dd data-testid="shift-detail-repeat" className="m-0 break-words text-base font-medium text-ink">
+        {repeat}
+      </dd>
+      {rotationLine && (
+        <dd data-testid="shift-detail-rotation" className="m-0 text-sm text-ink-2">
+          {rotationLine}
+        </dd>
+      )}
+    </div>
+  );
+  const reminderCell = (
+    <div className="flex min-w-0 flex-col gap-1">
+      <Eyebrow as="dt" className={cellLabel}>
+        {t('shifts:detail.reminder')}
+      </Eyebrow>
+      <dd data-testid="shift-detail-reminder" className="m-0 break-words text-base font-medium text-ink tabular-nums">
+        {formatShiftReminders(leads, t)}
+      </dd>
+    </div>
+  );
+  // The ONE action beside Close: Take shift (primary) or Drop shift (secondary: reversible, never filled).
+  const pinned = showTake ? (
+    <Button offlineKind="change" data-testid="shift-detail-take" onClick={() => onAction('take', shift)}>
+      {t('shifts:take.confirm')}
+    </Button>
+  ) : canDrop ? (
+    <Button
+      variant="secondary"
+      offlineKind="change"
+      data-testid="shift-detail-drop"
+      onClick={() => onAction('drop', shift)}
+    >
+      {t('shifts:drop.action')}
+    </Button>
+  ) : null;
   return (
     <Modal
       size="md"
@@ -169,9 +213,13 @@ export function ShiftDetailModal({
       closeLabel={t('shifts:close')}
       onClose={onClose}
       footer={
-        <Button variant="secondary" onClick={onClose}>
-          {t('shifts:close')}
-        </Button>
+        <>
+          {/* Ghost neutral, so it never twins a secondary Drop shift. */}
+          <Button variant="ghost" tone="neutral" data-testid="shift-detail-close" onClick={onClose}>
+            {t('shifts:close')}
+          </Button>
+          {pinned}
+        </>
       }
     >
       <div className="flex flex-col gap-4" data-testid="shift-detail">
@@ -193,32 +241,24 @@ export function ShiftDetailModal({
             </div>
           </dl>
           {/* A <dl> of its own: a <dl> may only hold <div> groups of <dt>/<dd>, never a nested grid div. */}
-          <dl
-            data-testid="shift-detail-card-grid"
-            className="m-0 grid grid-cols-2 gap-4 border-t border-line-2 py-3.5"
-          >
-            <div className="flex min-w-0 flex-col gap-1">
-              <Eyebrow as="dt" className={cellLabel}>
-                {t('shifts:detail.repeats')}
-              </Eyebrow>
-              <dd data-testid="shift-detail-repeat" className="m-0 break-words text-base font-medium text-ink">
-                {repeat}
-              </dd>
-              {rotationLine && (
-                <dd data-testid="shift-detail-rotation" className="m-0 text-sm text-ink-2">
-                  {rotationLine}
-                </dd>
-              )}
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Eyebrow as="dt" className={cellLabel}>
-                {t('shifts:detail.reminder')}
-              </Eyebrow>
-              <dd data-testid="shift-detail-reminder" className="m-0 break-words text-base font-medium text-ink">
-                {formatShiftReminders(shiftReminderLeads(shift), t)}
-              </dd>
-            </div>
-          </dl>
+          {multiLead ? (
+            <>
+              <dl data-testid="shift-detail-repeat-row" className="m-0 border-t border-line-2 py-3.5">
+                {repeatCell}
+              </dl>
+              <dl data-testid="shift-detail-reminder-row" className="m-0 border-t border-line-2 py-3.5">
+                {reminderCell}
+              </dl>
+            </>
+          ) : (
+            <dl
+              data-testid="shift-detail-card-grid"
+              className="m-0 grid grid-cols-2 gap-4 border-t border-line-2 py-3.5"
+            >
+              {repeatCell}
+              {reminderCell}
+            </dl>
+          )}
         </Card>
 
         <ShiftTaskList
@@ -234,22 +274,7 @@ export function ShiftDetailModal({
         />
 
         {canWrite && (
-          <div className="flex flex-wrap gap-2">
-            {showTake && (
-              <Button size="sm" offlineKind="change" onClick={() => onAction('take', shift)}>
-                {t('shifts:takeButton')}
-              </Button>
-            )}
-            {canDrop && (
-              <Button
-                size="sm"
-                variant="secondary"
-                offlineKind="change"
-                onClick={() => onAction('drop', shift)}
-              >
-                {t('shifts:drop.action')}
-              </Button>
-            )}
+          <div className="flex flex-wrap gap-2" data-testid="shift-detail-actions">
             <Button
               size="sm"
               variant="secondary"

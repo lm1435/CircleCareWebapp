@@ -242,6 +242,20 @@ test.describe('premium owner', () => {
     await expect(detail.getByTestId('shift-detail-status')).toHaveText('Open · nobody yet');
     await expect(detail.getByTestId('shift-detail-who')).toContainText('Open, nobody on this shift yet');
     await expect(detail.getByTestId('shift-detail-card')).toBeVisible();
+    // 1.4.3 redesign: an empty list drops the counter and is ONE card with an outlined "Add a task";
+    // the footer carries Close + the ONE action ("Take shift"); Edit / Assign / Delete stay in the body.
+    await expect(detail.getByTestId('shift-task-list-title')).toHaveText("This shift's list");
+    await expect(detail.getByTestId('shift-task-section')).not.toContainText('0 of 0');
+    const emptyCard = detail.getByTestId('shift-task-list-empty-card');
+    await expect(emptyCard).toContainText("Nothing on this shift's list yet.");
+    await expect(emptyCard.getByRole('button', { name: 'Add a task', exact: true })).toHaveAttribute('data-variant', 'outline');
+    const footer = detail.locator('[data-modal-footer]');
+    await expect(footer.getByRole('button', { name: 'Take shift', exact: true })).toHaveClass(/bg-primary-fill/);
+    await expect(footer.getByRole('button', { name: 'Close', exact: true })).toBeVisible();
+    for (const name of ['Edit', 'Assign', 'Delete']) {
+      await expect(footer.getByRole('button', { name, exact: true })).toHaveCount(0);
+      await expect(detail.getByTestId('shift-detail-actions').getByRole('button', { name, exact: true })).toBeVisible();
+    }
     await checkA11y(page, 'shifts-detail-light', testInfo);
     await detail.getByRole('button', { name: 'Close' }).last().click();
 
@@ -450,7 +464,7 @@ test.describe('an ended shift is read-only', () => {
     const detail = page.getByRole('dialog', { name: 'Evening' });
     await expect(detail.getByTestId('shift-detail-status')).toHaveText('Not covered');
     await expect(detail.getByTestId('shift-detail-who')).toHaveText("Who's on it, Not covered");
-    for (const name of ['Take', 'Drop shift', 'Assign']) {
+    for (const name of ['Take shift', 'Drop shift', 'Assign']) {
       await expect(detail.getByRole('button', { name, exact: true })).toHaveCount(0);
     }
     await expect(detail.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
@@ -462,7 +476,7 @@ test.describe('an ended shift is read-only', () => {
     await list.getByRole('button', { name: /^Morning, 8:00 AM to 12:00 PM, you are on this shift$/ }).click();
     const mine = page.getByRole('dialog', { name: 'Morning' });
     await expect(mine.getByTestId('shift-detail-chip-name')).toHaveText('You');
-    for (const name of ['Take', 'Drop shift', 'Assign']) {
+    for (const name of ['Take shift', 'Drop shift', 'Assign']) {
       await expect(mine.getByRole('button', { name, exact: true })).toHaveCount(0);
     }
     await mine.getByRole('button', { name: 'Close' }).last().click();

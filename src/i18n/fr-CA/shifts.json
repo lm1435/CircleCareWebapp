@@ -131,5 +131,11 @@
   },
   "detail": {
     "openChipSpoken": "À pourvoir, personne sur ce quart pour l’instant"
+  },
+  "tasks": {
+    "list": {
+      "titleOpen": "Liste de ce quart · {{done}} sur {{total}} faites",
+      "titleOpenEmpty": "Liste de ce quart"
+    }
   }
 }

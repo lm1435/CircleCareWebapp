@@ -257,11 +257,17 @@ test.describe('shift tasks', () => {
     await expect(detail.getByTestId('shift-task-list-title')).toHaveText("This shift's list · 0 of 1 done");
     await expect(detail.getByTestId('shift-task-row')).toHaveCount(1);
     // ONE filled button per screen: on an open shift that is Take, so the task's Done is an outline.
-    await expect(detail.getByRole('button', { name: 'Take', exact: true })).toHaveClass(/bg-primary-fill/);
+    // 1.4.3: the ONE action sits in the footer beside Close and reads "Take shift".
+    const footer = detail.locator('[data-modal-footer]');
+    await expect(footer.getByRole('button', { name: 'Take shift', exact: true })).toHaveClass(/bg-primary-fill/);
+    await expect(footer.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0);
+    // with rows the counter stays and the outlined Add sits under the list (no empty card)
+    await expect(detail.getByTestId('shift-task-list-empty-card')).toHaveCount(0);
     await expect(detail.getByTestId('shift-task-done')).toHaveAttribute('data-variant', 'outline');
 
     // Add from the detail: a one-off ("Only <date>").
-    await detail.getByRole('button', { name: 'Add a task to this shift' }).click();
+    await expect(detail.getByTestId('shift-detail-add-task')).toHaveAttribute('data-variant', 'outline');
+    await detail.getByRole('button', { name: 'Add a task', exact: true }).click();
     const second = page.getByRole('dialog', { name: 'Add a task' });
     await second.getByLabel(/Task name/).fill('Walk');
     await second.getByLabel(/^Time/).fill('15:00');

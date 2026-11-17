@@ -182,8 +182,26 @@ describe('shift detail card', () => {
     expect(screen.queryByText('Date')).not.toBeInTheDocument();
   });
 
+  it('P: 2+ reminder leads: Repeats and Reminder each take a FULL-width row (no side-by-side grid)', () => {
+    renderDetail(shift({ reminder_leads_minutes: [120, 60] }));
+    expect(screen.queryByTestId('shift-detail-card-grid')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('shift-detail-repeat-row')).getByTestId('shift-detail-repeat')).toHaveTextContent(/^Daily$/);
+    expect(within(screen.getByTestId('shift-detail-reminder-row')).getByTestId('shift-detail-reminder')).toHaveTextContent(
+      /^2 hours before, 1 hour before$/
+    );
+  });
+
+  it('N: one lead (or Off) keeps Repeats | Reminder side by side', () => {
+    renderDetail(shift({ reminder_leads_minutes: [60] }));
+    expect(screen.getByTestId('shift-detail-card-grid')).toBeInTheDocument();
+    expect(screen.queryByTestId('shift-detail-reminder-row')).not.toBeInTheDocument();
+    cleanup();
+    renderDetail(shift({ reminder_leads_minutes: null, reminder_lead_minutes: null }));
+    expect(screen.getByTestId('shift-detail-card-grid')).toBeInTheDocument();
+  });
+
   it('every <dl> directly holds only <div> groups of <dt>/<dd> (axe definition-list / dlitem)', () => {
-    renderDetail(shift({ recurrence_rule: 'cycle:14:7' }));
+    renderDetail(shift({ recurrence_rule: 'cycle:14:7', reminder_leads_minutes: [120, 60] }));
     const lists = screen.getByTestId('shift-detail-card').querySelectorAll('dl');
     expect(lists.length).toBeGreaterThan(0);
     for (const dl of lists) {
@@ -208,30 +226,69 @@ describe('shift detail card', () => {
   });
 });
 
+describe('one footer action beside Close; Edit / Assign / Delete at the end', () => {
+  const footer = () => document.querySelector('[data-modal-footer]') as HTMLElement;
+
+  it('P: open shift: the footer is Close (ghost, neutral) + "Take shift" (primary)', () => {
+    renderDetail(shift());
+    expect(within(footer()).getByRole('button', { name: 'Take shift' })).toHaveClass('bg-primary-fill');
+    const close = within(footer()).getByTestId('shift-detail-close');
+    expect(close).not.toHaveClass('bg-primary-fill');
+    expect(within(footer()).getAllByRole('button')).toHaveLength(2);
+  });
+
+  it('P: your shift: the footer is Close + "Drop shift" (secondary, not filled, not danger)', () => {
+    renderDetail(shift({ assigned_to: 'u-me' }));
+    const drop = within(footer()).getByRole('button', { name: 'Drop shift' });
+    expect(drop).not.toHaveClass('bg-primary-fill');
+    expect(drop.className).not.toContain('text-terracotta-deep');
+    expect(drop.className).not.toEqual(within(footer()).getByTestId('shift-detail-close').className);
+  });
+
+  it('N: Edit / Assign / Delete never sit in the footer', () => {
+    renderDetail(shift());
+    for (const name of ['Edit', 'Delete']) {
+      expect(within(footer()).queryByRole('button', { name })).not.toBeInTheDocument();
+      expect(within(screen.getByTestId('shift-detail-actions')).getByRole('button', { name })).toBeInTheDocument();
+    }
+  });
+
+  it('N: no Take and no Drop: the footer is Close alone', () => {
+    circle({ canManageMembers: false });
+    renderDetail(shift({ assigned_to: 'u-ana' }));
+    expect(within(footer()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Close']);
+  });
+
+  it('the dialog keeps the md size (max-w-lg)', () => {
+    renderDetail(shift());
+    expect(screen.getByRole('dialog').className).toContain('max-w-lg');
+  });
+});
+
 describe('one filled button per screen', () => {
   it('open shift: Take is the primary, the list fills no Done', () => {
     renderDetail(shift());
-    expect(screen.getByRole('button', { name: 'Take' })).toHaveClass('bg-primary-fill');
+    expect(screen.getByRole('button', { name: 'Take shift' })).toHaveClass('bg-primary-fill');
     expect(listProps.value?.primaryAllowed).toBe(false);
   });
 
   it("the viewer's own shift: no Take; the list's next Done is the primary and Drop is neutral", () => {
     renderDetail(shift({ assigned_to: 'u-me' }));
-    expect(screen.queryByRole('button', { name: 'Take' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Take shift' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Drop shift' })).not.toHaveClass('bg-primary-fill');
     expect(listProps.value?.primaryAllowed).toBe(true);
   });
 
   it("someone else's shift: no Take, the list may fill its first Done", () => {
     renderDetail(shift({ assigned_to: 'u-ana' }));
-    expect(screen.queryByRole('button', { name: 'Take' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Take shift' })).not.toBeInTheDocument();
     expect(listProps.value?.primaryAllowed).toBe(true);
   });
 
   it('an open shift with no Take on screen (read-only or ended) lets the list fill its Done', () => {
     circle({ viewOnly: true, canEdit: false });
     renderDetail(shift());
-    expect(screen.queryByRole('button', { name: 'Take' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Take shift' })).not.toBeInTheDocument();
     expect(listProps.value?.primaryAllowed).toBe(true);
   });
 });

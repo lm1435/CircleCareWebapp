@@ -148,5 +148,13 @@
     "open_other": "{{count}} turnos · {{open}}",
     "count_one": "{{count}} turno",
     "count_other": "{{count}} turnos"
+  },
+  "tasks": {
+    "list": {
+      "titleYou": "A sua lista · {{done}} de {{total}} concluídas",
+      "titleOpen": "Lista deste turno · {{done}} de {{total}} concluídas",
+      "titleYouEmpty": "A sua lista",
+      "titleOpenEmpty": "Lista deste turno"
+    }
   }
 }
