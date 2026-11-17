@@ -224,7 +224,9 @@ export default function NotesPage(): ReactElement {
   useEffect(() => {
     mountedRef.current = true;
     // A note that failed to post after the user left comes back, once, on return (BH-024).
-    const parked = circleId ? takeParkedNoteDraft(circleId) : null;
+    const parked = circleId
+      ? takeParkedNoteDraft(circleId, useAuthStore.getState().user?.id)
+      : null;
     if (parked) {
       setDraft(parked);
       setRestoredFrom('failed_post');
@@ -266,7 +268,7 @@ export default function NotesPage(): ReactElement {
     inFlightDraftRef.current = null;
     if (circleId) {
       takeDraft(currentUserId, `notes:create:${circleId}`);
-      takeParkedNoteDraft(circleId);
+      takeParkedNoteDraft(circleId, currentUserId);
     }
     if (source) Analytics.noteDraftDiscarded({ source });
   }
@@ -417,6 +419,7 @@ export default function NotesPage(): ReactElement {
   // ── Composer (create) ──────────────────────────────────────────────────────
   async function handlePost(): Promise<void> {
     const submitted = draft;
+    const submitterId = currentUserId;
     const input = draftToInput(submitted, today);
     const sentDate = input.note_date ?? null;
     if (input.body === undefined && input.mood === undefined) return;
@@ -466,7 +469,13 @@ export default function NotesPage(): ReactElement {
       if (!mountedRef.current) {
         // The composer is gone: say so in a toast and park the draft for the next visit.
         showToast(t('notes:composer.errorPosting'), 'error');
-        parkNoteDraft(circleId, submitted);
+        // Only for the user who is STILL signed in as the submitter. A post that failed because
+        // the session ended (forced sign-out) settles after the teardown with no user: parking
+        // then would hand this health note to whoever signs in next in this tab.
+        const signedInNow = useAuthStore.getState().user?.id;
+        if (signedInNow && signedInNow === submitterId) {
+          parkNoteDraft(circleId, signedInNow, submitted);
+        }
       } else {
         // INLINE in the composer, not a toast — see NoteComposer's `error`.
         setPostError(t('notes:composer.errorPosting'));

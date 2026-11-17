@@ -73,10 +73,13 @@ vi.mock('@/hooks/useCircle', () => ({
 
 let currentUserId: string | undefined = 'user-1';
 
-vi.mock('@/store/authStore', () => ({
-  useAuthStore: (selector: (s: { user: { id: string } | null }) => unknown) =>
-    selector({ user: currentUserId ? { id: currentUserId } : null }),
-}));
+vi.mock('@/store/authStore', () => {
+  const state = () => ({ user: currentUserId ? { id: currentUserId } : null });
+  const useAuthStore = (selector: (s: { user: { id: string } | null }) => unknown) =>
+    selector(state());
+  useAuthStore.getState = state;
+  return { useAuthStore };
+});
 
 const mockCareNotesViewed = vi.fn();
 const mockCareNoteAdded = vi.fn();
@@ -1509,6 +1512,31 @@ describe('NotesPage — a post that settles after leaving the page (BH-024)', ()
     expect(screen.queryByDisplayValue('Skipped dinner')).not.toBeInTheDocument();
   });
 
+  it('negative: a failure that settles after the session ended (signed out) parks nothing', async () => {
+    const user = userEvent.setup();
+    const opts = await postThenLeave();
+    // Forced sign-out: the teardown runs before the 401 rejects the post.
+    currentUserId = undefined;
+    await act(async () => {
+      opts.onError?.(new Error('unauthorized'));
+    });
+    // Same user signs back in to the same circle in this tab.
+    currentUserId = 'user-1';
+    await user.click(screen.getByText('go-notes'));
+    expect(screen.queryByDisplayValue('Skipped dinner')).not.toBeInTheDocument();
+  });
+
+  it('negative: a different user signed in when the user returns gets no parked draft', async () => {
+    const user = userEvent.setup();
+    const opts = await postThenLeave();
+    await act(async () => {
+      opts.onError?.(new Error('network'));
+    });
+    currentUserId = 'user-2';
+    await user.click(screen.getByText('go-notes'));
+    expect(screen.queryByDisplayValue('Skipped dinner')).not.toBeInTheDocument();
+  });
+
   it('negative: a failure after leaving fires no care_note_added', async () => {
     const opts = await postThenLeave();
     await act(async () => {
@@ -1597,7 +1625,7 @@ describe('NotesPage — restored draft line', () => {
   });
 
   it('P: a failed-post (parked) draft shows the line and fires source failed_post', () => {
-    parkNoteDraft(CIRCLE_ID, { body: 'Skipped dinner', mood: null, categories: [], noteDate: null });
+    parkNoteDraft(CIRCLE_ID, 'user-1', { body: 'Skipped dinner', mood: null, categories: [], noteDate: null });
     renderCircle(CIRCLE_ID);
     expect(textbox()).toHaveValue('Skipped dinner');
     expect(line()).toBeInTheDocument();
@@ -1606,7 +1634,7 @@ describe('NotesPage — restored draft line', () => {
 
   it('P: the line stays while the user edits the restored draft', async () => {
     const user = userEvent.setup();
-    parkNoteDraft(CIRCLE_ID, { body: 'Skipped dinner', mood: null, categories: [], noteDate: null });
+    parkNoteDraft(CIRCLE_ID, 'user-1', { body: 'Skipped dinner', mood: null, categories: [], noteDate: null });
     renderCircle(CIRCLE_ID);
     await user.type(textbox(), ', ate later');
     expect(line()).toBeInTheDocument();
@@ -1614,7 +1642,7 @@ describe('NotesPage — restored draft line', () => {
 
   it('P: Discard clears body, mood, categories and date, and the parked draft does not come back', async () => {
     const user = userEvent.setup();
-    parkNoteDraft(CIRCLE_ID, {
+    parkNoteDraft(CIRCLE_ID, 'user-1', {
       body: 'Skipped dinner',
       mood: 'tough',
       categories: ['meal'],
@@ -1669,7 +1697,7 @@ describe('NotesPage — restored draft line', () => {
   it('N: posting a restored draft works and the line goes away (no discard event)', async () => {
     const user = userEvent.setup();
     mockCreate.mockImplementation((_v, o: { onSuccess?: () => void }) => o.onSuccess?.());
-    parkNoteDraft(CIRCLE_ID, { body: 'Skipped dinner', mood: null, categories: [], noteDate: null });
+    parkNoteDraft(CIRCLE_ID, 'user-1', { body: 'Skipped dinner', mood: null, categories: [], noteDate: null });
     renderCircle(CIRCLE_ID);
     await user.click(screen.getByRole('button', { name: 'Post' }));
     expect(mockCreate).toHaveBeenCalledTimes(1);
@@ -1683,7 +1711,7 @@ describe('NotesPage — restored draft line', () => {
 
   it('N: emptying the restored text by hand hides the line, and new typing does not bring it back', async () => {
     const user = userEvent.setup();
-    parkNoteDraft(CIRCLE_ID, { body: 'Skipped dinner', mood: null, categories: [], noteDate: null });
+    parkNoteDraft(CIRCLE_ID, 'user-1', { body: 'Skipped dinner', mood: null, categories: [], noteDate: null });
     renderCircle(CIRCLE_ID);
     await user.clear(textbox());
     expect(line()).not.toBeInTheDocument();
@@ -1695,8 +1723,8 @@ describe('NotesPage — restored draft line', () => {
 
   it("N: Discard in circle A does not touch circle B's parked draft", async () => {
     const user = userEvent.setup();
-    parkNoteDraft(CIRCLE_ID, { body: 'A words', mood: null, categories: [], noteDate: null });
-    parkNoteDraft(OTHER_CIRCLE, { body: 'B words', mood: null, categories: [], noteDate: null });
+    parkNoteDraft(CIRCLE_ID, 'user-1', { body: 'A words', mood: null, categories: [], noteDate: null });
+    parkNoteDraft(OTHER_CIRCLE, 'user-1', { body: 'B words', mood: null, categories: [], noteDate: null });
     const a = renderCircle(CIRCLE_ID);
     await user.click(screen.getByRole('button', { name: 'Discard restored draft' }));
     a.unmount();

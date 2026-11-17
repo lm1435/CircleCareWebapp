@@ -447,4 +447,42 @@ describe('authStore', () => {
       expect(sessionStorage.length).toBe(0);
     });
   });
+
+  // BH-024 privacy: a care note parked (memory only) after a failed post must not survive ANY
+  // session end in this tab, or the next sign-in to the same circle gets it back.
+  describe('BH-024 parked note drafts', () => {
+    const DRAFT = { body: 'secret note', mood: null, categories: [], noteDate: null };
+    async function withParked() {
+      const mods = await loadModules();
+      const pd = await import('@/lib/parkedNoteDraft');
+      mods.useAuthStore.getState().signIn({ access_token: 't' }, testUser);
+      vi.mocked(mods.api.apiClient.post).mockResolvedValue({ success: true } as never);
+      pd.parkNoteDraft('c1', 'user-1', DRAFT);
+      return { ...mods, pd };
+    }
+
+    it('N: a voluntary sign-out drops the parked draft (not restored after sign-out)', async () => {
+      const { useAuthStore, pd } = await withParked();
+      await useAuthStore.getState().signOut();
+      expect(pd.takeParkedNoteDraft('c1', 'user-1')).toBeNull();
+    });
+
+    it('N: a FORCED sign-out (auth-failure hook) drops the parked draft too', async () => {
+      const { api, pd } = await withParked();
+      await vi.mocked(api.setOnAuthFailure).mock.calls[0][0]?.();
+      expect(pd.takeParkedNoteDraft('c1', 'user-1')).toBeNull();
+    });
+
+    it("N: another tab's logout broadcast drops the parked draft", async () => {
+      const { pd } = await withParked();
+      const ch = MockBroadcastChannel.instances[0];
+      ch.onmessage?.({ data: { type: 'logout' } } as MessageEvent);
+      expect(pd.takeParkedNoteDraft('c1', 'user-1')).toBeNull();
+    });
+
+    it('P: without a session end the parked draft is still there for the same user', async () => {
+      const { pd } = await withParked();
+      expect(pd.takeParkedNoteDraft('c1', 'user-1')).toEqual(DRAFT);
+    });
+  });
 });

@@ -76,6 +76,7 @@ import {
 } from '@/components/ui';
 import pkg from '../../package.json';
 import { blockOfflineWrite } from '@/lib/offlineWrite';
+import { clearParkedNoteDrafts } from '@/lib/parkedNoteDraft';
 
 // Stage 7, Task 7.3 — Profile & settings page. Built only on Stage 0 primitives
 // + the Stage 7 data layer (src/hooks/useProfile.ts + src/api/users.ts). Mirrors
@@ -524,6 +525,7 @@ export default function ProfilePage(): ReactElement {
         showToast(t('delete.success'), 'success');
         setShowDelete(false);
         queryClient.clear();
+        clearParkedNoteDrafts();
         void signOut().finally(() => navigate('/login', { replace: true }));
       },
       // On error the dialog stays OPEN with the failure shown inline (plus the

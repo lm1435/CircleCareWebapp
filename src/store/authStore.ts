@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { onSessionEnded, reconcileDrafts, saveDraftsForForcedSignOut } from '@/lib/sessionDraft';
+import { clearParkedNoteDrafts } from '@/lib/parkedNoteDraft';
 import { resetRefreshState, setOnAuthFailure, apiClient } from '@/lib/api';
 import { tokenAccessor } from '@/lib/tokenAccessor';
 import { markForcedSignOut, clearForcedSignOut } from '@/lib/forcedSignOut';
@@ -163,6 +164,9 @@ function clearLocalSession(): void {
   // callback pages PEEK the code and forward to /invite/:code, which consumes
   // it on any authenticated arrival).
   clearPendingInviteCode();
+  // BH-024: a care note parked after a failed post (memory only) belongs to this session's user;
+  // the next account in this tab must never get it back.
+  clearParkedNoteDrafts();
   // Daily-update dismiss / shown markers are per browser; the next account on
   // a shared browser must not inherit them (docs/plans/daily-update.md §6).
   clearDailyUpdateStorage();

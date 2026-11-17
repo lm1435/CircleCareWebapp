@@ -1,20 +1,43 @@
 // BH-024: a care note whose POST fails AFTER the user left the Notes page has nowhere to
 // restore into (the composer is unmounted). The draft is parked here, in memory only (care
 // notes are health content: never storage), and the next NotesPage mount for the same circle
-// takes it back exactly once.
+// AND the same signed-in user takes it back exactly once, within the same 30-minute window the
+// stored session draft uses (lib/sessionDraft DRAFT_TTL_MS).
+//
+// Privacy: a parked draft belongs to one person. Parking needs a signed-in user (a post that
+// failed because the session died parks nothing: PK9's sessionStorage draft covers that case,
+// with its own user + TTL checks), taking it needs the SAME user, and every session end drops
+// them all (store/authStore clearLocalSession).
 import type { NoteDraft } from '@/components/notes/NoteComposer';
+import { DRAFT_TTL_MS } from '@/lib/sessionDraft';
 
-const parked = new Map<string, NoteDraft>();
+type Parked = { draft: NoteDraft; userId: string; parkedAt: number };
 
-export function parkNoteDraft(circleId: string, draft: NoteDraft): void {
-  parked.set(circleId, draft);
+const parked = new Map<string, Parked>();
+
+/** No-op without a signed-in user. */
+export function parkNoteDraft(
+  circleId: string,
+  userId: string | null | undefined,
+  draft: NoteDraft
+): void {
+  if (!userId) return;
+  parked.set(circleId, { draft, userId, parkedAt: Date.now() });
 }
 
-/** Read and delete: a parked draft is restored at most once. */
-export function takeParkedNoteDraft(circleId: string): NoteDraft | null {
-  const d = parked.get(circleId) ?? null;
+/**
+ * Read and delete: a parked draft is restored at most once. Null (and still deleted) when it
+ * belongs to another user or is older than DRAFT_TTL_MS.
+ */
+export function takeParkedNoteDraft(
+  circleId: string,
+  userId: string | null | undefined
+): NoteDraft | null {
+  const p = parked.get(circleId);
   parked.delete(circleId);
-  return d;
+  if (!p || !userId || p.userId !== userId) return null;
+  if (Date.now() - p.parkedAt >= DRAFT_TTL_MS) return null;
+  return p.draft;
 }
 
 export function clearParkedNoteDrafts(): void {
