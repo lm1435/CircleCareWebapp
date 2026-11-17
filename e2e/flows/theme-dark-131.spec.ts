@@ -191,7 +191,7 @@ async function freshOwnerWithFirstCircle(
   await createAccount(email, 'free');
   await cookieLogin(context, { email, password: ACCOUNT_PASSWORD }, baseURL);
   await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: 'Create circle' }).first().click();
+  await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
   const modal = page.getByRole('dialog');
   await modal.locator('#recipient_name').fill(uniq(prefix));
   // The first-run form refuses to save before the circle detail (its timezone) has loaded.

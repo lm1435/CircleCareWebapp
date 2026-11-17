@@ -346,7 +346,7 @@ const SURFACES: Surface[] = [
     toast: "We couldn't create your circle just now. Nothing was lost — please try again.",
     async prepare({ page, label }) {
       await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-      await page.getByRole('button', { name: 'Create circle' }).first().click();
+      await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
       const dialog = page.getByRole('dialog', { name: 'New care circle' });
       await expect(dialog).toBeVisible({ timeout: 20_000 });
       await dialog.locator('#recipient_name').fill(label);

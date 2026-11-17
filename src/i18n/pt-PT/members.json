@@ -7,7 +7,16 @@
     "personHelping_other": "{{count}} pessoas a ajudar a coordenar o cuidado",
     "errorBody": "Verifique a sua ligação e tente novamente.",
     "empty": {
-      "companion": "Prefere o telemóvel? Transfira a app complementar."
+      "companion": "Prefere o telemóvel? Transfira a app complementar.",
+      "a2Title": "Um só lugar para o cuidado de quem ama",
+      "a2Subtitle": "Um círculo de cuidado reúne os medicamentos, consultas, tarefas, notas e documentos de uma pessoa, partilhados com a família, os amigos ou o cuidador contratado que convidar.",
+      "exampleDose": "A Rosa tomou a dose das 8:00",
+      "exampleDoseSub": "Recebeu o aviso, tal como a Ana",
+      "exampleReminders": "Escolhe quem recebe os lembretes",
+      "exampleRemindersSub": "Nem tudo tem de recair sobre si",
+      "exampleAppointment": "Dr. Patel, cardiologia · 10:30",
+      "exampleAppointmentSub": "Num calendário partilhado",
+      "exampleEmergencySub": "Alergias, médicos e seguro em segundos"
     }
   },
   "med": {

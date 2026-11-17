@@ -76,7 +76,7 @@ test('create a new circle, then delete it', async ({ page }) => {
 
   // --- Create ---
   await gotoCircles(page, 2);
-  await page.getByRole('button', { name: 'Create circle' }).first().click();
+  await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 15_000 });
   await dialog.locator('#recipient_name').fill(name);

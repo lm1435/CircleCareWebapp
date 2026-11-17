@@ -37,6 +37,8 @@ async function stubDrugs(page: Page): Promise<void> {
 
 interface Copy {
   createBtn: string;
+  /** The /circles page's own create button: the empty state's "Start a care circle" (1.4.3), or the header's Create circle. */
+  startBtn: RegExp;
   wizardName: string;
   skip: string;
   nameLabel: RegExp;
@@ -48,6 +50,7 @@ interface Copy {
 const COPY: Record<'en' | 'es', Copy> = {
   en: {
     createBtn: 'Create circle',
+    startBtn: /^(Start a care circle|Create circle)$/,
     wizardName: 'Circle created',
     skip: 'Skip for now',
     nameLabel: /Medication name/i,
@@ -58,6 +61,7 @@ const COPY: Record<'en' | 'es', Copy> = {
   },
   es: {
     createBtn: 'Crear círculo',
+    startBtn: /^(Crear un círculo de cuidado|Crear círculo)$/,
     wizardName: 'Círculo creado',
     skip: 'Omitir por ahora',
     nameLabel: /Nombre del medicamento/i,
@@ -72,7 +76,7 @@ const COPY: Record<'en' | 'es', Copy> = {
 async function createFirstCircle(page: Page, lang: 'en' | 'es', recipient: string): Promise<string> {
   const c = COPY[lang];
   await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: c.createBtn }).first().click();
+  await page.getByRole('button', { name: c.startBtn }).first().click();
   const modal = page.getByRole('dialog');
   await modal.locator('#recipient_name').fill(recipient);
   // The wizard mounts with a COLD circle cache and refuses to save until the

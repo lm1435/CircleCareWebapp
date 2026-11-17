@@ -47,7 +47,7 @@ test('create-circle modal validation', async ({ page }) => {
 
   // Open the create-circle modal (header CTA or empty-state CTA — both are
   // labelled "Create circle").
-  await page.getByRole('button', { name: 'Create circle' }).first().click();
+  await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
 
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 15_000 });

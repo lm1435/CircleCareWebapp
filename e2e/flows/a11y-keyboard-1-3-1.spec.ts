@@ -350,7 +350,7 @@ const wizardDialog = (page: Page) => page.getByRole('dialog', { name: 'Circle cr
 /** /circles -> Create circle (keyboard) -> the wizard over the new circle. */
 async function createFirstCircleByKeyboard(page: Page, recipient: string): Promise<string> {
   await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await press(page.getByRole('button', { name: 'Create circle' }).first());
+  await press(page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first());
   const modal = page.getByRole('dialog');
   await modal.locator('#recipient_name').fill(recipient);
   const circleLoaded = page.waitForResponse(

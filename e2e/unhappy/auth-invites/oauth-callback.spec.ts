@@ -189,7 +189,7 @@ test('RETURNING user via Sign-up Google: signed in, parked DECLINE is NOT applie
   expect(body.data.is_new_user, 'backend classifies the backdated account as RETURNING').toBe(false);
 
   await expect(page).toHaveURL(/\/circles$/, { timeout: 20_000 });
-  await expect(page.getByRole('button', { name: 'Join with an invite code' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: 'I have an invite code' })).toBeVisible({ timeout: 20_000 });
   expect(await hasRefreshCookie(context)).toBe(true);
   await withdraws.expectCount(0, { settleMs: 2_000 });
   expect(consentRow(acct.userId)).toEqual(consentBefore);

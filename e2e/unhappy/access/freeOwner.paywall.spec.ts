@@ -63,7 +63,7 @@ test('create circle at the free cap: real 402, the upgrade prompt, and still exa
   await openAllCircles(page);
   await expect(page.getByRole('link', { name: new RegExp(`^Open ${circleNameOf(h.circleId)}`) })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Create circle' }).first().click();
+  await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText('New care circle')).toBeVisible();
   await dialog.locator('#recipient_name').fill(name);

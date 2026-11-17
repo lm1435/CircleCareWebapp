@@ -1051,6 +1051,19 @@ export const Analytics = {
       ...(source ? { source } : {}),
     }),
 
+  // --- Circles first-time empty state --- same name/props as mobile.
+  /**
+   * The Circles empty state (no circles yet) was shown, once per page view.
+   * `variant` names the design ('a2' = 1.4.3 "A2-complete"); `has_pending_invite`:
+   * the pending-invitations banner was on the page with it. Enums/booleans only.
+   */
+  emptyStateViewed: (variant: 'a2', hasPendingInvite: boolean) =>
+    capture('empty_state_viewed', {
+      variant,
+      surface: 'circle_list',
+      has_pending_invite: hasPendingInvite === true,
+    }),
+
   // --- Onboarding 1.3.1 (invitee welcome) --- same names/props as mobile.
   // Enums and counts only: never names, circle_id or the invite code.
   /** The post-join welcome screen was shown. `items` = how many rows it lists. */

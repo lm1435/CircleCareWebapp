@@ -23,7 +23,7 @@ test.describe('create circle: Who are you caring for? (1.4.2, mobile parity)', (
 
   async function openCreate(page: import('@playwright/test').Page) {
     await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: 'Create circle' }).first().click();
+    await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
     return page.getByRole('dialog');
   }
 

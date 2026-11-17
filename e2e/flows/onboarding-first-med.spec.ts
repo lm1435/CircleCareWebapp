@@ -36,7 +36,7 @@ function trackPaths(page: Page): string[] {
 
 async function createFirstCircle(page: Page, recipient: string): Promise<string> {
   await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: 'Create circle' }).first().click();
+  await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
   const modal = page.getByRole('dialog');
   await modal.locator('#recipient_name').fill(recipient);
   // The first-run form refuses to save before the circle detail (its timezone) has loaded.

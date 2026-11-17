@@ -71,7 +71,7 @@ describe('CirclePickerPage: auto-skip never races a create in flight', () => {
     mockGetCircles.mockResolvedValue([]);
     const queryClient = renderPicker();
 
-    await user.click(await screen.findByRole('button', { name: 'Create circle' }));
+    await user.click(await screen.findByRole('button', { name: 'Start a care circle' }));
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
 
     // The create's invalidation lands first: the list now holds the one new circle.
@@ -96,7 +96,7 @@ describe('CirclePickerPage: auto-skip never races a create in flight', () => {
     mockGetCircles.mockResolvedValue([]);
     const queryClient = renderPicker();
 
-    await user.click(await screen.findByRole('button', { name: 'Create circle' }));
+    await user.click(await screen.findByRole('button', { name: 'Start a care circle' }));
     const dialog = await screen.findByRole('dialog');
     mockGetCircles.mockResolvedValue([circle]);
     await act(async () => {

@@ -134,7 +134,7 @@ interface Opener {
 }
 
 const OPENERS: Opener[] = [
-  { route: '/circles', name: /^Create circle$/, kind: 'dialog' },
+  { route: '/circles', name: /^(Start a care circle|Create circle)$/, kind: 'dialog' },
   { route: '/circles', name: /^Join a circle$/, kind: 'dialog' },
   { route: 'C', name: /^Account$/, kind: 'menu' },
   { route: 'C', name: /^Switch circle/, kind: 'menu' },

@@ -21,16 +21,26 @@
     "errorTitle": "Kreise konnten nicht geladen werden",
     "errorBody": "Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
     "empty": {
-      "title": "Richten wir Ihren Pflegekreis ein",
-      "body": "Ein Kreis ist ein privater Raum, in dem Familie und Pflegepersonen gemeinsam für einen geliebten Menschen sorgen – Medikamente, Termine und Aufgaben an einem Ort.",
-      "howItWorksTitle": "So funktioniert CircleCare",
-      "step1": "Erstellen Sie einen Kreis für Ihre Angehörige oder Ihren Angehörigen.",
-      "step2": "Laden Sie Familie und Pflegepersonen ein, damit die Last auf mehrere Schultern verteilt wird.",
-      "step3": "Alle sehen denselben Kalender – Medikamente, Termine und Aufgaben an einem Ort.",
       "learnMore": "Mehr erfahren",
       "invitedHintPrefix": "Schon per E-Mail eingeladen?",
       "invitedHintLink": "Einladungen ansehen",
-      "companion": "Lieber mit dem Smartphone? Laden Sie die Begleit-App."
+      "companion": "Lieber mit dem Smartphone? Laden Sie die Begleit-App.",
+      "a2Title": "Alles für ihre Pflege an einem Ort",
+      "a2Subtitle": "Ein Pflegekreis bündelt die Medikamente, Termine, Aufgaben, Notizen und Dokumente einer Person, geteilt mit der Familie, Freunden oder der bezahlten Pflegekraft, die Sie einladen.",
+      "example": "Beispiel",
+      "exampleTitle": "Heute für Rosa",
+      "exampleDose": "Rosa hat ihre Dosis um 8:00 Uhr genommen",
+      "exampleDoseSub": "Sie und Ana wurden benachrichtigt",
+      "exampleReminders": "Sie legen fest, wer Erinnerungen erhält",
+      "exampleRemindersSub": "Es muss nicht alles an Ihnen hängen bleiben",
+      "exampleAppointment": "Dr. Patel, Kardiologie · 10:30 Uhr",
+      "exampleAppointmentSub": "In einem gemeinsamen Kalender",
+      "exampleEmergency": "Notfallinfos",
+      "exampleEmergencySub": "Allergien, Ärzte und Versicherung in Sekunden",
+      "start": "Pflegekreis erstellen",
+      "inviteCode": "Ich habe einen Einladungscode",
+      "freeNote": "Kostenlos starten. Medikamente und Erinnerungen sind nie hinter einer Bezahlschranke.",
+      "secure": "Privat und sicher"
     }
   },
   "med": {

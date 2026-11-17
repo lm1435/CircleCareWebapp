@@ -334,10 +334,10 @@ describe('CirclePickerPage', () => {
     mockGetCircles.mockResolvedValue([]);
     renderPicker();
 
-    expect(await screen.findByText("Let's set up your care circle")).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'One place for their care' })).toBeInTheDocument();
     expect(
       screen.getByText(
-        'A circle is a private space where family and caregivers come together to care for someone you love — medications, appointments, and tasks, all in one place.'
+        'A care circle keeps one person’s medications, appointments, tasks, notes and documents together, shared with the family, friends or paid caregiver you invite.'
       )
     ).toBeInTheDocument();
     expect(screen.getByText('Prefer your phone? Get the companion app.')).toBeInTheDocument();
@@ -370,16 +370,16 @@ describe('CirclePickerPage', () => {
       expect(or.parentElement?.className).toContain('flex-wrap');
     });
 
+    // 1.4.3 A2: the two doors sit side by side with no "or" between them, the
+    // same pair (and words) as mobile's empty state and the Welcome screen.
     it('offers join beside create in the empty state', async () => {
       mockGetCircles.mockResolvedValue([]);
       renderPicker();
 
-      const join = await screen.findByRole('button', { name: 'Join with an invite code' });
-      const or = screen.getByText('or');
-      expect(or.parentElement).toContainElement(join);
-      expect(or.parentElement).toContainElement(
-        screen.getByRole('button', { name: 'Create circle' })
-      );
+      const join = await screen.findByRole('button', { name: 'I have an invite code' });
+      const start = screen.getByRole('button', { name: 'Start a care circle' });
+      expect(join.parentElement).toBe(start.parentElement);
+      expect(screen.queryByText('or')).not.toBeInTheDocument();
     });
 
     // The web analogue of mobile's create-screen dead end: the create modal
@@ -389,12 +389,12 @@ describe('CirclePickerPage', () => {
       mockGetCircles.mockResolvedValue([]);
       renderPicker();
 
-      await user.click(await screen.findByRole('button', { name: 'Create circle' }));
+      await user.click(await screen.findByRole('button', { name: 'Start a care circle' }));
       await screen.findByRole('heading', { name: 'New care circle' });
 
-      // Scoped to the dialog: the empty state behind it offers the same label,
-      // which is exactly the point — the escape hatch exists so the user does
-      // not have to find their way back out to it.
+      // Scoped to the dialog: the empty state behind it offers the same door
+      // ("I have an invite code"), which is exactly the point — the escape
+      // hatch exists so the user does not have to find their way back out to it.
       await user.click(
         within(screen.getByRole('dialog')).getByRole('button', {
           name: 'Join with an invite code',

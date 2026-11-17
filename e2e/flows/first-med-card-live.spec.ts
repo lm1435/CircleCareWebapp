@@ -72,7 +72,7 @@ async function rolledFirstMed(page: Page, context: any, baseURL: string | undefi
   const a = await freeAccount(prefix);
   await cookieLogin(context, a, baseURL);
   await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: 'Create circle' }).first().click();
+  await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
   const modal = page.getByRole('dialog');
   await modal.locator('#recipient_name').fill(uniq('Live'));
   await modal.getByRole('button', { name: 'Create circle' }).click();

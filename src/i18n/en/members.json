@@ -21,16 +21,26 @@
     "errorTitle": "Unable to load circles",
     "errorBody": "Please check your connection and try again.",
     "empty": {
-      "title": "Let's set up your care circle",
-      "body": "A circle is a private space where family and caregivers come together to care for someone you love — medications, appointments, and tasks, all in one place.",
-      "howItWorksTitle": "How CircleCare works",
-      "step1": "Create a circle for your loved one.",
-      "step2": "Invite family and caregivers to share the load.",
-      "step3": "Everyone sees the same calendar — medications, appointments, and tasks in one place.",
       "learnMore": "Learn more",
       "invitedHintPrefix": "Already invited by email?",
       "invitedHintLink": "Check your invitations",
-      "companion": "Prefer your phone? Get the companion app."
+      "companion": "Prefer your phone? Get the companion app.",
+      "a2Title": "One place for their care",
+      "a2Subtitle": "A care circle keeps one person’s medications, appointments, tasks, notes and documents together, shared with the family, friends or paid caregiver you invite.",
+      "example": "Example",
+      "exampleTitle": "Today for Rosa",
+      "exampleDose": "Rosa took her 8:00 AM dose",
+      "exampleDoseSub": "You and Ana were notified",
+      "exampleReminders": "You choose who gets reminders",
+      "exampleRemindersSub": "It doesn’t all have to fall to you",
+      "exampleAppointment": "Dr. Patel, cardiology · 10:30 AM",
+      "exampleAppointmentSub": "On one shared calendar",
+      "exampleEmergency": "Emergency info",
+      "exampleEmergencySub": "Allergies, doctors and insurance in seconds",
+      "start": "Start a care circle",
+      "inviteCode": "I have an invite code",
+      "freeNote": "Free to start. Medications and reminders are never paywalled.",
+      "secure": "Private & secure"
     }
   },
   "med": {

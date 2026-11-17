@@ -65,7 +65,7 @@ test('correct code (real endpoint): exchanged once, signed in, lands on /circles
 
   await typeOtp(page, otp);
   await expect(page).toHaveURL(/\/circles$/, { timeout: 20_000 });
-  await expect(page.getByRole('button', { name: 'Join with an invite code' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: 'I have an invite code' })).toBeVisible({ timeout: 20_000 });
   await verifies.expectCount(1);
   await exchanges.expectCount(1);
   expect(await hasRefreshCookie(context)).toBe(true);

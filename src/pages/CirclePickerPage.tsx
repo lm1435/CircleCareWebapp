@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCircles } from '@/hooks/useCircles';
 import { useInboxUnreadSummary } from '@/hooks/useInbox';
+import { usePendingInvites } from '@/hooks/useInvites';
 import { Analytics } from '@/lib/analytics';
 import { trackCirclesLoaded } from '@/lib/onboardingAnalytics';
 import { reportEmailLinkLanding } from '@/lib/emailLinkLanding';
@@ -169,6 +170,21 @@ export default function CirclePickerPage(): ReactElement {
     navigate(`/circles/${circles[0].id}`, { replace: true });
   }, [circles, isPending, isError, location.state, navigate, showCreate, showJoin]);
 
+  // FIRST-TIME EMPTY STATE (1.4.3 "A2-complete"): no circles once the list has
+  // loaded. It brings its own greeting eyebrow and h1, so the page header below
+  // steps aside for it.
+  const isEmpty = !isPending && !isError && (!circles || circles.length === 0);
+  const { data: pendingInvites } = usePendingInvites();
+  const hasPendingInvite = (pendingInvites?.length ?? 0) > 0;
+  // empty_state_viewed: once per page view (per mount), mobile parity.
+  const emptyViewedRef = useRef(false);
+  useEffect(() => {
+    if (!isEmpty || emptyViewedRef.current) return;
+    emptyViewedRef.current = true;
+    Analytics.emptyStateViewed('a2', hasPendingInvite);
+  }, [isEmpty, hasPendingInvite]);
+  const greeting = t(`picker.greeting.${greetingKey()}`);
+
   let content: ReactElement;
   if (isPending) {
     content = (
@@ -196,18 +212,19 @@ export default function CirclePickerPage(): ReactElement {
     );
   } else if (!circles || circles.length === 0) {
     content = (
-      // Both CTAs are now bare, equally-sized Buttons: EmptyCircles lays them
-      // out as one `A or B` row. The "Were you invited?" prompt that used to
-      // sit above the join button is gone from here — it framed joining as the
-      // exception, and it now does real work inside CreateCircleModal, where a
-      // user who opened the wrong door has no other way out.
+      // "Start a care circle" (moss) and "I have an invite code" (outline), the
+      // same pair and words as mobile's empty state and the Welcome screen.
       <EmptyCircles
+        greeting={firstName ? `${greeting}, ${firstName}` : greeting}
+        firstName={firstName || undefined}
         action={
-          <Button onClick={() => setShowCreate(true)} offlineKind="change">{t('circles:create.create')}</Button>
+          <Button size="lg" onClick={() => setShowCreate(true)} offlineKind="change">
+            {t('picker.empty.start')}
+          </Button>
         }
         joinAction={
-          <Button variant="secondary" onClick={() => setShowJoin(true)} offlineKind="change">
-            {t('circles:join.withCode')}
+          <Button size="lg" variant="outline" onClick={() => setShowJoin(true)} offlineKind="change">
+            {t('picker.empty.inviteCode')}
           </Button>
         }
       />
@@ -234,13 +251,14 @@ export default function CirclePickerPage(): ReactElement {
   const showHeaderActions = !isPending && !isError && circleCount > 0;
 
   return (
-    <section className="mx-auto w-full max-w-[900px] p-6 md:p-8">
+    <section className={`mx-auto w-full p-6 md:p-8 ${isEmpty ? 'max-w-[1120px] md:px-12' : 'max-w-[900px]'}`}>
       <NeedsCircleSelectionBanner />
+      {!isEmpty && (
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           {firstName && (
             <p className="mb-1 text-md font-medium text-ink-3">
-              {t(`picker.greeting.${greetingKey()}`)}
+              {greeting}
             </p>
           )}
           <Text variant="pageTitle">{firstName ?? t('picker.heading')}</Text>
@@ -274,6 +292,7 @@ export default function CirclePickerPage(): ReactElement {
           </div>
         )}
       </header>
+      )}
       {/* Mirrors mobile's CircleListScreen invite banner — without it a web user
           who already has a circle has no route to /invites at all. */}
       <PendingInvitesBanner />

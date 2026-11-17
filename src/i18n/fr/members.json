@@ -21,16 +21,26 @@
     "errorTitle": "Impossible de charger les cercles",
     "errorBody": "Vérifiez votre connexion et réessayez.",
     "empty": {
-      "title": "Configurons votre cercle de soins",
-      "body": "Un cercle est un espace privé où la famille et les aidants se réunissent pour prendre soin d’un proche : médicaments, rendez-vous et tâches, tout au même endroit.",
-      "howItWorksTitle": "Comment fonctionne CircleCare",
-      "step1": "Créez un cercle pour votre proche.",
-      "step2": "Invitez la famille et les aidants à partager la charge.",
-      "step3": "Tout le monde voit le même calendrier : médicaments, rendez-vous et tâches au même endroit.",
       "learnMore": "En savoir plus",
       "invitedHintPrefix": "Une invitation reçue par e-mail ?",
       "invitedHintLink": "Consultez vos invitations",
-      "companion": "Vous préférez votre téléphone ? Téléchargez l’application mobile."
+      "companion": "Vous préférez votre téléphone ? Téléchargez l’application mobile.",
+      "a2Title": "Un seul endroit pour ses soins",
+      "a2Subtitle": "Un cercle de soins réunit les médicaments, rendez-vous, tâches, notes et documents d’une personne, partagés avec la famille, les amis ou l’aidant rémunéré que vous invitez.",
+      "example": "Exemple",
+      "exampleTitle": "Aujourd’hui pour Rosa",
+      "exampleDose": "Rosa a pris sa dose de 8 h 00",
+      "exampleDoseSub": "Vous et Ana avez été prévenus",
+      "exampleReminders": "Vous choisissez qui reçoit les rappels",
+      "exampleRemindersSub": "Tout n’a pas à reposer sur vous",
+      "exampleAppointment": "Dr Patel, cardiologie · 10 h 30",
+      "exampleAppointmentSub": "Dans un calendrier partagé",
+      "exampleEmergency": "Infos d’urgence",
+      "exampleEmergencySub": "Allergies, médecins et assurance en quelques secondes",
+      "start": "Créer un cercle de soins",
+      "inviteCode": "J’ai un code d’invitation",
+      "freeNote": "Gratuit pour commencer. Les médicaments et les rappels ne sont jamais payants.",
+      "secure": "Privé et sécurisé"
     }
   },
   "med": {

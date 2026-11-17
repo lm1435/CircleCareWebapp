@@ -21,16 +21,26 @@
     "errorTitle": "Não foi possível carregar os círculos",
     "errorBody": "Verifique sua conexão e tente novamente.",
     "empty": {
-      "title": "Vamos configurar o seu círculo de cuidado",
-      "body": "Um círculo é um espaço privado onde familiares e cuidadores se reúnem para cuidar de uma pessoa querida — medicamentos, consultas e tarefas, tudo em um só lugar.",
-      "howItWorksTitle": "Como o CircleCare funciona",
-      "step1": "Crie um círculo para o seu ente querido.",
-      "step2": "Convide familiares e cuidadores para dividir a carga.",
-      "step3": "Todos veem o mesmo calendário — medicamentos, consultas e tarefas em um só lugar.",
       "learnMore": "Saiba mais",
       "invitedHintPrefix": "Recebeu um convite por e-mail?",
       "invitedHintLink": "Ver os seus convites",
-      "companion": "Prefere o celular? Baixe o app complementar."
+      "companion": "Prefere o celular? Baixe o app complementar.",
+      "a2Title": "Um só lugar para o cuidado de quem você ama",
+      "a2Subtitle": "Um círculo de cuidado reúne os medicamentos, consultas, tarefas, notas e documentos de uma pessoa, compartilhados com a família, os amigos ou o cuidador contratado que você convidar.",
+      "example": "Exemplo",
+      "exampleTitle": "Hoje para Rosa",
+      "exampleDose": "Rosa tomou a dose das 8:00",
+      "exampleDoseSub": "Você e Ana foram avisados",
+      "exampleReminders": "Você escolhe quem recebe os lembretes",
+      "exampleRemindersSub": "Nem tudo precisa recair sobre você",
+      "exampleAppointment": "Dr. Patel, cardiologia · 10:30",
+      "exampleAppointmentSub": "Em um calendário compartilhado",
+      "exampleEmergency": "Informações de emergência",
+      "exampleEmergencySub": "Alergias, médicos e plano de saúde em segundos",
+      "start": "Criar um círculo de cuidado",
+      "inviteCode": "Tenho um código de convite",
+      "freeNote": "Grátis para começar. Medicamentos e lembretes nunca são pagos.",
+      "secure": "Privado e seguro"
     }
   },
   "med": {

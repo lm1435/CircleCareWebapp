@@ -220,7 +220,7 @@ test('offline: the create-circle modal\'s "Join with an invite code" explains an
   const joiner = await createScopedAccount('offline-cjoin');
   await cookieLogin(context, joiner, baseURL);
   await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  const createEntry = page.getByRole('button', { name: 'Create circle' }).first();
+  const createEntry = page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first();
   await expect(createEntry).toBeVisible({ timeout: 30_000 });
   await createEntry.click();
   const createDialog = page.getByRole('dialog');
@@ -262,7 +262,7 @@ test('offline: join by code - an invite looked up online is not accepted offline
   const joiner = await createScopedAccount('offline-joiner');
   await cookieLogin(context, joiner, baseURL);
   await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  const entry = page.getByRole('button', { name: 'Join with an invite code', exact: true });
+  const entry = page.getByRole('button', { name: 'I have an invite code', exact: true });
   await expect(entry).toBeVisible({ timeout: 30_000 });
   await entry.click();
   const dialog = page.getByRole('dialog', { name: 'Join a circle', exact: true });
@@ -309,7 +309,7 @@ test('offline: first-run wizard - every step-1 choice is aria-disabled and expla
   const acct = await createScopedAccount('offline-wiz');
   await cookieLogin(context, acct, baseURL);
   await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: 'Create circle' }).first().click();
+  await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
   const modal = page.getByRole('dialog');
   await modal.locator('#recipient_name').fill(uniq('offwiz'));
   // The wizard mounts over the new circle; let its circle GET land first.

@@ -283,7 +283,7 @@ test('successful signup (stubbed 201) → /verify-email with the email in router
   const oauthExchanges = countRequests(page, 'POST', '/api/auth/oauth-session');
   await typeOtp(page, otp);
   await expect(page).toHaveURL(/\/circles/, { timeout: 20_000 });
-  await expect(page.getByRole('button', { name: 'Join with an invite code' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: 'I have an invite code' })).toBeVisible({ timeout: 20_000 });
   await oauthExchanges.expectCount(1);
   expect(await hasRefreshCookie(context)).toBe(true);
   expect(authUser(email).email_confirmed_at).not.toBeNull();

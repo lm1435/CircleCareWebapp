@@ -70,7 +70,7 @@ test('create circle is NOT paywalled for premium: the POST lands and a row is cr
   try {
     await gotoCirclePage(page, h.circleId, '');
     await openAllCircles(page);
-    await page.getByRole('button', { name: 'Create circle' }).first().click();
+    await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('New care circle')).toBeVisible();
     await dialog.locator('#recipient_name').fill(name);

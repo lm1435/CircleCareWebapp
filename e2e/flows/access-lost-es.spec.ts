@@ -89,5 +89,5 @@ test('ES: a member removed while the tab is open sees "Acceso eliminado", the Sp
   // The action works: back to the (now empty) picker, in Spanish.
   await back.click();
   await expect(page).toHaveURL(/\/circles$/, { timeout: 20_000 });
-  await expect(page.getByRole('button', { name: 'Crear círculo', exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: 'Crear un círculo de cuidado', exact: true })).toBeVisible({ timeout: 20_000 });
 });

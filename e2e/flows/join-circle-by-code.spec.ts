@@ -75,7 +75,7 @@ type Lang = 'en' | 'es';
 
 const COPY = {
   en: {
-    pickerJoinEmpty: 'Join with an invite code',
+    pickerJoinEmpty: 'I have an invite code',
     pickerJoinHeader: 'Join a circle',
     dialog: 'Join a circle',
     find: 'Find circle',
@@ -92,7 +92,7 @@ const COPY = {
     caregiver: 'Caregiver',
   },
   es: {
-    pickerJoinEmpty: 'Unirte con un código de invitación',
+    pickerJoinEmpty: 'Tengo un código de invitación',
     pickerJoinHeader: 'Unirte a un círculo',
     dialog: 'Unirte a un círculo',
     find: 'Buscar círculo',

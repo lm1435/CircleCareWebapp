@@ -21,16 +21,26 @@
     "errorTitle": "Impossibile caricare le cerchie",
     "errorBody": "Controlla la connessione e riprova.",
     "empty": {
-      "title": "Creiamo la tua cerchia di cura",
-      "body": "Una cerchia è uno spazio privato dove familiari e caregiver si ritrovano per prendersi cura di una persona cara: farmaci, appuntamenti e incarichi, tutto in un unico posto.",
-      "howItWorksTitle": "Come funziona CircleCare",
-      "step1": "Crea una cerchia per la tua persona cara.",
-      "step2": "Invita familiari e caregiver a condividere il carico.",
-      "step3": "Tutti vedono lo stesso calendario: farmaci, appuntamenti e incarichi in un unico posto.",
       "learnMore": "Scopri di più",
       "invitedHintPrefix": "Hai già ricevuto un invito via email?",
       "invitedHintLink": "Controlla i tuoi inviti",
-      "companion": "Preferisci il telefono? Scarica l'app di CircleCare."
+      "companion": "Preferisci il telefono? Scarica l'app di CircleCare.",
+      "a2Title": "Un solo posto per la sua cura",
+      "a2Subtitle": "Una cerchia di cura riunisce farmaci, appuntamenti, incarichi, note e documenti di una persona, condivisi con i familiari, gli amici o l’assistente a pagamento che inviti.",
+      "example": "Esempio",
+      "exampleTitle": "Oggi per Rosa",
+      "exampleDose": "Rosa ha preso la dose delle 8:00",
+      "exampleDoseSub": "Tu e Ana avete ricevuto l’avviso",
+      "exampleReminders": "Scegli tu chi riceve i promemoria",
+      "exampleRemindersSub": "Non deve ricadere tutto su di te",
+      "exampleAppointment": "Dott. Patel, cardiologia · 10:30",
+      "exampleAppointmentSub": "In un calendario condiviso",
+      "exampleEmergency": "Info di emergenza",
+      "exampleEmergencySub": "Allergie, medici e assicurazione in pochi secondi",
+      "start": "Crea una cerchia di cura",
+      "inviteCode": "Ho un codice d'invito",
+      "freeNote": "Si inizia gratis. Farmaci e promemoria non sono mai a pagamento.",
+      "secure": "Privato e sicuro"
     }
   },
   "med": {

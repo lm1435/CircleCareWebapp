@@ -66,6 +66,9 @@ import iconLogOutOutline from '../../../node_modules/ionicons/dist/svg/log-out-o
 import iconRemove from '../../../node_modules/ionicons/dist/svg/remove.svg?raw';
 import iconPlay from '../../../node_modules/ionicons/dist/svg/play.svg?raw';
 import iconPause from '../../../node_modules/ionicons/dist/svg/pause.svg?raw';
+import iconNotifications from '../../../node_modules/ionicons/dist/svg/notifications.svg?raw';
+import iconShieldCheckmark from '../../../node_modules/ionicons/dist/svg/shield-checkmark.svg?raw';
+import iconLockClosed from '../../../node_modules/ionicons/dist/svg/lock-closed.svg?raw';
 
 /**
  * Only glyphs the mobile app uses (mobile/src, @expo/vector-icons Ionicons).
@@ -137,6 +140,10 @@ export const ICON_NAMES = [
   'remove', // mobile VitalsDetailScreen's stable-trend glyph
   'play', // 1.4.3 preview video pause / play control (mobile PreviewScreen)
   'pause',
+  // 1.4.3 Circles empty state "Example" card + "Private & secure" (mobile CircleListScreen)
+  'notifications',
+  'shield-checkmark',
+  'lock-closed',
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];
@@ -208,4 +215,7 @@ export const ICON_FILES: Record<IconName, string> = {
   remove: iconRemove,
   play: iconPlay,
   pause: iconPause,
+  notifications: iconNotifications,
+  'shield-checkmark': iconShieldCheckmark,
+  'lock-closed': iconLockClosed,
 };
