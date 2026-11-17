@@ -1,6 +1,9 @@
 /**
- * Where is this browser? One resolver for the vitals units and the phone picker seed.
- * NO imports: pure. Mobile twin (identical body): mobile/src/utils/regionResolver.ts.
+ * Where is this browser? THE ONE region module on web (1.4.3): the vitals units, the phone picker
+ * seed and the week start all read the region from here, and nothing else turns a language tag or
+ * a time zone into a country (guarded by src/lib/__tests__/regionResolverGuard.test.ts).
+ * NO imports. The body above "Web only" is pure and the mobile twin's is identical:
+ * mobile/src/utils/regionResolver.ts.
  */
 
 /**
@@ -27,6 +30,17 @@ export function regionFromLocale(languageTag: string | null | undefined, regionC
   const parts = (languageTag || '').replace(/_/g, '-').split('-');
   const region = parts.slice(1).find((p) => /^[A-Za-z]{2}$/.test(p));
   return region ? region.toUpperCase() : null;
+}
+
+/**
+ * The country a tag's bare LANGUAGE names (LANGUAGE_DEFAULT_COUNTRY: "de-AT" -> DE, "pt" -> BR),
+ * or null ("en", "es", "ja").
+ */
+export function languageDefaultCountry(languageTag: string | null | undefined): string | null {
+  const language = ((languageTag || '').replace(/_/g, '-').split('-')[0] || '').toLowerCase();
+  return Object.prototype.hasOwnProperty.call(LANGUAGE_DEFAULT_COUNTRY, language)
+    ? LANGUAGE_DEFAULT_COUNTRY[language]
+    : null;
 }
 
 /**
@@ -111,26 +125,37 @@ export function resolveRegion(input: {
   const foreignZone = zoneCountry && !US_ZONE_COUNTRIES.has(zoneCountry) ? zoneCountry : null;
   if (foreignZone) return foreignZone;
   if (tagRegion === 'US') return 'US';
-  const language = ((input.languageTag || '').replace(/_/g, '-').split('-')[0] || '').toLowerCase();
-  if (Object.prototype.hasOwnProperty.call(LANGUAGE_DEFAULT_COUNTRY, language)) {
-    return LANGUAGE_DEFAULT_COUNTRY[language];
-  }
-  return null;
+  return languageDefaultCountry(input.languageTag);
 }
 
 // ── Web only (below the shared body) ─────────────────────────────────────────
 
 /**
- * The browser's region: `resolveRegion` on `navigator.languages[0]` and the browser time zone
+ * The browser's first preferred language tag (`navigator.languages[0]`, else `navigator.language`),
+ * the tag every region / phone-seed read uses. Null without a navigator.
+ */
+export function browserLanguageTag(): string | null {
+  if (typeof navigator === 'undefined') return null;
+  return navigator.languages?.[0] ?? navigator.language;
+}
+
+/**
+ * The browser's region: `resolveRegion` on `browserLanguageTag()` and the browser time zone
  * (browsers expose no OS region setting). Null when nothing says (the caller's default: the US).
+ * Never throws. Every caller reads this: vitals units, the phone picker seed, the week start
+ * (DaysOfWeekPicker, DatePickerPanel, ShiftCyclePanel, recurrenceLabel).
  */
 export function browserRegion(): string | null {
-  if (typeof navigator === 'undefined') return null;
-  let timeZone: string | null = null;
   try {
-    timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? null;
+    if (typeof navigator === 'undefined') return null;
+    let timeZone: string | null = null;
+    try {
+      timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? null;
+    } catch {
+      timeZone = null;
+    }
+    return resolveRegion({ languageTag: browserLanguageTag(), timeZone });
   } catch {
-    timeZone = null;
+    return null;
   }
-  return resolveRegion({ languageTag: navigator.languages?.[0] ?? navigator.language, timeZone });
 }

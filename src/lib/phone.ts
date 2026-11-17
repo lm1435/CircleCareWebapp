@@ -11,7 +11,7 @@
  * Neither is E.164.
  */
 import { AsYouType, parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js/min';
-import { LANGUAGE_DEFAULT_COUNTRY as SHARED_LANGUAGE_DEFAULT_COUNTRY, browserRegion } from './regionResolver';
+import { browserLanguageTag, browserRegion, languageDefaultCountry, regionFromLocale } from './regionResolver';
 
 export interface PhoneCountry {
   /** ISO 3166-1 alpha-2, and the `CountryCode` libphonenumber-js expects. */
@@ -100,9 +100,6 @@ export function findPhoneCountryByCallingCode(
   return PHONE_COUNTRIES.find((c) => c.callingCode === callingCode);
 }
 
-/** Bare language -> its country: the shared table in ./regionResolver (mobile reads the same). */
-const LANGUAGE_DEFAULT_COUNTRY = SHARED_LANGUAGE_DEFAULT_COUNTRY as Readonly<Record<string, CountryCode>>;
-
 /**
  * The country a NEW (empty) phone field starts on, from a locale tag: the
  * region when the picker offers it (de-DE -> DE, en-GB -> GB, pt-PT -> PT),
@@ -114,15 +111,12 @@ export function phoneCountryForLocale(
   languageTag: string | null | undefined,
   regionCode?: string | null
 ): CountryCode {
-  const parts = (languageTag || '').replace(/_/g, '-').split('-');
-  const region = regionCode || parts.slice(1).find((p) => /^[A-Za-z]{2}$/.test(p));
+  // The given region as is (an unoffered one falls to the language, not the tag), else the tag's.
+  const region = regionCode || regionFromLocale(languageTag);
   const byRegion = findPhoneCountryByIso2(region);
   if (byRegion) return byRegion.iso2;
-  const language = (parts[0] || '').toLowerCase();
-  if (Object.prototype.hasOwnProperty.call(LANGUAGE_DEFAULT_COUNTRY, language)) {
-    return LANGUAGE_DEFAULT_COUNTRY[language];
-  }
-  return DEFAULT_PHONE_COUNTRY_ISO2;
+  // Bare language -> its country: the shared table in ./regionResolver (mobile reads the same).
+  return (languageDefaultCountry(languageTag) as CountryCode | null) ?? DEFAULT_PHONE_COUNTRY_ISO2;
 }
 
 /** The new-number country for this browser: the shared region resolver, else `phoneCountryForLocale`. */
@@ -132,7 +126,7 @@ export function browserDefaultPhoneCountry(): CountryCode {
   // vitals units read the same), when the picker offers that country.
   const resolved = findPhoneCountryByIso2(browserRegion());
   if (resolved) return resolved.iso2;
-  return phoneCountryForLocale(navigator.languages?.[0] ?? navigator.language);
+  return phoneCountryForLocale(browserLanguageTag());
 }
 
 export function digitsOf(text: string): string {

@@ -1,5 +1,7 @@
 import { formatRecurrenceLabel, formatWeekdayList } from '../recurrenceLabel';
-import { browserRegion, firstDayForRegion, firstDayOfWeek, nextDateOnWeekdays, orderedWeekdays } from '../dateMath';
+import { firstDayForRegion, firstDayOfWeek, nextDateOnWeekdays, orderedWeekdays } from '../dateMath';
+// 1.4.3: dateMath's own `browserRegion` wrapper is gone; the week start reads THE resolver.
+import { browserRegion } from '@/lib/regionResolver';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -145,8 +147,8 @@ describe('week start uses THE shared region resolver (units, phone seed and week
     expect(formatWeekdayList([0, 3], 'en')).toBe('Wed, Sun');
   });
 
-  it('answers exactly what the vitals units read (lib/regionResolver.browserRegion)', async () => {
-    const { browserRegion: unitsRegion } = await import('@/lib/regionResolver');
+  it('answers exactly what the vitals units read (lib/vitals.browserDefaultUnits)', async () => {
+    const { browserDefaultUnits, getDefaultUnits } = await import('@/lib/vitals');
     for (const [langs, tz] of [
       [['en'], 'Europe/London'],
       [['de'], 'America/Denver'],
@@ -155,7 +157,7 @@ describe('week start uses THE shared region resolver (units, phone seed and week
     ] as const) {
       stubBrowserLanguages([...langs]);
       stubTimeZone(tz);
-      expect(browserRegion()).toBe(unitsRegion());
+      expect(browserDefaultUnits()).toEqual(getDefaultUnits(browserRegion()));
     }
   });
 

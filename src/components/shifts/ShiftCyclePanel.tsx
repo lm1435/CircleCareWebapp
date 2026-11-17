@@ -1,8 +1,8 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TextField, Text } from '@/components/ui';
+import { browserRegion } from '@/lib/regionResolver';
 import {
-  browserRegion,
   formatDateForDisplay,
   getWeekdayName,
   orderedWeekdays,

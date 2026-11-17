@@ -10,7 +10,8 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { addDaysToIsoDay } from '@/utils/recipientEventDate';
-import { browserRegion, firstDayOfWeek } from '@/components/calendar/dateMath';
+import { firstDayOfWeek } from '@/components/calendar/dateMath';
+import { browserRegion } from '@/lib/regionResolver';
 import { getCachedDateTimeFormat, getDateInTimezone, getDeviceTimezone } from '@/utils/timezone';
 import { Button } from './Button';
 import { Icon } from './Icon';

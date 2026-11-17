@@ -104,8 +104,9 @@ describe('resolveRegion (shared with the phone picker seed)', () => {
     const body = (file: string) => {
       const src = fs.readFileSync(file, 'utf8');
       const start = src.indexOf('/**\n * The language a bare tag names');
-      const webOnly = src.indexOf('// ── Web only');
-      return src.slice(start, webOnly === -1 ? undefined : webOnly).trimEnd();
+      // The platform-only tail: web "Web only", mobile "Device readers" (1.4.3).
+      const platformOnly = src.search(/\/\/ ── (?:Web only|Device readers)/);
+      return src.slice(start, platformOnly === -1 ? undefined : platformOnly).trimEnd();
     };
     const web = body(path.join(__dirname, '../regionResolver.ts'));
     const mobile = body(path.join(__dirname, '../../../../mobile/src/utils/regionResolver.ts'));

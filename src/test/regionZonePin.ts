@@ -26,7 +26,7 @@ export function withPinnedRegionZone(mod: typeof RegionResolver): typeof RegionR
       typeof navigator === 'undefined'
         ? null
         : mod.resolveRegion({
-            languageTag: navigator.languages?.[0] ?? navigator.language,
+            languageTag: mod.browserLanguageTag(),
             timeZone: PINNED_REGION_ZONE,
           }),
   };

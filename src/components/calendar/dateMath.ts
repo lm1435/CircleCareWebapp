@@ -1,5 +1,4 @@
 import { normalizeLocale } from '@/i18n/locales';
-import { browserRegion as sharedBrowserRegion } from '@/lib/regionResolver';
 import i18n from '@/i18n';
 import { formatTimeOfDay, getTimezoneSuffix } from '@/utils/timezone';
 import type { HourCycle } from '@/utils/hourCycle';
@@ -69,22 +68,6 @@ export function firstDayForRegion(region: string | null | undefined): number | n
   if (SATURDAY_FIRST_REGIONS.has(r)) return 6;
   if (FRIDAY_FIRST_REGIONS.has(r)) return 5;
   return 1;
-}
-
-/**
- * The browser's region for the week start: THE shared resolver (`lib/regionResolver.browserRegion`),
- * the same answer the vitals units and the phone picker's seed use, so the three always agree:
- * the language tag's region, then a time zone clearly outside the US (a bare "en" browser in
- * Europe/London is GB, so Monday-first), then the language's country. Null when nothing says (the
- * language decides). Re-exported so every week-start caller keeps its import. Mobile twin:
- * mobile/src/utils/weekStart.ts `deviceRegion`.
- */
-export function browserRegion(): string | null {
-  try {
-    return sharedBrowserRegion() ?? null;
-  } catch {
-    return null;
-  }
 }
 
 /**

@@ -1,6 +1,7 @@
 import i18n from '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { browserRegion, getWeekdayName, orderedWeekdays } from './dateMath';
+import { getWeekdayName, orderedWeekdays } from './dateMath';
+import { browserRegion } from '@/lib/regionResolver';
 
 // Local translate-fn type (mirrors mobile/src/utils/recurrenceFormat.ts) —
 // avoids coupling to i18next's generic TFunction signature.

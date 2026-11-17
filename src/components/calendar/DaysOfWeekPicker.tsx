@@ -1,7 +1,8 @@
 import type { ReactElement } from 'react';
 import { Text } from '@/components/ui';
 import { chipClass } from '@/components/ui/inputStyles';
-import { browserRegion, getWeekdayName, orderedWeekdays } from './dateMath';
+import { getWeekdayName, orderedWeekdays } from './dateMath';
+import { browserRegion } from '@/lib/regionResolver';
 
 export interface DaysOfWeekPickerProps {
   /** Id of the group — also the focus target when the field errors. */
