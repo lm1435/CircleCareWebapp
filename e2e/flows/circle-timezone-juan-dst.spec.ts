@@ -97,8 +97,14 @@ async function expectDoseTime(page: Page, circleId: string, eventId: string, dat
 // ---------------------------------------------------------------------------
 // 1. Monterrey circle, New York browser: the 1 h / 2 h / 1 h gap across the US switches.
 // ---------------------------------------------------------------------------
+// A PAST day's unanswered dose shows no clock time (1.4.0, calendar-unlogged-past-dose-time.spec.ts),
+// so every dated row must stay in the future. The winter row was 2026-11-16 and went stale on
+// 2026-11-17. DATE BOMB: the fixed 2027 DST rows below go stale after 2027-03-13; roll them to the
+// 2028 transitions (2028-03-12 / 2028-11-05) and WINTER_DAY to a later winter day before then.
+const WINTER_DAY = '2027-01-15';
+
 const JUAN_ROWS: Array<{ date: string; want: string; why: string }> = [
-  { date: '2026-11-16', want: '8:00 PM (Monterrey) / 9:00 PM (New York)', why: 'US winter, 1 h' },
+  { date: WINTER_DAY, want: '8:00 PM (Monterrey) / 9:00 PM (New York)', why: 'US winter, 1 h' },
   { date: '2027-03-13', want: '8:00 PM (Monterrey) / 9:00 PM (New York)', why: 'day before spring-forward' },
   { date: '2027-03-14', want: '8:00 PM (Monterrey) / 10:00 PM (New York)', why: 'spring-forward day' },
   { date: '2027-07-15', want: '8:00 PM (Monterrey) / 10:00 PM (New York)', why: 'US summer, 2 h' },
@@ -111,7 +117,7 @@ test.describe('Juan: Monterrey circle seen from a New York browser', () => {
 
   test('a daily 20:00 dose shows the dual clock with the seasonal gap', async ({ page, context, request, baseURL }) => {
     const s = await scene(context, request, baseURL, { circleZone: MTY, ownerZone: NY });
-    const med = await dailyMed(s, '2026-11-16', '20:00');
+    const med = await dailyMed(s, WINTER_DAY, '20:00');
     for (const r of JUAN_ROWS) {
       await test.step(`${r.date} (${r.why})`, async () => {
         await expectDoseTime(page, s.circleId, med.id, r.date, r.want);
@@ -126,9 +132,9 @@ test.describe('Juan: Monterrey circle seen from a New York browser', () => {
     baseURL,
   }) => {
     const s = await scene(context, request, baseURL, { circleZone: MTY, ownerZone: NY });
-    const med = await dailyMed(s, '2026-11-16', '20:00');
+    const med = await dailyMed(s, WINTER_DAY, '20:00');
     // Precondition: dual before the change.
-    await expectDoseTime(page, s.circleId, med.id, '2026-11-16', '8:00 PM (Monterrey) / 9:00 PM (New York)');
+    await expectDoseTime(page, s.circleId, med.id, WINTER_DAY, '8:00 PM (Monterrey) / 9:00 PM (New York)');
 
     await page.goto(`/circles/${s.circleId}/settings`, { waitUntil: 'domcontentloaded' });
     const card = page.getByTestId('circle-timezone-card');
@@ -157,7 +163,7 @@ test.describe('Juan: Monterrey circle seen from a New York browser', () => {
 
     await page.reload({ waitUntil: 'domcontentloaded' });
     // Winter and summer: one clock, no zone label, no " / ".
-    for (const date of ['2026-11-16', '2027-07-15']) {
+    for (const date of [WINTER_DAY, '2027-07-15']) {
       await test.step(date, async () => {
         await expectDoseTime(page, s.circleId, med.id, date, '8:00 PM');
       });
@@ -195,7 +201,7 @@ test.describe('Juan in Spanish', () => {
 
   test('US summer: the 2 h gap, Spanish place names', async ({ page, context, request, baseURL }) => {
     const s = await scene(context, request, baseURL, { circleZone: MTY, ownerZone: NY });
-    const med = await dailyMed(s, '2026-11-16', '20:00');
+    const med = await dailyMed(s, WINTER_DAY, '20:00');
     await page.route('**/api/users/me', async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
       try {
