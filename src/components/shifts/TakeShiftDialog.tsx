@@ -2,13 +2,21 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import type { ShiftScope } from '@/api/shifts';
-import { Button, ChipSelect, Modal, RadioGroup, useToast } from '@/components/ui';
+import { Button, Modal, RadioGroup, useToast } from '@/components/ui';
 import { Analytics } from '@/lib/analytics';
 import { useCircle } from '@/hooks/useCircle';
 import { useCanTakeFuture, useHandleShiftFailure, useTakeShift } from '@/hooks/useShifts';
 import { formatDateForDisplay } from '@/components/calendar/dateMath';
 import { ShiftInlineError } from './ShiftInlineError';
-import { SHIFT_REMINDER_LEADS, formatShiftReminder, type ShiftReminderLead } from './shiftUtils';
+import { ShiftReminderChoices } from './ShiftReminderChoices';
+import {
+  formatShiftReminders,
+  sameShiftLeads,
+  shiftReminderLeads,
+  shiftReminderStateFrom,
+  shiftRemindersForSave,
+  type ShiftReminderState,
+} from './shiftUtils';
 
 export interface TakeShiftDialogProps {
   circleId: string;
@@ -40,29 +48,25 @@ export function TakeShiftDialog({
   const handleFailure = useHandleShiftFailure();
   const [scope, setScope] = useState<ShiftScope>('occurrence');
   const [error, setError] = useState('');
-  // Starts at the shift's own reminder; sent only when the taker changes it.
-  const current = (shift.reminder_lead_minutes ?? null) as ShiftReminderLead;
-  const [reminder, setReminder] = useState<ShiftReminderLead>(current);
-  // One line ("Reminder · 1 hour before") + Change; Change opens every choice in place and a pick folds it back
-  // (approved mock 2026-11-08, mobile TakeShiftSheet).
+  // Starts at the shift's own reminders; sent only when the taker changes the set.
+  const current = shiftReminderLeads(shift);
+  const [picked, setPicked] = useState<ShiftReminderState>(() => shiftReminderStateFrom(current));
+  const pickedLeads = shiftRemindersForSave(picked);
+  // One line ("Reminder · 1 hour before") + Change; Change opens the Reminders card in place (toggle + one
+  // checkbox per lead, several allowed since 1.4.2; mobile TakeShiftSheet).
   const [reminderOpen, setReminderOpen] = useState(false);
-  const reminderOptions = SHIFT_REMINDER_LEADS.map((lead) => ({
-    value: lead === null ? 'off' : String(lead),
-    label: formatShiftReminder(lead, t),
-  }));
-  const reminderLabel = formatShiftReminder(reminder, t);
-  // Focus follows the swap (the control that had it is gone): into the choices on open (the chosen one), back to
-  // Change after a pick. Skipped on first render.
-  const changeRef = useRef<HTMLButtonElement>(null);
+  const reminderLabel = formatShiftReminders(pickedLeads, t);
+  // Focus follows the swap (Change is gone once open): into the card, on its first checked row (else the
+  // toggle). Skipped on first render.
   const choicesRef = useRef<HTMLDivElement>(null);
   const toggled = useRef(false);
   useEffect(() => {
-    if (!toggled.current) return;
-    if (reminderOpen) {
-      choicesRef.current?.querySelector<HTMLElement>('[role="radio"][aria-checked="true"]')?.focus();
-    } else {
-      changeRef.current?.focus();
-    }
+    if (!toggled.current || !reminderOpen) return;
+    const root = choicesRef.current;
+    (
+      root?.querySelector<HTMLElement>('[role="checkbox"][aria-checked="true"]') ??
+      root?.querySelector<HTMLElement>('[role="switch"]')
+    )?.focus();
   }, [reminderOpen]);
 
   // Same rule as mobile: offered only when it can succeed (the series default is
@@ -83,7 +87,7 @@ export function TakeShiftDialog({
       await take.mutateAsync({
         shift,
         scope: futureOffered ? scope : 'occurrence',
-        ...(reminder !== current ? { reminder } : {}),
+        ...(sameShiftLeads(pickedLeads, current) ? {} : { reminders: pickedLeads }),
       });
       showToast(t('shifts:toast.taken'), 'success');
       onTaken?.();
@@ -134,31 +138,17 @@ export function TakeShiftDialog({
           <div
             ref={choicesRef}
             data-testid="take-shift-reminder"
-            className="flex flex-col gap-2 border-t border-line pt-3"
-            // A click (or Enter / Space) on any choice, the current one included, folds the row back; arrow keys
-            // only move the choice, so a keyboard user is not thrown out after one step.
-            onClick={(event) => {
-              if ((event.target as HTMLElement).closest('[role="radio"]')) {
-                toggled.current = true;
-                setReminderOpen(false);
-              }
-            }}
+            className="flex flex-col gap-3 border-t border-line pt-3"
           >
             <p className="m-0 text-base text-ink-2" id="take-shift-reminder-label">
               {t('shifts:form.reminder')}
             </p>
-            <ChipSelect
-              id="take_shift_reminder"
-              label={t('shifts:form.reminder')}
-              allowDeselect={false}
-              options={reminderOptions}
-              value={reminder === null ? 'off' : String(reminder)}
-              onChange={(value) => {
-                const next = SHIFT_REMINDER_LEADS.find(
-                  (lead) => (lead === null ? 'off' : String(lead)) === value
-                );
-                if (next !== undefined) setReminder(next);
-              }}
+            <ShiftReminderChoices
+              value={picked}
+              onChange={setPicked}
+              disabled={take.isPending}
+              idPrefix="take_shift_reminder"
+              testIdPrefix="take-shift-reminder-select"
             />
           </div>
         ) : (
@@ -175,7 +165,6 @@ export function TakeShiftDialog({
               aria-label={`${t('shifts:take.changeReminder')}, ${reminderLabel}`}
               aria-expanded={false}
               disabled={take.isPending}
-              ref={changeRef}
               onClick={() => {
                 toggled.current = true;
                 setReminderOpen(true);

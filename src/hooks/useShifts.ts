@@ -45,6 +45,7 @@ import {
   isWithin24hOfStart,
   openShiftWindow,
   patchOccurrences,
+  shiftReminderBody,
   shiftRootId,
   targetFor,
   type OccurrenceTarget,
@@ -338,8 +339,8 @@ export interface ShiftActionVariables {
 }
 
 export interface TakeShiftVariables extends ShiftActionVariables {
-  /** Only when the taker changed it from the shift's own value; null = Off. */
-  reminder?: 60 | 120 | 240 | 1440 | null;
+  /** Only when the taker changed the set from the shift's own; null = Off; else the leads, longest first. */
+  reminders?: Array<60 | 120 | 240 | 1440> | null;
 }
 
 export interface AssignShiftVariables extends ShiftActionVariables {
@@ -359,13 +360,13 @@ export function useTakeShift(
   const me = useAuthStore((s) => s.user);
 
   return useMutation({
-    mutationFn: ({ shift, scope, reminder }: TakeShiftVariables) =>
+    mutationFn: ({ shift, scope, reminders }: TakeShiftVariables) =>
       takeShift(circleId, shift.id, {
         scope,
         scheduledDate: shift.scheduled_date,
-        ...(reminder !== undefined ? { reminder_lead_minutes: reminder } : {}),
+        ...(reminders !== undefined ? shiftReminderBody(reminders) : {}),
       }),
-    onMutate: async ({ shift, scope, reminder }) => {
+    onMutate: async ({ shift, scope, reminders }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.shifts(circleId) });
       return {
         snapshot: patchCaches(
@@ -381,14 +382,14 @@ export function useTakeShift(
                   last_name: me.last_name ?? null,
                   email: me.email ?? null,
                 },
-                ...(reminder !== undefined ? { reminder_lead_minutes: reminder } : {}),
+                ...(reminders !== undefined ? shiftReminderBody(reminders) : {}),
               }
             : { assigned_to: null, assigned_to_user: null }
         ),
       };
     },
-    onSuccess: (_result, { scope, reminder }) => {
-      Analytics.shiftTaken({ scope, reminderChanged: reminder !== undefined });
+    onSuccess: (_result, { scope, reminders }) => {
+      Analytics.shiftTaken({ scope, reminderChanged: reminders !== undefined });
       // Covering a shift is a store-review moment (lib/reviewMoments.ts).
       raiseReviewMoment('shift_covered');
     },

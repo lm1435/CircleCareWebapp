@@ -79,9 +79,18 @@ beforeEach(() => {
 
 describe('TakeShiftDialog', () => {
   // Approved mock 2026-11-08 (mobile TakeShiftSheet): ONE line "Reminder · 1 hour before" + Change; Change opens
-  // every option in place; a pick folds it back, showing the choice. Take shift is the only filled button.
+  // the Reminders card in place (toggle + one checkbox per lead, several since 1.4.2). Take shift is the only
+  // filled button.
   const change = () => screen.getByRole('button', { name: /^Change reminder, / });
-  const choices = () => screen.getByRole('radiogroup', { name: 'Reminder' });
+  const choices = () => screen.getByRole('group', { name: 'Remind before the shift' });
+  const box = (name: string) => within(choices()).getByRole('checkbox', { name });
+  const toggle = () => screen.getByRole('switch', { name: 'Enable notifications' });
+  const checkedLeads = () =>
+    within(choices())
+      .getAllByRole('checkbox')
+      .filter((r) => r.getAttribute('aria-checked') === 'true')
+      .map((r) => document.getElementById(r.getAttribute('aria-labelledby') ?? '')?.textContent);
+  const takeBody = () => mockTake.mock.calls[0][2];
 
   it('a one-off: one Take button, no scope choice, the reminder is one line and unchanged sends none', async () => {
     const user = userEvent.setup();
@@ -101,55 +110,57 @@ describe('TakeShiftDialog', () => {
     );
   });
 
-  it('Change opens every option (current one checked, focused), counts it, and a pick folds it back', async () => {
+  it('Change opens the Reminders card: toggle + four checkboxes, the shift\'s own checked and focused; counts it', async () => {
     const user = userEvent.setup();
     renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
     await user.click(change());
     expect(Analytics.shiftTakeReminderExpanded).toHaveBeenCalledTimes(1);
-    const radios = within(choices()).getAllByRole('radio');
-    expect(radios.map((r) => r.textContent)).toEqual([
-      'Off',
-      '1 hour before',
-      '2 hours before',
-      '4 hours before',
-      '1 day before',
-    ]);
-    const current = within(choices()).getByRole('radio', { name: '1 hour before' });
-    expect(current).toBeChecked();
-    expect(current).toHaveFocus();
-    expect(current.className).toContain('bg-ink');
-    await user.click(within(choices()).getByRole('radio', { name: '4 hours before' }));
-    expect(screen.queryByRole('radiogroup', { name: 'Reminder' })).not.toBeInTheDocument();
-    expect(screen.getByTestId('take-shift-reminder-value')).toHaveTextContent('Reminder · 4 hours before');
-    expect(change()).toHaveFocus();
-    // Tapping the current choice just folds it.
-    await user.click(change());
-    await user.click(within(choices()).getByRole('radio', { name: '4 hours before' }));
-    expect(screen.queryByRole('radiogroup', { name: 'Reminder' })).not.toBeInTheDocument();
+    expect(toggle()).toBeChecked();
+    expect(within(choices()).getAllByRole('checkbox')).toHaveLength(4);
+    expect(checkedLeads()).toEqual(['1 hour before']);
+    expect(box('1 hour before')).toHaveFocus();
   });
 
-  it('arrow keys move the choice without folding the row (keyboard users are not thrown out)', async () => {
+  it('N: the take rows are checkboxes, never radios (no Off chip)', async () => {
     const user = userEvent.setup();
     renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
     await user.click(change());
-    await user.keyboard('{ArrowRight}');
-    expect(within(choices()).getByRole('radio', { name: '2 hours before' })).toBeChecked();
-    await user.keyboard('{Enter}');
-    expect(screen.queryByRole('radiogroup', { name: 'Reminder' })).not.toBeInTheDocument();
+    expect(within(choices()).queryAllByRole('radio')).toHaveLength(0);
+    expect(screen.queryByRole('radio', { name: 'Off' })).not.toBeInTheDocument();
+  });
+
+  it('P: a 1.4.2 shift with [1440, 60] reads both and opens with both checked', async () => {
+    const user = userEvent.setup();
+    renderDialog(
+      shift({ id: 's1', parent_event_id: null, recurrence_rule: null, reminder_leads_minutes: [1440, 60] })
+    );
+    expect(screen.getByTestId('take-shift-reminder-value')).toHaveTextContent(
+      'Reminder · 1 day before, 1 hour before'
+    );
+    await user.click(change());
+    expect(checkedLeads()).toEqual(['1 day before', '1 hour before']);
+  });
+
+  it('P: a legacy row (only reminder_lead_minutes = 120) shows 2 hours checked', async () => {
+    const user = userEvent.setup();
+    renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null, reminder_lead_minutes: 120 }));
     expect(screen.getByTestId('take-shift-reminder-value')).toHaveTextContent('Reminder · 2 hours before');
+    await user.click(change());
+    expect(checkedLeads()).toEqual(['2 hours before']);
   });
 
-  it('changing the reminder sends reminder_lead_minutes; the event reports reminderChanged', async () => {
+  it('N: adding a lead sends the whole array ([240, 60]); the event reports reminderChanged', async () => {
     const user = userEvent.setup();
     renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
     await user.click(change());
-    await user.click(within(choices()).getByRole('radio', { name: '4 hours before' }));
+    await user.click(box('4 hours before'));
     await user.click(screen.getByRole('button', { name: 'Take shift' }));
     await waitFor(() =>
       expect(mockTake).toHaveBeenCalledWith('c', 's1', {
         scope: 'occurrence',
         scheduledDate: '2026-10-20',
-        reminder_lead_minutes: 240,
+        reminder_lead_minutes: 60,
+        reminder_leads_minutes: [240, 60],
       })
     );
     await waitFor(() =>
@@ -157,14 +168,42 @@ describe('TakeShiftDialog', () => {
     );
   });
 
-  it('Off sends null', async () => {
+  it('N: unchecking the last lead turns it off and sends null, never []', async () => {
     const user = userEvent.setup();
     renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
     await user.click(change());
-    await user.click(within(choices()).getByRole('radio', { name: 'Off' }));
+    await user.click(box('1 hour before'));
+    expect(toggle()).not.toBeChecked();
     await user.click(screen.getByRole('button', { name: 'Take shift' }));
     await waitFor(() => expect(mockTake).toHaveBeenCalled());
-    expect(mockTake.mock.calls[0][2]).toHaveProperty('reminder_lead_minutes', null);
+    expect(takeBody()).toHaveProperty('reminder_leads_minutes', null);
+    expect(takeBody()).toHaveProperty('reminder_lead_minutes', null);
+  });
+
+  it('P: the toggle off sends both null', async () => {
+    const user = userEvent.setup();
+    renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
+    await user.click(change());
+    await user.click(toggle());
+    await user.click(screen.getByRole('button', { name: 'Take shift' }));
+    await waitFor(() => expect(mockTake).toHaveBeenCalled());
+    expect(takeBody()).toHaveProperty('reminder_leads_minutes', null);
+    expect(takeBody()).toHaveProperty('reminder_lead_minutes', null);
+  });
+
+  it('changing it and changing it back sends nothing (unchanged = absent)', async () => {
+    const user = userEvent.setup();
+    renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
+    await user.click(change());
+    await user.click(box('2 hours before'));
+    await user.click(box('2 hours before'));
+    await user.click(screen.getByRole('button', { name: 'Take shift' }));
+    await waitFor(() => expect(mockTake).toHaveBeenCalled());
+    expect(takeBody()).not.toHaveProperty('reminder_leads_minutes');
+    expect(takeBody()).not.toHaveProperty('reminder_lead_minutes');
+    await waitFor(() =>
+      expect(Analytics.shiftTaken).toHaveBeenCalledWith({ scope: 'occurrence', reminderChanged: false })
+    );
   });
 
   it('a shift with no reminder reads "Reminder · Off"', () => {

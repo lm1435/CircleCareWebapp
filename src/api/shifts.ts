@@ -87,6 +87,7 @@ export interface RescheduleShiftBody {
   duration_minutes?: number;
   assigned_to?: string | null;
   reminder_lead_minutes?: number | null;
+  reminder_leads_minutes?: number[] | null;
 }
 
 /** POST .../shift/reschedule -> the new series root. Errors: 400 INVALID_START, 409 RESCHEDULE_REQUIRED. */
@@ -115,8 +116,15 @@ async function postShiftAction(
   return response.data;
 }
 
-/** Take only: `reminder_lead_minutes` is sent when the taker changed it (null = Off); absent keeps the shift's own. */
-export type TakeShiftBody = ShiftActionBody & { reminder_lead_minutes?: 60 | 120 | 240 | 1440 | null };
+/**
+ * Take only: `reminder_leads_minutes` is sent when the taker changed the set (null = Off, else the leads longest
+ * first, never []); absent keeps the shift's own.
+ */
+export type TakeShiftBody = ShiftActionBody & {
+  reminder_leads_minutes?: Array<60 | 120 | 240 | 1440> | null;
+  /** The legacy mirror, sent with the list: its smallest lead, null when off. */
+  reminder_lead_minutes?: 60 | 120 | 240 | 1440 | null;
+};
 
 export const takeShift = (circleId: string, eventId: string, body: TakeShiftBody) =>
   postShiftAction(circleId, eventId, 'take', body);

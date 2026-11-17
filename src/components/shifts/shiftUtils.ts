@@ -41,6 +41,92 @@ export type ShiftReminderLead = (typeof SHIFT_REMINDER_LEADS)[number];
 /** The form's default reminder: 1 hour before. */
 export const DEFAULT_SHIFT_REMINDER_LEAD: ShiftReminderLead = 60;
 
+/** One lead time in minutes (1.4.2: a shift keeps several, `reminder_leads_minutes`). */
+export type ShiftLead = 60 | 120 | 240 | 1440;
+/** The Reminders card's rows and the order a saved set is kept in: longest lead first. */
+export const SHIFT_LEAD_ROWS: readonly ShiftLead[] = [1440, 240, 120, 60];
+/** A shift's reminders: the leads, longest first, or `null` = off. Never an empty array. */
+export type ShiftReminders = ShiftLead[] | null;
+/** A new shift reminds 1 hour before. */
+export const DEFAULT_SHIFT_REMINDERS: ShiftLead[] = [60];
+
+/** Only the allowed leads, de-duplicated, longest first; nothing left = `null` (Off). */
+export function normalizeShiftLeads(leads: readonly unknown[] | null | undefined): ShiftReminders {
+  if (!Array.isArray(leads)) return null;
+  const out = SHIFT_LEAD_ROWS.filter((m) => leads.includes(m));
+  return out.length > 0 ? out : null;
+}
+
+/**
+ * A shift row's reminders. Prefers `reminder_leads_minutes`; an older backend or a cached row with only the
+ * legacy single `reminder_lead_minutes` reads as that one lead; neither = Off.
+ */
+export function shiftReminderLeads(
+  shift: { reminder_leads_minutes?: number[] | null; reminder_lead_minutes?: number | null } | null | undefined
+): ShiftReminders {
+  if (!shift) return null;
+  if (shift.reminder_leads_minutes !== undefined) return normalizeShiftLeads(shift.reminder_leads_minutes);
+  const one = shift.reminder_lead_minutes;
+  return one == null ? null : normalizeShiftLeads([one]);
+}
+
+/** Same set (order-insensitive; `null` and `[]` are both Off). */
+export function sameShiftLeads(a: readonly number[] | null | undefined, b: readonly number[] | null | undefined): boolean {
+  const x = normalizeShiftLeads(a ?? null);
+  const y = normalizeShiftLeads(b ?? null);
+  if (x === null || y === null) return x === y;
+  return x.length === y.length && x.every((m, i) => m === y[i]);
+}
+
+/** The Reminders card: the "Enable notifications" toggle and the checked rows (kept while it is off). */
+export interface ShiftReminderState {
+  enabled: boolean;
+  leads: ShiftLead[];
+}
+
+export function shiftReminderStateFrom(reminders: ShiftReminders): ShiftReminderState {
+  const leads = normalizeShiftLeads(reminders);
+  return leads ? { enabled: true, leads } : { enabled: false, leads: [] };
+}
+
+/** What is saved: the checked leads (longest first) while the toggle is on, else `null`. Never `[]`. */
+export function shiftRemindersForSave(state: ShiftReminderState): ShiftReminders {
+  return state.enabled ? normalizeShiftLeads(state.leads) : null;
+}
+
+/** The toggle: off keeps the checks; on restores them, or 1 hour when none is checked. */
+export function setShiftRemindersEnabled(state: ShiftReminderState, on: boolean): ShiftReminderState {
+  if (!on) return { ...state, enabled: false };
+  return { enabled: true, leads: state.leads.length > 0 ? state.leads : [...DEFAULT_SHIFT_REMINDERS] };
+}
+
+/**
+ * A row click: checks / unchecks that lead on its own (the task card's checkboxes). Unchecking the LAST one
+ * turns the toggle off, as on the task card ("nothing selected" and "off" mean the same).
+ */
+export function toggleShiftLead(state: ShiftReminderState, lead: ShiftLead): ShiftReminderState {
+  const has = state.leads.includes(lead);
+  const leads = normalizeShiftLeads(has ? state.leads.filter((m) => m !== lead) : [...state.leads, lead]) ?? [];
+  return { enabled: leads.length > 0 ? state.enabled || !has : false, leads };
+}
+
+/**
+ * The reminder fields of EVERY shift write (create, edit, series edit / reschedule, add-next, take): the list
+ * AND the legacy single `reminder_lead_minutes` = its smallest lead (null when off). The backend lets the list
+ * win; a rolled-back backend still stores the smallest lead instead of silently dropping the edit. Never send
+ * the list without its mirror.
+ */
+export function shiftReminderBody(reminders: ShiftReminders): {
+  reminder_lead_minutes: ShiftLead | null;
+  reminder_leads_minutes: ShiftReminders;
+} {
+  const leads = normalizeShiftLeads(reminders);
+  return {
+    reminder_lead_minutes: leads ? leads[leads.length - 1] : null,
+    reminder_leads_minutes: leads,
+  };
+}
+
 export const MIN_SHIFT_MINUTES = 15;
 export const MAX_SHIFT_MINUTES = 1440;
 export const SHIFT_NAME_MAX = 60;
@@ -552,6 +638,18 @@ export function formatShiftReminder(lead: number | null | undefined, t: Translat
     default:
       return t('shifts:reminder.off');
   }
+}
+
+/**
+ * Every lead of a shift, longest first, listed the way the task card's Reminders summary lists several:
+ * "1 day before, 1 hour before" / "Off". `null` or empty = Off.
+ */
+export function formatShiftReminders(leads: readonly number[] | null | undefined, t: TranslateFn): string {
+  if (!leads || leads.length === 0) return t('shifts:reminder.off');
+  return [...leads]
+    .sort((a, b) => b - a)
+    .map((m) => formatShiftReminder(m, t))
+    .join(', ');
 }
 
 /** The picker's short wording ("1 hour" / "Off"), shared by the shift form and the Take dialog. */

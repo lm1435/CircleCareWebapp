@@ -315,6 +315,7 @@ describe('edit a series: This shift / All upcoming shifts', () => {
       scheduled_time: '18:00',
       duration_minutes: 1440,
       reminder_lead_minutes: 60,
+      reminder_leads_minutes: [60],
     });
     expect(mockUpdate).not.toHaveBeenCalled();
     expect(Analytics.shiftSeriesRescheduled).toHaveBeenCalledWith({

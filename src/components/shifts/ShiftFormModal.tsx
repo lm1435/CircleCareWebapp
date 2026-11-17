@@ -10,7 +10,6 @@ import {
 import {
   Button,
   Card,
-  Checkbox,
   ChipSelect,
   ChoiceTileButton,
   DateField,
@@ -21,7 +20,6 @@ import {
   Text,
   TextField,
   TimeField,
-  Toggle,
   useToast,
   type FieldErrors,
   RequiredMarker,
@@ -62,20 +60,27 @@ import {
 import { spanMinutes } from '@/lib/eventForm';
 import { defaultNewEventDate } from '@/utils/recipientEventDate';
 import { formatTimeOfDay, getTimezoneLabel } from '@/utils/timezone';
+import { ShiftReminderChoices } from './ShiftReminderChoices';
 import {
-  DEFAULT_SHIFT_REMINDER_LEAD,
+  DEFAULT_SHIFT_REMINDERS,
   MAX_SHIFT_MINUTES,
   MIN_SHIFT_MINUTES,
   SHIFT_NAME_MAX,
   formatShiftDuration,
   formatShiftRepeat,
-  formatShiftReminder,
+  formatShiftReminders,
   isShiftRepeating,
   memberShortName,
   recurrenceEnum,
   reminderEnum,
   shiftEnd,
+  shiftReminderBody,
+  shiftReminderLeads,
+  shiftReminderStateFrom,
+  shiftRemindersForSave,
   shiftRootId,
+  type ShiftReminders,
+  type ShiftReminderState,
   shiftZonesDiffer,
   canCoverShifts,
 } from './shiftUtils';
@@ -102,7 +107,8 @@ export interface ShiftFormPrefill {
   cycleOn?: string;
   cycleOff?: string;
   repeatEndDate?: string;
-  reminder?: number | null;
+  /** The reminder leads, longest first; null = off. */
+  reminders?: ShiftReminders;
 }
 
 export type ShiftFormSource = 'add_menu' | 'shifts_view' | 'empty_state' | 'add_next' | 'header';
@@ -120,16 +126,6 @@ export interface ShiftFormModalProps {
   onCreated?: (shift: CalendarEvent, prefillNext: ShiftFormPrefill) => void;
   onUpdated?: () => void;
 }
-
-const REMINDER_OPTIONS: Array<{ value: string; lead: number | null }> = [
-  { value: 'off', lead: null },
-  { value: '60', lead: 60 },
-  { value: '120', lead: 120 },
-  { value: '240', lead: 240 },
-  { value: '1440', lead: 1440 },
-];
-/** The Reminders card's rows, longest lead first (the task card's order). Off is the toggle. */
-const REMINDER_ROWS = ['1440', '240', '120', '60'].map((v) => REMINDER_OPTIONS.find((o) => o.value === v)!);
 
 const DEFAULT_START = '08:00';
 const DEFAULT_END = '14:00';
@@ -319,10 +315,18 @@ function ShiftFormBody({
     }
   }, [rootRule]);
   const [repeatEndDate, setRepeatEndDate] = useState(prefill?.repeatEndDate ?? '');
-  const [reminder, setReminder] = useState<string>(() => {
-    const lead = shift ? (shift.reminder_lead_minutes ?? null) : (prefill?.reminder ?? DEFAULT_SHIFT_REMINDER_LEAD);
-    return lead === null ? 'off' : String(lead);
-  });
+  // The Reminders card: the toggle + the checked leads (several since 1.4.2). The checks survive the toggle
+  // going off, so it restores them; what is saved is `reminders` (the leads, or null = off).
+  const [reminderState, setReminderState] = useState<ShiftReminderState>(() =>
+    shiftReminderStateFrom(
+      shift
+        ? shiftReminderLeads(shift)
+        : prefill?.reminders !== undefined
+          ? prefill.reminders
+          : DEFAULT_SHIFT_REMINDERS
+    )
+  );
+  const reminders = shiftRemindersForSave(reminderState);
   const initialAssignee = shift?.assigned_to ?? '';
   const [assignedTo, setAssignedTo] = useState<string>(initialAssignee);
   const [editScope, setEditScope] = useState<ShiftScope>('occurrence');
@@ -335,10 +339,6 @@ function ShiftFormBody({
   const [moreOpen, setMoreOpen] = useState(false);
   // The Reminders card under "Who's with" (owner 2026-11-16): an accordion like the other forms', folded.
   const [reminderOpen, setReminderOpen] = useState(false);
-  // What "Enable notifications" turns back on to: the last lead picked (1 hour when none).
-  const [lastReminder, setLastReminder] = useState<string>(() =>
-    reminder === 'off' ? String(DEFAULT_SHIFT_REMINDER_LEAD) : reminder
-  );
   // An element to focus once the render that mounted / revealed it has happened.
   const [focusAfter, setFocusAfter] = useState<string | null>(null);
   useEffect(() => {
@@ -490,7 +490,6 @@ function ShiftFormBody({
       return;
     }
     const duration = span as number;
-    const lead = REMINDER_OPTIONS.find((o) => o.value === reminder)?.lead ?? null;
     const assignee = assignedTo || null;
 
     if (isEditing && shift) {
@@ -515,7 +514,7 @@ function ShiftFormBody({
             title: name.trim(),
             scheduled_time: startTime,
             duration_minutes: duration,
-            reminder_lead_minutes: lead,
+            ...shiftReminderBody(reminders),
           };
           if (next.days && !keepStoredRule) body.recurrence_days = next.days;
           if ((keepStoredRule || next.rule) && stored?.recurrence_end_date) {
@@ -550,7 +549,7 @@ function ShiftFormBody({
         title: name.trim(),
         scheduled_time: startTime,
         duration_minutes: duration,
-        reminder_lead_minutes: lead,
+        ...shiftReminderBody(reminders),
       };
       // A one-off always sends its date; "This shift" of a series sends it only when it MOVED
       // (that occurrence alone moves). "All upcoming" never sends a date here (see above).
@@ -581,7 +580,7 @@ function ShiftFormBody({
       scheduled_date: date,
       scheduled_time: startTime,
       duration_minutes: duration,
-      reminder_lead_minutes: lead,
+      ...shiftReminderBody(reminders),
       assigned_to: assignee,
     };
     const chosen = chosenRule();
@@ -606,7 +605,9 @@ function ShiftFormBody({
           : {}),
         assigned: !!assignee,
         assignedSelf: !!assignee && assignee === viewerId,
-        reminder: reminderEnum(lead),
+        // The shortest lead (the legacy single value) + how many are on.
+        reminder: reminderEnum(reminders ? reminders[reminders.length - 1] : null),
+        reminderCount: reminders?.length ?? 0,
         overnight: nextDay,
         durationMinutes: duration,
         source,
@@ -620,7 +621,7 @@ function ShiftFormBody({
         cycleOn,
         cycleOff,
         repeatEndDate,
-        reminder: lead,
+        reminders,
       });
     } catch (err) {
       // A classified failure closes with a toast; a network / server failure
@@ -737,9 +738,8 @@ function ShiftFormBody({
     .filter(Boolean)
     .join(' · ');
 
-  // The Reminders card's line: "1 hour before" / "Off".
-  const reminderLead = REMINDER_OPTIONS.find((o) => o.value === reminder)?.lead ?? null;
-  const reminderValue = formatShiftReminder(reminderLead, t);
+  // The Reminders card's line: "1 day before, 1 hour before" / "Off".
+  const reminderValue = formatShiftReminders(reminders, t);
   // More details now holds ONLY the repeat end, a field a NEW repeating shift has; with nothing in it, the
   // row is not shown at all (mobile parity).
   const showRepeatEnd = !isEditing && repeats;
@@ -1068,46 +1068,13 @@ function ShiftFormBody({
           }}
         >
           <div className="flex flex-col gap-3">
-            {/* The task card's Reminders contents (AddEventModal): "Enable notifications" (Off), then
-                "Remind before the shift" and the task card's checkbox rows. A shift stores ONE lead time,
-                so the rows are a radiogroup: checking one unchecks the others, re-checking does nothing.
-                Off keeps the list shown, greyed; back on restores the last lead picked (1 hour if none). */}
-            <Toggle
-              id="shift_reminder_enabled"
-              label={t('calendar:addEvent.reminders.enable')}
-              checked={reminder !== 'off'}
-              onChange={(on) => setReminder(on ? lastReminder : 'off')}
+            {/* The task card's Reminders contents (AddEventModal): "Enable notifications", then "Remind before
+                the shift" and one checkbox per lead (several since 1.4.2). */}
+            <ShiftReminderChoices
+              value={reminderState}
+              onChange={setReminderState}
+              describedBy="shift_reminder-hint"
             />
-            <div
-              role="radiogroup"
-              aria-labelledby="shift_reminder-label"
-              aria-describedby="shift_reminder-hint"
-              aria-disabled={reminder === 'off' ? true : undefined}
-              data-testid="shift-form-reminder"
-              className={`flex flex-col gap-2 rounded-xl border border-line-2 p-3 ${
-                reminder === 'off' ? 'opacity-60' : ''
-              }`}
-            >
-              <Text variant="label" as="span" id="shift_reminder-label">
-                {t('shifts:form.remindBefore')}
-              </Text>
-              {REMINDER_ROWS.map((o) => (
-                <Checkbox
-                  key={o.value}
-                  role="radio"
-                  data-testid={`shift-form-reminder-${o.value}`}
-                  label={formatShiftReminder(o.lead, t)}
-                  // Off: nothing is checked (the toggle restores `lastReminder`).
-                  checked={reminder === o.value}
-                  disabled={reminder === 'off'}
-                  onChange={() => {
-                    if (reminder === o.value) return;
-                    setReminder(o.value);
-                    setLastReminder(o.value);
-                  }}
-                />
-              ))}
-            </div>
             {/* An OPEN shift's reminder goes to whoever has taken it by then (the cron reads the assignee
                 at send time; none, no reminder): backend process_shift_alerts. */}
             <Text variant="caption" as="p" id="shift_reminder-hint" data-testid="shift-form-reminder-hint">

@@ -1690,7 +1690,10 @@ export const Analytics = {
     recurrence: string;
     assigned: boolean;
     assignedSelf: boolean;
+    /** The shortest lead (the legacy single value); 'off' when none. */
     reminder: string;
+    /** 1.4.2: how many lead times are on (0-4). Sent only when the caller passes it. */
+    reminderCount?: number;
     overnight: boolean;
     durationMinutes: number;
     source: string;
@@ -1706,6 +1709,9 @@ export const Analytics = {
       assigned: opts.assigned === true,
       assigned_self: opts.assignedSelf === true,
       reminder: pickEnum(opts.reminder, SHIFT_REMINDERS, 'off'),
+      ...(opts.reminderCount !== undefined
+        ? { reminder_count: Math.max(0, Math.min(4, Math.floor(Number(opts.reminderCount) || 0))) }
+        : {}),
       overnight: opts.overnight === true,
       duration_bucket: shiftDurationBucket(opts.durationMinutes),
       source: pickEnum(opts.source, SHIFT_SOURCES, 'shifts_view'),

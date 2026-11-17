@@ -93,10 +93,16 @@ async function showWeekOf(page: Page, today: string, date: string): Promise<void
 
 function sqlShiftRows(
   circleId: string
-): Array<{ title: string; assigned_to: string | null; parent: string | null; reminder: number | null }> {
+): Array<{
+  title: string;
+  assigned_to: string | null;
+  parent: string | null;
+  reminder: number | null;
+  leads: number[] | null;
+}> {
   return dbQuery(`
     select title, assigned_to::text as assigned_to, parent_event_id::text as parent,
-           reminder_lead_minutes as reminder
+           reminder_lead_minutes as reminder, reminder_leads_minutes as leads
       from calendar_events
      where circle_id = ${sqlStr(circleId)}::uuid and event_type = 'shift'
      order by created_at`);
@@ -152,11 +158,17 @@ test.describe('premium owner', () => {
     await expect(reminders).toBeVisible();
     await reminders.click();
     // Open, it is the task card's contents: "Enable notifications" on, then "Remind before the shift" and four
-    // single-choice rows (1 hour checked); the DB assertion below still expects the 1 hour default.
+    // checkbox rows (1 hour checked). 1.4.2: several leads; check 1 day too, so the DB stores [1440, 60] (+ the
+    // legacy mirror 60) and add-next carries both.
     await expect(form.getByRole('switch', { name: 'Enable notifications' })).toBeChecked();
-    const remindBefore = form.getByRole('radiogroup', { name: 'Remind before the shift' });
-    await expect(remindBefore.getByRole('radio')).toHaveCount(4);
-    await expect(remindBefore.getByRole('radio', { name: '1 hour before' })).toBeChecked();
+    const remindBefore = form.getByRole('group', { name: 'Remind before the shift' });
+    await expect(remindBefore.getByRole('checkbox')).toHaveCount(4);
+    await expect(remindBefore.getByRole('radio')).toHaveCount(0);
+    await expect(remindBefore.getByRole('checkbox', { name: '1 hour before' })).toHaveAttribute('aria-checked', 'true');
+    await remindBefore.getByRole('checkbox', { name: '1 day before' }).click();
+    await expect(remindBefore.getByRole('checkbox', { name: '1 day before' })).toHaveAttribute('aria-checked', 'true');
+    await expect(remindBefore.getByRole('checkbox', { name: '1 hour before' })).toHaveAttribute('aria-checked', 'true');
+    await expect(form.getByRole('button', { name: 'Reminders: 1 day before, 1 hour before' })).toBeVisible();
     await expect(form.getByTestId('shift-form-reminder-hint')).toHaveText(
       'Sent to whoever takes the shift, if they take it before the reminder time.'
     );
@@ -200,6 +212,11 @@ test.describe('premium owner', () => {
     const rows = sqlShiftRows(s.circleId).filter((r) => !r.parent);
     expect(rows.map((r) => r.title).sort()).toEqual(['Day', 'Night']);
     expect(rows.every((r) => r.assigned_to === null)).toBe(true);
+    // Two leads on both series (add-next carried them), the legacy mirror = the smallest.
+    for (const r of rows) {
+      expect(r.leads, `${r.title} reminder_leads_minutes`).toEqual([1440, 60]);
+      expect(r.reminder, `${r.title} reminder_lead_minutes`).toBe(60);
+    }
 
     // Shifts view: the toggle carries no open count (owner decision 2026-10-24).
     await expect(page.getByTestId('shifts-open-badge')).toHaveCount(0);
@@ -313,26 +330,21 @@ test.describe('a member takes and drops a shift', () => {
       const take = page.getByRole('dialog', { name: 'Take "Night"' });
       await expect(take.getByRole('radio', { name: /Just this one/ })).toBeChecked();
       await expect(take.getByRole('radio', { name: /This and every future one/ })).toBeVisible();
-      // The reminder is ONE line at the shift's own value + Change (approved mock 2026-11-08); Change opens every
-      // option in place and a pick folds it back. Take shift is the only filled button.
+      // The reminder is ONE line at the shift's own value + Change (approved mock 2026-11-08); Change opens the
+      // Reminders card in place (toggle + one checkbox per lead, 1.4.2). Take shift is the only filled button.
       await expect(take.getByTestId('take-shift-reminder-value')).toHaveText('Reminder · 1 hour before');
       await expect(take.locator('button[class*="bg-primary-fill"]')).toHaveCount(1);
       await checkA11y(page, 'shifts-take-light', testInfo);
       const change = take.getByRole('button', { name: 'Change reminder, 1 hour before' });
       await expect(change).toHaveAttribute('aria-expanded', 'false');
       await change.click();
-      const reminder = take.getByRole('radiogroup', { name: 'Reminder' });
-      await expect(reminder.getByRole('radio')).toHaveText([
-        'Off',
-        '1 hour before',
-        '2 hours before',
-        '4 hours before',
-        '1 day before',
-      ]);
-      await expect(reminder.getByRole('radio', { name: '1 hour before' })).toBeChecked();
+      const reminder = take.getByRole('group', { name: 'Remind before the shift' });
+      await expect(take.getByRole('switch', { name: 'Enable notifications' })).toBeChecked();
+      await expect(reminder.getByRole('checkbox')).toHaveCount(4);
+      await expect(reminder.getByRole('checkbox', { name: '1 hour before' })).toHaveAttribute('aria-checked', 'true');
       await checkA11y(page, 'shifts-take-reminder-open-light', testInfo);
-      await reminder.getByRole('radio', { name: '4 hours before' }).click();
-      await expect(take.getByTestId('take-shift-reminder-value')).toHaveText('Reminder · 4 hours before');
+      await reminder.getByRole('checkbox', { name: '4 hours before' }).click();
+      await expect(reminder.getByRole('checkbox', { name: '4 hours before' })).toHaveAttribute('aria-checked', 'true');
       await take.getByRole('button', { name: 'Take shift' }).click();
       await expect(page.getByText("You're on it.", { exact: true })).toBeVisible({ timeout: 20_000 });
 
@@ -342,8 +354,9 @@ test.describe('a member takes and drops a shift', () => {
       // Only today's occurrence was taken: tomorrow's is still open.
       const rows = sqlShiftRows(s.circleId);
       expect(rows.filter((r) => r.assigned_to === member.userId)).toHaveLength(1);
-      // The reminder picked at take time landed on the claimed row only.
-      expect(rows.find((r) => r.assigned_to === member.userId)?.reminder).toBe(240);
+      // The reminders picked at take time landed on the claimed row only: the list + the legacy mirror (smallest).
+      expect(rows.find((r) => r.assigned_to === member.userId)?.leads).toEqual([240, 60]);
+      expect(rows.find((r) => r.assigned_to === member.userId)?.reminder).toBe(60);
       expect(rows.find((r) => r.assigned_to === null && r.title === 'Night' && r.parent === null)?.reminder ?? 60).toBe(60);
       await page.getByRole('button', { name: 'Next day', exact: true }).click();
       await expect(

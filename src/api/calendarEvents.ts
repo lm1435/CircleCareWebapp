@@ -129,7 +129,10 @@ export interface CalendarEvent {
    * the start the assignee is reminded — 60 | 120 | 240 | 1440, or null = off.
    * Absent on every other event type and on a backend that predates shifts.
    * A shift's `assigned_to` null means OPEN (nobody on it).
+   * 1.4.2: `reminder_leads_minutes` is every lead, longest first (null = off); the legacy single value is its
+   * smallest. Read through shiftUtils `shiftReminderLeads` (falls back to the legacy field).
    */
+  reminder_leads_minutes?: number[] | null;
   reminder_lead_minutes?: number | null;
 
   // Recurrence (display only on web). recurrence_days: 0=Sun..6=Sat.
@@ -423,7 +426,9 @@ export interface CreateEventRequest {
   duration_minutes?: number | null;
   /** `null` clears on an edit. */
   location?: string | null;
-  /** Shifts only: 60 | 120 | 240 | 1440 minutes before the start, null = off. */
+  /** Shifts only: the leads (subset of 60 | 120 | 240 | 1440, longest first), null = off. Never []. */
+  reminder_leads_minutes?: number[] | null;
+  /** Shifts only: the legacy mirror, always sent with the list = its smallest lead (shiftUtils shiftReminderBody). */
   reminder_lead_minutes?: number | null;
 
   /**

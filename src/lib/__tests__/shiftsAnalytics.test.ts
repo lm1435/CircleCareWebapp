@@ -91,6 +91,19 @@ describe('shifts analytics', () => {
     }
   });
 
+  it('shift_created reminder_count (1.4.2): a 0-4 integer, clamped; absent = not sent', async () => {
+    const A = await load();
+    const base = { repeats: false, recurrence: 'none', assigned: false, assignedSelf: false, reminder: '1h', overnight: false, durationMinutes: 60, source: 'shifts_view' };
+    A.shiftCreated({ ...base, reminderCount: 2 });
+    expect(last()[1]).toMatchObject({ reminder: '1h', reminder_count: 2 });
+    A.shiftCreated({ ...base, reminderCount: 99 });
+    expect(last()[1].reminder_count).toBe(4);
+    A.shiftCreated({ ...base, reminderCount: 'x' as never });
+    expect(last()[1].reminder_count).toBe(0);
+    A.shiftCreated(base);
+    expect(last()[1]).not.toHaveProperty('reminder_count');
+  });
+
   it('shift_created and shift_edited carry the form layout enum only when the caller sends "simple"', async () => {
     const A = await load();
     const base = { repeats: false, recurrence: 'none', assigned: false, assignedSelf: false, reminder: 'off', overnight: false, durationMinutes: 60, source: 'shifts_view' };

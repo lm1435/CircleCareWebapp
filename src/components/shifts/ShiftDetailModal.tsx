@@ -16,7 +16,8 @@ import { holdsOnlyThisDay,
   formatShiftRange,
   formatShiftRangeViewer,
   formatShiftRepeat,
-  formatShiftReminder,
+  formatShiftReminders,
+  shiftReminderLeads,
   isShiftOpen,
   isShiftRepeating,
   shiftEnd,
@@ -214,7 +215,7 @@ export function ShiftDetailModal({
                 {t('shifts:detail.reminder')}
               </Eyebrow>
               <dd data-testid="shift-detail-reminder" className="m-0 break-words text-base font-medium text-ink">
-                {formatShiftReminder(shift.reminder_lead_minutes, t)}
+                {formatShiftReminders(shiftReminderLeads(shift), t)}
               </dd>
             </div>
           </dl>

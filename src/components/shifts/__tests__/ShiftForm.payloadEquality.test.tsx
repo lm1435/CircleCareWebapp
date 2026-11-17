@@ -25,6 +25,12 @@ import { ShiftFormModal } from '../ShiftFormModal';
 // ShiftFormModal.tsx (the dropdown layout) is in place; capture mode drives the OLD controls and writes
 // `__fixtures__/shiftFormOldLayoutPayloads.json`. Without the flag the file drives the NEW controls with the
 // same answers and compares. Fixed 2027 dates, the clock pinned.
+//
+// DELIBERATE FIXTURE EDIT (1.4.2, multiple shift reminders): every body now also carries the list. In the
+// fixture, and ONLY there, right after each `"reminder_lead_minutes": X` (kept: the legacy mirror = the smallest
+// lead) a `"reminder_leads_minutes": [X]` was added (`null` -> `null`): 36 bodies, purely additive (the only `-`
+// lines in `git log -p` of the fixture are trailing commas). Every scenario is still compared as JSON text, key
+// order included, so nothing else may drift.
 
 const CAPTURE = process.env.CAPTURE_OLD_SHIFT_FORM === '1';
 const FIXTURE = path.join(__dirname, '__fixtures__', 'shiftFormOldLayoutPayloads.json');
@@ -257,10 +263,14 @@ async function fill(answers: Answers, editing: boolean): Promise<void> {
         if (on) await user.click(toggle);
       } else {
         if (!on) await user.click(toggle);
-        const group = screen.getByRole('radiogroup', { name: 'Remind before the shift' });
-        await user.click(
-          within(group).getByRole('radio', { name: `${REMINDER_LABEL[answers.reminder]} before` })
-        );
+        // 1.4.2: the rows are checkboxes (several leads). "Pick X" = check X, then uncheck every other one.
+        const group = screen.getByRole('group', { name: 'Remind before the shift' });
+        const want = `${REMINDER_LABEL[answers.reminder]} before`;
+        const target = within(group).getByRole('checkbox', { name: want });
+        if (target.getAttribute('aria-checked') !== 'true') await user.click(target);
+        for (const other of within(group).getAllByRole('checkbox')) {
+          if (other !== target && other.getAttribute('aria-checked') === 'true') await user.click(other);
+        }
       }
     }
   }
@@ -392,6 +402,25 @@ describe('shift form: request bodies are identical to the old layout', () => {
   it.each(Object.keys(EDITS))('edit: %s sends the old request', async (id) => {
     const actual = await runEdit(EDITS[id].shift, EDITS[id].answers);
     expect(JSON.stringify(actual)).toBe(JSON.stringify(fixture.edits[id]));
+  });
+
+  it('the deliberate 1.4.2 diff: every body carries reminder_leads_minutes ([X] or null, never []) WITH its legacy mirror', () => {
+    const bodies = [
+      ...Object.values(fixture.creates).map((c) => c[c.length - 1]),
+      ...Object.values(fixture.edits).map((c) => c[c.length - 1]),
+      ...fixture.addNext.map((c) => c[c.length - 1]),
+    ] as Array<Record<string, unknown>>;
+    expect(bodies.length).toBeGreaterThan(0);
+    for (const b of bodies) {
+      expect(b).toHaveProperty('reminder_lead_minutes');
+      expect(b).toHaveProperty('reminder_leads_minutes');
+      const v = b.reminder_leads_minutes as number[] | null;
+      expect(v === null || (Array.isArray(v) && v.length === 1)).toBe(true);
+      expect(b.reminder_lead_minutes).toBe(v === null ? null : v[0]);
+      // The list rides right after its mirror.
+      const keys = Object.keys(b);
+      expect(keys.indexOf('reminder_leads_minutes')).toBe(keys.indexOf('reminder_lead_minutes') + 1);
+    }
   });
 
   it('"Add the next shift" posts the old pair of bodies', async () => {

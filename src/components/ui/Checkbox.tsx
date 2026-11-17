@@ -16,7 +16,7 @@ export interface CheckboxProps {
   id?: string;
   /**
    * `radio`: the same box, announced as one option of a single choice (the parent is a
-   * `role="radiogroup"`). The shift reminder card draws the task card's rows but stores ONE lead time.
+   * `role="radiogroup"`).
    */
   role?: 'checkbox' | 'radio';
   'data-testid'?: string;

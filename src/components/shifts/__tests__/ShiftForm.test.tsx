@@ -126,13 +126,15 @@ const openReminders = async (user: ReturnType<typeof userEvent.setup>) => {
   if (row.getAttribute('aria-expanded') !== 'true') await user.click(row);
 };
 
+// 1.4.2: the rows are checkboxes (several leads). "Choose X" = check X, then uncheck every other one.
 const chooseReminder = async (user: ReturnType<typeof userEvent.setup>, label: string) => {
   await openReminders(user);
-  await user.click(
-    within(screen.getByRole('radiogroup', { name: 'Remind before the shift' })).getByRole('radio', {
-      name: label,
-    })
-  );
+  const group = screen.getByRole('group', { name: 'Remind before the shift' });
+  const target = within(group).getByRole('checkbox', { name: label });
+  if (target.getAttribute('aria-checked') !== 'true') await user.click(target);
+  for (const other of within(group).getAllByRole('checkbox')) {
+    if (other !== target && other.getAttribute('aria-checked') === 'true') await user.click(other);
+  }
 };
 
 beforeEach(() => {
@@ -254,6 +256,7 @@ describe('ShiftFormModal (create)', () => {
       scheduled_time: '20:00',
       duration_minutes: 720,
       reminder_lead_minutes: 60,
+      reminder_leads_minutes: [60],
       assigned_to: null,
       recurrence_rule: 'daily',
     });
@@ -263,6 +266,7 @@ describe('ShiftFormModal (create)', () => {
       assigned: false,
       assignedSelf: false,
       reminder: '1h',
+      reminderCount: 1,
       overnight: true,
       durationMinutes: 720,
       source: 'empty_state',
@@ -284,6 +288,7 @@ describe('ShiftFormModal (create)', () => {
     const body = mockCreate.mock.calls[0][1];
     expect(body.recurrence_rule).toBe('weekly');
     expect(body.recurrence_days).toEqual([2]); // 2026-10-20 is a Tuesday
+    expect(body.reminder_leads_minutes).toEqual([1440]);
     expect(body.reminder_lead_minutes).toBe(1440);
     expect(body.assigned_to).toBe('u-me');
     expect(Analytics.shiftCreated).toHaveBeenCalledWith(
@@ -506,7 +511,7 @@ describe('ShiftComposer: saved sheet and "Add the next shift"', () => {
     expect(field('shift_date')).toHaveValue('2026-10-20');
     expect(screen.getByRole('radio', { name: 'Every day' })).toBeChecked();
     await openReminders(user);
-    expect(screen.getByRole('radio', { name: '2 hours before' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: '2 hours before' })).toHaveAttribute('aria-checked', 'true');
 
     // The second save is attributed to add_next.
     await user.type(nameField(), 'Afternoon');

@@ -151,6 +151,16 @@ describe('shift detail header', () => {
 });
 
 describe('shift detail card', () => {
+  it('P: every lead of a 1.4.2 row, longest first ("1 day before, 1 hour before")', () => {
+    renderDetail(shift({ reminder_leads_minutes: [60, 1440], reminder_lead_minutes: 60 }));
+    expect(screen.getByTestId('shift-detail-reminder')).toHaveTextContent(/^1 day before, 1 hour before$/);
+  });
+
+  it('P: reminder_leads_minutes wins over the legacy field; null reads Off', () => {
+    renderDetail(shift({ reminder_leads_minutes: null, reminder_lead_minutes: 120 }));
+    expect(screen.getByTestId('shift-detail-reminder')).toHaveTextContent(/^Off$/);
+  });
+
   it('ONE card: When (date · range on one line), then Repeats and Reminder side by side', () => {
     renderDetail(shift());
     const card = screen.getByTestId('shift-detail-card');
