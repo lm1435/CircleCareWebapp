@@ -22,6 +22,8 @@ const mockUseCircle = vi.fn();
 vi.mock('@/hooks/useCircle', () => ({
   useCircle: (circleId: string) => mockUseCircle(circleId),
 }));
+// CircleTimezoneCard reads the viewer's 12h/24h clock (a React Query read) since 975b2c3.
+vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => '12h' }));
 
 const updateMutate = vi.fn();
 const deleteMutate = vi.fn();

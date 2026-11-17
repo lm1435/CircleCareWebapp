@@ -26,6 +26,8 @@ import {
 // today_viewed event, the first-run hand-off and the section order. Every
 // block's own behaviour has its own suite, so the heavy children are stubbed.
 vi.mock('@/hooks/useCircle', () => ({ useCircle: vi.fn() }));
+// ShiftsTeaserDialog reads the viewer's 12h/24h clock (a React Query read) since 975b2c3.
+vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => '12h' }));
 vi.mock('@/hooks/useEarnedUpsell', () => ({ useEarnedUpsell: vi.fn() }));
 vi.mock('@/hooks/useNextUp', () => ({ useNextUp: vi.fn() }));
 vi.mock('@/hooks/useNextStep', () => ({ useNextStep: vi.fn() }));

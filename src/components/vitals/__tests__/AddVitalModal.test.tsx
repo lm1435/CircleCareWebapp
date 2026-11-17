@@ -454,8 +454,11 @@ describe('AddVitalModal', () => {
       await user.click(screen.getByRole('button', { name: 'Save reading' }));
 
       expect(mutateCreate).not.toHaveBeenCalled();
+      // Since c73933c the range error spots the other unit and points at Settings > Units.
       expect(
-        screen.getByText('That looks outside the expected range. Double-check the number.')
+        screen.getByText(
+          '98.6 looks like °F, but your units are °C. You can change them in Settings, under Units.'
+        )
       ).toBeInTheDocument();
       expect(screen.getByLabelText(/^Temperature/)).toHaveAttribute('aria-invalid', 'true');
     });
@@ -470,7 +473,9 @@ describe('AddVitalModal', () => {
 
       expect(mutateCreate).not.toHaveBeenCalled();
       expect(
-        screen.getByText('That looks outside the expected range. Double-check the number.')
+        screen.getByText(
+          '37 looks like °C, but your units are °F. You can change them in Settings, under Units.'
+        )
       ).toBeInTheDocument();
     });
 
