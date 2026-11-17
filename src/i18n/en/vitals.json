@@ -1,4 +1,11 @@
 {
+  "unitsPrompt": {
+    "title": "Use {{weight}} and {{temperature}}?",
+    "message": "Where you are, weight is usually in {{weight}} and temperature in {{temperature}}. Your readings stay exactly as logged; only how they are shown changes. You can change this in Settings, under Units.",
+    "messageGlucose": "Where you are, weight is usually in {{weight}}, temperature in {{temperature}} and glucose in {{glucose}}. Your readings stay exactly as logged; only how they are shown changes. You can change this in Settings, under Units.",
+    "switch": "Switch",
+    "keep": "Keep {{weight}} and {{temperature}}"
+  },
   "title": "Vitals",
   "subtitle": "Track health readings for your circle — blood pressure, heart rate, glucose, weight, temperature, and blood oxygen.",
   "loading": "Loading vitals",

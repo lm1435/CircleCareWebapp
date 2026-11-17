@@ -120,6 +120,54 @@ describe('week start follows the browser REGION (1.4.2 i18n audit D)', () => {
   });
 });
 
+describe('week start uses THE shared region resolver (units, phone seed and week start agree)', () => {
+  function stubTimeZone(timeZone: string) {
+    const real = Intl.DateTimeFormat.prototype.resolvedOptions;
+    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (
+      this: Intl.DateTimeFormat
+    ) {
+      return { ...real.call(this), timeZone };
+    });
+  }
+
+  // POSITIVE
+  it('a bare "en" browser in Europe/London is GB (time zone step) and starts on Monday', () => {
+    stubBrowserLanguages(['en']);
+    stubTimeZone('Europe/London');
+    expect(browserRegion()).toBe('GB');
+    expect(formatWeekdayList([0, 3], 'en')).toBe('Wed, Sun');
+  });
+
+  it('answers exactly what the vitals units read (lib/regionResolver.browserRegion)', async () => {
+    const { browserRegion: unitsRegion } = await import('@/lib/regionResolver');
+    for (const [langs, tz] of [
+      [['en'], 'Europe/London'],
+      [['de'], 'America/Denver'],
+      [['en-US'], 'Europe/Berlin'],
+      [['es-419'], 'America/Denver'],
+    ] as const) {
+      stubBrowserLanguages([...langs]);
+      stubTimeZone(tz);
+      expect(browserRegion()).toBe(unitsRegion());
+    }
+  });
+
+  // NEGATIVE
+  it('an en-US browser in a US zone stays US and Sunday-first', () => {
+    stubBrowserLanguages(['en-US']);
+    stubTimeZone('America/New_York');
+    expect(browserRegion()).toBe('US');
+    expect(formatWeekdayList([0, 3], 'en')).toBe('Sun, Wed');
+  });
+
+  it('a bare "en" browser in a US zone has no region: the language decides (Sunday)', () => {
+    stubBrowserLanguages(['en']);
+    stubTimeZone('America/Denver');
+    expect(browserRegion()).toBeNull();
+    expect(formatWeekdayList([0, 3], 'en')).toBe('Sun, Wed');
+  });
+});
+
 describe('formatRecurrenceLabel — weekly with days', () => {
   it('labels a days series in the locale order', () => {
     const event = { recurrence_rule: 'weekly', recurrence_days: [5, 3, 1] };

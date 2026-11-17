@@ -40,11 +40,12 @@ vi.mock('@/hooks/usePremiumGate', () => ({
 const mockMemberRemoved = vi.fn();
 const mockCircleLeft = vi.fn();
 const mockRoleChanged = vi.fn();
+const mockErrorOccurred = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
     memberRemoved: (...args: unknown[]) => mockMemberRemoved(...args),
     circleLeft: (...args: unknown[]) => mockCircleLeft(...args),
-    errorOccurred: vi.fn(),
+    errorOccurred: (...args: unknown[]) => mockErrorOccurred(...args),
     memberRoleChanged: (...args: unknown[]) => mockRoleChanged(...args),
   },
 }));
@@ -62,6 +63,7 @@ import {
   useSetMedicationResponsible,
   useSetMemberRole,
 } from '@/hooks/useCircleMembers';
+import { markPaywallRefusal } from '@/lib/apiErrors';
 
 const CIRCLE_ID = 'circle-1';
 const USER_ID = 'user-9';
@@ -314,6 +316,38 @@ describe('useSetMemberRole', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(promptUpgrade).toHaveBeenCalledTimes(1);
     expect(showToast).not.toHaveBeenCalled();
+  });
+
+  // 1.4.2: paywall moments are not errors (lib/apiErrors `isPaywallRefusal`).
+  it('POSITIVE: a 402 SUBSCRIPTION_REQUIRED (marked by the API client) fires NO error_occurred', async () => {
+    const { wrapper } = setup();
+    mockErrorOccurred.mockClear();
+    const body = reject('SUBSCRIPTION_REQUIRED');
+    markPaywallRefusal(body);
+    mockSetRole.mockRejectedValue(body);
+
+    const { result } = renderHook(() => useSetMemberRole(CIRCLE_ID), { wrapper });
+    result.current.mutate({ userId: USER_ID, role: 'manager', name: 'Ana' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(promptUpgrade).toHaveBeenCalledTimes(1);
+    expect(mockErrorOccurred).not.toHaveBeenCalled();
+  });
+
+  it('NEGATIVE: an unmarked SUBSCRIPTION_REQUIRED (403 lapse) and any other failure still report', async () => {
+    for (const code of ['SUBSCRIPTION_REQUIRED', 'CARE_RECIPIENT_CANNOT_MANAGE']) {
+      const { wrapper } = setup();
+      mockErrorOccurred.mockClear();
+      mockSetRole.mockRejectedValue(reject(code));
+      const { result } = renderHook(() => useSetMemberRole(CIRCLE_ID), { wrapper });
+      result.current.mutate({ userId: USER_ID, role: 'manager', name: 'Ana' });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(mockErrorOccurred).toHaveBeenCalledWith(
+        'members',
+        'members_update_failed',
+        expect.objectContaining({ source: 'members', action: 'update', code })
+      );
+    }
   });
 
   it.each([

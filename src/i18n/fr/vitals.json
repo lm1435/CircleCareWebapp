@@ -1,4 +1,11 @@
 {
+  "unitsPrompt": {
+    "title": "Passer en {{weight}} et {{temperature}} ?",
+    "message": "Là où vous êtes, le poids s’exprime généralement en {{weight}} et la température en {{temperature}}. Vos mesures restent telles que saisies ; seul leur affichage change. Vous pouvez modifier ce choix dans Paramètres, section Unités.",
+    "messageGlucose": "Là où vous êtes, le poids s’exprime généralement en {{weight}}, la température en {{temperature}} et la glycémie en {{glucose}}. Vos mesures restent telles que saisies ; seul leur affichage change. Vous pouvez modifier ce choix dans Paramètres, section Unités.",
+    "switch": "Changer",
+    "keep": "Garder {{weight}} et {{temperature}}"
+  },
   "title": "Constantes",
   "subtitle": "Suivez les mesures de santé de votre cercle : tension artérielle, fréquence cardiaque, glycémie, poids, température et oxygène sanguin.",
   "loading": "Chargement des constantes",

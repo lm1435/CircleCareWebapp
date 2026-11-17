@@ -125,6 +125,33 @@ export function isSubscriptionRequiredError(err: unknown): boolean {
 }
 
 /**
+ * PAYWALL MOMENTS ARE NOT ERRORS (1.4.2). A 402 SUBSCRIPTION_REQUIRED (invite cap, make manager,
+ * shifts, a free circle's storage, the email digest...) is the server saying "this needs Premium";
+ * the hooks answer it with the upgrade prompt. Counting it as `error_occurred` put paywall hits in
+ * the admin digest's ERRORS. The rejection callers receive is the UNWRAPPED body (no HTTP status),
+ * so `lib/api.ts` marks the 402 body and the hooks skip `error_occurred` for a marked one. A 403
+ * SUBSCRIPTION_REQUIRED (a lapsed, read-only circle) is NOT marked and still reports.
+ * A WeakSet: nothing a handler reads changes. Mobile twin: mobile/src/utils/paywallRefusal.ts.
+ */
+const paywallRefusals = new WeakSet<object>();
+
+/** Called by the API client for a 402 response. Only SUBSCRIPTION_REQUIRED bodies are marked. */
+export function markPaywallRefusal(rejected: unknown): void {
+  try {
+    if (rejected !== null && typeof rejected === 'object' && errorCode(rejected) === 'SUBSCRIPTION_REQUIRED') {
+      paywallRefusals.add(rejected);
+    }
+  } catch {
+    // Bookkeeping only: never change what the caller receives.
+  }
+}
+
+/** True for a 402 SUBSCRIPTION_REQUIRED rejection the API client saw. Never throws. */
+export function isPaywallRefusal(err: unknown): boolean {
+  return err !== null && typeof err === 'object' && paywallRefusals.has(err);
+}
+
+/**
  * True for a 403 view-only / read-only rejection — the user lacks edit
  * permission on this circle. Web shows "no permission" and refetches flags.
  */

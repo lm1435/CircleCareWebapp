@@ -29,6 +29,11 @@ export interface ConfirmDialogProps {
   onConfirm: () => void | Promise<unknown>;
   onCancel: () => void;
   /**
+   * Closed WITHOUT choosing: the backdrop, Escape or the × button. Defaults to `onCancel` (every
+   * existing caller). Set it only where that must read differently from the Cancel button.
+   */
+  onDismiss?: () => void;
+  /**
    * When true, the confirm button uses the `danger` variant and a terracotta
    * mark is shown. Alias for `variant="destructive"` — kept so no existing
    * call site needs to change.
@@ -97,6 +102,7 @@ export function ConfirmDialog({
   closeLabel,
   onConfirm,
   onCancel,
+  onDismiss,
   destructive = false,
   variant,
   confirmDisabled = false,
@@ -168,7 +174,7 @@ export function ConfirmDialog({
   return (
     <Modal
       title={title}
-      onClose={onCancel}
+      onClose={onDismiss ?? onCancel}
       closeLabel={closeLabel ?? cancelLabel}
       size="sm"
       closeOnBackdropClick={!isDestructive}

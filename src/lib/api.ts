@@ -7,6 +7,7 @@ import { isOfflineNow } from '@/hooks/useIsOffline';
 import { offlineWriteRejection } from './offlineWrite';
 import { noteIdempotencyHeaders } from './idempotentWrite';
 import { noteReviewBlockingError } from './reviewMoments';
+import { markPaywallRefusal } from './apiErrors';
 
 // PORT of mobile/src/api/client.ts adapted for the web threat model:
 // - Access token: in memory only (tokenAccessor). Authorization: Bearer on every call.
@@ -253,7 +254,10 @@ apiClient.interceptors.response.use(
     // 402 Payment Required — no purchase flow on web. The caller's own error
     // handler shows contextual feedback (banner/toast + "open the app" CTA).
     if (error.response?.status === 402) {
-      return Promise.reject(error.response?.data || error);
+      const rejected = error.response?.data || error;
+      // A paywall moment, not an error: the hooks skip `error_occurred` for a marked body.
+      markPaywallRefusal(rejected);
+      return Promise.reject(rejected);
     }
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {

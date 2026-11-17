@@ -1,4 +1,11 @@
 {
+  "unitsPrompt": {
+    "title": "¿Usar {{weight}} y {{temperature}}?",
+    "message": "Donde estás, el peso suele medirse en {{weight}} y la temperatura en {{temperature}}. Tus lecturas quedan tal como las registraste; solo cambia cómo se muestran. Puedes cambiarlo en Configuración, en la sección Unidades.",
+    "messageGlucose": "Donde estás, el peso suele medirse en {{weight}}, la temperatura en {{temperature}} y la glucosa en {{glucose}}. Tus lecturas quedan tal como las registraste; solo cambia cómo se muestran. Puedes cambiarlo en Configuración, en la sección Unidades.",
+    "switch": "Cambiar",
+    "keep": "Mantener {{weight}} y {{temperature}}"
+  },
   "title": "Signos vitales",
   "subtitle": "Lleva el registro de las lecturas de salud de tu círculo: presión arterial, frecuencia cardíaca, glucosa, peso, temperatura y oxígeno en sangre.",
   "loading": "Cargando signos vitales",

@@ -41,6 +41,7 @@ import {
   isProviderNotFoundError,
   isPermissionDeniedError,
   isSubscriptionRequiredError,
+  isPaywallRefusal,
 } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
@@ -461,7 +462,8 @@ function useEventMutationOnError(
     // re-read first — 'not_recorded' or 'unverified'. Absent = a definite
     // refusal reported as it came, or a write that never verifies.
     const outcome = confirmFailureOutcome(error);
-    Analytics.errorOccurred(failSource, `${failSource}_${action}_failed`, {
+    // A 402 SUBSCRIPTION_REQUIRED is a paywall moment (the upgrade prompt below), not an error.
+    if (!isPaywallRefusal(error)) Analytics.errorOccurred(failSource, `${failSource}_${action}_failed`, {
       circle_id: circleId,
       ...failureContext(failSource, action, error),
       ...(outcome ? { outcome } : {}),

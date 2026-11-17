@@ -1873,6 +1873,20 @@ export const Analytics = {
     glucose_unit: 'mg/dL' | 'mmol/L';
     temperature_unit: '°F' | '°C';
   }) => capture('vital_units_auto_set', { ...props }),
+  /**
+   * The one-time "Use kg and °C?" prompt for an account that logged vitals before its region units
+   * could be set (lib/vitalUnitsPrompt, 1.4.2; mobile twin, same shape). Enums only: no country.
+   */
+  vitalUnitsPrompt: (props: {
+    outcome: 'shown' | 'switched' | 'kept' | 'dismissed';
+    region_group: 'metric_mg_dl' | 'metric_mmol_l';
+    surface: 'vitals';
+  }) =>
+    capture('vital_units_prompt', {
+      outcome: props.outcome,
+      region_group: props.region_group,
+      surface: props.surface,
+    }),
 
   // --- Emergency info (web-new) — never the contents, only that a view/edit
   // happened and WHICH top-level fields changed. ---

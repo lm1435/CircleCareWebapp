@@ -1,4 +1,11 @@
 {
+  "unitsPrompt": {
+    "title": "Usare {{weight}} e {{temperature}}?",
+    "message": "Dove ti trovi, il peso si misura di solito in {{weight}} e la temperatura in {{temperature}}. Le tue misurazioni restano esattamente come registrate; cambia solo come vengono mostrate. Puoi cambiarlo in Impostazioni, nella sezione Unità.",
+    "messageGlucose": "Dove ti trovi, il peso si misura di solito in {{weight}}, la temperatura in {{temperature}} e la glicemia in {{glucose}}. Le tue misurazioni restano esattamente come registrate; cambia solo come vengono mostrate. Puoi cambiarlo in Impostazioni, nella sezione Unità.",
+    "switch": "Cambia",
+    "keep": "Mantieni {{weight}} e {{temperature}}"
+  },
   "title": "Parametri vitali",
   "subtitle": "Tieni traccia delle misurazioni di salute della tua cerchia: pressione, battito, glicemia, peso, temperatura e ossigeno nel sangue.",
   "loading": "Caricamento parametri vitali",

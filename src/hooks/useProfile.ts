@@ -20,7 +20,7 @@ import {
   type User,
 } from '@/api/users';
 import { queryKeys } from '@/lib/queryKeys';
-import { failureContext, isSubscriptionRequiredError, type FailureAction } from '@/lib/apiErrors';
+import { failureContext, isSubscriptionRequiredError, type FailureAction, isPaywallRefusal } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
 import type { AvatarColorKey } from '@/components/ui/Avatar';
 import { useToast } from '@/components/ui';
@@ -43,7 +43,8 @@ import i18n from '@/i18n';
  * submitted values (name, timezone) and never the toast copy.
  */
 function reportProfileError(error: unknown, action: FailureAction = 'update'): void {
-  Analytics.errorOccurred('profile', `profile_${action}_failed`, failureContext('profile', action, error));
+  // A 402 SUBSCRIPTION_REQUIRED is a paywall moment (the upgrade prompt below), not an error.
+  if (!isPaywallRefusal(error)) Analytics.errorOccurred('profile', `profile_${action}_failed`, failureContext('profile', action, error));
 }
 
 /**

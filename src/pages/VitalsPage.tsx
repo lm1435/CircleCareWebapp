@@ -30,6 +30,7 @@ import {
 import { PageMasthead } from '@/components/layout/PageMasthead';
 import { AddVitalModal } from '@/components/vitals/AddVitalModal';
 import { EditVitalModal } from '@/components/vitals/EditVitalModal';
+import { VitalUnitsPrompt } from '@/components/vitals/VitalUnitsPrompt';
 import { VitalsChart, type VitalsChartSeries } from '@/components/vitals/VitalsChart';
 import { useVitals, useDeleteVital, useLatestVitals } from '@/hooks/useVitals';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
@@ -1118,6 +1119,10 @@ export default function VitalsPage(): ReactElement {
       )}
 
       <div className="mt-6 px-5">{body}</div>
+
+      {/* One-time "Use kg and °C?" for an account that logged vitals before its region units were
+          set. Never over this page's own dialogs (or any other open dialog). */}
+      <VitalUnitsPrompt busy={showAdd || editingVital !== null || deletingVital !== null} />
 
       {showAdd && (
         <AddVitalModal

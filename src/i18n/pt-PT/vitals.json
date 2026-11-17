@@ -1,4 +1,11 @@
 {
+  "unitsPrompt": {
+    "title": "Usar {{weight}} e {{temperature}}?",
+    "message": "Onde está, o peso costuma ser medido em {{weight}} e a temperatura em {{temperature}}. As suas medições ficam exatamente como foram registadas; só muda a forma como são mostradas. Pode alterar isto em Definições, na secção Unidades.",
+    "messageGlucose": "Onde está, o peso costuma ser medido em {{weight}}, a temperatura em {{temperature}} e a glicose em {{glucose}}. As suas medições ficam exatamente como foram registadas; só muda a forma como são mostradas. Pode alterar isto em Definições, na secção Unidades.",
+    "switch": "Mudar",
+    "keep": "Manter {{weight}} e {{temperature}}"
+  },
   "errorHint": "Verifique a sua ligação e tente novamente.",
   "fields": {
     "timesShownIn": "Horários apresentados em {{timezone}}",

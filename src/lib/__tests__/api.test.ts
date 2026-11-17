@@ -243,4 +243,32 @@ describe('api client', () => {
       });
     });
   });
+
+  // 1.4.2: paywall moments are not errors. The client marks a 402 SUBSCRIPTION_REQUIRED body so the
+  // hooks skip `error_occurred` (lib/apiErrors `isPaywallRefusal`).
+  describe('paywall refusal mark', () => {
+    function rejectWith(status: number, code: string) {
+      apiClient.defaults.adapter = async (config) => {
+        throw new AxiosError('x', AxiosError.ERR_BAD_REQUEST, config, null, {
+          data: { success: false, error: { code } },
+          status,
+          statusText: 'x',
+          headers: {},
+          config,
+        });
+      };
+      return apiClient.patch('/circles/c1/members/u1/role', { role: 'manager' }).catch((e: unknown) => e);
+    }
+
+    it('POSITIVE: a 402 SUBSCRIPTION_REQUIRED body is marked', async () => {
+      const { isPaywallRefusal } = await import('@/lib/apiErrors');
+      expect(isPaywallRefusal(await rejectWith(402, 'SUBSCRIPTION_REQUIRED'))).toBe(true);
+    });
+
+    it('NEGATIVE: a 403 SUBSCRIPTION_REQUIRED (lapsed circle) and a 402 with another code are not', async () => {
+      const { isPaywallRefusal } = await import('@/lib/apiErrors');
+      expect(isPaywallRefusal(await rejectWith(403, 'SUBSCRIPTION_REQUIRED'))).toBe(false);
+      expect(isPaywallRefusal(await rejectWith(402, 'PAYMENT_REQUIRED'))).toBe(false);
+    });
+  });
 });

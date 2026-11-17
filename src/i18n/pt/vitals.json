@@ -1,4 +1,11 @@
 {
+  "unitsPrompt": {
+    "title": "Usar {{weight}} e {{temperature}}?",
+    "message": "Onde você está, o peso costuma ser medido em {{weight}} e a temperatura em {{temperature}}. Suas medições continuam exatamente como registradas; só muda a forma como aparecem. Você pode alterar isso em Configurações, na seção Unidades.",
+    "messageGlucose": "Onde você está, o peso costuma ser medido em {{weight}}, a temperatura em {{temperature}} e a glicose em {{glucose}}. Suas medições continuam exatamente como registradas; só muda a forma como aparecem. Você pode alterar isso em Configurações, na seção Unidades.",
+    "switch": "Mudar",
+    "keep": "Manter {{weight}} e {{temperature}}"
+  },
   "title": "Sinais vitais",
   "subtitle": "Acompanhe as medições de saúde do seu círculo: pressão arterial, frequência cardíaca, glicose, peso, temperatura e oxigênio no sangue.",
   "loading": "Carregando sinais vitais",

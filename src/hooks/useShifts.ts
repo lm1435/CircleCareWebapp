@@ -32,7 +32,7 @@ import { useCircle } from '@/hooks/useCircle';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { classifyShiftFailure, describeShiftFailure } from '@/lib/shiftErrors';
-import { failureContext, type FailureAction } from '@/lib/apiErrors';
+import { failureContext, type FailureAction, isPaywallRefusal } from '@/lib/apiErrors';
 import { queryKeys } from '@/lib/queryKeys';
 import { Analytics } from '@/lib/analytics';
 import { raiseReviewMoment } from '@/lib/reviewMoments';
@@ -253,7 +253,8 @@ export function useShiftMutationOnError(
   return useCallback(
     (error: unknown) => {
       // `error_occurred` for the admin digest: enums only, no circle_id.
-      Analytics.errorOccurred('shifts', `shifts_${action}_failed`, failureContext('shifts', action, error));
+      // A 402 SUBSCRIPTION_REQUIRED is a paywall moment (the upgrade prompt below), not an error.
+      if (!isPaywallRefusal(error)) Analytics.errorOccurred('shifts', `shifts_${action}_failed`, failureContext('shifts', action, error));
       const kind = classifyShiftFailure(error);
       if (kind === 'already_taken') Analytics.shiftTakeConflict();
       if (kind === 'subscription') {
