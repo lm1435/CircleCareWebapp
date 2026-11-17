@@ -64,6 +64,8 @@ import iconLogoApple from '../../../node_modules/ionicons/dist/svg/logo-apple.sv
 import iconLogoGoogle from '../../../node_modules/ionicons/dist/svg/logo-google.svg?raw';
 import iconLogOutOutline from '../../../node_modules/ionicons/dist/svg/log-out-outline.svg?raw';
 import iconRemove from '../../../node_modules/ionicons/dist/svg/remove.svg?raw';
+import iconPlay from '../../../node_modules/ionicons/dist/svg/play.svg?raw';
+import iconPause from '../../../node_modules/ionicons/dist/svg/pause.svg?raw';
 
 /**
  * Only glyphs the mobile app uses (mobile/src, @expo/vector-icons Ionicons).
@@ -133,6 +135,8 @@ export const ICON_NAMES = [
   'logo-google',
   'log-out-outline', // mobile ProfileScreen sign-out row
   'remove', // mobile VitalsDetailScreen's stable-trend glyph
+  'play', // 1.4.3 preview video pause / play control (mobile PreviewScreen)
+  'pause',
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];
@@ -202,4 +206,6 @@ export const ICON_FILES: Record<IconName, string> = {
   'logo-google': iconLogoGoogle,
   'log-out-outline': iconLogOutOutline,
   remove: iconRemove,
+  play: iconPlay,
+  pause: iconPause,
 };

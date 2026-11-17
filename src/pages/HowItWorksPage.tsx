@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useAppConfig } from '@/hooks/useAppConfig';
 import { resolvePreviewVideo, type PreviewVideoSource } from '@/lib/previewVideo';
 import { prefersReducedMotion } from '@/components/ui/motion';
+import { Icon } from '@/components/ui';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Analytics } from '@/lib/analytics';
@@ -130,17 +131,7 @@ function PreviewVideo({
           aria-label={playing ? t('preview.pauseVideo') : t('preview.playVideo')}
           className="absolute right-3 bottom-3 inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-card text-ink shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-deep"
         >
-          {/* Inline glyphs (two shapes; not worth two bundled icon files). */}
-          {playing ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-              <rect x="6" y="5" width="4" height="14" rx="1" />
-              <rect x="14" y="5" width="4" height="14" rx="1" />
-            </svg>
-          ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-              <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" />
-            </svg>
-          )}
+          <Icon name={playing ? 'pause' : 'play'} size="inline" />
         </button>
       </div>
     </>
