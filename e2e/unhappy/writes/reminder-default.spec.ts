@@ -109,7 +109,8 @@ test('an Any time task shows the Reminders OFF card (not a button) and stores no
       `select concat_ws(',', reminder_at_due, reminder_24h, reminder_1h, reminder_30m, reminder_15m) as r
          from calendar_events where circle_id = ${sqlStr(circleId)}::uuid and title = ${sqlStr(title)}`
     ).map((row) => row.r);
-    expect(stored).toEqual(['false,false,false,false,false']);
+    // Postgres text-casts a boolean as 't' / 'f' inside concat_ws.
+    expect(stored).toEqual(['f,f,f,f,f']);
   } finally {
     purgeEventsTitled(circleId, title);
   }
