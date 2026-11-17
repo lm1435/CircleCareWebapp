@@ -48,7 +48,9 @@
     "memberRoleChanged": {
       "manager": "{{name}} ora aiuta a gestire la cerchia",
       "member": "{{name}} non aiuta più a gestire la cerchia"
-    }
+    },
+    "inviteDeclined": "{{name}} ha rifiutato l’invito",
+    "inviteDeclinedUnknown": "Un invito è stato rifiutato"
   },
   "phrases": {
     "confirmedMedication": "Farmaco confermato:",
@@ -84,7 +86,8 @@
     "importedAppointment_other": "Ha importato {{count}} appuntamenti dal calendario",
     "changedAnswer": "(ha modificato la risposta di un altro caregiver)",
     "loggedDose": "Dose registrata:",
-    "removedLoggedDose": "Dose registrata rimossa:"
+    "removedLoggedDose": "Dose registrata rimossa:",
+    "declinedInvite": "ha rifiutato l’invito"
   },
   "sentences": {
     "memberLeft": "Un membro ha lasciato la cerchia",

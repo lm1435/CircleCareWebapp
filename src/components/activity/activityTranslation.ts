@@ -282,6 +282,11 @@ const KEY_RENDERERS = new Map<string, KeyRenderer>(Object.entries({
     ctx.t('entries.memberJoined.careRecipientUnknown') },
   'entries.memberJoined.caregiverUnknown': { requires: [], render: (_p, ctx) =>
     ctx.t('entries.memberJoined.caregiverUnknown') },
+  // 1.4.3 invite decline (docs/plans/invite-decline-1-4-3.md), mobile parity.
+  'entries.inviteDeclined': { requires: ['name'], render: (p, ctx) =>
+    ctx.t('entries.inviteDeclined', { name: p.name ?? '' }) },
+  'entries.inviteDeclinedUnknown': { requires: [], render: (_p, ctx) =>
+    ctx.t('entries.inviteDeclinedUnknown') },
   // Notes first-class (Slice 1/2, plan docs/plans/notes-first-class.md task
   // 24). `careNoteAdded` carries NO params -- there is no subject to
   // interpolate, just "someone added a daily care note" -- so `requires` is
@@ -557,6 +562,9 @@ export function translateActivityDescription(
     // at the END so no existing phrase's substitution order changes.
     'Removed a logged dose:': t('phrases.removedLoggedDose'),
     'Logged a dose:': t('phrases.loggedDose'),
+    // 1.4.3 invite decline, keyless/legacy path: the backend's fixed English phrases (mobile parity).
+    'An invite was declined': t('entries.inviteDeclinedUnknown'),
+    'declined the invite': t('phrases.declinedInvite'),
   };
 
   // Legacy "Logged a dose: X at 2:30 PM" (a time-bearing as-needed row): the whole

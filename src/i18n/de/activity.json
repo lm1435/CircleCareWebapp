@@ -48,7 +48,9 @@
     "memberRoleChanged": {
       "manager": "{{name}} verwaltet den Kreis jetzt mit",
       "member": "{{name}} verwaltet den Kreis nicht mehr mit"
-    }
+    },
+    "inviteDeclined": "{{name}} hat die Einladung abgelehnt",
+    "inviteDeclinedUnknown": "Eine Einladung wurde abgelehnt"
   },
   "phrases": {
     "confirmedMedication": "Medikament bestätigt:",
@@ -84,7 +86,8 @@
     "importedAppointment_other": "{{count}} Termine aus dem Kalender importiert",
     "changedAnswer": "(hat die Antwort einer anderen Pflegeperson geändert)",
     "loggedDose": "Dosis eingetragen:",
-    "removedLoggedDose": "Eingetragene Dosis entfernt:"
+    "removedLoggedDose": "Eingetragene Dosis entfernt:",
+    "declinedInvite": "hat die Einladung abgelehnt"
   },
   "sentences": {
     "memberLeft": "Ein Mitglied hat den Kreis verlassen",

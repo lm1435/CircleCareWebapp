@@ -48,7 +48,9 @@
     "memberRoleChanged": {
       "manager": "{{name}} is now a manager",
       "member": "{{name}} is no longer a manager"
-    }
+    },
+    "inviteDeclined": "{{name}} declined the invite",
+    "inviteDeclinedUnknown": "An invite was declined"
   },
   "phrases": {
     "confirmedMedication": "Confirmed Medication:",
@@ -84,7 +86,8 @@
     "importedAppointment_other": "Imported {{count}} appointments from calendar",
     "changedAnswer": "(changed another caregiver's answer)",
     "loggedDose": "Logged a dose:",
-    "removedLoggedDose": "Removed a logged dose:"
+    "removedLoggedDose": "Removed a logged dose:",
+    "declinedInvite": "declined the invite"
   },
   "sentences": {
     "memberLeft": "A member left the circle",

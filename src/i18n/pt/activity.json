@@ -48,7 +48,9 @@
     "memberRoleChanged": {
       "manager": "{{name}} agora ajuda a gerenciar o círculo",
       "member": "{{name}} não ajuda mais a gerenciar o círculo"
-    }
+    },
+    "inviteDeclined": "{{name}} recusou o convite",
+    "inviteDeclinedUnknown": "Um convite foi recusado"
   },
   "phrases": {
     "confirmedMedication": "Medicamento confirmado:",
@@ -84,7 +86,8 @@
     "importedAppointment_other": "{{count}} consultas importadas do calendário",
     "changedAnswer": "(alterou a resposta de outro cuidador)",
     "loggedDose": "Registrou uma dose:",
-    "removedLoggedDose": "Removeu uma dose registrada:"
+    "removedLoggedDose": "Removeu uma dose registrada:",
+    "declinedInvite": "recusou o convite"
   },
   "sentences": {
     "memberLeft": "Um membro saiu do círculo",

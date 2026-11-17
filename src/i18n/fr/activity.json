@@ -48,7 +48,9 @@
     "memberRoleChanged": {
       "manager": "{{name}} aide désormais à gérer le cercle",
       "member": "{{name}} n’aide plus à gérer le cercle"
-    }
+    },
+    "inviteDeclined": "{{name}} a refusé l’invitation",
+    "inviteDeclinedUnknown": "Une invitation a été refusée"
   },
   "phrases": {
     "confirmedMedication": "Médicament confirmé :",
@@ -84,7 +86,8 @@
     "importedAppointment_other": "{{count}} rendez-vous importés depuis le calendrier",
     "changedAnswer": "(a modifié la réponse d’un autre aidant)",
     "loggedDose": "Dose enregistrée :",
-    "removedLoggedDose": "Dose enregistrée supprimée :"
+    "removedLoggedDose": "Dose enregistrée supprimée :",
+    "declinedInvite": "a refusé l’invitation"
   },
   "sentences": {
     "memberLeft": "Un membre a quitté le cercle",
