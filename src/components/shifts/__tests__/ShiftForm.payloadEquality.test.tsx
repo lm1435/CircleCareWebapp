@@ -250,8 +250,18 @@ async function fill(answers: Answers, editing: boolean): Promise<void> {
     if (CAPTURE) {
       await user.selectOptions(screen.getByLabelText('Reminder'), answers.reminder);
     } else {
-      const group = screen.getByRole('radiogroup', { name: 'Reminder' });
-      await user.click(within(group).getByRole('radio', { name: REMINDER_LABEL[answers.reminder] }));
+      // 2026-11-16 (later): "Enable notifications" is Off; the rows ("1 hour before" ...) are the lead times.
+      const toggle = screen.getByRole('switch', { name: 'Enable notifications' });
+      const on = toggle.getAttribute('aria-checked') === 'true';
+      if (answers.reminder === 'off') {
+        if (on) await user.click(toggle);
+      } else {
+        if (!on) await user.click(toggle);
+        const group = screen.getByRole('radiogroup', { name: 'Remind before the shift' });
+        await user.click(
+          within(group).getByRole('radio', { name: `${REMINDER_LABEL[answers.reminder]} before` })
+        );
+      }
     }
   }
   if (answers.repeatEnd !== undefined) {

@@ -143,6 +143,7 @@
     "endsOn": "La répétition s’arrête",
     "reminderHint": "Envoyé à la personne qui assure la garde.",
     "reminderHintOpen": "Envoyé à la personne qui prend la garde, si elle la prend avant l’heure du rappel.",
+    "remindBefore": "Rappeler avant la garde",
     "whenQuestion": "Quand ?",
     "howOften": "À quelle fréquence ?",
     "once": "Une fois",

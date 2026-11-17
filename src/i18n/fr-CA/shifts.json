@@ -58,6 +58,7 @@
     "save": "Enregistrer le quart",
     "reminderHint": "Envoyé à la personne qui assure le quart.",
     "reminderHintOpen": "Envoyé à la personne qui prend le quart, si elle le prend avant l’heure du rappel.",
+    "remindBefore": "Rappeler avant le quart",
     "editScopeLabel": "Quels quarts ?",
     "nameQuestion": "Comment s’appelle le quart ?",
     "openHint": "Un quart à pourvoir peut être pris par n’importe qui dans le cercle."

@@ -14,6 +14,12 @@ export interface CheckboxProps {
   disabled?: boolean;
   /** Optional explicit id; auto-generated otherwise. */
   id?: string;
+  /**
+   * `radio`: the same box, announced as one option of a single choice (the parent is a
+   * `role="radiogroup"`). The shift reminder card draws the task card's rows but stores ONE lead time.
+   */
+  role?: 'checkbox' | 'radio';
+  'data-testid'?: string;
 }
 
 /**
@@ -44,6 +50,8 @@ export function Checkbox({
   hint,
   disabled = false,
   id,
+  role = 'checkbox',
+  'data-testid': testId,
 }: CheckboxProps): ReactNode {
   const generatedId = useId();
   const checkboxId = id ?? generatedId;
@@ -60,8 +68,9 @@ export function Checkbox({
       <button
         id={checkboxId}
         type="button"
-        role="checkbox"
+        role={role}
         aria-checked={checked}
+        data-testid={testId}
         aria-labelledby={labelId}
         aria-describedby={hint ? hintId : undefined}
         disabled={disabled}

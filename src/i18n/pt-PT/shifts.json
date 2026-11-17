@@ -70,6 +70,7 @@
     "save": "Guardar turno",
     "reminderHint": "Enviado a quem está no turno.",
     "reminderHintOpen": "Enviado a quem assumir o turno, se o assumir antes da hora do lembrete.",
+    "remindBefore": "Lembrar antes do turno",
     "editScopeLabel": "Quais turnos?",
     "nameQuestion": "Como se chama o turno?",
     "everyWeek": "Todas as semanas",

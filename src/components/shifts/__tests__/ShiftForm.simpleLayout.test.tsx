@@ -109,6 +109,11 @@ const setTime = (which: 'start' | 'end', value: string) => {
   fireEvent.change(field(id), { target: { value } });
 };
 const group = (name: string) => screen.getByRole('radiogroup', { name });
+const REMIND = 'Remind before the shift';
+const nameOf = (el: HTMLElement) =>
+  document.getElementById(el.getAttribute('aria-labelledby') ?? '')?.textContent ?? '';
+const ROW_LABELS = ['1 day before', '4 hours before', '2 hours before', '1 hour before'];
+const reminderSwitch = () => screen.getByRole('switch', { name: 'Enable notifications' });
 const CUSTOM_REPEATS = ['Every other day', 'Days on / off', 'Some days', 'Monthly', 'Yearly'];
 const radio = (groupName: string, name: string | RegExp) => {
   // The rarer repeats sit behind "Custom…" (approved mock 2026-11-08): open it when the tile is not shown.
@@ -519,28 +524,81 @@ describe('simple shift form: the Reminders card (main form)', () => {
     expect(remindersRow()).toHaveAccessibleName('Reminders: 1 hour before');
     expect(remindersRow()).toHaveAttribute('aria-expanded', 'false');
     expect(reminderValue()).toBe('1 hour before');
-    // Folded: the tiles are not exposed until the card is opened.
-    expect(screen.queryByRole('radiogroup', { name: 'Reminder' })).toBeNull();
+    // Folded: the card's controls are not exposed until it is opened.
+    expect(screen.queryByRole('radiogroup', { name: 'Remind before the shift' })).toBeNull();
+    expect(screen.queryByRole('switch', { name: 'Enable notifications' })).toBeNull();
   });
 
-  it('P: opens to the five tiles (1 hour checked) and the assigned-shift hint; folds again', async () => {
+  it('P: opens to the task-style card: Enable notifications on, "Remind before the shift", four rows, 1 hour checked; folds again', async () => {
     const user = userEvent.setup();
     open();
     await user.click(radio("Who's with Rosa?", /^Ana/));
     await openReminders(user);
     expect(Analytics.shiftFormReminderExpanded).toHaveBeenCalledWith({ editing: false });
-    expect(within(group('Reminder')).getAllByRole('radio').map((r) => r.textContent)).toEqual([
-      'Off',
-      '1 hour',
-      '2 hours',
-      '4 hours',
-      '1 day',
-    ]);
-    expect(radio('Reminder', '1 hour')).toBeChecked();
+    expect(reminderSwitch()).toBeChecked();
+    expect(within(group(REMIND)).getAllByRole('radio').map(nameOf)).toEqual(ROW_LABELS);
+    for (const l of ROW_LABELS) expect(radio(REMIND, l)).toHaveAttribute('aria-checked', String(l === '1 hour before'));
+    expect(screen.queryByRole('radio', { name: 'Off' })).toBeNull();
     expect(screen.getByTestId('shift-form-reminder-hint')).toHaveTextContent('Sent to whoever is on the shift.');
     await user.click(remindersRow());
     expect(remindersRow()).toHaveAttribute('aria-expanded', 'false');
     expect(Analytics.shiftFormReminderExpanded).toHaveBeenCalledTimes(1);
+  });
+
+  it('N: the rows are radios in a radiogroup (single choice), not checkboxes', async () => {
+    const user = userEvent.setup();
+    open();
+    await openReminders(user);
+    expect(within(group(REMIND)).getAllByRole('radio')).toHaveLength(4);
+    expect(within(group(REMIND)).queryAllByRole('checkbox')).toHaveLength(0);
+    for (const r of within(group(REMIND)).getAllByRole('radio')) expect(r).toHaveAttribute('aria-checked');
+  });
+
+  it('N: only one row can be checked; re-clicking the checked row keeps it (Off is the toggle)', async () => {
+    const user = userEvent.setup();
+    open();
+    await openReminders(user);
+    await user.click(radio(REMIND, '4 hours before'));
+    await user.click(radio(REMIND, '1 day before'));
+    const checkedRows = () =>
+      within(group(REMIND)).getAllByRole('radio').filter((r) => r.getAttribute('aria-checked') === 'true');
+    expect(checkedRows().map(nameOf)).toEqual(['1 day before']);
+    await user.click(radio(REMIND, '1 day before'));
+    expect(checkedRows().map(nameOf)).toEqual(['1 day before']);
+    expect(reminderSwitch()).toBeChecked();
+  });
+
+  it('P: the toggle off greys the list (shown, disabled) and saves Off; back on restores the last choice', async () => {
+    const user = userEvent.setup();
+    open();
+    await user.type(field('shift_name'), 'Night');
+    await openReminders(user);
+    await user.click(radio(REMIND, '2 hours before'));
+    await user.click(reminderSwitch());
+    expect(reminderValue()).toBe('Off');
+    expect(group(REMIND)).toHaveAttribute('aria-disabled', 'true');
+    for (const l of ROW_LABELS) {
+      expect(radio(REMIND, l)).toBeDisabled();
+      expect(radio(REMIND, l)).toHaveAttribute('aria-checked', 'false');
+    }
+    await user.click(reminderSwitch());
+    expect(reminderValue()).toBe('2 hours before');
+    expect(radio(REMIND, '2 hours before')).toHaveAttribute('aria-checked', 'true');
+    expect(radio(REMIND, '2 hours before')).toBeEnabled();
+    await user.click(reminderSwitch());
+    await user.click(screen.getByRole('button', { name: 'Save shift' }));
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+    expect(JSON.stringify(mockCreate.mock.calls[0])).toContain('"reminder_lead_minutes":null');
+  });
+
+  it('P: back on with no lead ever picked (an existing Off shift) restores the 1 hour default', async () => {
+    const user = userEvent.setup();
+    open({ shift: shift({ reminder_lead_minutes: null }) });
+    await openReminders(user);
+    expect(reminderSwitch()).not.toBeChecked();
+    await user.click(reminderSwitch());
+    expect(reminderValue()).toBe('1 hour before');
+    expect(radio(REMIND, '1 hour before')).toHaveAttribute('aria-checked', 'true');
   });
 
   it('P: an OPEN shift ("Leave open") says who actually gets it: whoever takes it before the reminder time', async () => {
@@ -555,33 +613,34 @@ describe('simple shift form: the Reminders card (main form)', () => {
     expect(screen.getByTestId('shift-form-reminder-hint')).toHaveTextContent('Sent to whoever is on the shift.');
   });
 
-  it('P: a tile updates the row line and is what saves', async () => {
+  it('P: a row updates the row line and is what saves (2 hours)', async () => {
     const user = userEvent.setup();
     open();
     await user.type(field('shift_name'), 'Night');
     await openReminders(user);
-    await user.click(radio('Reminder', '1 day'));
+    await user.click(radio(REMIND, '1 day before'));
     expect(reminderValue()).toBe('1 day before');
-    await user.click(radio('Reminder', 'Off'));
-    expect(reminderValue()).toBe('Off');
+    await user.click(radio(REMIND, '2 hours before'));
+    expect(reminderValue()).toBe('2 hours before');
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
     await waitFor(() => expect(mockCreate).toHaveBeenCalled());
-    expect(JSON.stringify(mockCreate.mock.calls[0])).toContain('"reminder_lead_minutes":null');
+    expect(JSON.stringify(mockCreate.mock.calls[0])).toContain('"reminder_lead_minutes":120');
   });
 
   it.each([
-    [null, 'off', 'Off'],
-    [60, '1 hour', '1 hour before'],
-    [120, '2 hours', '2 hours before'],
-    [240, '4 hours', '4 hours before'],
-    [1440, '1 day', '1 day before'],
-  ] as const)('N: an existing shift keeps its saved reminder %s (row line, checked tile, untouched save)', async (lead, label, line) => {
+    [null, null, 'Off'],
+    [60, '1 hour before', '1 hour before'],
+    [120, '2 hours before', '2 hours before'],
+    [240, '4 hours before', '4 hours before'],
+    [1440, '1 day before', '1 day before'],
+  ] as const)('N: an existing shift keeps its saved reminder %s (row line, toggle + checked row, untouched save)', async (lead, label, line) => {
     const user = userEvent.setup();
     open({ shift: shift({ reminder_lead_minutes: lead }) });
     expect(reminderValue()).toBe(line);
     await openReminders(user);
     expect(Analytics.shiftFormReminderExpanded).toHaveBeenCalledWith({ editing: true });
-    expect(radio('Reminder', new RegExp(`^${label}$`, 'i'))).toBeChecked();
+    expect(reminderSwitch()).toHaveAttribute('aria-checked', String(lead !== null));
+    for (const l of ROW_LABELS) expect(radio(REMIND, l)).toHaveAttribute('aria-checked', String(l === label));
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
     expect(JSON.stringify(mockUpdate.mock.calls[0])).toContain(`"reminder_lead_minutes":${lead}`);
@@ -609,7 +668,7 @@ describe('simple shift form: More details (the repeat end only)', () => {
     await user.click(moreToggle());
     // Open, it holds the repeat end and no reminder tiles.
     expect(field('shift_repeat_end')).toBeInTheDocument();
-    expect(screen.queryByRole('radiogroup', { name: 'Reminder' })).toBeNull();
+    expect(screen.queryByRole('radiogroup', { name: REMIND })).toBeNull();
     fireEvent.change(field('shift_repeat_end'), { target: { value: '2027-06-30' } });
     await user.click(moreToggle());
     expect(summary()).toBe('Repeat ends: Jun 30, 2027');
@@ -655,7 +714,7 @@ describe('simple shift form: add the next shift', () => {
     await user.type(field('shift_name'), 'Morning');
     await user.click(radio('How often?', 'Every day'));
     await openReminders(user);
-    await user.click(radio('Reminder', '2 hours'));
+    await user.click(radio(REMIND, '2 hours before'));
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
     expect(await screen.findByRole('heading', { name: '"Morning" saved' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^Add (the next|another) shift$/ }));

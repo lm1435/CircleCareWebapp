@@ -143,6 +143,7 @@
     "endsOn": "A repetição termina",
     "reminderHint": "Enviado a quem está no plantão.",
     "reminderHintOpen": "Enviado a quem assumir o plantão, se assumir antes do horário do lembrete.",
+    "remindBefore": "Lembrar antes do plantão",
     "whenQuestion": "Quando?",
     "howOften": "Com que frequência?",
     "once": "Uma vez",

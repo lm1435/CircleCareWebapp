@@ -143,6 +143,7 @@
     "endsOn": "Repeat ends",
     "reminderHint": "Sent to whoever is on the shift.",
     "reminderHintOpen": "Sent to whoever takes the shift, if they take it before the reminder time.",
+    "remindBefore": "Remind before the shift",
     "whenQuestion": "When?",
     "howOften": "How often?",
     "once": "Once",

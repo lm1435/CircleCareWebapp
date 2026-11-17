@@ -143,6 +143,7 @@
     "endsOn": "Wiederholung endet",
     "reminderHint": "Wird an die Person gesendet, die die Schicht hat.",
     "reminderHintOpen": "Wird an die Person gesendet, die die Schicht übernimmt, wenn sie das vor dem Erinnerungszeitpunkt tut.",
+    "remindBefore": "Vor der Schicht erinnern",
     "whenQuestion": "Wann?",
     "howOften": "Wie oft?",
     "once": "Einmal",

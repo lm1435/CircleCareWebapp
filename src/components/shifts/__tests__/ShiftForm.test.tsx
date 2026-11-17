@@ -129,7 +129,9 @@ const openReminders = async (user: ReturnType<typeof userEvent.setup>) => {
 const chooseReminder = async (user: ReturnType<typeof userEvent.setup>, label: string) => {
   await openReminders(user);
   await user.click(
-    within(screen.getByRole('radiogroup', { name: 'Reminder' })).getByRole('radio', { name: label })
+    within(screen.getByRole('radiogroup', { name: 'Remind before the shift' })).getByRole('radio', {
+      name: label,
+    })
   );
 };
 
@@ -276,7 +278,7 @@ describe('ShiftFormModal (create)', () => {
     setTime('end', '17:00');
     await chooseRepeat(user, 'Some days');
     await user.click(screen.getByRole('radio', { name: 'Me' }));
-    await chooseReminder(user, '1 day');
+    await chooseReminder(user, '1 day before');
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
     await waitFor(() => expect(mockCreate).toHaveBeenCalled());
     const body = mockCreate.mock.calls[0][1];
@@ -487,7 +489,7 @@ describe('ShiftComposer: saved sheet and "Add the next shift"', () => {
     setTime('start', '08:00');
     setTime('end', '14:00');
     await chooseRepeat(user, 'Every day');
-    await chooseReminder(user, '2 hours');
+    await chooseReminder(user, '2 hours before');
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
 
     expect(await screen.findByRole('heading', { name: '"Morning" saved' })).toBeInTheDocument();
@@ -504,7 +506,7 @@ describe('ShiftComposer: saved sheet and "Add the next shift"', () => {
     expect(field('shift_date')).toHaveValue('2026-10-20');
     expect(screen.getByRole('radio', { name: 'Every day' })).toBeChecked();
     await openReminders(user);
-    expect(screen.getByRole('radio', { name: '2 hours' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: '2 hours before' })).toBeChecked();
 
     // The second save is attributed to add_next.
     await user.type(nameField(), 'Afternoon');

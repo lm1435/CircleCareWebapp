@@ -151,6 +151,12 @@ test.describe('premium owner', () => {
     const reminders = form.getByRole('button', { name: 'Reminders: 1 hour before' });
     await expect(reminders).toBeVisible();
     await reminders.click();
+    // Open, it is the task card's contents: "Enable notifications" on, then "Remind before the shift" and four
+    // single-choice rows (1 hour checked); the DB assertion below still expects the 1 hour default.
+    await expect(form.getByRole('switch', { name: 'Enable notifications' })).toBeChecked();
+    const remindBefore = form.getByRole('radiogroup', { name: 'Remind before the shift' });
+    await expect(remindBefore.getByRole('radio')).toHaveCount(4);
+    await expect(remindBefore.getByRole('radio', { name: '1 hour before' })).toBeChecked();
     await expect(form.getByTestId('shift-form-reminder-hint')).toHaveText(
       'Sent to whoever takes the shift, if they take it before the reminder time.'
     );

@@ -143,6 +143,7 @@
     "endsOn": "La ripetizione termina",
     "reminderHint": "Inviato a chi ha il turno.",
     "reminderHintOpen": "Inviato a chi prende il turno, se lo prende prima dell’orario del promemoria.",
+    "remindBefore": "Ricorda prima del turno",
     "whenQuestion": "Quando?",
     "howOften": "Con che frequenza?",
     "once": "Una volta",

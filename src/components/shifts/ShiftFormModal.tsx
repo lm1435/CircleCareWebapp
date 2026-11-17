@@ -10,6 +10,7 @@ import {
 import {
   Button,
   Card,
+  Checkbox,
   ChipSelect,
   ChoiceTileButton,
   DateField,
@@ -20,6 +21,7 @@ import {
   Text,
   TextField,
   TimeField,
+  Toggle,
   useToast,
   type FieldErrors,
   RequiredMarker,
@@ -68,7 +70,6 @@ import {
   formatShiftDuration,
   formatShiftRepeat,
   formatShiftReminder,
-  formatShiftReminderChip,
   isShiftRepeating,
   memberShortName,
   recurrenceEnum,
@@ -127,6 +128,8 @@ const REMINDER_OPTIONS: Array<{ value: string; lead: number | null }> = [
   { value: '240', lead: 240 },
   { value: '1440', lead: 1440 },
 ];
+/** The Reminders card's rows, longest lead first (the task card's order). Off is the toggle. */
+const REMINDER_ROWS = ['1440', '240', '120', '60'].map((v) => REMINDER_OPTIONS.find((o) => o.value === v)!);
 
 const DEFAULT_START = '08:00';
 const DEFAULT_END = '14:00';
@@ -332,6 +335,10 @@ function ShiftFormBody({
   const [moreOpen, setMoreOpen] = useState(false);
   // The Reminders card under "Who's with" (owner 2026-11-16): an accordion like the other forms', folded.
   const [reminderOpen, setReminderOpen] = useState(false);
+  // What "Enable notifications" turns back on to: the last lead picked (1 hour when none).
+  const [lastReminder, setLastReminder] = useState<string>(() =>
+    reminder === 'off' ? String(DEFAULT_SHIFT_REMINDER_LEAD) : reminder
+  );
   // An element to focus once the render that mounted / revealed it has happened.
   const [focusAfter, setFocusAfter] = useState<string | null>(null);
   useEffect(() => {
@@ -1061,22 +1068,46 @@ function ShiftFormBody({
           }}
         >
           <div className="flex flex-col gap-3">
-            <ChipSelect
-              id="shift_reminder"
-              label={t('shifts:form.reminder')}
-              variant="tile"
-              allowDeselect={false}
-              options={REMINDER_OPTIONS.map((o) => ({
-                value: o.value,
-                // The short chip wording mobile shows ("1 hour"); the read-only rows
-                // elsewhere say "1 hour before".
-                label: formatShiftReminderChip(o.lead, t),
-              }))}
-              value={reminder}
-              onChange={(next) => {
-                if (next) setReminder(next);
-              }}
+            {/* The task card's Reminders contents (AddEventModal): "Enable notifications" (Off), then
+                "Remind before the shift" and the task card's checkbox rows. A shift stores ONE lead time,
+                so the rows are a radiogroup: checking one unchecks the others, re-checking does nothing.
+                Off keeps the list shown, greyed; back on restores the last lead picked (1 hour if none). */}
+            <Toggle
+              id="shift_reminder_enabled"
+              label={t('calendar:addEvent.reminders.enable')}
+              checked={reminder !== 'off'}
+              onChange={(on) => setReminder(on ? lastReminder : 'off')}
             />
+            <div
+              role="radiogroup"
+              aria-labelledby="shift_reminder-label"
+              aria-describedby="shift_reminder-hint"
+              aria-disabled={reminder === 'off' ? true : undefined}
+              data-testid="shift-form-reminder"
+              className={`flex flex-col gap-2 rounded-xl border border-line-2 p-3 ${
+                reminder === 'off' ? 'opacity-60' : ''
+              }`}
+            >
+              <Text variant="label" as="span" id="shift_reminder-label">
+                {t('shifts:form.remindBefore')}
+              </Text>
+              {REMINDER_ROWS.map((o) => (
+                <Checkbox
+                  key={o.value}
+                  role="radio"
+                  data-testid={`shift-form-reminder-${o.value}`}
+                  label={formatShiftReminder(o.lead, t)}
+                  // Off: nothing is checked (the toggle restores `lastReminder`).
+                  checked={reminder === o.value}
+                  disabled={reminder === 'off'}
+                  onChange={() => {
+                    if (reminder === o.value) return;
+                    setReminder(o.value);
+                    setLastReminder(o.value);
+                  }}
+                />
+              ))}
+            </div>
             {/* An OPEN shift's reminder goes to whoever has taken it by then (the cron reads the assignee
                 at send time; none, no reminder): backend process_shift_alerts. */}
             <Text variant="caption" as="p" id="shift_reminder-hint" data-testid="shift-form-reminder-hint">
