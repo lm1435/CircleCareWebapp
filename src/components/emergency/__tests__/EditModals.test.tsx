@@ -3,6 +3,10 @@ import { neverSettles, submitFormTwice } from '@/test/doubleSubmit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cloneElement, type ReactElement, type ReactNode } from 'react';
 import '@/i18n';
+// A US browser regardless of the sweep zone (week start, phone seed): src/test/regionZonePin.ts.
+vi.mock('@/lib/regionResolver', async (orig) =>
+  (await import('@/test/regionZonePin')).withPinnedRegionZone(await orig<typeof import('@/lib/regionResolver')>())
+);
 
 // Mock the WRITE fn only — keep types/read fn + Zod intact. The mutation hook
 // (useUpdateEmergencyInfo) calls this; we assert on its argument (the partial

@@ -1,6 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/i18n';
+// A US browser regardless of the sweep zone (week start, phone seed): src/test/regionZonePin.ts.
+vi.mock('@/lib/regionResolver', async (orig) =>
+  (await import('@/test/regionZonePin')).withPinnedRegionZone(await orig<typeof import('@/lib/regionResolver')>())
+);
 import { ShiftCyclePanel } from '../ShiftCyclePanel';
 import { buildCyclePreview, previewRange } from '../shiftRotation';
 

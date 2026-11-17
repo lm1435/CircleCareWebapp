@@ -3,6 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
+// A US browser regardless of the sweep zone (week start, phone seed): src/test/regionZonePin.ts.
+vi.mock('@/lib/regionResolver', async (orig) =>
+  (await import('@/test/regionZonePin')).withPinnedRegionZone(await orig<typeof import('@/lib/regionResolver')>())
+);
 import { apiClient } from '@/lib/api';
 import type { EmergencyInfo } from '@/api/emergencyInfo';
 import { ToastProvider } from '@/components/ui';

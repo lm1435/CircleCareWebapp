@@ -2,6 +2,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactElement, ReactNode } from 'react';
 import '@/i18n';
+// A US browser regardless of the sweep zone (week start, phone seed): src/test/regionZonePin.ts.
+vi.mock('@/lib/regionResolver', async (orig) =>
+  (await import('@/test/regionZonePin')).withPinnedRegionZone(await orig<typeof import('@/lib/regionResolver')>())
+);
 
 // Mock the WRITE fn only (same as EditModals.test.tsx): "no network call" is
 // asserted on it.

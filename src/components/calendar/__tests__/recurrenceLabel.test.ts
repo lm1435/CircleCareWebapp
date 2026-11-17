@@ -13,6 +13,22 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/** The zone the browser region resolver reads (its step 2), for one test. */
+const realResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
+function stubTimeZone(timeZone: string) {
+  vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (
+    this: Intl.DateTimeFormat
+  ) {
+    return { ...realResolvedOptions.call(this), timeZone };
+  });
+}
+
+// A US zone unless a test says otherwise: the "no region" cases must not pick up the sweep's
+// process zone (a bare "en" browser in Europe/London IS GB, by design).
+beforeEach(() => {
+  stubTimeZone('America/Denver');
+});
+
 /** Passes the key through with its interpolations, so the exact output is visible. */
 const t = (key: string, opts?: Record<string, unknown>): string =>
   opts && Object.keys(opts).length ? `${key}(${JSON.stringify(opts)})` : key;
@@ -121,15 +137,6 @@ describe('week start follows the browser REGION (1.4.2 i18n audit D)', () => {
 });
 
 describe('week start uses THE shared region resolver (units, phone seed and week start agree)', () => {
-  function stubTimeZone(timeZone: string) {
-    const real = Intl.DateTimeFormat.prototype.resolvedOptions;
-    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (
-      this: Intl.DateTimeFormat
-    ) {
-      return { ...real.call(this), timeZone };
-    });
-  }
-
   // POSITIVE
   it('a bare "en" browser in Europe/London is GB (time zone step) and starts on Monday', () => {
     stubBrowserLanguages(['en']);

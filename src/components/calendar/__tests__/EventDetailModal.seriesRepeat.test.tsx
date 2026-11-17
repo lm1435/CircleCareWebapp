@@ -2,6 +2,10 @@ import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import '@/i18n';
+// A US browser regardless of the sweep zone (week start, phone seed): src/test/regionZonePin.ts.
+vi.mock('@/lib/regionResolver', async (orig) =>
+  (await import('@/test/regionZonePin')).withPinnedRegionZone(await orig<typeof import('@/lib/regionResolver')>())
+);
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { queryKeys } from '@/lib/queryKeys';
 import { EventDetailModal } from '../EventDetailModal';

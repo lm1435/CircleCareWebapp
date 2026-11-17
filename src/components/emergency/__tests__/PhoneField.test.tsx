@@ -1,6 +1,10 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { createRef, useState, type ReactElement } from 'react';
 import i18n from '@/i18n';
+// A US browser regardless of the sweep zone (week start, phone seed): src/test/regionZonePin.ts.
+vi.mock('@/lib/regionResolver', async (orig) =>
+  (await import('@/test/regionZonePin')).withPinnedRegionZone(await orig<typeof import('@/lib/regionResolver')>())
+);
 import { PhoneField, type PhoneFieldHandle } from '@/components/emergency/PhoneField';
 
 function country(): HTMLSelectElement {
