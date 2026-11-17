@@ -27,6 +27,7 @@ import {
 import { INPUT_ERROR } from '@/components/ui/inputStyles';
 import { DaysOfWeekPicker } from '@/components/calendar/DaysOfWeekPicker';
 import { DisclosureRow } from '@/components/calendar/DisclosureRow';
+import { RemindersSummaryRow } from '@/components/calendar/RemindersSummaryRow';
 import { formatWeekdayList } from '@/components/calendar/recurrenceLabel';
 import {
   formatDateForDisplay,
@@ -329,6 +330,8 @@ function ShiftFormBody({
   // The Starts / Ends tiles reveal their time input in place; a field with an error stays open.
   const [timeOpen, setTimeOpen] = useState({ start: false, end: false });
   const [moreOpen, setMoreOpen] = useState(false);
+  // The Reminders card under "Who's with" (owner 2026-11-16): an accordion like the other forms', folded.
+  const [reminderOpen, setReminderOpen] = useState(false);
   // An element to focus once the render that mounted / revealed it has happened.
   const [focusAfter, setFocusAfter] = useState<string | null>(null);
   useEffect(() => {
@@ -727,29 +730,21 @@ function ShiftFormBody({
     .filter(Boolean)
     .join(' · ');
 
-  // The folded "More details" line: the reminder, then (only when it repeats) when the repeat ends.
+  // The Reminders card's line: "1 hour before" / "Off".
   const reminderLead = REMINDER_OPTIONS.find((o) => o.value === reminder)?.lead ?? null;
-  const reminderSummary =
-    reminderLead === null
-      ? t('shifts:form.summaryReminderOff')
-      : t('shifts:form.summaryReminder', { reminder: formatShiftReminder(reminderLead, t) });
-  // The repeat-end FIELD exists on create only; the summary also names a repeating shift's stored end (read-only).
+  const reminderValue = formatShiftReminder(reminderLead, t);
+  // More details now holds ONLY the repeat end, a field a NEW repeating shift has; with nothing in it, the
+  // row is not shown at all (mobile parity).
   const showRepeatEnd = !isEditing && repeats;
-  const summaryRepeats = isEditing ? repeatingEdit : repeats;
-  const summaryEndDate = isEditing ? (shift?.recurrence_end_date ?? '') : repeatEndDate;
-  const moreSummary = summaryRepeats
-    ? `${reminderSummary} · ${
-        summaryEndDate
-          ? t('shifts:form.summaryRepeatEnds', {
-              date: formatDateForDisplay(
-                summaryEndDate,
-                { month: 'short', day: 'numeric', year: 'numeric' },
-                language
-              ),
-            })
-          : t('shifts:form.summaryRepeatEndsNever')
-      }`
-    : reminderSummary;
+  const moreSummary = repeatEndDate
+    ? t('shifts:form.summaryRepeatEnds', {
+        date: formatDateForDisplay(
+          repeatEndDate,
+          { month: 'short', day: 'numeric', year: 'numeric' },
+          language
+        ),
+      })
+    : t('shifts:form.summaryRepeatEndsNever');
 
   return (
     <Modal
@@ -1053,19 +1048,19 @@ function ShiftFormBody({
           )}
         </section>
 
-        <DisclosureRow
-          id="shift-more-details"
-          title={t('shifts:form.moreDetails')}
-          summary={moreSummary}
-          summaryTestId="shift-form-more-summary"
-          wrapSummary
-          open={moreOpen}
-          onToggle={setMoreOpen}
+        <RemindersSummaryRow
+          variant="summary"
+          valueText={reminderValue}
+          label={t('calendar:addEvent.reminders.summary.label', { value: reminderValue })}
+          expanded={reminderOpen}
+          panelId="shift-reminder-panel"
+          onPress={() => {
+            const opening = !reminderOpen;
+            setReminderOpen(opening);
+            if (opening) Analytics.shiftFormReminderExpanded({ editing: isEditing });
+          }}
         >
           <div className="flex flex-col gap-3">
-            <Text variant="label" as="h4" id="sf-reminder">
-              {t('shifts:form.reminder')}
-            </Text>
             <ChipSelect
               id="shift_reminder"
               label={t('shifts:form.reminder')}
@@ -1082,11 +1077,24 @@ function ShiftFormBody({
                 if (next) setReminder(next);
               }}
             />
-            <Text variant="caption" as="p" id="shift_reminder-hint">
-              {t('shifts:form.reminderHint')}
+            {/* An OPEN shift's reminder goes to whoever has taken it by then (the cron reads the assignee
+                at send time; none, no reminder): backend process_shift_alerts. */}
+            <Text variant="caption" as="p" id="shift_reminder-hint" data-testid="shift-form-reminder-hint">
+              {assignedTo ? t('shifts:form.reminderHint') : t('shifts:form.reminderHintOpen')}
             </Text>
           </div>
-          {showRepeatEnd && (
+        </RemindersSummaryRow>
+
+        {showRepeatEnd && (
+        <DisclosureRow
+          id="shift-more-details"
+          title={t('shifts:form.moreDetails')}
+          summary={moreSummary}
+          summaryTestId="shift-form-more-summary"
+          wrapSummary
+          open={moreOpen}
+          onToggle={setMoreOpen}
+        >
             <div className="flex flex-col gap-2">
               <DateField
                 id="shift_repeat_end"
@@ -1114,8 +1122,8 @@ function ShiftFormBody({
                 </button>
               )}
             </div>
-          )}
         </DisclosureRow>
+        )}
         {warnShown && (
           <p
             role="status"

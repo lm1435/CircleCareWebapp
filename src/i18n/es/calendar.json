@@ -245,8 +245,8 @@
         "nothingAtTime": "nada a la hora programada",
         "change": "Cambiar",
         "hint": "Muestra la configuración de recordatorios.",
-        "pickTime": "Elige una hora para recibir recordatorios",
-        "pickTimeLabel": "Recordatorios: elige una hora para recibir recordatorios. Lleva a la elección de hora."
+        "pickTime": "Elige una hora para activar los recordatorios",
+        "pickTimeLabel": "Recordatorios, desactivados. Elige una hora para activar los recordatorios"
       }
     },
     "validation": {

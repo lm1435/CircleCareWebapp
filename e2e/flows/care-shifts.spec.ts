@@ -124,7 +124,7 @@ test.describe('premium owner', () => {
 
     await empty.getByRole('button', { name: 'Add a shift' }).click();
     const form = page.getByRole('dialog', { name: 'New shift' });
-    // The simple layout: four headed sections, tiles for the choices, a folded "More details".
+    // The simple layout: four headed sections, tiles for the choices, the Reminders card and (repeating) "More details".
     await expect(form.getByRole('heading', { name: /^Who's with E2E/ })).toBeVisible();
     await expect(form.getByRole('heading', { level: 3 })).toHaveText([
       "What's the shift called? *", // the aria-hidden required asterisk is part of the visible text
@@ -146,9 +146,15 @@ test.describe('premium owner', () => {
     const tomorrow = dateInTz(s.tz, 1);
     await form.locator('#shift_date').fill(tomorrow);
     await form.getByRole('radiogroup', { name: 'How often?' }).getByRole('radio', { name: 'Every day' }).click();
-    await expect(form.getByTestId('shift-form-more-summary')).toHaveText(
-      'Reminder: 1 hour before · Repeat ends: never'
+    // 2026-11-16: the reminder is its own Reminders card under "Who's with" (1 hour default; an open shift's hint
+    // names whoever takes it), and More details holds only the repeat end.
+    const reminders = form.getByRole('button', { name: 'Reminders: 1 hour before' });
+    await expect(reminders).toBeVisible();
+    await reminders.click();
+    await expect(form.getByTestId('shift-form-reminder-hint')).toHaveText(
+      'Sent to whoever takes the shift, if they take it before the reminder time.'
     );
+    await expect(form.getByTestId('shift-form-more-summary')).toHaveText('Repeat ends: never');
     await checkA11y(page, 'shifts-form-light', testInfo);
     await form.getByRole('button', { name: 'Save shift' }).click();
 

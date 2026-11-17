@@ -245,8 +245,8 @@
         "nothingAtTime": "nichts zur geplanten Zeit",
         "change": "Ändern",
         "hint": "Zeigt die Einstellungen für Erinnerungen.",
-        "pickTime": "Wählen Sie eine Uhrzeit, um Erinnerungen zu erhalten",
-        "pickTimeLabel": "Erinnerungen: Wählen Sie eine Uhrzeit, um Erinnerungen zu erhalten. Führt zur Zeitauswahl."
+        "pickTime": "Wählen Sie eine Uhrzeit, um Erinnerungen einzuschalten",
+        "pickTimeLabel": "Erinnerungen, aus. Wählen Sie eine Uhrzeit, um Erinnerungen einzuschalten"
       }
     },
     "validation": {

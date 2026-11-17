@@ -8,6 +8,7 @@ import type { Provider } from '@/api/providers';
 import { Analytics } from '@/lib/analytics';
 import { resetLargeTextReports } from '@/lib/largeText';
 import { AddEventModal } from '../AddEventModal';
+import { untimedRemindersCleared } from '@/test/untimedReminders';
 
 // THE APPOINTMENT FORM ON THE TASK / SHIFT PATTERN (owner 2026-11-08, "cohesiveness"): When? = the date field +
 // a "Time" tile (revealing the SAME viewer-frame time field) + "Any time"; How often? = the task grid; Who's
@@ -499,12 +500,13 @@ if (CAPTURE) {
       expect(document.getElementById('row-repeat')).toBeNull();
     });
 
+    // DELIBERATE (owner 2026-11-16): an untimed appointment saves its reminders cleared. See test/untimedReminders.
     it.each(CREATE_CASES.map((c) => [c.name, c] as const))('%s', async (_name, c) => {
-      expect(await runCreate(c, 'new')).toEqual(OLD[c.name]);
+      expect(await runCreate(c, 'new')).toEqual(untimedRemindersCleared(OLD[c.name]));
     });
 
     it.each(EDIT_CASES.map((c) => [c.name, c] as const))('%s', async (_name, c) => {
-      expect(await runEdit(c, 'new')).toEqual(OLD[c.name]);
+      expect(await runEdit(c, 'new')).toEqual(untimedRemindersCleared(OLD[c.name], c.event));
     });
 
     it('byte-identical, not just deep-equal: key order too', async () => {

@@ -22,71 +22,95 @@ import {
  *    inline, directly under it, and folds it again; it never routes the user down the page. The panel
  *    stays MOUNTED while folded (`hidden`), so `aria-controls` always points at a real element and the
  *    card's state and ids are stable. Expanded, the header shows a chevron-up instead of "Change >".
- *  - `pickTime`: a task / appointment with no time yet (reminders need one). Muted, no "Change";
- *    the parent sends the tap to the form's time choice instead of More details.
+ *  - `off`: a task / appointment with no time yet (reminders need one; owner 2026-11-16). A
+ *    crossed-out bell, "Reminders" / "Pick a time to turn on reminders", a lighter border, no
+ *    chevron, and NOT a button: a disabled group read as "Reminders, off. Pick a time to turn on
+ *    reminders". Dimmed, not faint: ink-2 / ink-3 both keep AA contrast.
+ *
+ * The shift form uses the `summary` look too (one reminder, owner 2026-11-16): it passes its own
+ * `valueText` / `label` instead of a medication / task `summary`.
  */
 
 export type RemindersSummaryRowProps =
-  | {
+  | ({
       variant: 'summary';
-      summary: ReminderSummary;
       expanded: boolean;
       /** The panel's id (the button's aria-controls). */
       panelId: string;
       onPress: () => void;
       /** The Reminders card, shown in the panel while expanded. */
       children: ReactNode;
-    }
-  | { variant: 'pickTime'; onPress: () => void };
+    } & (
+      | { summary: ReminderSummary; valueText?: undefined; label?: undefined }
+      | { summary?: undefined; valueText: string; label: string }
+    ))
+  | { variant: 'off' };
 
 export function RemindersSummaryRow(props: RemindersSummaryRowProps): ReactElement {
   const { t, i18n } = useTranslation(['calendar', 'common']);
   const locale = i18n.language || 'en';
   const hintId = useId();
-  const isPickTime = props.variant === 'pickTime';
-  const value = isPickTime
-    ? t('addEvent.reminders.summary.pickTime')
-    : reminderSummaryText(t, props.summary, locale);
-  const label = isPickTime
-    ? t('addEvent.reminders.summary.pickTimeLabel')
-    : reminderSummaryLabel(t, props.summary, locale);
-  const expanded = props.variant === 'summary' && props.expanded;
+  if (props.variant === 'off') {
+    return (
+      <div
+        role="group"
+        aria-disabled="true"
+        aria-label={t('addEvent.reminders.summary.pickTimeLabel')}
+        data-testid="reminders-summary-row"
+        data-variant="off"
+        // The field box with the softer `line` edge on the page tone instead of the strong field edge.
+        className="flex min-h-[44px] w-full items-center gap-2.5 rounded-md border border-line bg-bg px-3.5 py-2"
+      >
+        <span className="shrink-0 text-ink-3" aria-hidden="true" data-testid="reminders-summary-off-icon">
+          <Icon name="notifications-off-outline" size="inline" />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col" aria-hidden="true">
+          <span className="text-sm font-medium text-ink-2">{t('addEvent.reminders.section')}</span>
+          <span data-testid="reminders-summary-value" className="text-sm text-ink-3">
+            {t('addEvent.reminders.summary.pickTime')}
+          </span>
+        </span>
+      </div>
+    );
+  }
+  const value =
+    props.valueText !== undefined ? props.valueText : reminderSummaryText(t, props.summary, locale);
+  const label =
+    props.valueText !== undefined ? props.label : reminderSummaryLabel(t, props.summary, locale);
+  const expanded = props.expanded;
   const button = (
     <button
       type="button"
       data-testid="reminders-summary-row"
-      data-variant={props.variant}
+      data-variant="summary"
       aria-label={label}
-      aria-expanded={props.variant === 'summary' ? props.expanded : undefined}
-      aria-controls={props.variant === 'summary' ? props.panelId : undefined}
-      // Mobile's accessibilityHint ("Shows the reminder settings."); the pick-time label already says
-      // where it goes.
-      aria-describedby={isPickTime ? undefined : hintId}
+      aria-expanded={props.expanded}
+      aria-controls={props.panelId}
+      // Mobile's accessibilityHint ("Shows the reminder settings.").
+      aria-describedby={hintId}
       onClick={props.onPress}
       // The form's own field shell (cream, line-strong border, rounded-md, px-3.5, 44px min) and its
       // moss focus edge, so the row reads as one of the form's fields.
       className={fieldShell({ extra: 'w-full cursor-pointer py-2 text-left outline-none' })}
     >
-      <span className={`shrink-0 ${isPickTime ? 'text-ink-3' : 'text-ink-2'}`}>
+      <span className="shrink-0 text-ink-2">
         <Icon name="notifications-outline" size="inline" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className={`text-sm font-medium ${isPickTime ? 'text-ink-2' : 'text-ink'}`}>
+        <span className="text-sm font-medium text-ink">
           {t('addEvent.reminders.section')}
         </span>
         <span
           data-testid="reminders-summary-value"
-          className={`truncate text-sm ${isPickTime ? 'text-ink-3' : 'text-ink-2'}`}
+          className="truncate text-sm text-ink-2"
         >
           {value}
         </span>
       </span>
-      {!isPickTime && (
-        <span id={hintId} hidden>
-          {t('addEvent.reminders.summary.hint')}
-        </span>
-      )}
-      {!isPickTime && !expanded && (
+      <span id={hintId} hidden>
+        {t('addEvent.reminders.summary.hint')}
+      </span>
+      {!expanded && (
         <span
           data-testid="reminders-summary-change"
           className="flex shrink-0 items-center gap-1 text-sm font-semibold text-moss-deep"
@@ -103,7 +127,6 @@ export function RemindersSummaryRow(props: RemindersSummaryRowProps): ReactEleme
       )}
     </button>
   );
-  if (props.variant === 'pickTime') return button;
   return (
     <div className="flex flex-col gap-3" data-testid="reminders-summary">
       {button}

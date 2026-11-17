@@ -850,6 +850,24 @@ function AddEventForm({
    * default below — once they have expressed a preference, it is theirs.
    */
   const remindersTouched = useRef(false);
+  /**
+   * An "Any time" task / appointment is saved with its reminders CLEARED (reminderFlagsForSave: never a
+   * reminder without a time). So when an edit of such a row gets its first time here and all five flags
+   * read off, the new-entry defaults come back (at the scheduled time on), shown live in the Reminders
+   * card before Save, instead of the newly timed entry staying silent. A row whose stored flags are not
+   * all off (saved before 2026-11-16) keeps them. Once per form. Mobile twin: AddEventScreen.
+   */
+  const untimedStoredRowRef = useRef(
+    isEditing && (eventType === 'task' || eventType === 'appointment') && !event?.scheduled_time
+  );
+  useEffect(() => {
+    if (!timeStr.trim() || !untimedStoredRowRef.current) return;
+    untimedStoredRowRef.current = false;
+    if (reminderAtDue || reminder24h || reminder1h || reminder30m || reminder15m) return;
+    setReminderAtDue(true);
+    setReminder15m(defaultReminder15mFor(eventType));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on the time arriving, reads the flags as they are then
+  }, [timeStr]);
 
   const [errors, setErrors] = useState<FieldErrors>({});
 
@@ -1050,17 +1068,6 @@ function AddEventForm({
       .getElementById('notifications_enabled')
       ?.scrollIntoView?.({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   }, [remindersNudge]);
-  // The pick-time variant's tap (a task / appointment with no time yet): a counter, so the scroll + focus to the
-  // form's "Pick a time" choice runs after the commit.
-  const [timeJump, setTimeJump] = useState(0);
-  useEffect(() => {
-    if (!timeJump) return;
-    const target = document.querySelector<HTMLElement>(
-      '#task-time [role="radio"], #appt-time [role="radio"]'
-    );
-    target?.scrollIntoView?.({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
-    target?.focus({ preventScroll: true });
-  }, [timeJump]);
   // The medication's "Other…" time picker: which time it is setting. `primary` = the form's own time (an edit, or
   // a new medication with no time yet); a number = that extra dose (a new medication's next time). Set when the
   // picker opens; `null` = decide on the first pick.
@@ -2590,7 +2597,7 @@ function AddEventForm({
   // Directly ABOVE each simple form's More details, always visible, live from the card's own state. An
   // accordion: tapping it expands the full Reminders card inline under it (and folds it again), outside More
   // details. As-needed medications have no reminders at all: no row. A task / appointment without a time cannot
-  // remind yet: the muted pick-time row, which goes to the time choice and expands nothing.
+  // remind yet: the OFF card, which is not pressable and expands nothing.
   const simpleReminderSummary = reminderSummary({
     eventType,
     notificationsEnabled,
@@ -2620,7 +2627,9 @@ function AddEventForm({
         {reminderBlockFor(true)}
       </RemindersSummaryRow>
     ) : (
-      <RemindersSummaryRow variant="pickTime" onPress={() => setTimeJump((n) => n + 1)} />
+      // The OFF card (owner 2026-11-16): not a button, crossed-out bell, "Pick a time to turn on reminders".
+      // Reminders on an untimed entry are cleared on save (reminderFlagsForSave).
+      <RemindersSummaryRow variant="off" />
     );
 
   // SIMPLE-UI FIELDS (new medication / new appointment): defined below.

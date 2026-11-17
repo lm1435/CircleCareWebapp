@@ -245,8 +245,8 @@
         "nothingAtTime": "rien à l’heure prévue",
         "change": "Modifier",
         "hint": "Affiche les réglages des rappels.",
-        "pickTime": "Choisissez une heure pour recevoir des rappels",
-        "pickTimeLabel": "Rappels : choisissez une heure pour recevoir des rappels. Mène au choix de l’heure."
+        "pickTime": "Choisissez une heure pour activer les rappels",
+        "pickTimeLabel": "Rappels, désactivés. Choisissez une heure pour activer les rappels"
       }
     },
     "validation": {

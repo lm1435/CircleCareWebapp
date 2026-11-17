@@ -982,3 +982,102 @@ describe('analytics', () => {
     expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, 'task', 'form', true, 'simple');
   });
 });
+
+// ── Reminders with no time: the OFF card (owner 2026-11-16) ─────────────────────────────────────────────
+// "Any time" has nothing to fire against: the Reminders card is shown OFF (crossed-out bell, not a button) and an
+// untimed task saves with its five reminder flags cleared. Mobile twin: AddEventTaskSimpleForm.test.tsx.
+describe('Reminders when the task has no time', () => {
+  const FLAGS = ['reminder_at_due', 'reminder_24h', 'reminder_1h', 'reminder_30m', 'reminder_15m'] as const;
+  const flagsOf = (data: Record<string, unknown>) => Object.fromEntries(FLAGS.map((k) => [k, data[k]]));
+  const ALL_OFF = Object.fromEntries(FLAGS.map((k) => [k, false]));
+  const offCard = () => screen.getByTestId('reminders-summary-row');
+
+  it('P: Any time shows the OFF card: crossed-out bell, "Pick a time to turn on reminders", disabled, not pressable', async () => {
+    const summaryToggled = vi.spyOn(Analytics, 'remindersSummaryToggled').mockImplementation(() => {});
+    const user = userEvent.setup();
+    renderNew();
+    expect(radio('Any time')).toBeChecked();
+    expect(offCard()).toHaveAttribute('data-variant', 'off');
+    expect(screen.getByTestId('reminders-summary-off-icon')).toBeInTheDocument();
+    expect(screen.getByTestId('reminders-summary-value')).toHaveTextContent('Pick a time to turn on reminders');
+    expect(offCard()).toHaveAccessibleName('Reminders, off. Pick a time to turn on reminders');
+    expect(offCard()).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.queryByTestId('reminders-summary-change')).toBeNull();
+    await user.click(offCard());
+    expect(screen.queryByTestId('reminders-summary-panel')).toBeNull();
+    expect(radio('Any time')).toBeChecked();
+    expect(summaryToggled).not.toHaveBeenCalled();
+  });
+
+  it('N: the OFF card is not a button, holds none, and is not focusable', () => {
+    renderNew();
+    expect(offCard().tagName).not.toBe('BUTTON');
+    expect(offCard()).not.toHaveAttribute('role', 'button');
+    expect(offCard()).not.toHaveAttribute('tabindex');
+    expect(within(offCard()).queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Pick a time to turn on reminders/ })).toBeNull();
+  });
+
+  it('P: Pick a time (with a time) shows the normal tappable card', async () => {
+    const user = userEvent.setup();
+    renderNew();
+    await pickTime(user);
+    fireEvent.change(timeInput(), { target: { value: '10:00' } });
+    const card = screen.getByRole('button', { name: /^Reminders: / });
+    expect(card).toHaveAttribute('data-variant', 'summary');
+    expect(card).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('reminders-summary-off-icon')).toBeNull();
+    expect(screen.getByTestId('reminders-summary-change')).toBeInTheDocument();
+  });
+
+  it('P: switching a task with reminders to Any time turns the card off and saves the reminders cleared', async () => {
+    const user = userEvent.setup();
+    renderEdit(task({ scheduled_time: '09:30', duration_minutes: 30, reminder_1h: true, reminder_15m: true }));
+    expect(screen.getByRole('button', { name: /^Reminders: / })).toBeInTheDocument();
+    await user.click(radio('Any time'));
+    expect(offCard()).toHaveAttribute('data-variant', 'off');
+    const data = await saveEdit(user);
+    expect(data.scheduled_time).toBeNull();
+    expect(flagsOf(data)).toEqual(ALL_OFF);
+    expect(data.notifications_enabled).toBe(true);
+  });
+
+  it('N: a timed task keeps its reminders exactly (untouched edit)', async () => {
+    const user = userEvent.setup();
+    renderEdit(task({ scheduled_time: '09:30', duration_minutes: 30, reminder_at_due: true, reminder_1h: true }));
+    expect(flagsOf(await saveEdit(user))).toEqual({ ...ALL_OFF, reminder_at_due: true, reminder_1h: true });
+  });
+
+  it('N: a NEW timed task keeps the at-due default', async () => {
+    const user = userEvent.setup();
+    renderNew();
+    await user.type(titleBox(), 'Call');
+    await pickTime(user);
+    fireEvent.change(timeInput(), { target: { value: '10:00' } });
+    expect(flagsOf(await saveCreate(user))).toEqual({ ...ALL_OFF, reminder_at_due: true });
+  });
+
+  it('P: a NEW Any time task saves no reminder', async () => {
+    const user = userEvent.setup();
+    renderNew();
+    await user.type(titleBox(), 'Call');
+    expect(flagsOf(await saveCreate(user))).toEqual(ALL_OFF);
+  });
+
+  it('P: an untimed task saved with reminders cleared gets the at-due default back when it is given a time', async () => {
+    const user = userEvent.setup();
+    renderEdit(task({ scheduled_time: null, reminder_at_due: false }));
+    await pickTime(user);
+    fireEvent.change(timeInput(), { target: { value: '10:00' } });
+    expect(screen.getByTestId('reminders-summary-value')).toHaveTextContent('At the scheduled time');
+    expect(flagsOf(await saveEdit(user))).toEqual({ ...ALL_OFF, reminder_at_due: true });
+  });
+
+  it('N: an untimed row whose stored flags are not all off keeps them when given a time (no re-arm)', async () => {
+    const user = userEvent.setup();
+    renderEdit(task({ scheduled_time: null, reminder_at_due: false, reminder_24h: true }));
+    await pickTime(user);
+    fireEvent.change(timeInput(), { target: { value: '10:00' } });
+    expect(flagsOf(await saveEdit(user))).toEqual({ ...ALL_OFF, reminder_24h: true });
+  });
+});

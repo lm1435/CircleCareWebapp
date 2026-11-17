@@ -245,8 +245,8 @@
         "nothingAtTime": "nada no horário agendado",
         "change": "Alterar",
         "hint": "Mostra as configurações de lembretes.",
-        "pickTime": "Escolha um horário para receber lembretes",
-        "pickTimeLabel": "Lembretes: escolha um horário para receber lembretes. Leva à escolha do horário."
+        "pickTime": "Escolha um horário para ativar os lembretes",
+        "pickTimeLabel": "Lembretes, desativados. Escolha um horário para ativar os lembretes"
       }
     },
     "validation": {

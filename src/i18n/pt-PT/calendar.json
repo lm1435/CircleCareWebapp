@@ -38,7 +38,11 @@
       "howItWorks": {
         "scheduledBody": "Uma notificação é enviada no horário agendado, para a app CircleCare do telemóvel."
       },
-      "followUpOnlyBody": "Se uma dose não for marcada como tomada, o CircleCare continua a alertar o círculo: após 15 minutos, 30 minutos e 1 hora. Desative Notificações acima para silenciar tudo deste medicamento."
+      "followUpOnlyBody": "Se uma dose não for marcada como tomada, o CircleCare continua a alertar o círculo: após 15 minutos, 30 minutos e 1 hora. Desative Notificações acima para silenciar tudo deste medicamento.",
+      "summary": {
+        "pickTime": "Escolha uma hora para ativar os lembretes",
+        "pickTimeLabel": "Lembretes, desativados. Escolha uma hora para ativar os lembretes"
+      }
     },
     "alerts": {
       "someDoseTimesFailed_one": "Guardado, mas horários de dose não adicionados: {{count}} ({{times}}). Abra o medicamento e adicione novamente.",

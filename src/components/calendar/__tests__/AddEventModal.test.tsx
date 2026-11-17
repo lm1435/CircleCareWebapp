@@ -993,13 +993,11 @@ describe('AddEventModal', () => {
       expect(screen.getByText('Enable notifications')).toBeInTheDocument();
     });
 
-    it('persists the task defaults on a timeless task — inert, not zeroed', async () => {
-      // A timeless task's flags CANNOT fire: every reminder function filters
-      // `scheduled_time IS NOT NULL`. This used to zero them anyway, which wrote
-      // `reminder_at_due = false` onto the row — so a caregiver who later added a
-      // time got a completely silent task, with no control on screen showing why.
-      // Persisting the type's own defaults instead means adding a time later
-      // behaves exactly like creating the task with one.
+    it('clears every reminder on a timeless task: never a reminder without a time (owner 2026-11-16)', async () => {
+      // A timeless task's flags cannot fire (every reminder function filters `scheduled_time IS NOT NULL`),
+      // and the owner's rule is that none is stored. The old reason to keep them (adding a time later gave a
+      // silent task) is closed by the form re-arming the defaults when an untimed row gets a time
+      // (AddEventModal.taskSimple.test.tsx).
       const user = userEvent.setup();
       renderNew('task');
 
@@ -1009,16 +1007,14 @@ describe('AddEventModal', () => {
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       const payload = mutateCreate.mock.calls[0][0];
       expect(payload.scheduled_time).toBeUndefined();
-      // The anchor is the flag whose column default is TRUE and the one the old
-      // zeroing actually changed here. It must be sent as an explicit `true`.
-      expect(payload.reminder_at_due).toBe(true);
-      // The four the user never opted into stay off — "preserve the selection"
-      // is not "turn everything on", and `reminder_15m` is now one of them for
-      // every type (its column default is TRUE, so the explicit false matters).
+      // All five are SENT, as explicit false (an absent key would leave a stored one on).
+      expect(payload.reminder_at_due).toBe(false);
       expect(payload.reminder_15m).toBe(false);
       expect(payload.reminder_30m).toBe(false);
       expect(payload.reminder_1h).toBe(false);
       expect(payload.reminder_24h).toBe(false);
+      // The per-entry mute is a different switch and is left as it was.
+      expect(payload.notifications_enabled).toBe(true);
     });
   });
 

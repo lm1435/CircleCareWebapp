@@ -245,8 +245,8 @@
         "nothingAtTime": "nothing at the scheduled time",
         "change": "Change",
         "hint": "Shows the reminder settings.",
-        "pickTime": "Pick a time to get reminders",
-        "pickTimeLabel": "Reminders: pick a time to get reminders. Goes to the time choice."
+        "pickTime": "Pick a time to turn on reminders",
+        "pickTimeLabel": "Reminders, off. Pick a time to turn on reminders"
       }
     },
     "validation": {

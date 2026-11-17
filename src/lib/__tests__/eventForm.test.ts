@@ -261,28 +261,8 @@ describe('reminderFlagsForSave', () => {
     expect(reminderFlagsForSave(savedWhileMuted, true, true)).toEqual(anchorOnly);
   });
 
-  it('does NOT zero anything when there is no time to fire against', () => {
-    // Every reminder function filters `scheduled_time IS NOT NULL`, so the flags
-    // are INERT without a time. Zeroing them wrote the anchor off, and adding a
-    // time later then produced a silent event with nothing on screen to explain
-    // it — the same defect one step removed.
-    expect(reminderFlagsForSave(allOn, true, false)).toEqual(allOn);
-  });
-
-  it('keeps both column-default-TRUE flags on a timeless entry', () => {
-    // `reminder_15m` and `reminder_at_due` are the two whose DB default is TRUE,
-    // so an omitted key comes back ON for either. A fresh task now selects only
-    // the anchor, but a row can hold both — from the old task default, or from a
-    // user who ticked 15m — and neither may be zeroed on the way out.
-    const defaults: ReminderSelection = { ...allOff, reminder_at_due: true, reminder_15m: true };
-    const saved = reminderFlagsForSave(defaults, true, false);
-    expect(saved.reminder_15m).toBe(true);
-    expect(saved.reminder_at_due).toBe(true);
-  });
-
-  it('leaves the selection alone when notifications are off AND there is no time', () => {
-    expect(reminderFlagsForSave(allOn, false, false)).toEqual(allOn);
-  });
+  // The no-time cases moved to 'reminderFlagsForSave: no time to fire against' below: since 2026-11-16 (owner)
+  // an untimed entry saves all five CLEARED.
 
   it('sends all five flags, never a subset', () => {
     // A dropped key is a partial patch server-side: the stored value survives.
@@ -522,5 +502,40 @@ describe('shiftEndTimeStr (PK21: the end follows the start)', () => {
   it('empty when any input is missing', () => {
     expect(shiftEndTimeStr('', '11:00', '12:00')).toBe('');
     expect(shiftEndTimeStr('10:00', '11:00', '')).toBe('');
+  });
+});
+
+// Owner 2026-11-16: never persist a reminder without a time. Mobile twin: utils/eventScheduling.test.ts.
+describe('reminderFlagsForSave: no time to fire against', () => {
+  const allOn: ReminderSelection = {
+    reminder_at_due: true,
+    reminder_24h: true,
+    reminder_1h: true,
+    reminder_30m: true,
+    reminder_15m: true,
+  };
+  const allOff: ReminderSelection = {
+    reminder_at_due: false,
+    reminder_24h: false,
+    reminder_1h: false,
+    reminder_30m: false,
+    reminder_15m: false,
+  };
+
+  it('P: clears all five when there is no time (an "Any time" task / appointment)', () => {
+    expect(reminderFlagsForSave(allOn, true, false)).toEqual(allOff);
+    expect(reminderFlagsForSave({ ...allOff, reminder_at_due: true }, true, false)).toEqual(allOff);
+  });
+
+  it('P: clears them with notifications off as well, and still sends all five keys', () => {
+    const out = reminderFlagsForSave(allOn, false, false);
+    expect(out).toEqual(allOff);
+    expect(Object.keys(out).sort()).toEqual(Object.keys(allOff).sort());
+  });
+
+  it('N: a timed entry keeps its selection exactly', () => {
+    const chosen: ReminderSelection = { ...allOff, reminder_at_due: true, reminder_1h: true };
+    expect(reminderFlagsForSave(chosen, true, true)).toEqual(chosen);
+    expect(reminderFlagsForSave(chosen, false, true)).toEqual(chosen);
   });
 });

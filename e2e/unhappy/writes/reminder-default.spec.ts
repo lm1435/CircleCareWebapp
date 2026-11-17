@@ -83,3 +83,34 @@ test('task with "15 minutes before" explicitly checked stores reminder_15m = tru
     purgeEventsTitled(circleId, title);
   }
 });
+
+// Owner 2026-11-16: an "Any time" task shows the Reminders card OFF (crossed-out bell, not a button) and is saved
+// with all five reminder flags cleared: never a reminder without a time. Mobile twin:
+// mobile/.maestro/parity/calendar/task-any-time-reminders-off.yaml. NOT YET RUN (written while the machine was busy).
+test('an Any time task shows the Reminders OFF card (not a button) and stores no reminder', async ({ page, circleId }) => {
+  const title = uniqueLabel('Rem anytime');
+  try {
+    await gotoCalendarSettled(page, circleId);
+    const dialog = await openCalendarNew(page, 'task');
+    await dialog.locator('#title').fill(title);
+    await dialog.locator('#scheduled_date').fill(localDate(3));
+    await expect(dialog.getByRole('radio', { name: 'Any time' })).toBeChecked();
+    const off = dialog.getByTestId('reminders-summary-row');
+    await expect(off).toHaveAttribute('data-variant', 'off');
+    await expect(off).toHaveAttribute('aria-disabled', 'true');
+    await expect(off).toHaveAccessibleName('Reminders, off. Pick a time to turn on reminders');
+    await expect(dialog.getByRole('button', { name: /Pick a time to turn on reminders/ })).toHaveCount(0);
+
+    const body = await saveAndCapture(page, dialog, circleId);
+    for (const k of ['reminder_at_due', 'reminder_24h', 'reminder_1h', 'reminder_30m', 'reminder_15m']) {
+      expect(body[k], `${k} is sent as an explicit false`).toBe(false);
+    }
+    const stored = dbQuery<{ r: string }>(
+      `select concat_ws(',', reminder_at_due, reminder_24h, reminder_1h, reminder_30m, reminder_15m) as r
+         from calendar_events where circle_id = ${sqlStr(circleId)}::uuid and title = ${sqlStr(title)}`
+    ).map((row) => row.r);
+    expect(stored).toEqual(['false,false,false,false,false']);
+  } finally {
+    purgeEventsTitled(circleId, title);
+  }
+});

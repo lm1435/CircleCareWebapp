@@ -245,8 +245,8 @@
         "nothingAtTime": "niente all'orario programmato",
         "change": "Cambia",
         "hint": "Mostra le impostazioni dei promemoria.",
-        "pickTime": "Scegli un orario per ricevere promemoria",
-        "pickTimeLabel": "Promemoria: scegli un orario per ricevere promemoria. Porta alla scelta dell'orario."
+        "pickTime": "Scegli un orario per attivare i promemoria",
+        "pickTimeLabel": "Promemoria, disattivati. Scegli un orario per attivare i promemoria"
       }
     },
     "validation": {

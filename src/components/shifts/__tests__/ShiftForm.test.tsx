@@ -32,6 +32,7 @@ vi.mock('@/lib/analytics', () => ({
     shiftAddNextTapped: vi.fn(),
     shiftSavedSheetAction: vi.fn(),
     shiftRepeatCustomOpened: vi.fn(),
+    shiftFormReminderExpanded: vi.fn(),
     shiftEditTasksWarningShown: vi.fn(),
     shiftTakeConflict: vi.fn(),
   },
@@ -119,13 +120,14 @@ const chooseRepeat = async (user: ReturnType<typeof userEvent.setup>, label: str
   return user.click(within(screen.getByRole('radiogroup', { name: 'Custom' })).getByRole('radio', { name: label }));
 };
 
-const openMore = async (user: ReturnType<typeof userEvent.setup>) => {
-  const toggle = screen.getByRole('button', { name: /^More details/ });
-  if (toggle.getAttribute('aria-expanded') !== 'true') await user.click(toggle);
+// 2026-11-16: the reminder lives in its own Reminders card on the main form (an accordion), not More details.
+const openReminders = async (user: ReturnType<typeof userEvent.setup>) => {
+  const row = screen.getByRole('button', { name: /^Reminders: / });
+  if (row.getAttribute('aria-expanded') !== 'true') await user.click(row);
 };
 
 const chooseReminder = async (user: ReturnType<typeof userEvent.setup>, label: string) => {
-  await openMore(user);
+  await openReminders(user);
   await user.click(
     within(screen.getByRole('radiogroup', { name: 'Reminder' })).getByRole('radio', { name: label })
   );
@@ -147,7 +149,10 @@ describe('ShiftFormModal (create)', () => {
   it('shows the heading, the overnight "next day" label and the derived duration', async () => {
     shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
     expect(screen.getByRole('radiogroup', { name: "Who's with Rosa?" })).toBeInTheDocument();
-    expect(screen.getByText('Sent to whoever is on the shift.')).toBeInTheDocument();
+    // A new shift is open by default: the reminder hint names whoever takes it (2026-11-16).
+    expect(
+      screen.getByText('Sent to whoever takes the shift, if they take it before the reminder time.')
+    ).toBeInTheDocument();
     setTime('start', '20:00');
     setTime('end', '08:00');
     expect(screen.getByTestId('shift-end-tile')).toHaveTextContent('8:00 AM next day');
@@ -323,11 +328,16 @@ describe('ShiftFormModal (defaults, order, hydration)', () => {
     expect(document.getElementById('shift_start')).toBeNull();
     fireEvent.click(screen.getByTestId('shift-start-tile'));
     expect(field('shift_start')).toHaveValue('08:00');
-    expect(screen.getByText('Sent to whoever is on the shift.')).toBeInTheDocument();
+    // A new shift is "Leave open": its reminder goes to whoever takes it before the reminder time.
+    fireEvent.click(screen.getByRole('button', { name: /^Reminders: / }));
+    expect(screen.getByTestId('shift-form-reminder-hint')).toHaveTextContent(
+      'Sent to whoever takes the shift, if they take it before the reminder time.'
+    );
   });
 
-  it('sections follow the agreed order: name, when, how often, who, then More details', async () => {
+  it('sections follow the agreed order: name, when, how often, who, Reminders, then (repeating) More details', async () => {
     shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('radio', { name: 'Every day' }));
     // `* ` is the aria-hidden required asterisk on the name heading.
     const headings = screen
       .getAllByRole('heading', { level: 3 })
@@ -347,6 +357,7 @@ describe('ShiftFormModal (defaults, order, hydration)', () => {
       screen.getByTestId('shift-form-duration'),
       screen.getByRole('radiogroup', { name: 'How often?' }),
       screen.getByRole('radiogroup', { name: "Who's with Rosa?" }),
+      screen.getByRole('button', { name: /^Reminders: / }),
       screen.getByRole('button', { name: /^More details/ }),
     ].map(pos);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
@@ -492,7 +503,7 @@ describe('ShiftComposer: saved sheet and "Add the next shift"', () => {
     expect(screen.getByTestId('shift-end-tile')).toHaveTextContent('Choose a time');
     expect(field('shift_date')).toHaveValue('2026-10-20');
     expect(screen.getByRole('radio', { name: 'Every day' })).toBeChecked();
-    await openMore(user);
+    await openReminders(user);
     expect(screen.getByRole('radio', { name: '2 hours' })).toBeChecked();
 
     // The second save is attributed to add_next.

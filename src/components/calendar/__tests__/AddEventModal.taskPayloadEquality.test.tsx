@@ -7,6 +7,7 @@ import type { CalendarEvent } from '@/api/calendarEvents';
 import { Analytics } from '@/lib/analytics';
 import { resetLargeTextReports } from '@/lib/largeText';
 import { AddEventModal } from '../AddEventModal';
+import { untimedRemindersCleared } from '@/test/untimedReminders';
 
 // THE NEW / EDIT TASK FORM IN THE SIMPLE STYLE (owner 1.4.0, mobile parity): same state, same `buildPayload`,
 // same Save. Only the arrangement changed ("What needs doing? / When? / How often? / Who's doing it? / More
@@ -502,12 +503,13 @@ if (CAPTURE) {
       expect(screen.queryByLabelText(/^Assigned to/)).toBeNull();
     });
 
+    // DELIBERATE (owner 2026-11-16): an untimed task saves its reminders cleared. See test/untimedReminders.
     it.each(CREATE_CASES.map((c) => [c.name, c] as const))('%s', async (_name, c) => {
-      expect(await runCreate(c, 'new')).toEqual(OLD[c.name]);
+      expect(await runCreate(c, 'new')).toEqual(untimedRemindersCleared(OLD[c.name]));
     });
 
     it.each(EDIT_CASES.map((c) => [c.name, c] as const))('%s', async (_name, c) => {
-      expect(await runEdit(c, 'new')).toEqual(OLD[c.name]);
+      expect(await runEdit(c, 'new')).toEqual(untimedRemindersCleared(OLD[c.name], c.event));
     });
 
     it('build 11: To is optional on a new task: its in-tile "×" clears the default and saves no length', async () => {

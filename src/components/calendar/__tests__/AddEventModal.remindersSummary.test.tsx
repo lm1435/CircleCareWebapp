@@ -290,31 +290,29 @@ describe('Reminders summary row: accordion', () => {
   }
 });
 
-describe('Reminders summary row: no time yet (task / appointment)', () => {
+describe('Reminders summary row: no time yet (task / appointment) shows the OFF card (owner 2026-11-16)', () => {
   for (const kind of ['task', 'appointment'] as const) {
-    it(`${kind}: muted "Pick a time" row, no Change, tap focuses the "Pick a time" choice; a time switches it to the summary`, async () => {
+    it(`${kind}: OFF card (crossed-out bell, not a button, does nothing); a time switches it to the summary`, async () => {
       const user = userEvent.setup();
       renderNew(kind);
-      expect(row()).toHaveAttribute('data-variant', 'pickTime');
-      expect(value()).toHaveTextContent('Pick a time to get reminders');
-      expect(row()).toHaveAccessibleName(
-        'Reminders: pick a time to get reminders. Goes to the time choice.'
-      );
+      expect(row()).toHaveAttribute('data-variant', 'off');
+      expect(value()).toHaveTextContent('Pick a time to turn on reminders');
+      expect(row()).toHaveAccessibleName('Reminders, off. Pick a time to turn on reminders');
+      expect(row()).toHaveAttribute('aria-disabled', 'true');
+      expect(row().tagName).not.toBe('BUTTON');
+      expect(screen.getByTestId('reminders-summary-off-icon')).toBeInTheDocument();
       expect(within(row()).queryByTestId('reminders-summary-change')).toBeNull();
 
       await user.click(row());
-      // What time?'s first choice, "Pick a time" (build 11).
-      const pick = within(screen.getByRole('radiogroup', { name: 'What time?' })).getByRole('radio', {
-        name: 'Pick a time',
-      });
-      await waitFor(() => expect(pick).toHaveFocus());
-      expect(scrollIntoView.mock.contexts.at(-1)).toBe(pick);
-      expect(scrollIntoView).toHaveBeenLastCalledWith({ block: 'center', behavior: 'smooth' });
-      // It goes to the time choice, NOT More details; it expands nothing and is not the summary tap.
+      // Nothing happens: no scroll, no focus move, More details closed, nothing expands, no analytics.
+      expect(scrollIntoView).not.toHaveBeenCalled();
       expect(moreToggle()).toHaveAttribute('aria-expanded', 'false');
       expect(row()).not.toHaveAttribute('aria-expanded');
       expect(summaryToggled).not.toHaveBeenCalled();
 
+      const pick = within(screen.getByRole('radiogroup', { name: 'What time?' })).getByRole('radio', {
+        name: 'Pick a time',
+      });
       await user.click(pick);
       fireEvent.change(document.getElementById('scheduled_time') as HTMLInputElement, { target: { value: '10:00' } });
       await waitFor(() => expect(row()).toHaveAttribute('data-variant', 'summary'));
@@ -324,10 +322,13 @@ describe('Reminders summary row: no time yet (task / appointment)', () => {
     });
   }
 
-  it('Spanish pick-time copy', async () => {
+  it('Spanish OFF copy', async () => {
     await i18n.changeLanguage('es');
     renderNew('task');
-    expect(value()).toHaveTextContent('Elige una hora para recibir recordatorios');
+    expect(value()).toHaveTextContent('Elige una hora para activar los recordatorios');
+    expect(row()).toHaveAccessibleName(
+      'Recordatorios, desactivados. Elige una hora para activar los recordatorios'
+    );
   });
 });
 

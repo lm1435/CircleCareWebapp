@@ -44,6 +44,7 @@ vi.mock('@/lib/analytics', () => ({
     shiftAddNextTapped: vi.fn(),
     shiftSavedSheetAction: vi.fn(),
     shiftRepeatCustomOpened: vi.fn(),
+    shiftFormReminderExpanded: vi.fn(),
     shiftEditTasksWarningShown: vi.fn(),
     shiftTakeConflict: vi.fn(),
   },
@@ -240,10 +241,12 @@ async function fill(answers: Answers, editing: boolean): Promise<void> {
     const group = screen.getByRole('radiogroup', { name: "Who's with Rosa?" });
     await user.click(within(group).getByRole('radio', { name: new RegExp(`^${label}`) }));
   }
-  if (answers.reminder !== undefined || answers.repeatEnd !== undefined) {
+  // 2026-11-16: the reminder has its own Reminders card on the main form; More details holds only the repeat end.
+  if (answers.repeatEnd !== undefined) {
     if (!CAPTURE) await user.click(screen.getByRole('button', { name: /^More details/ }));
   }
   if (answers.reminder !== undefined) {
+    if (!CAPTURE) await user.click(screen.getByRole('button', { name: /^Reminders: / }));
     if (CAPTURE) {
       await user.selectOptions(screen.getByLabelText('Reminder'), answers.reminder);
     } else {

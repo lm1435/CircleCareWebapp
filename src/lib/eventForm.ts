@@ -56,7 +56,14 @@ export interface ReminderSelection {
 }
 
 /**
- * Reminder flags to persist: the user's selection, VERBATIM, always.
+ * Reminder flags to persist: the user's selection, VERBATIM, whenever there is
+ * a time to fire against. With NO time (an "Any time" task / appointment,
+ * `applicable` false) all five are CLEARED, owner 2026-11-16: never persist a
+ * reminder without a time. The old reason to keep them (adding a time later
+ * gave a silent event) is closed by the modal re-arming the defaults when an
+ * untimed row gets a time (AddEventModal `untimedStoredRowRef`). A medication
+ * always has `applicable` true and is never touched. Mobile twin:
+ * utils/eventScheduling.ts.
  *
  * THE SELECTION IS DATA. SILENCE IS `notifications_enabled`'s JOB. This helper
  * used to zero all five flags whenever the master toggle was off or there was
@@ -93,8 +100,8 @@ export interface ReminderSelection {
  * only at save time — which is why an off→on cycle looked correct until the
  * modal was closed and reopened.
  *
- * `notificationsEnabled` and `applicable` are retained so the call site keeps
- * stating the conditions this helper deliberately no longer acts on.
+ * `notificationsEnabled` is retained so the call site keeps stating the
+ * condition this helper deliberately does not act on.
  *
  * DEPLOY ORDER — A HARD PREREQUISITE, ENFORCED BY NOBODY. Migrations
  * 20260823120000 and 20260901120000 MUST be applied to the production database
@@ -133,8 +140,19 @@ export interface ReminderSelection {
 export function reminderFlagsForSave(
   selection: ReminderSelection,
   _notificationsEnabled: boolean,
-  _applicable: boolean
+  applicable: boolean
 ): ReminderSelection {
+  // No time to fire against ("Any time" task / appointment): never persist a reminder without a time
+  // (owner 2026-11-16). All five go false; the form re-arms the defaults when a time is picked later.
+  if (!applicable) {
+    return {
+      reminder_at_due: false,
+      reminder_24h: false,
+      reminder_1h: false,
+      reminder_30m: false,
+      reminder_15m: false,
+    };
+  }
   return { ...selection };
 }
 

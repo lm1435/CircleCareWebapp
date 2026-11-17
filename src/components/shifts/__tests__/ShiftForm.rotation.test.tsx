@@ -35,6 +35,7 @@ vi.mock('@/lib/analytics', () => ({
     shiftAddNextTapped: vi.fn(),
     shiftSavedSheetAction: vi.fn(),
     shiftRepeatCustomOpened: vi.fn(),
+    shiftFormReminderExpanded: vi.fn(),
     shiftEditTasksWarningShown: vi.fn(),
     shiftTakeConflict: vi.fn(),
     errorOccurred: vi.fn(),

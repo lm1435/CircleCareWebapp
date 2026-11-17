@@ -36,6 +36,7 @@ vi.mock('@/lib/analytics', () => ({
     shiftAddNextTapped: vi.fn(),
     shiftSavedSheetAction: vi.fn(),
     shiftRepeatCustomOpened: vi.fn(),
+    shiftFormReminderExpanded: vi.fn(),
     shiftEditTasksWarningShown: vi.fn(),
     shiftTakeConflict: vi.fn(),
   },
@@ -119,6 +120,11 @@ const radio = (groupName: string, name: string | RegExp) => {
 };
 const moreToggle = () => screen.getByRole('button', { name: /^More details/ });
 const summary = () => screen.getByTestId('shift-form-more-summary').textContent;
+const remindersRow = () => screen.getByRole('button', { name: /^Reminders: / });
+const reminderValue = () => within(remindersRow()).getByTestId('reminders-summary-value').textContent;
+const openReminders = async (user: ReturnType<typeof userEvent.setup>) => {
+  if (remindersRow().getAttribute('aria-expanded') !== 'true') await user.click(remindersRow());
+};
 const open = (props: Partial<React.ComponentProps<typeof ShiftFormModal>> = {}) =>
   shell(<ShiftFormModal circleId="c" initialDate="2027-03-09" onClose={vi.fn()} {...props} />);
 
@@ -502,49 +508,27 @@ describe("simple shift form: Who's with Rosa?", () => {
   });
 });
 
-describe('simple shift form: More details', () => {
-  it('is collapsed by default and says so', () => {
+// Owner 2026-11-16: the reminder left More details for its own Reminders card on the main form, under
+// "Who's with"; More details keeps only the repeat end and is not shown when it would be empty. Mobile twin:
+// ShiftFormSimpleLayout.test.tsx.
+describe('simple shift form: the Reminders card (main form)', () => {
+  it('P: sits after "Who\'s with", folded, reading the 1 hour default', () => {
     open();
-    expect(moreToggle()).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getByTestId('shift-form-more-summary')).toBeInTheDocument();
-    expect(screen.queryByRole('radiogroup', { name: 'Reminder' })).not.toBeInTheDocument(); // folded away
+    const pos = (el: HTMLElement) => Array.from(document.querySelectorAll('*')).indexOf(el);
+    expect(pos(remindersRow())).toBeGreaterThan(pos(group("Who's with Rosa?")));
+    expect(remindersRow()).toHaveAccessibleName('Reminders: 1 hour before');
+    expect(remindersRow()).toHaveAttribute('aria-expanded', 'false');
+    expect(reminderValue()).toBe('1 hour before');
+    // Folded: the tiles are not exposed until the card is opened.
+    expect(screen.queryByRole('radiogroup', { name: 'Reminder' })).toBeNull();
   });
 
-  it('summarises the reminder, and adds the repeat end only when it repeats', async () => {
+  it('P: opens to the five tiles (1 hour checked) and the assigned-shift hint; folds again', async () => {
     const user = userEvent.setup();
     open();
-    expect(summary()).toBe('Reminder: 1 hour before');
-    await user.click(radio('How often?', 'Every day'));
-    expect(summary()).toBe('Reminder: 1 hour before · Repeat ends: never');
-    await user.click(radio('How often?', 'Once'));
-    expect(summary()).toBe('Reminder: 1 hour before');
-  });
-
-  it('follows the reminder (off, 2 hours, 4 hours, 1 day) and the repeat end date', async () => {
-    const user = userEvent.setup();
-    open();
-    await user.click(radio('How often?', 'Every week'));
-    await user.click(moreToggle());
-    expect(moreToggle()).toHaveAttribute('aria-expanded', 'true');
-    await user.click(radio('Reminder', 'Off'));
-    await user.click(moreToggle());
-    expect(summary()).toBe('Reminder: off · Repeat ends: never');
-    await user.click(moreToggle());
-    await user.click(radio('Reminder', '4 hours'));
-    fireEvent.change(field('shift_repeat_end'), { target: { value: '2027-06-30' } });
-    await user.click(moreToggle());
-    expect(summary()).toBe('Reminder: 4 hours before · Repeat ends: Jun 30, 2027');
-    await user.click(moreToggle());
-    await user.click(radio('Reminder', '1 day'));
-    await user.click(radio('Reminder', '2 hours'));
-    await user.click(moreToggle());
-    expect(summary()).toContain('Reminder: 2 hours before');
-  });
-
-  it('inside: the reminder tiles (Off ... 1 day), the hint, and the repeat end with a clear button', async () => {
-    const user = userEvent.setup();
-    open();
-    await user.click(moreToggle());
+    await user.click(radio("Who's with Rosa?", /^Ana/));
+    await openReminders(user);
+    expect(Analytics.shiftFormReminderExpanded).toHaveBeenCalledWith({ editing: false });
     expect(within(group('Reminder')).getAllByRole('radio').map((r) => r.textContent)).toEqual([
       'Off',
       '1 hour',
@@ -553,10 +537,91 @@ describe('simple shift form: More details', () => {
       '1 day',
     ]);
     expect(radio('Reminder', '1 hour')).toBeChecked();
-    expect(screen.getByText('Sent to whoever is on the shift.')).toBeInTheDocument();
-    // Once: no repeat end to give.
-    expect(document.getElementById('shift_repeat_end')).toBeNull();
+    expect(screen.getByTestId('shift-form-reminder-hint')).toHaveTextContent('Sent to whoever is on the shift.');
+    await user.click(remindersRow());
+    expect(remindersRow()).toHaveAttribute('aria-expanded', 'false');
+    expect(Analytics.shiftFormReminderExpanded).toHaveBeenCalledTimes(1);
+  });
+
+  it('P: an OPEN shift ("Leave open") says who actually gets it: whoever takes it before the reminder time', async () => {
+    const user = userEvent.setup();
+    open();
+    await openReminders(user);
+    expect(radio("Who's with Rosa?", 'Leave open')).toBeChecked();
+    expect(screen.getByTestId('shift-form-reminder-hint')).toHaveTextContent(
+      'Sent to whoever takes the shift, if they take it before the reminder time.'
+    );
+    await user.click(radio("Who's with Rosa?", /^Me/));
+    expect(screen.getByTestId('shift-form-reminder-hint')).toHaveTextContent('Sent to whoever is on the shift.');
+  });
+
+  it('P: a tile updates the row line and is what saves', async () => {
+    const user = userEvent.setup();
+    open();
+    await user.type(field('shift_name'), 'Night');
+    await openReminders(user);
+    await user.click(radio('Reminder', '1 day'));
+    expect(reminderValue()).toBe('1 day before');
+    await user.click(radio('Reminder', 'Off'));
+    expect(reminderValue()).toBe('Off');
+    await user.click(screen.getByRole('button', { name: 'Save shift' }));
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+    expect(JSON.stringify(mockCreate.mock.calls[0])).toContain('"reminder_lead_minutes":null');
+  });
+
+  it.each([
+    [null, 'off', 'Off'],
+    [60, '1 hour', '1 hour before'],
+    [120, '2 hours', '2 hours before'],
+    [240, '4 hours', '4 hours before'],
+    [1440, '1 day', '1 day before'],
+  ] as const)('N: an existing shift keeps its saved reminder %s (row line, checked tile, untouched save)', async (lead, label, line) => {
+    const user = userEvent.setup();
+    open({ shift: shift({ reminder_lead_minutes: lead }) });
+    expect(reminderValue()).toBe(line);
+    await openReminders(user);
+    expect(Analytics.shiftFormReminderExpanded).toHaveBeenCalledWith({ editing: true });
+    expect(radio('Reminder', new RegExp(`^${label}$`, 'i'))).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
+    expect(JSON.stringify(mockUpdate.mock.calls[0])).toContain(`"reminder_lead_minutes":${lead}`);
+  });
+});
+
+describe('simple shift form: More details (the repeat end only)', () => {
+  it('N: gone when it would be empty: a one-off create, and every edit', () => {
+    const one = open();
+    expect(screen.queryByRole('button', { name: /^More details/ })).toBeNull();
+    one.unmount();
+    const oneOff = open({ shift: shift() });
+    expect(screen.queryByRole('button', { name: /^More details/ })).toBeNull();
+    oneOff.unmount();
+    open({ shift: shift({ recurrence_rule: 'daily', recurrence_end_date: '2027-06-30' }) });
+    expect(screen.queryByRole('button', { name: /^More details/ })).toBeNull();
+  });
+
+  it('P: shown for a repeating create, collapsed, summarising the repeat end; the reminder is not in it', async () => {
+    const user = userEvent.setup();
+    open();
     await user.click(radio('How often?', 'Every day'));
+    expect(moreToggle()).toHaveAttribute('aria-expanded', 'false');
+    expect(summary()).toBe('Repeat ends: never');
+    await user.click(moreToggle());
+    // Open, it holds the repeat end and no reminder tiles.
+    expect(field('shift_repeat_end')).toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: 'Reminder' })).toBeNull();
+    fireEvent.change(field('shift_repeat_end'), { target: { value: '2027-06-30' } });
+    await user.click(moreToggle());
+    expect(summary()).toBe('Repeat ends: Jun 30, 2027');
+    await user.click(radio('How often?', 'Once'));
+    expect(screen.queryByRole('button', { name: /^More details/ })).toBeNull();
+  });
+
+  it('inside: the repeat end with a clear button', async () => {
+    const user = userEvent.setup();
+    open();
+    await user.click(radio('How often?', 'Every day'));
+    await user.click(moreToggle());
     expect(field('shift_repeat_end')).toHaveValue('');
     expect(screen.queryByTestId('shift-form-clear-end')).not.toBeInTheDocument();
     fireEvent.change(field('shift_repeat_end'), { target: { value: '2027-04-01' } });
@@ -580,33 +645,6 @@ describe('simple shift form: More details', () => {
     await waitFor(() => expect(field('shift_repeat_end')).toHaveFocus());
     expect(mockCreate).not.toHaveBeenCalled();
   });
-
-  it.each([
-    [null, 'off'],
-    [60, '1 hour'],
-    [120, '2 hours'],
-    [240, '4 hours'],
-    [1440, '1 day'],
-  ] as const)('edit prefill: reminder %s checks "%s"', async (lead, label) => {
-    const user = userEvent.setup();
-    open({ shift: shift({ reminder_lead_minutes: lead }) });
-    await user.click(moreToggle());
-    expect(radio('Reminder', new RegExp(`^${label}$`, 'i'))).toBeChecked();
-  });
-
-  it('an edit of a repeating shift names its stored end (or "never"), read-only; a one-off names none', async () => {
-    const user = userEvent.setup();
-    const ended = open({ shift: shift({ recurrence_rule: 'daily', recurrence_end_date: '2027-06-30' }) });
-    expect(summary()).toBe('Reminder: 1 hour before · Repeat ends: Jun 30, 2027');
-    await user.click(moreToggle());
-    expect(document.getElementById('shift_repeat_end')).toBeNull();
-    ended.unmount();
-    const never = open({ shift: shift({ recurrence_rule: 'daily', recurrence_end_date: null }) });
-    expect(summary()).toBe('Reminder: 1 hour before · Repeat ends: never');
-    never.unmount();
-    open({ shift: shift({ reminder_lead_minutes: null }) });
-    expect(summary()).toBe('Reminder: off');
-  });
 });
 
 describe('simple shift form: add the next shift', () => {
@@ -616,7 +654,7 @@ describe('simple shift form: add the next shift', () => {
     shell(<ShiftComposer circleId="c" initialDate="2027-03-09" source="shifts_view" onClose={vi.fn()} />);
     await user.type(field('shift_name'), 'Morning');
     await user.click(radio('How often?', 'Every day'));
-    await user.click(moreToggle());
+    await openReminders(user);
     await user.click(radio('Reminder', '2 hours'));
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
     expect(await screen.findByRole('heading', { name: '"Morning" saved' })).toBeInTheDocument();
@@ -627,7 +665,8 @@ describe('simple shift form: add the next shift', () => {
     expect(endTile()).toHaveAccessibleName('Ends, Choose a time');
     expect(field('shift_date')).toHaveValue('2027-03-09');
     expect(radio('How often?', 'Every day')).toBeChecked();
-    expect(summary()).toBe('Reminder: 2 hours before · Repeat ends: never');
+    expect(reminderValue()).toBe('2 hours before');
+    expect(summary()).toBe('Repeat ends: never');
 
     // Saving without an end flags the Ends tile.
     await user.type(field('shift_name'), 'Afternoon');
