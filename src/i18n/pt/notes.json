@@ -9,6 +9,9 @@
     "hint": "Anote como foi o dia: todos no círculo podem ver."
   },
   "composer": {
+    "draftRestored": "Rascunho restaurado",
+    "discardDraft": "Descartar",
+    "discardDraftA11y": "Descartar rascunho restaurado",
     "label": "Adicionar uma nota",
     "placeholder": "Como foi o dia?",
     "moodLabel": "Humor",

@@ -9,6 +9,9 @@
     "hint": "Jot down how the day went — everyone in the circle can see it."
   },
   "composer": {
+    "draftRestored": "Draft restored",
+    "discardDraft": "Discard",
+    "discardDraftA11y": "Discard restored draft",
     "label": "Add a note",
     "placeholder": "How was the day?",
     "moodLabel": "Mood",

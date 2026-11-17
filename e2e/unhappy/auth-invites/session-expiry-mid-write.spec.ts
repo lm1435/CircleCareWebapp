@@ -151,7 +151,10 @@ test('PK9: the typed draft is restored after re-login, with the notice, then del
 
   const composer = await openNoteComposer(page);
   await expect(composer).toHaveValue(draft, { timeout: 5_000 });
-  await expect(page.getByText('We restored your unsaved draft.')).toBeVisible();
+  // Notes show the inline "Draft restored · Discard" line instead of the generic PK9 toast (2026-11-16).
+  await expect(page.getByText('Draft restored', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Discard restored draft' })).toBeVisible();
+  await expect(page.getByText('We restored your unsaved draft.')).toHaveCount(0);
   expect(await DRAFT_ENTRIES(page)).toHaveLength(0);
   expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain(draft);
   // Nothing was posted by the restore itself.
@@ -200,6 +203,7 @@ test('PK9 privacy: an EXPIRED (>30 min) draft is purged, not restored', async ({
   const composer = await openNoteComposer(page);
   await expect(composer).toHaveValue('');
   await expect(page.getByText('We restored your unsaved draft.')).toHaveCount(0);
+  await expect(page.getByText('Draft restored', { exact: true })).toHaveCount(0);
   expect(await DRAFT_ENTRIES(page)).toHaveLength(0);
 });
 
@@ -250,6 +254,7 @@ test('PK9 privacy: a VOLUNTARY sign-out purges any saved draft; re-login restore
   await openNotes(page, circleId);
   await expect(page.getByRole('textbox', { name: /^Add a note/ })).toHaveCount(0); // folded back into its button
   await expect(page.getByText('We restored your unsaved draft.')).toHaveCount(0);
+  await expect(page.getByText('Draft restored', { exact: true })).toHaveCount(0);
 });
 
 test('falsifier: with a working refresh the same 401 is retried and the note IS written', async ({

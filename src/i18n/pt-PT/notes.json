@@ -2,6 +2,9 @@
   "subtitle": "Um diário partilhado de como foi cada dia, visível para todos no círculo.",
   "errorHint": "Verifique a sua ligação e tente novamente.",
   "composer": {
+    "draftRestored": "Rascunho recuperado",
+    "discardDraft": "Descartar",
+    "discardDraftA11y": "Descartar rascunho recuperado",
     "save": "Guardar",
     "errorSaving": "Não foi possível guardar a nota. Tente novamente."
   },

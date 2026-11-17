@@ -30,6 +30,14 @@ import {
  * safely when uninitialized (guarded on `env.VITE_POSTHOG_KEY`, the same signal
  * `initAnalytics` uses), so every call below is safe to make unconditionally.
  */
+// Where a restored notes-composer draft came from (note_draft_restored / note_draft_discarded).
+export const NOTE_DRAFT_SOURCES = ['session', 'failed_post'] as const;
+export type NoteDraftSource = (typeof NOTE_DRAFT_SOURCES)[number];
+/** A stray value can never become a property: anything off the enum reads as 'session'. */
+function noteDraftSource(source: unknown): NoteDraftSource {
+  return NOTE_DRAFT_SOURCES.includes(source as NoteDraftSource) ? (source as NoteDraftSource) : 'session';
+}
+
 function capture(event: string, props?: Record<string, unknown>): void {
   if (!env.VITE_POSTHOG_KEY) return;
   // CONSENT, checked on the EMIT path and not only at init.
@@ -1770,6 +1778,9 @@ export const Analytics = {
   /** The shift form's "Custom…" repeat tile opened the rarer options in place. */
   shiftRepeatCustomOpened: (opts: { editing: boolean }) =>
     capture('shift_repeat_custom_opened', { editing: opts.editing === true }),
+  /** The shift form's Reminders card (main form, under "Who's with") opened its choices. Boolean only. */
+  shiftFormReminderExpanded: (opts: { editing: boolean }) =>
+    capture('shift_form_reminder_expanded', { editing: opts.editing === true }),
   /** The Take dialog's reminder row "Change" opened the reminder choices. */
   shiftTakeReminderExpanded: () => capture('shift_take_reminder_expanded', {}),
   shiftTaskDeleted: (opts: { scope: string }) =>
@@ -1815,6 +1826,16 @@ export const Analytics = {
   /** "Show older notes" pressed: `page` = how many 92-day pages back (1 = first). */
   careNotesOlderLoaded: (opts: { page: number }) =>
     capture('care_notes_older_loaded', { page: opts.page }),
+  /**
+   * The notes composer opened pre-filled with a restored draft (owner 2026-11-16). `source` is an
+   * enum: 'session' = the PK9 forced-sign-out draft, 'failed_post' = the BH-024 note that failed to
+   * post after the user left. NEVER the text, mood, categories, date or circle_id. Twin of mobile.
+   */
+  noteDraftRestored: (opts: { source: NoteDraftSource }) =>
+    capture('note_draft_restored', { source: noteDraftSource(opts.source) }),
+  /** "Discard" on the restored-draft line. Same enum-only rule as `noteDraftRestored`. */
+  noteDraftDiscarded: (opts: { source: NoteDraftSource }) =>
+    capture('note_draft_discarded', { source: noteDraftSource(opts.source) }),
   /** A daily care note was EDITED. Mirrors `care_note_added`: a category COUNT
    *  and nothing else — never mood, body, or category names. */
   careNoteUpdated: (

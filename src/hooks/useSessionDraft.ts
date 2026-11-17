@@ -13,12 +13,16 @@ import { useAuthStore } from '@/store/authStore';
  * - `restore` receives the saved draft on the form's mount (same user, <30 min);
  *   the entry is deleted as it is read and the "restored" notice shows.
  * - `draftKey` null disables the hook (e.g. an edit of a saved record).
+ * - `options.toast` false: skip the toast, the form shows its own inline notice
+ *   (NotesPage's "Draft restored · Discard" line, mobile parity).
  */
 export function useSessionDraft<T>(
   draftKey: string | null,
   getSnapshot: () => T | null,
-  restore: (draft: T) => void
+  restore: (draft: T) => void,
+  options: { toast?: boolean } = {}
 ): void {
+  const wantToast = options.toast !== false;
   const { t } = useTranslation('common');
   // Tolerate a missing provider (isolated component tests): the notice is
   // then skipped, the restore itself still happens.
@@ -32,8 +36,10 @@ export function useSessionDraft<T>(
   const getRef = useRef(getSnapshot);
   const restoreRef = useRef(restore);
   const toastRef = useRef({ showToast, text: t('draftRestored') });
+  const wantToastRef = useRef(wantToast);
   getRef.current = getSnapshot;
   restoreRef.current = restore;
+  wantToastRef.current = wantToast;
   toastRef.current = { showToast, text: t('draftRestored') };
 
   // Re-runs when the user id arrives: on a full page load the form can mount
@@ -45,7 +51,7 @@ export function useSessionDraft<T>(
     const saved = takeDraft<T>(userId, draftKey);
     if (saved !== null) {
       restoreRef.current(saved);
-      toastRef.current.showToast?.(toastRef.current.text, 'info');
+      if (wantToastRef.current) toastRef.current.showToast?.(toastRef.current.text, 'info');
     }
     return registerDraft(draftKey, () => getRef.current());
   }, [draftKey, userId]);

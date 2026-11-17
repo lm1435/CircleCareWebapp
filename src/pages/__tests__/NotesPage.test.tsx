@@ -23,7 +23,8 @@ import NotesPage from '../NotesPage';
 import type { CareNote } from '@/api/careNotes';
 import { daysBetween, olderPageRange, olderPagesNeeded } from '@/lib/noteDate';
 import { __resetEmailLinkLandingForTests } from '@/lib/emailLinkLanding';
-import { clearParkedNoteDrafts } from '@/lib/parkedNoteDraft';
+import { clearParkedNoteDrafts, parkNoteDraft } from '@/lib/parkedNoteDraft';
+import { onSessionEnded, saveDraftsForForcedSignOut } from '@/lib/sessionDraft';
 
 function shiftIso(date: string, days: number): string {
   const d = new Date(`${date}T12:00:00Z`);
@@ -83,6 +84,8 @@ const mockCareNoteUpdated = vi.fn();
 const mockCareNoteDeleted = vi.fn();
 const mockCareNotesOlderLoaded = vi.fn();
 const mockEmailLinkOpened = vi.fn();
+const mockNoteDraftRestored = vi.fn();
+const mockNoteDraftDiscarded = vi.fn();
 
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
@@ -93,6 +96,8 @@ vi.mock('@/lib/analytics', () => ({
     careNotesOlderLoaded: (...args: unknown[]) => mockCareNotesOlderLoaded(...args),
     errorOccurred: vi.fn(),
     emailLinkOpened: (...args: unknown[]) => mockEmailLinkOpened(...args),
+    noteDraftRestored: (...args: unknown[]) => mockNoteDraftRestored(...args),
+    noteDraftDiscarded: (...args: unknown[]) => mockNoteDraftDiscarded(...args),
   },
 }));
 
@@ -189,6 +194,8 @@ beforeEach(() => {
   mockCareNoteDeleted.mockReset();
   mockCareNotesOlderLoaded.mockReset();
   mockEmailLinkOpened.mockReset();
+  mockNoteDraftRestored.mockReset();
+  mockNoteDraftDiscarded.mockReset();
   __resetEmailLinkLandingForTests();
   mockUseOlder.mockReset();
   mockUseOlder.mockReturnValue(OLDER_EMPTY);
@@ -1526,5 +1533,190 @@ describe('NotesPage — a post that settles after leaving the page (BH-024)', ()
     // Exactly one alert, and it lives in the composer (a toast would be a second, outside it).
     expect(screen.getAllByRole('alert')).toHaveLength(1);
     expect(within(form).getByRole('alert')).toBeInTheDocument();
+  });
+});
+
+// ── "Draft restored · Discard" (owner 2026-11-16) ─────────────────────────────
+// The line shows only when the composer was pre-filled with a RESTORED draft (PK9 session draft or
+// the BH-024 parked note), stays while the user edits, and goes on post / discard / emptied by hand.
+// Discard clears body, mood, categories and date plus the stored copy, for THIS circle only.
+// Twin of mobile NotesTab.test.tsx "restored draft line".
+describe('NotesPage — restored draft line', () => {
+  const OTHER_CIRCLE = 'circle-2';
+  const textbox = () => screen.getByRole('textbox', { name: /^Add a note/ });
+  const line = () => screen.queryByTestId('draft-restored-notice');
+
+  function renderCircle(circleId: string) {
+    const utils = render(
+      <ToastProvider>
+        <MemoryRouter initialEntries={[`/circles/${circleId}/notes`]}>
+          <Routes>
+            <Route path="/circles/:circleId/notes" element={<NotesPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
+    );
+    const trigger = within(utils.container).queryByTestId('note-composer-expand');
+    if (trigger) fireEvent.click(trigger);
+    return utils;
+  }
+
+  /** Type into each circle's composer, force a sign-out (session draft saved), unmount. */
+  function sessionRestoreSetup(entries: Array<[string, string]>): void {
+    const views = entries.map(([circleId, text]) => {
+      const v = renderCircle(circleId);
+      // Two pages mounted at once share the composer's element ids (one per page in real use), so
+      // the label only names the first one: reach each page's own textarea directly.
+      const area = v.container.querySelector('textarea') as HTMLTextAreaElement;
+      fireEvent.change(area, { target: { value: text } });
+      return v;
+    });
+    saveDraftsForForcedSignOut('user-1');
+    onSessionEnded();
+    views.forEach((v) => v.unmount());
+  }
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    clearParkedNoteDrafts();
+  });
+
+  it('P: a session-restored draft shows the line (polite status, labelled Discard), no toast', () => {
+    sessionRestoreSetup([[CIRCLE_ID, 'Slept badly']]);
+    renderCircle(CIRCLE_ID);
+    expect(textbox()).toHaveValue('Slept badly');
+    expect(line()).toBeInTheDocument();
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('Draft restored');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByRole('button', { name: 'Discard restored draft' })).toHaveTextContent('Discard');
+    // The generic PK9 toast is replaced by the inline line here.
+    expect(screen.queryByText(i18n.t('common:draftRestored') as string)).not.toBeInTheDocument();
+    expect(mockNoteDraftRestored).toHaveBeenCalledTimes(1);
+    expect(mockNoteDraftRestored).toHaveBeenCalledWith({ source: 'session' });
+  });
+
+  it('P: a failed-post (parked) draft shows the line and fires source failed_post', () => {
+    parkNoteDraft(CIRCLE_ID, { body: 'Skipped dinner', mood: null, categories: [], noteDate: null });
+    renderCircle(CIRCLE_ID);
+    expect(textbox()).toHaveValue('Skipped dinner');
+    expect(line()).toBeInTheDocument();
+    expect(mockNoteDraftRestored).toHaveBeenCalledWith({ source: 'failed_post' });
+  });
+
+  it('P: the line stays while the user edits the restored draft', async () => {
+    const user = userEvent.setup();
+    parkNoteDraft(CIRCLE_ID, { body: 'Skipped dinner', mood: null, categories: [], noteDate: null });
+    renderCircle(CIRCLE_ID);
+    await user.type(textbox(), ', ate later');
+    expect(line()).toBeInTheDocument();
+  });
+
+  it('P: Discard clears body, mood, categories and date, and the parked draft does not come back', async () => {
+    const user = userEvent.setup();
+    parkNoteDraft(CIRCLE_ID, {
+      body: 'Skipped dinner',
+      mood: 'tough',
+      categories: ['meal'],
+      noteDate: '2026-03-10',
+    });
+    const first = renderCircle(CIRCLE_ID);
+    await user.click(screen.getByRole('button', { name: 'Discard restored draft' }));
+    expect(line()).not.toBeInTheDocument();
+    // Collapsed back to "Add a note", with focus handed to it.
+    expect(screen.queryByRole('textbox', { name: /^Add a note/ })).not.toBeInTheDocument();
+    expect(screen.getByTestId('note-composer-expand')).toHaveFocus();
+    fireEvent.click(screen.getByTestId('note-composer-expand'));
+    expect(textbox()).toHaveValue('');
+    expect(screen.getByLabelText(/^Date/)).toHaveValue(TODAY);
+    const moodGroup = screen.getByRole('radiogroup', { name: 'Mood' });
+    expect(within(moodGroup).getByRole('radio', { name: 'Tough day' })).not.toBeChecked();
+    const categoryGroup = screen.getByRole('group', { name: 'Categories' });
+    expect(within(categoryGroup).getByRole('button', { name: 'Meal' })).toHaveAttribute('aria-pressed', 'false');
+    expect(mockNoteDraftDiscarded).toHaveBeenCalledTimes(1);
+    expect(mockNoteDraftDiscarded).toHaveBeenCalledWith({ source: 'failed_post' });
+    expect(mockCreate).not.toHaveBeenCalled();
+    first.unmount();
+
+    renderCircle(CIRCLE_ID);
+    expect(line()).not.toBeInTheDocument();
+    expect(textbox()).toHaveValue('');
+  });
+
+  it('P: Discard of a session draft leaves nothing stored for the next forced sign-out / remount', async () => {
+    const user = userEvent.setup();
+    sessionRestoreSetup([[CIRCLE_ID, 'Slept badly']]);
+    const v = renderCircle(CIRCLE_ID);
+    await user.click(screen.getByRole('button', { name: 'Discard restored draft' }));
+    expect(mockNoteDraftDiscarded).toHaveBeenCalledWith({ source: 'session' });
+    saveDraftsForForcedSignOut('user-1');
+    onSessionEnded();
+    v.unmount();
+    expect(sessionStorage.length).toBe(0);
+    renderCircle(CIRCLE_ID);
+    expect(textbox()).toHaveValue('');
+    expect(line()).not.toBeInTheDocument();
+  });
+
+  it('N: fresh typing shows no line and fires no restore event', async () => {
+    const user = userEvent.setup();
+    renderCircle(CIRCLE_ID);
+    await user.type(textbox(), 'Typed just now');
+    expect(line()).not.toBeInTheDocument();
+    expect(mockNoteDraftRestored).not.toHaveBeenCalled();
+  });
+
+  it('N: posting a restored draft works and the line goes away (no discard event)', async () => {
+    const user = userEvent.setup();
+    mockCreate.mockImplementation((_v, o: { onSuccess?: () => void }) => o.onSuccess?.());
+    parkNoteDraft(CIRCLE_ID, { body: 'Skipped dinner', mood: null, categories: [], noteDate: null });
+    renderCircle(CIRCLE_ID);
+    await user.click(screen.getByRole('button', { name: 'Post' }));
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreate.mock.calls[0][0].input).toEqual({ body: 'Skipped dinner' });
+    expect(line()).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('note-composer-expand'));
+    await user.type(textbox(), 'A new one');
+    expect(line()).not.toBeInTheDocument();
+    expect(mockNoteDraftDiscarded).not.toHaveBeenCalled();
+  });
+
+  it('N: emptying the restored text by hand hides the line, and new typing does not bring it back', async () => {
+    const user = userEvent.setup();
+    parkNoteDraft(CIRCLE_ID, { body: 'Skipped dinner', mood: null, categories: [], noteDate: null });
+    renderCircle(CIRCLE_ID);
+    await user.clear(textbox());
+    expect(line()).not.toBeInTheDocument();
+    const trigger = screen.queryByTestId('note-composer-expand');
+    if (trigger) fireEvent.click(trigger);
+    await user.type(textbox(), 'Mine now');
+    expect(line()).not.toBeInTheDocument();
+  });
+
+  it("N: Discard in circle A does not touch circle B's parked draft", async () => {
+    const user = userEvent.setup();
+    parkNoteDraft(CIRCLE_ID, { body: 'A words', mood: null, categories: [], noteDate: null });
+    parkNoteDraft(OTHER_CIRCLE, { body: 'B words', mood: null, categories: [], noteDate: null });
+    const a = renderCircle(CIRCLE_ID);
+    await user.click(screen.getByRole('button', { name: 'Discard restored draft' }));
+    a.unmount();
+    renderCircle(OTHER_CIRCLE);
+    expect(textbox()).toHaveValue('B words');
+    expect(line()).toBeInTheDocument();
+  });
+
+  it("N: Discard in circle A does not touch circle B's session draft", async () => {
+    const user = userEvent.setup();
+    sessionRestoreSetup([
+      [CIRCLE_ID, 'A words'],
+      [OTHER_CIRCLE, 'B words'],
+    ]);
+    const a = renderCircle(CIRCLE_ID);
+    expect(textbox()).toHaveValue('A words');
+    await user.click(screen.getByRole('button', { name: 'Discard restored draft' }));
+    a.unmount();
+    renderCircle(OTHER_CIRCLE);
+    expect(textbox()).toHaveValue('B words');
+    expect(line()).toBeInTheDocument();
   });
 });

@@ -9,6 +9,9 @@
     "hint": "Annota com'è andata la giornata: tutti nella cerchia possono vederla."
   },
   "composer": {
+    "draftRestored": "Bozza ripristinata",
+    "discardDraft": "Scarta",
+    "discardDraftA11y": "Scarta la bozza ripristinata",
     "label": "Aggiungi una nota",
     "placeholder": "Com'è andata la giornata?",
     "moodLabel": "Umore",

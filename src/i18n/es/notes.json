@@ -9,6 +9,9 @@
     "hint": "Anota cómo estuvo el día — todos en el círculo pueden verlo."
   },
   "composer": {
+    "draftRestored": "Borrador recuperado",
+    "discardDraft": "Descartar",
+    "discardDraftA11y": "Descartar el borrador recuperado",
     "label": "Agregar una nota",
     "placeholder": "¿Cómo estuvo el día?",
     "moodLabel": "Estado de ánimo",

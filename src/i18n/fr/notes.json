@@ -9,6 +9,9 @@
     "hint": "Notez comment s’est passée la journée : tout le cercle peut la voir."
   },
   "composer": {
+    "draftRestored": "Brouillon restauré",
+    "discardDraft": "Effacer",
+    "discardDraftA11y": "Effacer le brouillon restauré",
     "label": "Ajouter une note",
     "placeholder": "Comment s’est passée la journée ?",
     "moodLabel": "Humeur",

@@ -48,6 +48,8 @@ import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { useAuthStore } from '@/store/authStore';
 import { Analytics } from '@/lib/analytics';
 import { parkNoteDraft, takeParkedNoteDraft } from '@/lib/parkedNoteDraft';
+import { takeDraft } from '@/lib/sessionDraft';
+import { NoteDraftRestoredLine } from '@/components/notes/NoteDraftRestoredLine';
 import type { CareNote, CareNoteInput } from '@/api/careNotes';
 import { blockOfflineWrite } from '@/lib/offlineWrite';
 
@@ -179,6 +181,13 @@ export default function NotesPage(): ReactElement {
 
   const [draft, setDraft] = useState<NoteDraft>(EMPTY_NOTE_DRAFT);
   const [postError, setPostError] = useState<string | null>(null);
+  // "Draft restored · Discard" (owner 2026-11-16). Set when the composer is pre-filled with words the
+  // user did not just type: the PK9 session draft ('session') or the BH-024 parked note that failed to
+  // post after they left ('failed_post'). The line STAYS while they edit, and goes away when they post,
+  // discard, or empty the composer by hand (then later typing is theirs, not restored). A failure while
+  // still on the page restores in place with its own inline error: not a "restored draft". A circle
+  // switch remounts the page (AppLayout keys the outlet by pathname). Twin of mobile NotesTab.
+  const [restoredFrom, setRestoredFrom] = useState<'session' | 'failed_post' | null>(null);
   // The create composer is COLLAPSED into an "Add a note" button (owner 2026-11-07, mobile parity).
   // It also shows whenever there is something in it (a restored session draft, or the text kept after
   // a failed post) so nothing typed is ever hidden.
@@ -216,7 +225,11 @@ export default function NotesPage(): ReactElement {
     mountedRef.current = true;
     // A note that failed to post after the user left comes back, once, on return (BH-024).
     const parked = circleId ? takeParkedNoteDraft(circleId) : null;
-    if (parked) setDraft(parked);
+    if (parked) {
+      setDraft(parked);
+      setRestoredFrom('failed_post');
+      Analytics.noteDraftRestored({ source: 'failed_post' });
+    }
     return () => {
       mountedRef.current = false;
     };
@@ -229,9 +242,34 @@ export default function NotesPage(): ReactElement {
       const live = d.body.trim() !== '' || d.mood !== null || d.categories.length > 0;
       return live ? d : inFlightDraftRef.current;
     },
-    (restored) => setDraft({ ...EMPTY_NOTE_DRAFT, ...restored })
+    (restored) => {
+      setDraft({ ...EMPTY_NOTE_DRAFT, ...restored });
+      setRestoredFrom('session');
+      Analytics.noteDraftRestored({ source: 'session' });
+    },
+    // The inline "Draft restored · Discard" line replaces the generic toast here.
+    { toast: false }
   );
   const draftIsLive = draft.body.trim() !== '' || draft.mood !== null || draft.categories.length > 0;
+  useEffect(() => {
+    if (restoredFrom !== null && !draftIsLive) setRestoredFrom(null);
+  }, [restoredFrom, draftIsLive]);
+  // Discard a restored draft: empty the composer (body, mood, categories, date), collapse it, and drop
+  // any stored copy (session draft / parked note) for THIS circle only, so it cannot come back on the
+  // next mount. Both stores are read-and-delete already; this is the belt to that braces.
+  function handleDiscardRestored(): void {
+    const source = restoredFrom;
+    setDraft(EMPTY_NOTE_DRAFT);
+    setPostError(null);
+    setComposerOpen(false);
+    setRestoredFrom(null);
+    inFlightDraftRef.current = null;
+    if (circleId) {
+      takeDraft(currentUserId, `notes:create:${circleId}`);
+      takeParkedNoteDraft(circleId);
+    }
+    if (source) Analytics.noteDraftDiscarded({ source });
+  }
   const composerShown = composerOpen || draftIsLive || postError !== null;
   // Focus management: when the composer closes (posted, cancelled), the focused control is gone, so
   // hand focus to the button that reopens it instead of dropping it on <body>.
@@ -402,6 +440,7 @@ export default function NotesPage(): ReactElement {
     // Optimistic: the hook prepends the note; clear the composer now.
     setDraft(EMPTY_NOTE_DRAFT);
     setComposerOpen(false);
+    setRestoredFrom(null);
     // mutateAsync, settled on the promise, NOT mutate(vars, {callbacks}): per-call mutate
     // callbacks are only delivered while this component is still mounted, so leaving the page
     // mid-post dropped both the failure surface and the analytics event (BH-024). The promise
@@ -634,6 +673,9 @@ export default function NotesPage(): ReactElement {
       <div ref={composerWrapRef} className="scroll-mt-4" data-testid="notes-composer-slot">
         {composerShown ? (
           <Sheet padding="sm">
+            {restoredFrom !== null && draftIsLive ? (
+              <NoteDraftRestoredLine onDiscard={handleDiscardRestored} />
+            ) : null}
             <NoteComposer
               idPrefix="care-note"
               draft={draft}

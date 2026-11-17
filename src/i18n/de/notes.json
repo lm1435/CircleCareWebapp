@@ -9,6 +9,9 @@
     "hint": "Halten Sie fest, wie der Tag verlaufen ist – alle im Kreis können es sehen."
   },
   "composer": {
+    "draftRestored": "Entwurf wiederhergestellt",
+    "discardDraft": "Verwerfen",
+    "discardDraftA11y": "Wiederhergestellten Entwurf verwerfen",
     "label": "Notiz hinzufügen",
     "placeholder": "Wie war der Tag?",
     "moodLabel": "Stimmung",
