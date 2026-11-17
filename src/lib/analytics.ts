@@ -898,6 +898,13 @@ export const Analytics = {
     capture('preview_opened', { source }),
   /** The walkthrough's final "Get started" CTA; `step` is the 1-based screen. */
   previewGetStartedTapped: (step: number) => capture('preview_get_started_tapped', { step }),
+  // 1.4.3 "See how it works" video — same names/props as mobile (enums only).
+  previewVideoStarted: (videoLanguage: string, platform: 'ios' | 'android' | 'web') =>
+    capture('preview_video_started', { video_language: videoLanguage, platform }),
+  previewVideoCompleted: (videoLanguage: string, platform: 'ios' | 'android' | 'web') =>
+    capture('preview_video_completed', { video_language: videoLanguage, platform }),
+  previewVideoFailed: (videoLanguage: string, platform: 'ios' | 'android' | 'web') =>
+    capture('preview_video_failed', { video_language: videoLanguage, platform }),
 
   // --- Daily update (docs/plans/daily-update.md §7) ---
   // Booleans and enums ONLY: no circle_id (2026-09-04 decision), no names, no

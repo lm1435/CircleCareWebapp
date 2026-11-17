@@ -4,7 +4,9 @@ import { checkA11y } from '../helpers';
 // The pre-auth "See how it works" walkthrough (/how-it-works), the web twin of
 // mobile Welcome's Preview: Sign up -> step 1 -> step 2 -> Get started -> Sign up,
 // keyboard-driven, with an axe scan of each step. Signed out on purpose: no
-// session, and the page must make no API call of its own.
+// session, and the page's ONLY API call is the public app config (1.4.3 video
+// branch), stubbed here to "no video" so this spec pins the carousel (the
+// video: how-it-works-video.spec.ts).
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -19,6 +21,9 @@ test('Sign up -> See how it works -> step 2 -> Get started -> Sign up', async ({
     }
   });
 
+  await page.route('**/api/app-config', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true,"data":{}}' })
+  );
   await page.goto('/signup', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { level: 1, name: 'Create account' })).toBeVisible();
 
@@ -57,5 +62,5 @@ test('Sign up -> See how it works -> step 2 -> Get started -> Sign up', async ({
   await expect(page).toHaveURL(/\/signup$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Create account' })).toBeVisible();
 
-  expect(apiCalls).toEqual([]);
+  expect(apiCalls.filter((p) => p !== '/api/app-config')).toEqual([]);
 });

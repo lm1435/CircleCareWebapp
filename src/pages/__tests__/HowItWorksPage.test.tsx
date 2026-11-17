@@ -9,12 +9,16 @@ import LoginPage from '@/pages/LoginPage';
 import { apiClient } from '@/lib/api';
 import { Analytics } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
+import { queryKeys } from '@/lib/queryKeys';
 
 // /how-it-works — the web twin of mobile's pre-auth Preview walkthrough.
 // `@/lib/api` is mocked by the global setup; the page must never call it.
 
 function renderAt(entry: string | { pathname: string; state?: unknown }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // 1.4.3: the page reads public app config for the video branch. Seeded as
+  // "no video configured" so this suite pins the carousel (video: HowItWorksVideo.test.tsx).
+  queryClient.setQueryData(queryKeys.appConfig, {});
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[entry]}>

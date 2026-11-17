@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { useAppConfig } from '@/hooks/useAppConfig';
+import { resolvePreviewVideo, type PreviewVideoSource } from '@/lib/previewVideo';
+import { prefersReducedMotion } from '@/components/ui/motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Analytics } from '@/lib/analytics';
@@ -16,9 +19,12 @@ import { PreviewActivityStep } from '@/components/preview/PreviewActivityStep';
  * Back (the top bar's back button steps back, then leaves), a "Screen N of M" indicator, a trial note on the last step and a final
  * "Get started" that goes to Sign up. Public: no session, no circle, no API.
  *
- * The mobile screen's video branch (app config `preview_video_url`) is not
- * mirrored: the web has no app-config hook, and the carousel is the default on
- * mobile too.
+ * 1.4.3 video branch (mobile parity): app config `preview_video_url_<language>`
+ * -> its base language -> the legacy `preview_video_url` -> this carousel
+ * (lib/previewVideo.ts), as the 16:9 cut. Muted, looping, inline, with a
+ * poster and a pause / play control; never autoplays under
+ * prefers-reduced-motion (poster + Play). A source that fails to load hands
+ * over to the carousel. Mock: docs/mocks-143/preview-video.
  *
  * Opened from Sign up / Log in with `state.previewSource`; anything else
  * (typed URL, bookmark) is reported as 'direct'.
@@ -37,8 +43,115 @@ function readSource(state: unknown): PreviewSource {
   return SOURCES.includes(raw as PreviewSource) ? (raw as PreviewSource) : 'direct';
 }
 
-export default function HowItWorksPage(): ReactElement {
+/** The video layout (docs/mocks-143/preview-video, web panel). */
+function PreviewVideo({
+  video,
+  onFailed,
+}: {
+  video: PreviewVideoSource;
+  onFailed: () => void;
+}): ReactElement {
   const { t } = useTranslation('auth');
+  const ref = useRef<HTMLVideoElement>(null);
+  // Read once on mount: a reader who asked for less motion gets the poster + Play.
+  const [reduced] = useState(prefersReducedMotion);
+  const [playing, setPlaying] = useState(false);
+  const started = useRef(false);
+  const completed = useRef(false);
+  const failed = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || reduced) return;
+    // Muted autoplay can still be refused (data saver, a policy): stay on the poster.
+    const p = el.play?.();
+    if (p && typeof p.catch === 'function') p.catch(() => undefined);
+  }, [reduced]);
+
+  const toggle = (): void => {
+    const el = ref.current;
+    if (!el) return;
+    if (playing) {
+      el.pause();
+      return;
+    }
+    const p = el.play?.();
+    if (p && typeof p.catch === 'function') p.catch(() => undefined);
+  };
+
+  return (
+    <>
+      <Text variant="pageTitle" as="h1" id="preview-video-title" tabIndex={-1}>
+        {t('preview.videoTitle')}
+      </Text>
+      <Text variant="pageSubtitle" className="mt-2" id="preview-video-subtitle">
+        {t('preview.videoSubtitle')}
+      </Text>
+      <div className="relative mt-4 aspect-video overflow-hidden rounded-2xl bg-inset" data-testid="preview-video">
+        <video
+          ref={ref}
+          className="block h-full w-full object-contain"
+          src={video.src}
+          poster={video.poster ?? undefined}
+          muted
+          loop
+          playsInline
+          preload={reduced ? 'none' : 'auto'}
+          aria-labelledby="preview-video-title"
+          aria-describedby="preview-video-subtitle"
+          onPlay={() => {
+            setPlaying(true);
+            if (!started.current) {
+              started.current = true;
+              Analytics.previewVideoStarted(video.language, 'web');
+            }
+          }}
+          onPause={() => setPlaying(false)}
+          onTimeUpdate={(e) => {
+            // `ended` never fires on a looping video: count the first pass near the end.
+            const el = e.currentTarget;
+            if (completed.current || !(el.duration > 0)) return;
+            if (el.currentTime >= el.duration - 0.5) {
+              completed.current = true;
+              Analytics.previewVideoCompleted(video.language, 'web');
+            }
+          }}
+          onError={() => {
+            if (failed.current) return;
+            failed.current = true;
+            Analytics.previewVideoFailed(video.language, 'web');
+            onFailed();
+          }}
+        />
+        {/* WCAG 2.2.2: looping motion can be paused. */}
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={playing ? t('preview.pauseVideo') : t('preview.playVideo')}
+          className="absolute right-3 bottom-3 inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-card text-ink shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-deep"
+        >
+          {/* Inline glyphs (two shapes; not worth two bundled icon files). */}
+          {playing ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+              <rect x="6" y="5" width="4" height="14" rx="1" />
+              <rect x="14" y="5" width="4" height="14" rx="1" />
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+              <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" />
+            </svg>
+          )}
+        </button>
+      </div>
+    </>
+  );
+}
+
+export default function HowItWorksPage(): ReactElement {
+  const { t, i18n } = useTranslation('auth');
+  const { data: appConfig, isPending: configPending } = useAppConfig();
+  const [videoFailed, setVideoFailed] = useState(false);
+  const video = videoFailed ? null : resolvePreviewVideo(appConfig, i18n.language, '16x9');
   const navigate = useNavigate();
   const location = useLocation();
   const { goBack } = useAuthBack('/signup');
@@ -79,6 +192,41 @@ export default function HowItWorksPage(): ReactElement {
     Analytics.previewGetStartedTapped(step + 1);
     navigate('/signup');
   };
+
+  // Wait for the config (mobile parity): no carousel flash before the video.
+  if (configPending) {
+    return (
+      <AuthShell>
+        <AuthTopBar onBack={goBack} />
+        <div aria-busy="true" className="min-h-64" data-testid="preview-loading" />
+      </AuthShell>
+    );
+  }
+
+  if (video) {
+    return (
+      <AuthShell>
+        <AuthTopBar onBack={goBack} />
+        <PreviewVideo video={video} onFailed={() => setVideoFailed(true)} />
+        <div className="mt-8 border-t border-line-2 pt-4">
+          <Text variant="caption" className="mb-3 text-center text-ink-3!">
+            {t('preview.trialNote')}
+          </Text>
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            onClick={() => {
+              Analytics.previewGetStartedTapped(1);
+              navigate('/signup');
+            }}
+          >
+            {t('preview.getStarted')}
+          </Button>
+        </div>
+      </AuthShell>
+    );
+  }
 
   return (
     <AuthShell>
