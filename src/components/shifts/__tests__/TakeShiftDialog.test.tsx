@@ -180,6 +180,17 @@ describe('TakeShiftDialog', () => {
     expect(takeBody()).toHaveProperty('reminder_lead_minutes', null);
   });
 
+  it('P/N: keyboard-unchecking the last box moves focus to the toggle, never to <body> (WCAG 2.4.3)', async () => {
+    const user = userEvent.setup();
+    renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
+    await user.click(change());
+    expect(box('1 hour before')).toHaveFocus();
+    await user.keyboard(' ');
+    expect(toggle()).not.toBeChecked();
+    expect(toggle()).toHaveFocus();
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
   it('P: the toggle off sends both null', async () => {
     const user = userEvent.setup();
     renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));

@@ -625,6 +625,19 @@ describe('simple shift form: the Reminders card (main form)', () => {
     expect(JSON.stringify(mockCreate.mock.calls[0])).not.toContain('"reminder_leads_minutes":[]');
   });
 
+  it('P/N: keyboard-unchecking the last box moves focus to the toggle, never to <body> (WCAG 2.4.3)', async () => {
+    const user = userEvent.setup();
+    open();
+    await openReminders(user);
+    box('1 hour before').focus();
+    expect(box('1 hour before')).toHaveFocus();
+    await user.keyboard(' ');
+    expect(reminderSwitch()).not.toBeChecked();
+    expect(box('1 hour before')).toBeDisabled();
+    expect(reminderSwitch()).toHaveFocus();
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
   it('P: the toggle off greys the list (keeps its checks) and saves null; back on restores the set', async () => {
     const user = userEvent.setup();
     open();

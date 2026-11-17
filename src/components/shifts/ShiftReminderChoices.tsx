@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import { useEffect, useRef, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Checkbox, Text, Toggle } from '@/components/ui';
 import {
@@ -39,6 +39,14 @@ export function ShiftReminderChoices({
 }: ShiftReminderChoicesProps): ReactElement {
   const { t } = useTranslation(['shifts', 'calendar']);
   const rowsDisabled = disabled || !value.enabled;
+  // Unchecking the last box turns the toggle off, which disables every row, the focused one included: focus would
+  // drop to <body> (WCAG 2.4.3). Hand it to the "Enable notifications" toggle once that render has happened.
+  const focusToggle = useRef(false);
+  useEffect(() => {
+    if (!focusToggle.current) return;
+    focusToggle.current = false;
+    document.getElementById(`${idPrefix}_enabled`)?.focus();
+  }, [value.enabled, idPrefix]);
   return (
     <>
       <Toggle
@@ -67,7 +75,11 @@ export function ShiftReminderChoices({
             // Off keeps the checks on screen (greyed): the toggle restores exactly these.
             checked={value.leads.includes(lead)}
             disabled={rowsDisabled}
-            onChange={() => onChange(toggleShiftLead(value, lead))}
+            onChange={() => {
+              const next = toggleShiftLead(value, lead);
+              if (value.enabled && !next.enabled) focusToggle.current = true;
+              onChange(next);
+            }}
           />
         ))}
       </div>
