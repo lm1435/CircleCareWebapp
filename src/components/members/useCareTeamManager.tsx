@@ -160,6 +160,17 @@ export function useCareTeamManager(circleId: string): CareTeamManager {
     );
   };
 
+  /**
+   * What names an invite row (1.4.3): its address, or "Shared link" for an
+   * invite with no address. `inline` is the in-sentence form for labels and
+   * screen-reader copy ("Actions for invite to a shared link"). Never renders
+   * a raw null.
+   */
+  const inviteLabel = (invite: { invited_email: string | null }): string =>
+    invite.invited_email || t('manage.sharedLink');
+  const inviteLabelInline = (invite: { invited_email: string | null }): string =>
+    invite.invited_email || t('manage.sharedLinkInline');
+
   const handleCopyInviteLink = (invite: PendingCircleInvite): void => {
     const url = invite.invite_url;
     if (!url) return;
@@ -192,7 +203,13 @@ export function useCareTeamManager(circleId: string): CareTeamManager {
       { inviteId: invite.id },
       {
         onSuccess: () => {
-          showToast(t('manage.resendInviteSuccess', { email: invite.invited_email }), 'success');
+          // A shared link has nobody to email: the same link was renewed (1.4.3).
+          showToast(
+            invite.invited_email
+              ? t('manage.resendInviteSuccess', { email: invite.invited_email })
+              : t('manage.inviteLinkRenewed'),
+            'success'
+          );
           setInvitePendingResend(null);
         },
         onError: () => setInvitePendingResend(null),
@@ -206,7 +223,9 @@ export function useCareTeamManager(circleId: string): CareTeamManager {
   // existing cancel (DELETE), which dismisses the declined row. Never Resend.
   const handleInviteAgain = (): void => {
     const invite = declinedToReinvite;
-    if (!invite || declinedBusyId) return;
+    // A declined shared link is never re-invited from its row (no address;
+    // the row offers Remove only). Belt and braces for the guard below.
+    if (!invite || !invite.invited_email || declinedBusyId) return;
     setDeclinedBusyId(invite.id);
     createInvite.mutate(
       { email: invite.invited_email, member_type: invite.member_type },
@@ -359,10 +378,10 @@ export function useCareTeamManager(circleId: string): CareTeamManager {
 
     return (
       <SheetRow as="li" key={invite.id} className="gap-3 px-[18px] py-3.5">
-        <IconTile size={36} tone="coral" name="mail-outline" />
+        <IconTile size={36} tone="coral" name={invite.invited_email ? 'mail-outline' : 'share-outline'} />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <p className="m-0 min-w-0 truncate text-md text-ink">{invite.invited_email}</p>
+            <p className="m-0 min-w-0 truncate text-md text-ink">{inviteLabel(invite)}</p>
             {isExpired ? (
               <Badge variant="warning" size="sm">
                 {t('manage.inviteExpired')}
@@ -384,7 +403,7 @@ export function useCareTeamManager(circleId: string): CareTeamManager {
               <span className="sr-only">
                 {t('manage.inviteExpiresInLabel', {
                   count: expiry.daysLeft,
-                  email: invite.invited_email,
+                  email: inviteLabelInline(invite),
                 })}
               </span>
               <span aria-hidden="true">
@@ -394,7 +413,7 @@ export function useCareTeamManager(circleId: string): CareTeamManager {
           ) : null}
         </div>
         <MoreMenu
-          label={t('manage.inviteActionsLabel', { email: invite.invited_email })}
+          label={t('manage.inviteActionsLabel', { email: inviteLabelInline(invite) })}
           items={menuItems}
         />
       </SheetRow>
@@ -413,7 +432,7 @@ export function useCareTeamManager(circleId: string): CareTeamManager {
       >
         <IconTile size={36} tone="neutral" name="mail-outline" />
         <div className="min-w-0 flex-1">
-          <p className="m-0 min-w-0 truncate text-md text-ink">{invite.invited_email}</p>
+          <p className="m-0 min-w-0 truncate text-md text-ink">{inviteLabel(invite)}</p>
           <Badge variant="default" size="sm">
             {declinedOn
               ? t('manage.inviteDeclinedOn', { date: declinedOn })
@@ -421,23 +440,27 @@ export function useCareTeamManager(circleId: string): CareTeamManager {
           </Badge>
         </div>
         <div className="flex shrink-0 gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            offlineKind="change"
-            disabled={busy}
-            onClick={() => setDeclinedToReinvite(invite)}
-            aria-label={t('manage.inviteAgainLabel', { email: invite.invited_email })}
-          >
-            {t('manage.inviteAgain')}
-          </Button>
+          {/* No "Invite again" on a declined SHARED LINK (1.4.3): there is no
+              address to send to; a new link is one press away in Invite. */}
+          {invite.invited_email ? (
+            <Button
+              size="sm"
+              variant="outline"
+              offlineKind="change"
+              disabled={busy}
+              onClick={() => setDeclinedToReinvite(invite)}
+              aria-label={t('manage.inviteAgainLabel', { email: invite.invited_email })}
+            >
+              {t('manage.inviteAgain')}
+            </Button>
+          ) : null}
           <Button
             size="sm"
             variant="ghost"
             offlineKind="change"
             disabled={busy}
             onClick={() => handleRemoveDeclined(invite)}
-            aria-label={t('manage.removeDeclinedLabel', { email: invite.invited_email })}
+            aria-label={t('manage.removeDeclinedLabel', { email: inviteLabelInline(invite) })}
           >
             {t('manage.removeDeclined')}
           </Button>
@@ -507,7 +530,11 @@ export function useCareTeamManager(circleId: string): CareTeamManager {
           offlineKind="change"
           icon="mail-outline"
           title={t('manage.cancelInviteConfirmTitle')}
-          message={t('manage.cancelInviteConfirmBody', { email: inviteToCancel.invited_email })}
+          message={
+            inviteToCancel.invited_email
+              ? t('manage.cancelInviteConfirmBody', { email: inviteToCancel.invited_email })
+              : t('manage.cancelLinkInviteConfirmBody')
+          }
           confirmLabel={t('manage.cancelInviteConfirm')}
           cancelLabel={t('manage.keepInvite')}
           destructive

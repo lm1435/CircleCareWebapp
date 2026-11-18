@@ -257,3 +257,40 @@ describe('InviteMemberModal seat pre-check — negative', () => {
     expectFormOpen();
   });
 });
+
+// 1.4.3: a SHARED-LINK invite (no address) holds the seat.
+describe('InviteMemberModal seat pre-check — shared-link invite (1.4.3)', () => {
+  it('PL-P1: a live link invite holds the seat -> held-seat card naming a shared link, no Share/Send', () => {
+    render(
+      <InviteMemberModal
+        viewerIsOwner
+        circleId="circle-1"
+        isSelfCare={false}
+        onClose={vi.fn()}
+        circle={seat({ members: [person('owner', 'owner')], invites: [invite('inv-link', null as unknown as string)] })}
+      />
+    );
+    expect(screen.getByTestId('invite-cap-card')).toHaveTextContent('Your free invitation is in use');
+    expect(screen.getByTestId('invite-cap-card')).toHaveTextContent(/shared invite link/i);
+    expect(screen.getByTestId('invite-cap-card')).not.toHaveTextContent(/null/);
+    expect(screen.queryByRole('button', { name: 'Share invite link' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Send invitation' })).toBeNull();
+  });
+
+  it('PL-N1: an EXPIRED link invite holds no seat: both invite buttons are offered', () => {
+    render(
+      <InviteMemberModal
+        viewerIsOwner
+        circleId="circle-1"
+        isSelfCare={false}
+        onClose={vi.fn()}
+        circle={seat({
+          members: [person('owner', 'owner')],
+          invites: [invite('inv-link', null as unknown as string, { is_expired: true, expires_at: past() })],
+        })}
+      />
+    );
+    expect(screen.queryByTestId('invite-cap-card')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Share invite link' })).toBeInTheDocument();
+  });
+});

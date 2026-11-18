@@ -8,7 +8,7 @@ import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { joinedCircleMessage } from '@/hooks/useOpenJoinedCircle';
 import { useAuth } from '@/hooks/useAuth';
 import { recordPendingInviteeWelcome } from '@/lib/inviteeWelcome';
-import { extractJoinCode, isCompleteJoinCode } from '@/lib/joinCode';
+import { JOIN_CODE_LENGTH, extractJoinCode, isCompleteJoinCode } from '@/lib/joinCode';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
 import { isOwnOrMemberInvite, type InviteByCode } from '@/api/invites';
@@ -285,9 +285,12 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
             onSubmit={handleLookup}
             className="flex flex-col gap-4"
           >
+            {/* 8 boxes (1.4.3 codes); a legacy 6-character code fills six and is
+                already complete (`isCompleteJoinCode` accepts 6 or 8). */}
             <OtpInput
               ref={codeFieldRef}
               alphanumeric
+              length={JOIN_CODE_LENGTH}
               value={code}
               onChange={(next) => {
                 setCode(next);

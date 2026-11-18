@@ -96,7 +96,9 @@
     "viewOnlyCannotManage": "Los miembros con acceso de solo visualización no pueden tener el rol de gestor.",
     "circleInactive": "Este círculo de cuidado ya no está activo.",
     "pendingInviteSeatAskOwner": "El lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancela esa invitación para liberarlo o pídele a la persona titular del círculo que mejore a Premium.",
-    "pendingInviteSeatAskOwnerUnknown": "El lugar gratuito lo tiene otra invitación pendiente. Cancela esa invitación para liberarlo o pídele a la persona titular del círculo que mejore a Premium."
+    "pendingInviteSeatAskOwnerUnknown": "El lugar gratuito lo tiene otra invitación pendiente. Cancela esa invitación para liberarlo o pídele a la persona titular del círculo que mejore a Premium.",
+    "pendingInviteSeatLink": "Ya usaste tu invitación: el lugar gratuito lo tiene un enlace de invitación compartido. Cancela esa invitación para liberarlo o mejora a Premium para agregar más cuidadores.",
+    "pendingInviteSeatAskOwnerLink": "El lugar gratuito lo tiene un enlace de invitación compartido. Cancela esa invitación para liberarlo o pídele a la persona titular del círculo que mejore a Premium."
   },
   "invite": {
     "cta": "Invitar miembro",
@@ -145,7 +147,14 @@
     "capReachedAskOwner": "Los círculos gratuitos incluyen hasta dos cuidadores. Solo la persona titular del círculo puede mejorar el plan para agregar más.",
     "capReachedAskOwnerNamed": "Los círculos gratuitos incluyen hasta dos cuidadores. Solo {{ownerName}}, titular del círculo, puede mejorar el plan para agregar más.",
     "pendingSeatAskOwner": "El lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancélala en Invitaciones pendientes para liberar el lugar o pídele a la persona titular del círculo que mejore el plan.",
-    "pendingSeatAskOwnerUnknown": "El lugar gratuito lo tiene otra invitación pendiente. Cancélala en Invitaciones pendientes para liberar el lugar o pídele a la persona titular del círculo que mejore el plan."
+    "pendingSeatAskOwnerUnknown": "El lugar gratuito lo tiene otra invitación pendiente. Cancélala en Invitaciones pendientes para liberar el lugar o pídele a la persona titular del círculo que mejore el plan.",
+    "creatingLink": "Creando enlace…",
+    "linkSentTitle": "Enlace de invitación listo",
+    "linkSentMessage": "Cualquier persona con este enlace puede unirse una vez. Vence en 7 días.",
+    "pendingSeatLink": "Ya usaste tu invitación: el lugar gratuito lo tiene un enlace de invitación compartido. Cancélalo en Invitaciones pendientes para liberar el lugar o mejora a Premium para agregar más cuidadores.",
+    "pendingSeatAskOwnerLink": "El lugar gratuito lo tiene un enlace de invitación compartido. Cancélalo en Invitaciones pendientes para liberar el lugar o pídele a la persona titular del círculo que mejore el plan.",
+    "pendingSeatCardMessageLink": "Tu círculo gratuito incluye una invitación de cuidador, y la ocupa un enlace de invitación compartido. Cancela esa invitación para liberar el lugar, o mejora tu plan para agregar más cuidadores.",
+    "pendingSeatCardMessageAskOwnerLink": "El lugar de cuidador de este círculo gratuito lo ocupa un enlace de invitación compartido. Cancela esa invitación para liberar el lugar, o pide a la persona titular del círculo que mejore el plan."
   },
   "manage": {
     "subheading": "Todos en este círculo de cuidado. Invita, elimina o administra miembros abajo.",
@@ -202,7 +211,11 @@
     "inviteAgainSuccess": "Invitación enviada a {{email}}.",
     "removeDeclined": "Quitar",
     "removeDeclinedLabel": "Quitar la invitación rechazada de {{email}}",
-    "removeDeclinedSuccess": "Se quitó la invitación rechazada."
+    "removeDeclinedSuccess": "Se quitó la invitación rechazada.",
+    "sharedLink": "Enlace compartido",
+    "sharedLinkInline": "un enlace compartido",
+    "inviteLinkRenewed": "Enlace de invitación renovado",
+    "cancelLinkInviteConfirmBody": "Quien tenga este enlace ya no podrá unirse con él."
   },
   "pending": {
     "heading": "Tus invitaciones",

@@ -45,7 +45,7 @@
   },
   "joinModal": {
     "title": "Unirte a un círculo",
-    "subtitle": "Ingresa el código de 6 caracteres de tu invitación.",
+    "subtitle": "Ingresa el código de tu invitación.",
     "codeLabel": "Código de invitación",
     "pasteCode": "Pegar código",
     "pasteNoCode": "No encontramos un código de invitación en tu portapapeles.",

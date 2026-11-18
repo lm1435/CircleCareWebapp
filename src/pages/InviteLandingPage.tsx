@@ -3,11 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, Eyebrow, Skeleton, Text } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, Eyebrow, Skeleton, Text } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthTopBar } from '@/components/auth/AuthTopBar';
 import { StoreBadges } from '@/components/layout/StoreBadges';
 import {
+  declineInviteByCode,
   isOwnOrMemberInvite,
   lookupInviteByCode,
   previewInviteByCode,
@@ -24,6 +25,8 @@ import { consumePendingInviteCode, setPendingInviteCode } from '@/lib/pendingInv
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
 import { failureContext } from '@/lib/apiErrors';
+import { isCompleteJoinCode } from '@/lib/joinCode';
+import { readDeclineError } from '@/lib/inviteDecline';
 
 // Invite-link sharing is SHIPPED: the mobile app's InviteMemberScreen shows
 // Share/Copy actions on the inline success panel after an invite is created,
@@ -133,6 +136,9 @@ function acceptErrorMessage(t: (key: string) => string, code: string | undefined
  */
 export default function InviteLandingPage(): ReactElement {
   const { t, i18n } = useTranslation('invite');
+  // Decline copy is SHARED with the pending-invites list (members:pending.*), so
+  // the two decline doors can never word it differently.
+  const { t: tm } = useTranslation('members');
   const { code = '' } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, isBootstrapping } = useAuth();
@@ -143,14 +149,22 @@ export default function InviteLandingPage(): ReactElement {
   // Backend normalizes too; normalize here so the displayed fallback code
   // matches what the app expects users to type.
   const displayCode = code.trim().toUpperCase();
+  // 1.4.3: a code is 6 or 8 letters/digits. Anything else (7, 9, punctuation)
+  // can never be an invite, so it gets the "expired or invalid" card straight
+  // away instead of a round trip to a rate-limited endpoint.
+  const malformedCode = !isCompleteJoinCode(displayCode);
 
-  const { data: invite, isPending, isError, error } = useQuery({
+  const previewQuery = useQuery({
     queryKey: ['invitePreview', displayCode],
     queryFn: () => previewInviteByCode(displayCode),
-    enabled: displayCode.length > 0,
+    enabled: !malformedCode,
     retry: false, // 404/400 are definitive; endpoint is rate-limited
     staleTime: Infinity,
   });
+  const invite = previewQuery.data;
+  const isPending = !malformedCode && previewQuery.isPending;
+  const isError = malformedCode || previewQuery.isError;
+  const error = previewQuery.error;
 
   // WHO IS LOOKING (2026-10-17). The preview above is unauthenticated, so it
   // cannot say whether the signed-in visitor SENT this invite. An inviter who
@@ -330,6 +344,51 @@ export default function InviteLandingPage(): ReactElement {
     navigate('/login', { state: { from: { pathname: `/invite/${displayCode}` } } });
   }, [navigate, displayCode]);
 
+  // DECLINE BY CODE (1.4.3). A shared-link invite has no address, so the
+  // invitee's pending list never shows it; this page is where they can say no.
+  // Signed in, not the sender, not a member (the backend refuses those with
+  // NOT_INVITEE; the button is never offered to them). Confirm first, then one
+  // guarded call. Same copy and analytics as the pending-invites list.
+  const [confirmDecline, setConfirmDecline] = useState(false);
+  const [declining, setDeclining] = useState(false);
+  const [declined, setDeclined] = useState(false);
+  const [declineError, setDeclineError] = useState<string | null>(null);
+  const declineGuard = useSubmitGuard();
+  const memberTypeEnum: 'caregiver' | 'care_recipient' =
+    invite?.member_type === 'care_recipient' ? 'care_recipient' : 'caregiver';
+  const handleDeclineTap = useCallback(() => {
+    Analytics.inviteDeclineTapped(memberTypeEnum);
+    setDeclineError(null);
+    setConfirmDecline(true);
+  }, [memberTypeEnum]);
+  const handleDecline = useCallback(async (): Promise<void> => {
+    if (!declineGuard.claim()) return;
+    setDeclining(true);
+    try {
+      const result = await declineInviteByCode(displayCode);
+      Analytics.inviteDeclineConfirmed(memberTypeEnum, result?.already_declined === true);
+      setDeclined(true);
+    } catch (err) {
+      const reading = readDeclineError(err);
+      Analytics.inviteDeclineFailed(reading.code);
+      setDeclineError(
+        reading.messageKey === 'declineErrorUsed'
+          ? tm('pending.declineErrorUsed')
+          : reading.messageKey === 'declineErrorInactive'
+            ? tm('pending.declineErrorInactive')
+            : reading.messageKey === 'declineErrorExpired'
+              ? tm('pending.declineErrorExpired')
+              : reading.messageKey === 'declineErrorRateLimit'
+                ? tm('pending.declineErrorRateLimit')
+                : tm('pending.declineErrorGeneric')
+      );
+    } finally {
+      setDeclining(false);
+      setConfirmDecline(false);
+      declineGuard.release();
+    }
+  }, [declineGuard, displayCode, memberTypeEnum, tm]);
+
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(displayCode);
@@ -487,17 +546,40 @@ export default function InviteLandingPage(): ReactElement {
               </div>
             )}
 
-            {!isBootstrapping && !viewerPending && !ownInvite && (
+            {!isBootstrapping && !viewerPending && !ownInvite && declined && (
+              <p
+                role="status"
+                className="m-0 text-center text-base text-ink-2 text-balance"
+                data-testid="invite-declined-notice"
+              >
+                {tm('pending.declineSuccess')}
+              </p>
+            )}
+
+            {!isBootstrapping && !viewerPending && !ownInvite && !declined && (
               <div className="flex flex-col items-center gap-3">
                 {isAuthenticated ? (
-                  <Button
-                    className="w-full max-w-xs"
-                    onClick={() => void handleAccept()}
-                    offlineKind="change"
-                    disabled={accepting}
-                  >
-                    {accepting ? t('accepting') : t('accept')}
-                  </Button>
+                  <>
+                    <Button
+                      className="w-full max-w-xs"
+                      onClick={() => void handleAccept()}
+                      offlineKind="change"
+                      disabled={accepting || declining}
+                    >
+                      {accepting ? t('accepting') : t('accept')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      tone="neutral"
+                      className="w-full max-w-xs"
+                      onClick={handleDeclineTap}
+                      offlineKind="change"
+                      disabled={accepting || declining}
+                      data-testid="invite-decline"
+                    >
+                      {declining ? tm('pending.declining') : tm('pending.decline')}
+                    </Button>
+                  </>
                 ) : (
                   <>
                     <Button className="w-full max-w-xs" onClick={handleCreateAccount}>
@@ -511,6 +593,11 @@ export default function InviteLandingPage(): ReactElement {
                 {acceptError ? (
                   <p role="alert" className="m-0 text-sm text-terracotta-deep text-balance">
                     {acceptError}
+                  </p>
+                ) : null}
+                {declineError ? (
+                  <p role="alert" className="m-0 text-sm text-terracotta-deep text-balance">
+                    {declineError}
                   </p>
                 ) : null}
               </div>
@@ -540,6 +627,20 @@ export default function InviteLandingPage(): ReactElement {
           </>
         )}
       </div>
+      {confirmDecline && invite ? (
+        <ConfirmDialog
+          offlineKind="change"
+          icon="mail-outline"
+          title={tm('pending.declineTitle')}
+          message={tm('pending.declineMessage', { inviter: inviterName })}
+          confirmLabel={tm('pending.decline')}
+          cancelLabel={tm('pending.declineKeep')}
+          destructive
+          confirmDisabled={declining}
+          onConfirm={() => void handleDecline()}
+          onCancel={() => setConfirmDecline(false)}
+        />
+      ) : null}
     </AuthShell>
   );
 }

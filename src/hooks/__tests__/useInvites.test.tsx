@@ -249,6 +249,41 @@ describe('useCreateInvite', () => {
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
   });
 
+  // 1.4.3 — a shared-link invite (no email in the variables) is method 'link'.
+  it('UI-P1: a create with no email fires invite_sent with method link and posts no email key', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockResolvedValue(CREATE_RESULT);
+    const spy = vi.spyOn(Analytics, 'inviteSent');
+    try {
+      const { result } = renderHook(() => useCreateInvite(CIRCLE_ID), { wrapper });
+      result.current.mutate({ member_type: 'caregiver' });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(spy).toHaveBeenCalledWith(CIRCLE_ID, 'caregiver', 'owner', 'link');
+      expect(mockCreate).toHaveBeenCalledWith(CIRCLE_ID, { member_type: 'caregiver' });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  // 1.4.3 — the seat is held by a SHARED LINK (blocking_invite with a null address).
+  it('UI-P2: a link invite holding the seat -> the shared-link copy (owner and manager)', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValue({
+      success: false,
+      error: {
+        code: 'SUBSCRIPTION_REQUIRED',
+        message: 'upgrade',
+        details: { reason: 'pending_invite_seat', blocking_invite: { id: 'inv-link', invited_email: null } },
+      },
+    });
+    const { result } = renderHook(() => useCreateInvite(CIRCLE_ID), { wrapper });
+    result.current.mutate({ email: 'a@b.com', member_type: 'caregiver' });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(promptUpgrade).toHaveBeenCalledWith('errors.pendingInviteSeatLink');
+    // UI-N1: never the nameless copy, never "null" in the message.
+    expect(promptUpgrade).not.toHaveBeenCalledWith('errors.pendingInviteSeatUnknown');
+  });
+
   it('falls back to a nameless pending-seat message when blocking_invite is missing', async () => {
     const { wrapper } = setup();
     mockCreate.mockRejectedValue({
@@ -322,7 +357,7 @@ describe('useCreateInvite', () => {
         const { result } = renderHook(() => useCreateInvite(CIRCLE_ID), { wrapper });
         result.current.mutate({ email: 'a@b.com', member_type: 'caregiver' });
         await waitFor(() => expect(result.current.isSuccess).toBe(true));
-        expect(spy).toHaveBeenCalledWith(CIRCLE_ID, 'caregiver', actor);
+        expect(spy).toHaveBeenCalledWith(CIRCLE_ID, 'caregiver', actor, 'email');
       } finally {
         viewerRole.actor = 'owner';
         spy.mockRestore();

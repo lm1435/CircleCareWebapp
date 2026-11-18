@@ -326,6 +326,28 @@ describe('JoinCircleModal', () => {
       expect(submit).toBeEnabled();
     });
 
+    // 1.4.3: codes are 6 OR 8 characters (eight boxes; six filled is complete).
+    it('JM-P1: an 8-character code fills eight boxes, enables submit and looks up as typed', async () => {
+      const user = userEvent.setup();
+      lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(INVITE));
+      renderModal();
+      expect(codeBoxes()).toHaveLength(8);
+      await pasteCode(user, 'abcd-2345');
+      expect(codeValue()).toBe('ABCD2345');
+      const submit = screen.getByRole('button', { name: 'Find circle' });
+      expect(submit).toBeEnabled();
+      await user.click(submit);
+      expect(lookupMutate.mock.calls[0][0]).toBe('ABCD2345');
+    });
+
+    it('JM-N1: a 7-character code keeps submit disabled', async () => {
+      const user = userEvent.setup();
+      renderModal();
+      await pasteCode(user, 'ABCD234');
+      expect(screen.getByRole('button', { name: 'Find circle' })).toBeDisabled();
+      expect(lookupMutate).not.toHaveBeenCalled();
+    });
+
     it('looks up with the normalized code', async () => {
       const user = userEvent.setup();
       lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(INVITE));

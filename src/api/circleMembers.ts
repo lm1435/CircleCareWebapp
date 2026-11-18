@@ -48,7 +48,8 @@ export interface CircleMember {
 /** A declined invite on the circle detail (`declined_invites`, 1.4.3). */
 export interface DeclinedCircleInvite {
   id: string;
-  invited_email: string;
+  /** null for a declined shared-link invite (1.4.3): render "Shared link", Remove only. */
+  invited_email: string | null;
   member_type: 'caregiver' | 'care_recipient';
   created_at: string;
   status: 'declined';
@@ -58,7 +59,8 @@ export interface DeclinedCircleInvite {
 
 export interface PendingCircleInvite {
   id: string;
-  invited_email: string;
+  /** null for a shared-link invite (1.4.3): render "Shared link", never the raw value. */
+  invited_email: string | null;
   created_at: string;
   expires_at: string;
   /**

@@ -201,7 +201,8 @@ export type InviteCapReason = 'pending_invite_seat' | 'members_full';
 /** The pending invite occupying the last free caregiver seat. */
 export interface BlockingInvite {
   id: string;
-  invited_email: string;
+  /** null when the seat is held by a shared-link invite (1.4.3). */
+  invited_email: string | null;
 }
 
 export interface InviteCapDetails {
@@ -239,7 +240,7 @@ export function getInviteCapDetails(err: unknown): InviteCapDetails | null {
     blocking_invite:
       blocking != null &&
       typeof blocking.id === 'string' &&
-      typeof blocking.invited_email === 'string'
+      (typeof blocking.invited_email === 'string' || blocking.invited_email === null)
         ? { id: blocking.id, invited_email: blocking.invited_email }
         : null,
   };
@@ -254,11 +255,18 @@ export function getInviteCapDetails(err: unknown): InviteCapDetails | null {
  * Every other 402 (including a `details`-less one from an older backend)
  * returns null and stays on the upgrade path.
  */
-export function getPendingInviteSeat(err: unknown): { email: string | null } | null {
+export function getPendingInviteSeat(
+  err: unknown
+): { email: string | null; link: boolean } | null {
   const details = getInviteCapDetails(err);
   if (details === null || details.reason !== 'pending_invite_seat') return null;
   const email = details.blocking_invite?.invited_email;
-  return { email: typeof email === 'string' && email.trim().length > 0 ? email : null };
+  return {
+    email: typeof email === 'string' && email.trim().length > 0 ? email : null,
+    // 1.4.3: the seat is held by a SHARED LINK (a named invite with no
+    // address) -- say so, rather than the unnamed "another pending invite".
+    link: details.blocking_invite != null && details.blocking_invite.invited_email === null,
+  };
 }
 
 /**

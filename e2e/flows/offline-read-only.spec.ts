@@ -269,7 +269,7 @@ test('offline: join by code - an invite looked up online is not accepted offline
   await expect(dialog).toBeVisible({ timeout: 10_000 });
 
   // ONLINE: type the code and look it up.
-  await dialog.getByLabel('Character 1 of 6', { exact: true }).click();
+  await dialog.getByLabel('Character 1 of 8', { exact: true }).click();
   await page.keyboard.type(invite.code.toLowerCase(), { delay: 15 });
   await dialog.getByRole('button', { name: 'Find circle', exact: true }).click();
   await expect(dialog.getByText(recipientName, { exact: true }).first()).toBeVisible({ timeout: 20_000 });

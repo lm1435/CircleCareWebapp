@@ -237,13 +237,35 @@ describe('analytics wrapper — active path (key set)', () => {
       circle_id: 'circle-123',
       role: 'caregiver',
       actor_role: 'owner',
+      method: 'email',
     });
     Analytics.inviteSent('circle-123', 'caregiver', 'manager');
     expect(capture).toHaveBeenLastCalledWith('invite_sent', {
       circle_id: 'circle-123',
       role: 'caregiver',
       actor_role: 'manager',
+      method: 'email',
     });
+  });
+
+  // 1.4.3: invite_sent.method ('email' | 'link'), enum only.
+  it('AN-P1: invite_sent carries method link for a shared-link invite', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.inviteSent('circle-123', 'caregiver', 'owner', 'link');
+    expect(capture).toHaveBeenLastCalledWith('invite_sent', {
+      circle_id: 'circle-123',
+      role: 'caregiver',
+      actor_role: 'owner',
+      method: 'link',
+    });
+  });
+
+  it('AN-N1: an unknown method value never reaches PostHog (falls back to email)', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.inviteSent('circle-123', 'caregiver', 'owner', 'a@b.com' as unknown as 'link');
+    const props = capture.mock.calls[capture.mock.calls.length - 1][1] as Record<string, unknown>;
+    expect(props.method).toBe('email');
+    expect(JSON.stringify(props)).not.toContain('@');
   });
 
   it('member_role_changed carries ONLY the new role enum (no circle_id, no member id)', async () => {

@@ -97,9 +97,13 @@ function useInviteMutationOnError(
           ? owner
             ? t('errors.pendingInviteSeat', { email: pendingSeat.email })
             : t('errors.pendingInviteSeatAskOwner', { email: pendingSeat.email })
-          : owner
-            ? t('errors.pendingInviteSeatUnknown')
-            : t('errors.pendingInviteSeatAskOwnerUnknown')
+          : pendingSeat.link
+            ? owner
+              ? t('errors.pendingInviteSeatLink')
+              : t('errors.pendingInviteSeatAskOwnerLink')
+            : owner
+              ? t('errors.pendingInviteSeatUnknown')
+              : t('errors.pendingInviteSeatAskOwnerUnknown')
       );
       invalidateCircleAccessFlags(queryClient, circleId);
     } else if (isSubscriptionRequiredError(error)) {
@@ -146,7 +150,13 @@ export function useCreateInvite(
     mutationFn: (data: CreateInviteRequest) => createInvite(circleId, data),
     onSuccess: (_response, variables) => {
       // PHI-safe: only circle_id + the member_type role enum (never the email).
-      Analytics.inviteSent(circleId, variables.member_type, cachedActorRole(circleId));
+      // `method` (1.4.3): 'link' for a shared-link invite (no email in the body).
+      Analytics.inviteSent(
+        circleId,
+        variables.member_type,
+        cachedActorRole(circleId),
+        variables.email ? 'email' : 'link'
+      );
       // A new pending invite changes the circle detail (pending_invites list) and
       // the circle summary (member/invite counts).
       void queryClient.invalidateQueries({ queryKey: queryKeys.circle(circleId) });

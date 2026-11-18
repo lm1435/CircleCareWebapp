@@ -45,7 +45,7 @@
   },
   "joinModal": {
     "title": "Unisciti a una cerchia",
-    "subtitle": "Inserisci il codice di 6 caratteri del tuo invito.",
+    "subtitle": "Inserisci il codice del tuo invito.",
     "codeLabel": "Codice di invito",
     "pasteCode": "Incolla il codice",
     "pasteNoCode": "Non abbiamo trovato un codice di invito negli appunti.",

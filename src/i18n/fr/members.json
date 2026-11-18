@@ -96,7 +96,9 @@
     "viewOnlyCannotManage": "Les membres en lecture seule ne peuvent pas être gestionnaires.",
     "circleInactive": "Ce cercle de soins n’est plus actif.",
     "pendingInviteSeatAskOwner": "La place gratuite est réservée par une invitation en attente pour {{email}}. Annulez cette invitation pour libérer la place, ou demandez au propriétaire du cercle de passer à Premium.",
-    "pendingInviteSeatAskOwnerUnknown": "La place gratuite est réservée par une autre invitation en attente. Annulez cette invitation pour libérer la place, ou demandez au propriétaire du cercle de passer à Premium."
+    "pendingInviteSeatAskOwnerUnknown": "La place gratuite est réservée par une autre invitation en attente. Annulez cette invitation pour libérer la place, ou demandez au propriétaire du cercle de passer à Premium.",
+    "pendingInviteSeatLink": "Vous avez déjà utilisé votre invitation : la place gratuite est occupée par un lien d’invitation partagé. Annulez cette invitation pour la libérer, ou passez à Premium pour ajouter d’autres aidants.",
+    "pendingInviteSeatAskOwnerLink": "La place gratuite est occupée par un lien d’invitation partagé. Annulez cette invitation pour la libérer, ou demandez au propriétaire du cercle de passer à Premium."
   },
   "invite": {
     "cta": "Inviter un membre",
@@ -145,7 +147,14 @@
     "capReachedAskOwner": "Les cercles gratuits incluent jusqu’à deux aidants. Seul le propriétaire du cercle peut passer à Premium pour en ajouter d’autres.",
     "capReachedAskOwnerNamed": "Les cercles gratuits incluent jusqu’à deux aidants. Seul le propriétaire du cercle, {{ownerName}}, peut passer à Premium pour en ajouter d’autres.",
     "pendingSeatAskOwner": "La place gratuite est réservée par une invitation en attente pour {{email}}. Annulez-la dans Invitations en attente pour libérer la place, ou demandez au propriétaire du cercle de passer à Premium.",
-    "pendingSeatAskOwnerUnknown": "La place gratuite est réservée par une autre invitation en attente. Annulez-la dans Invitations en attente pour libérer la place, ou demandez au propriétaire du cercle de passer à Premium."
+    "pendingSeatAskOwnerUnknown": "La place gratuite est réservée par une autre invitation en attente. Annulez-la dans Invitations en attente pour libérer la place, ou demandez au propriétaire du cercle de passer à Premium.",
+    "creatingLink": "Création du lien…",
+    "linkSentTitle": "Lien d’invitation prêt",
+    "linkSentMessage": "Toute personne ayant ce lien peut rejoindre le cercle une seule fois. Il expire dans 7 jours.",
+    "pendingSeatLink": "Vous avez déjà utilisé votre invitation : la place gratuite est occupée par un lien d’invitation partagé. Annulez-le dans Invitations en attente pour libérer la place, ou passez à Premium pour ajouter d’autres aidants.",
+    "pendingSeatAskOwnerLink": "La place gratuite est occupée par un lien d’invitation partagé. Annulez-le dans Invitations en attente pour libérer la place, ou demandez au propriétaire du cercle de passer à Premium.",
+    "pendingSeatCardMessageLink": "Votre cercle gratuit comprend une invitation d’aidant, occupée par un lien d’invitation partagé. Annulez cette invitation pour libérer la place, ou passez à Premium pour ajouter d’autres aidants.",
+    "pendingSeatCardMessageAskOwnerLink": "La place d’aidant de ce cercle gratuit est occupée par un lien d’invitation partagé. Annulez cette invitation pour libérer la place, ou demandez au propriétaire du cercle de passer à Premium."
   },
   "manage": {
     "subheading": "Toutes les personnes de ce cercle de soins. Invitez, retirez ou gérez les membres ci-dessous.",
@@ -202,7 +211,11 @@
     "inviteAgainSuccess": "Invitation envoyée à {{email}}.",
     "removeDeclined": "Retirer",
     "removeDeclinedLabel": "Retirer l’invitation refusée de {{email}}",
-    "removeDeclinedSuccess": "Invitation refusée retirée."
+    "removeDeclinedSuccess": "Invitation refusée retirée.",
+    "sharedLink": "Lien partagé",
+    "sharedLinkInline": "un lien partagé",
+    "inviteLinkRenewed": "Lien d’invitation renouvelé",
+    "cancelLinkInviteConfirmBody": "Les personnes ayant ce lien ne pourront plus rejoindre le cercle avec."
   },
   "pending": {
     "heading": "Vos invitations",

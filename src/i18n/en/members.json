@@ -96,7 +96,9 @@
     "viewOnlyCannotManage": "Members with view-only access can't be managers.",
     "circleInactive": "This care circle is no longer active.",
     "pendingInviteSeatAskOwner": "The free spot is held by a pending invite to {{email}}. Cancel that invitation to free it up, or ask the circle owner about upgrading to Premium.",
-    "pendingInviteSeatAskOwnerUnknown": "The free spot is held by another pending invite. Cancel that invitation to free it up, or ask the circle owner about upgrading to Premium."
+    "pendingInviteSeatAskOwnerUnknown": "The free spot is held by another pending invite. Cancel that invitation to free it up, or ask the circle owner about upgrading to Premium.",
+    "pendingInviteSeatLink": "You've already used your invitation — the free spot is held by a shared invite link. Cancel that invitation to free it up, or upgrade to Premium to add more caregivers.",
+    "pendingInviteSeatAskOwnerLink": "The free spot is held by a shared invite link. Cancel that invitation to free it up, or ask the circle owner about upgrading to Premium."
   },
   "invite": {
     "cta": "Invite member",
@@ -145,7 +147,14 @@
     "capReachedAskOwner": "Free circles include up to two caregivers. Only the circle owner can upgrade to add more.",
     "capReachedAskOwnerNamed": "Free circles include up to two caregivers. Only {{ownerName}}, the circle owner, can upgrade to add more.",
     "pendingSeatAskOwner": "The free spot is held by a pending invite to {{email}}. Cancel it under Pending invites to free the spot, or ask the circle owner to upgrade.",
-    "pendingSeatAskOwnerUnknown": "The free spot is held by another pending invite. Cancel it under Pending invites to free the spot, or ask the circle owner to upgrade."
+    "pendingSeatAskOwnerUnknown": "The free spot is held by another pending invite. Cancel it under Pending invites to free the spot, or ask the circle owner to upgrade.",
+    "creatingLink": "Creating link…",
+    "linkSentTitle": "Invite link ready",
+    "linkSentMessage": "Anyone with this link can join once. It expires in 7 days.",
+    "pendingSeatLink": "You've already used your invitation — the free spot is held by a shared invite link. Cancel it under Pending invites to free the spot, or upgrade to Premium to add more caregivers.",
+    "pendingSeatAskOwnerLink": "The free spot is held by a shared invite link. Cancel it under Pending invites to free the spot, or ask the circle owner to upgrade.",
+    "pendingSeatCardMessageLink": "Your free circle includes one caregiver invitation, and it is held by a shared invite link. Cancel that invite to free the spot, or upgrade to add more caregivers.",
+    "pendingSeatCardMessageAskOwnerLink": "This free circle's caregiver spot is held by a shared invite link. Cancel that invite to free the spot, or ask the circle owner to upgrade."
   },
   "manage": {
     "subheading": "Everyone in this care circle. Invite, remove, or manage members below.",
@@ -202,7 +211,11 @@
     "inviteAgainSuccess": "Invitation sent to {{email}}.",
     "removeDeclined": "Remove",
     "removeDeclinedLabel": "Remove declined invite for {{email}}",
-    "removeDeclinedSuccess": "Declined invite removed."
+    "removeDeclinedSuccess": "Declined invite removed.",
+    "sharedLink": "Shared link",
+    "sharedLinkInline": "a shared link",
+    "inviteLinkRenewed": "Invite link renewed",
+    "cancelLinkInviteConfirmBody": "Anyone holding this link will no longer be able to join with it."
   },
   "pending": {
     "heading": "Your invitations",

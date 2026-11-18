@@ -96,7 +96,9 @@
     "viewOnlyCannotManage": "Membros com acesso somente de visualização não podem ser gestores.",
     "circleInactive": "Este círculo de cuidado não está mais ativo.",
     "pendingInviteSeatAskOwner": "A vaga gratuita está ocupada por um convite pendente para {{email}}. Cancele esse convite para liberar a vaga ou peça ao proprietário do círculo para fazer upgrade para o Premium.",
-    "pendingInviteSeatAskOwnerUnknown": "A vaga gratuita está ocupada por outro convite pendente. Cancele esse convite para liberar a vaga ou peça ao proprietário do círculo para fazer upgrade para o Premium."
+    "pendingInviteSeatAskOwnerUnknown": "A vaga gratuita está ocupada por outro convite pendente. Cancele esse convite para liberar a vaga ou peça ao proprietário do círculo para fazer upgrade para o Premium.",
+    "pendingInviteSeatLink": "Você já usou seu convite: a vaga gratuita está ocupada por um link de convite compartilhado. Cancele esse convite para liberá-la ou assine o Premium para adicionar mais cuidadores.",
+    "pendingInviteSeatAskOwnerLink": "A vaga gratuita está ocupada por um link de convite compartilhado. Cancele esse convite para liberá-la ou peça à pessoa responsável pelo círculo que assine o Premium."
   },
   "invite": {
     "cta": "Convidar membro",
@@ -145,7 +147,14 @@
     "capReachedAskOwner": "Círculos gratuitos incluem até dois cuidadores. Somente o proprietário do círculo pode fazer upgrade para adicionar mais.",
     "capReachedAskOwnerNamed": "Círculos gratuitos incluem até dois cuidadores. Somente {{ownerName}}, proprietário do círculo, pode fazer upgrade para adicionar mais.",
     "pendingSeatAskOwner": "A vaga gratuita está ocupada por um convite pendente para {{email}}. Cancele-o em Convites pendentes para liberar a vaga ou peça ao proprietário do círculo para fazer upgrade.",
-    "pendingSeatAskOwnerUnknown": "A vaga gratuita está ocupada por outro convite pendente. Cancele-o em Convites pendentes para liberar a vaga ou peça ao proprietário do círculo para fazer upgrade."
+    "pendingSeatAskOwnerUnknown": "A vaga gratuita está ocupada por outro convite pendente. Cancele-o em Convites pendentes para liberar a vaga ou peça ao proprietário do círculo para fazer upgrade.",
+    "creatingLink": "Criando link…",
+    "linkSentTitle": "Link de convite pronto",
+    "linkSentMessage": "Qualquer pessoa com este link pode entrar uma vez. Ele expira em 7 dias.",
+    "pendingSeatLink": "Você já usou seu convite: a vaga gratuita está ocupada por um link de convite compartilhado. Cancele-o em Convites pendentes para liberar a vaga ou assine o Premium para adicionar mais cuidadores.",
+    "pendingSeatAskOwnerLink": "A vaga gratuita está ocupada por um link de convite compartilhado. Cancele-o em Convites pendentes para liberar a vaga ou peça à pessoa responsável pelo círculo que assine o Premium.",
+    "pendingSeatCardMessageLink": "Seu círculo gratuito inclui um convite de cuidador, e ele está ocupado por um link de convite compartilhado. Cancele esse convite para liberar a vaga ou assine o Premium para adicionar mais cuidadores.",
+    "pendingSeatCardMessageAskOwnerLink": "A vaga de cuidador deste círculo gratuito está ocupada por um link de convite compartilhado. Cancele esse convite para liberar a vaga ou peça à pessoa responsável pelo círculo que assine o Premium."
   },
   "manage": {
     "subheading": "Todos neste círculo de cuidado. Convide, remova ou gerencie membros abaixo.",
@@ -202,7 +211,11 @@
     "inviteAgainSuccess": "Convite enviado para {{email}}.",
     "removeDeclined": "Remover",
     "removeDeclinedLabel": "Remover o convite recusado de {{email}}",
-    "removeDeclinedSuccess": "Convite recusado removido."
+    "removeDeclinedSuccess": "Convite recusado removido.",
+    "sharedLink": "Link compartilhado",
+    "sharedLinkInline": "um link compartilhado",
+    "inviteLinkRenewed": "Link de convite renovado",
+    "cancelLinkInviteConfirmBody": "Quem tiver este link não poderá mais entrar com ele."
   },
   "pending": {
     "heading": "Seus convites",

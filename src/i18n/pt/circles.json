@@ -45,7 +45,7 @@
   },
   "joinModal": {
     "title": "Participar de um círculo",
-    "subtitle": "Digite o código de 6 caracteres do seu convite.",
+    "subtitle": "Digite o código do seu convite.",
     "codeLabel": "Código do convite",
     "pasteCode": "Colar código",
     "pasteNoCode": "Não encontramos um código de convite na área de transferência.",

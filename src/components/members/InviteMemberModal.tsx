@@ -27,9 +27,9 @@ import {
 } from '@/components/ui';
 import { CHIP_SELECTED, CHIP_UNSELECTED } from '@/components/ui/inputStyles';
 
-// "Invite a member" form for the owner AND managers — EMAIL-required. The
-// sender enters the invitee's email and role; the backend emails them a link to
-// join this care circle. Seats are always the OWNER's plan, so only the owner
+// "Invite a member" form for the owner AND managers. Two ways out (1.4.3):
+// "Send invitation" (an email address; the backend emails them a link) or
+// "Share invite link" (no address; the inviter shares the link themselves). Seats are always the OWNER's plan, so only the owner
 // is ever offered Upgrade on the cap card; a manager is told to ask the owner.
 //
 // MIRRORS mobile/src/screens/circle/InviteMemberScreen.tsx. The free-tier
@@ -53,7 +53,13 @@ const emailSchema = z.string().trim().email();
  * case where a still-pending invite to `email` is holding the last seat — the
  * note must NOT read as an upsell there, or it would contradict the toast.
  */
-type CapNotice = { kind: 'cap' } | { kind: 'pendingSeat'; email: string | null };
+type CapNotice =
+  | { kind: 'cap' }
+  // `link`: the seat is held by a shared-link invite (no address, 1.4.3).
+  | { kind: 'pendingSeat'; email: string | null; link: boolean };
+
+/** How the invite went out: an address typed (email) or a shared link (1.4.3). */
+type InviteMethod = 'email' | 'link';
 
 export interface InviteMemberModalProps {
   circleId: string;
@@ -153,6 +159,9 @@ export function InviteMemberModal({
   const precheckReason = seatPrecheck.reason ?? 'members_full';
   const pendingSeatEmail =
     seatPrecheck.reason === 'pending_invite_seat' ? seatPrecheck.blockingEmail : null;
+  // 1.4.3: the seat is held by a SHARED LINK (no address to name).
+  const pendingSeatLink =
+    seatPrecheck.reason === 'pending_invite_seat' && seatPrecheck.blockingIsLink;
 
   // The name the subtitle, the recipient description and the daily-update line speak of.
   const careForName = recipientName?.trim() || circleName?.trim() || '';
@@ -164,10 +173,14 @@ export function InviteMemberModal({
     memberType === 'care_recipient' ? t('roles.careRecipient') : t('roles.caregiver');
 
   const [sentInvite, setSentInvite] = useState<{
-    email: string;
+    /** null for a shared-link invite (1.4.3). */
+    email: string | null;
     url: string | null;
     showHelp: boolean;
+    method: InviteMethod;
   } | null>(null);
+  // Which action is in flight, so only THAT button shows its loading label.
+  const [pendingMethod, setPendingMethod] = useState<InviteMethod | null>(null);
   // The form (and its focused Send button) unmounts when the invite is sent.
   // Focus the "Invitation sent" heading so a screen reader announces the
   // outcome and the keyboard does not fall to <body> (WCAG 4.1.3 / 2.4.3).
@@ -243,15 +256,16 @@ export function InviteMemberModal({
             inviteUrl,
           });
 
-  const handleShare = async (): Promise<void> => {
-    if (!shareUrl) return;
+  const handleShare = async (urlOverride?: string): Promise<void> => {
+    const url = urlOverride ?? shareUrl;
+    if (!url) return;
     try {
       // Message only, exactly as mobile's `Share.share({ message })`. Safari
       // and Android both PREPEND `title` to the shared text, so the old
       // `{ title, text }` landed in Messages as two lines — "Join our care
       // circle" stacked over the real sentence — instead of the one sentence
       // the recipient gets from the app.
-      await navigator.share({ text: shareMessage(shareUrl) });
+      await navigator.share({ text: shareMessage(url) });
       // navigator.share resolves on completion and REJECTS on cancel, so this
       // counts an actual share rather than an intent — unlike the mobile SDK,
       // which resolves either way.
@@ -277,9 +291,21 @@ export function InviteMemberModal({
 
   const handleSendAnother = (): void => {
     setSentInvite(null);
+    setPendingMethod(null);
     setCopied(false);
     setEmail('');
     setErrors({});
+  };
+
+  // Mirror the hook's classification EXACTLY: a pending-invite seat is not a
+  // cap, so it must not leave a generic upsell on screen.
+  const handleCreateError = (error: unknown): void => {
+    const pendingSeat = getPendingInviteSeat(error);
+    if (pendingSeat !== null) {
+      setCapNotice({ kind: 'pendingSeat', email: pendingSeat.email, link: pendingSeat.link });
+    } else if (isSubscriptionRequiredError(error)) {
+      setCapNotice({ kind: 'cap' });
+    }
   };
 
   const handleSubmit = (formEvent: FormEvent): void => {
@@ -296,6 +322,7 @@ export function InviteMemberModal({
     setErrors({});
     if (createInvite.isPending || !submitGuard.claim()) return;
 
+    setPendingMethod('email');
     createInvite.mutate(
       { email: result.data, member_type: memberType },
       {
@@ -313,22 +340,51 @@ export function InviteMemberModal({
           const url =
             created?.invite?.invite_url ??
             (code ? `${window.location.origin}/invite/${encodeURIComponent(code)}` : null);
-          setSentInvite({ email: result.data, url, showHelp: showHelpLink });
+          setSentInvite({ email: result.data, url, showHelp: showHelpLink, method: 'email' });
           onInvited?.(memberType);
         },
-        onError: (error: unknown) => {
-          // Mirror the hook's classification EXACTLY: a pending-invite seat is
-          // not a cap, so it must not leave a generic upsell on screen.
-          const pendingSeat = getPendingInviteSeat(error);
-          if (pendingSeat !== null) {
-            setCapNotice({ kind: 'pendingSeat', email: pendingSeat.email });
-          } else if (isSubscriptionRequiredError(error)) {
-            setCapNotice({ kind: 'cap' });
-          }
-        },
+        onError: handleCreateError,
         // This modal stays mounted on both outcomes (success swaps it to the
         // "invite sent" panel), so the guard is always released here.
-        onSettled: () => submitGuard.release(),
+        onSettled: () => {
+          setPendingMethod(null);
+          submitGuard.release();
+        },
+      }
+    );
+  };
+
+  /**
+   * "Share invite link" (1.4.3): an invite with NO address. The body is
+   * `{ member_type }` only (no `email` key at all), the backend sends nothing,
+   * and the same "sent" step shows the link with Copy. Where the browser has a
+   * share sheet it opens straight away (the press that started this is the
+   * user gesture); a dismissed or refused sheet is harmless, the link and Copy
+   * stay on screen. Same seat rules and errors as an email invite. Mobile
+   * twin: InviteMemberScreen `handleCreateShareLink`.
+   */
+  const handleShareLinkInvite = (): void => {
+    setCapNotice(null);
+    setErrors({});
+    if (createInvite.isPending || !submitGuard.claim()) return;
+    setPendingMethod('link');
+    createInvite.mutate(
+      { member_type: memberType },
+      {
+        onSuccess: (created) => {
+          const code = created?.invite?.invite_code;
+          const url =
+            created?.invite?.invite_url ??
+            (code ? `${window.location.origin}/invite/${encodeURIComponent(code)}` : null);
+          setSentInvite({ email: null, url, showHelp: showHelpLink, method: 'link' });
+          onInvited?.(memberType);
+          if (url && canShare) void handleShare(withInviteLocale(url, i18n.language));
+        },
+        onError: handleCreateError,
+        onSettled: () => {
+          setPendingMethod(null);
+          submitGuard.release();
+        },
       }
     );
   };
@@ -349,19 +405,35 @@ export function InviteMemberModal({
             </Button>
           </div>
         ) : (
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-wrap justify-end gap-3">
             <Button variant="ghost" onClick={onClose} disabled={createInvite.isPending}>
               {t('common:cancel')}
             </Button>
+            {/* Two ways to invite (1.4.3), side by side: share a link (no email
+                needed) or send by email. Both hidden while the seat cap blocks
+                this role, exactly like Send. */}
+            {precheckBlocked ? null : (
+              <Button
+                variant="outline"
+                offlineKind="save"
+                data-testid="invite-share-link-create"
+                onClick={handleShareLinkInvite}
+                loading={pendingMethod === 'link'}
+                disabled={createInvite.isPending}
+                leftIcon={<Icon name="share-outline" size="row" />}
+              >
+                {pendingMethod === 'link' ? t('invite.creatingLink') : t('invite.shareLink')}
+              </Button>
+            )}
             {precheckBlocked ? null : (
               <Button
                 type="submit"
                 offlineKind="save"
                 form="invite-member-form"
-                loading={createInvite.isPending}
+                loading={pendingMethod === 'email'}
                 disabled={createInvite.isPending || email.trim().length === 0}
               >
-                {createInvite.isPending ? t('invite.sending') : t('invite.send')}
+                {pendingMethod === 'email' ? t('invite.sending') : t('invite.send')}
               </Button>
             )}
           </div>
@@ -381,10 +453,14 @@ export function InviteMemberModal({
                 tabIndex={-1}
                 className="m-0 text-base font-semibold text-ink focus:outline-none"
               >
-                {t('invite.sentTitle')}
+                {sentInvite.method === 'link' ? t('invite.linkSentTitle') : t('invite.sentTitle')}
               </h3>
               <p className="m-0 mt-1 text-sm text-ink-2">
-                {shareUrl ? t('invite.success') : t('invite.emailNote', { email: sentInvite.email, role: roleLabel })}
+                {sentInvite.method === 'link'
+                  ? t('invite.linkSentMessage')
+                  : shareUrl
+                    ? t('invite.success')
+                    : t('invite.emailNote', { email: sentInvite.email, role: roleLabel })}
               </p>
             </div>
           </div>
@@ -423,7 +499,7 @@ export function InviteMemberModal({
                   {canShare ? (
                     <Button
                       variant="ghost"
-                      onClick={handleShare}
+                      onClick={() => void handleShare()}
                       leftIcon={<Icon name="share-outline" size="row" />}
                     >
                       {t('invite.shareLink')}
@@ -435,9 +511,12 @@ export function InviteMemberModal({
                   so the link stays the primary action, but it still names the
                   address and role — the sender's only confirmation they typed
                   the right thing. */}
-              <p className="m-0 text-sm text-ink-2">
-                {t('invite.emailNote', { email: sentInvite.email, role: roleLabel })}
-              </p>
+              {/* A shared-link invite emailed nobody: no receipt line (1.4.3). */}
+              {sentInvite.email ? (
+                <p className="m-0 text-sm text-ink-2" data-testid="invite-email-receipt">
+                  {t('invite.emailNote', { email: sentInvite.email, role: roleLabel })}
+                </p>
+              ) : null}
             </>
           ) : null}
           {/* Daily update line (docs/plans/daily-update.md §2.3, D10): what the
@@ -523,7 +602,7 @@ export function InviteMemberModal({
               <div className="min-w-0">
                 <h3 className="m-0 text-base font-semibold text-ink">
                   {viewerIsOwner
-                    ? pendingSeatEmail
+                    ? pendingSeatEmail || pendingSeatLink
                       ? t('invite.pendingSeatCardTitle')
                       : t('invite.capCardTitle')
                     : t('invite.capCardTitleAskOwner')}
@@ -532,10 +611,14 @@ export function InviteMemberModal({
                   {viewerIsOwner
                     ? pendingSeatEmail
                       ? t('invite.pendingSeatCardMessage', { email: pendingSeatEmail })
-                      : t('invite.capCardMessage', { limit: 2 })
+                      : pendingSeatLink
+                        ? t('invite.pendingSeatCardMessageLink')
+                        : t('invite.capCardMessage', { limit: 2 })
                     : pendingSeatEmail
                       ? t('invite.pendingSeatCardMessageAskOwner', { email: pendingSeatEmail })
-                      : ownerName
+                      : pendingSeatLink
+                        ? t('invite.pendingSeatCardMessageAskOwnerLink')
+                        : ownerName
                         ? t('invite.capReachedAskOwnerNamed', { ownerName })
                         : t('invite.capReachedAskOwner')}
                 </p>
@@ -585,14 +668,18 @@ export function InviteMemberModal({
                     ? t('invite.capReached')
                     : capNotice.email
                       ? t('invite.pendingSeat', { email: capNotice.email })
-                      : t('invite.pendingSeatUnknown')
+                      : capNotice.link
+                        ? t('invite.pendingSeatLink')
+                        : t('invite.pendingSeatUnknown')
                   : capNotice.kind === 'cap'
                     ? ownerName
                       ? t('invite.capReachedAskOwnerNamed', { ownerName })
                       : t('invite.capReachedAskOwner')
                     : capNotice.email
                       ? t('invite.pendingSeatAskOwner', { email: capNotice.email })
-                      : t('invite.pendingSeatAskOwnerUnknown')}
+                      : capNotice.link
+                        ? t('invite.pendingSeatAskOwnerLink')
+                        : t('invite.pendingSeatAskOwnerUnknown')}
               </p>
             </div>
             {/* The seat cap is the INVITE_CAP context — see lib/paywallContext.ts.

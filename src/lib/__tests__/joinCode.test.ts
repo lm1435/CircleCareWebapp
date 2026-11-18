@@ -74,3 +74,35 @@ describe('extractJoinCode', () => {
     expect(extractJoinCode('')).toBeNull();
   });
 });
+
+// 1.4.3 — invite codes are 6 OR 8 characters (backend normalizeInviteCode).
+describe('6 or 8 character codes (1.4.3)', () => {
+  it('JC-P1: an 8-character code is complete, and extracted from a paste with separators', () => {
+    expect(isCompleteJoinCode('ABCD2345')).toBe(true);
+    expect(extractJoinCode('abcd-2345')).toBe('ABCD2345');
+    expect(extractJoinCode(' AB CD 23 45 ')).toBe('ABCD2345');
+  });
+
+  it('JC-P2: a legacy 6-character code is still complete', () => {
+    expect(isCompleteJoinCode('HK3M9T')).toBe(true);
+    expect(extractJoinCode('hk3-m9t')).toBe('HK3M9T');
+  });
+
+  it('JC-N1: 7 and 9 characters are never a code (typed or pasted)', () => {
+    expect(isCompleteJoinCode('ABCD234')).toBe(false);
+    expect(isCompleteJoinCode('ABCD23456')).toBe(false);
+    expect(extractJoinCode('abcd-234')).toBeNull();
+    expect(extractJoinCode('ABCD23456')).toBeNull();
+  });
+
+  it('JC-N2: look-alike characters are not remapped (as before): an 8-char code keeps them as typed', () => {
+    // The backend alphabet has no O/0/I/1/L; the client neither rejects nor
+    // rewrites them, exactly as for 6-char codes, so the user sees what they typed.
+    expect(normalizeJoinCode('abc0-o1il')).toBe('ABC0O1IL');
+    expect(isCompleteJoinCode('ABC0O1IL')).toBe(true);
+  });
+
+  it('JC-N3: an 8-character string with punctuation is not complete', () => {
+    expect(isCompleteJoinCode('ABCD!345')).toBe(false);
+  });
+});

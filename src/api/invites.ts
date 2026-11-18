@@ -37,6 +37,8 @@ export interface InvitePreview {
    */
   invited_by_name: string | null;
   expires_at: string;
+  /** ADDITIVE (1.4.3): present (true) only on a shared-link invite (no address). */
+  link_invite?: boolean;
 }
 
 interface InvitePreviewEnvelope {
@@ -66,8 +68,9 @@ export async function previewInviteByCode(code: string): Promise<InvitePreview> 
 // backend/src/routes/invites.ts (mounted at /api/invites + /api/circles via the
 // shared router):
 //   - POST   /circles/:circleId/invites  (requireAuth + inviteRateLimit + owner)
-//       body { member_type, email } — email REQUIRED. We email the invitee a
-//       link to join. 402 SUBSCRIPTION_REQUIRED when a free-tier circle already
+//       body { member_type, email? }. With an email we email the invitee a
+//       link to join; WITHOUT one (1.4.3) it is a shared-link invite: no email,
+//       the response carries the code + link for the inviter to share. 402 SUBSCRIPTION_REQUIRED when a free-tier circle already
 //       has ≥2 active+pending caregivers.
 //   - DELETE /invites/:inviteId          (requireAuth, inviter/owner = CANCEL).
 //       On a DECLINED row (1.4.3) the same call dismisses it ("Remove").
@@ -87,13 +90,18 @@ export async function previewInviteByCode(code: string): Promise<InvitePreview> 
 // ===========================================================================
 
 export interface CreateInviteRequest {
-  email: string;
+  /**
+   * OMITTED (never null, never '') for a shared-link invite (1.4.3): the body is
+   * then `{ member_type }` only.
+   */
+  email?: string;
   member_type: InviteMemberType;
 }
 
 export interface CreatedInvite {
   id: string;
-  invited_email: string;
+  /** null for a shared-link invite (1.4.3). */
+  invited_email: string | null;
   member_type: InviteMemberType;
   invite_code: string;
   /**
@@ -170,7 +178,11 @@ export async function declineInvite(inviteId: string): Promise<DeclineInviteResu
 export interface ResendInviteResult {
   invite: {
     id: string;
-    invited_email: string;
+    /** null for a shared-link invite (1.4.3): nothing was emailed, the same link renewed. */
+    invited_email: string | null;
+    /** Present for a shared-link invite (1.4.3). */
+    invite_code?: string;
+    invite_url?: string;
     member_type: InviteMemberType;
     expires_at: string;
     /** Always false — the row was just extended by another 7 days. */
@@ -321,6 +333,8 @@ export interface InviteByCode {
    * Absent on an older backend → treat as 'none'.
    */
   viewer_relationship?: InviteViewerRelationship;
+  /** ADDITIVE (1.4.3): present (true) only on a shared-link invite (no address). */
+  link_invite?: boolean;
 }
 
 export type InviteViewerRelationship = 'inviter' | 'member' | 'none';
@@ -359,5 +373,20 @@ export async function acceptInviteByCode(code: string): Promise<AcceptInviteResp
   const response = (await apiClient.post(
     `/invites/code/${normalizeCode(code)}/accept`
   )) as unknown as AcceptInviteEnvelope;
+  return response.data;
+}
+
+/**
+ * POST /invites/code/:code/decline (1.4.3) — decline BY CODE (authenticated).
+ * The way a shared-link invite (no address) is declined; holding the code is
+ * the access, as for accept-by-code. Same result shape as `declineInvite`.
+ * 403 NOT_INVITEE for the inviter or an existing member (the page never offers
+ * it to them). Mirrors mobile/src/api/invites.ts.
+ */
+export async function declineInviteByCode(code: string): Promise<DeclineInviteResult> {
+  const response = (await apiClient.post(
+    `/invites/code/${normalizeCode(code)}/decline`,
+    {}
+  )) as unknown as DeclineInviteEnvelope;
   return response.data;
 }

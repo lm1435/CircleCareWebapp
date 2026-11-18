@@ -34,6 +34,8 @@ export interface InviteSeatPrecheck {
   livePendingCaregiverInvites: number;
   /** Email of the invite holding the seat (reason 'pending_invite_seat' only). */
   blockingEmail: string | null;
+  /** The invite holding the seat is a shared link with no address (1.4.3). */
+  blockingIsLink: boolean;
 }
 
 export function getInviteSeatPrecheck(
@@ -56,5 +58,6 @@ export function getInviteSeatPrecheck(
     activeCaregivers,
     livePendingCaregiverInvites: livePending.length,
     blockingEmail: blocking?.invited_email || null,
+    blockingIsLink: blocking != null && blocking.invited_email == null,
   };
 }

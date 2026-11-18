@@ -1,16 +1,20 @@
 // Round 4 (R4-2) — invite/join code normalization helpers
 // (docs/plans/condition-tags.md, "Round 4: Onboarding friction").
 //
-// Invite codes are 6 alphanumeric characters, but people paste them from
+// Invite codes are 6 or 8 alphanumeric characters (8 since 1.4.3; 6-character
+// codes keep working until they expire), but people paste them from
 // emails with stray spaces, dashes, or lowercase. These pure helpers keep the
 // normalization in one place so the form input, submit gating, and the
 // clipboard-assist button all agree.
 
-/** Canonical invite-code length. */
-export const JOIN_CODE_LENGTH = 6;
+/** Longest invite code (1.4.3). The legacy length is 6; nothing else is valid. */
+export const JOIN_CODE_LENGTH = 8;
 
-/** Matches a fully-normalized, complete code: exactly 6 alphanumerics. */
-const COMPLETE_CODE_RE = /^[A-Z0-9]{6}$/;
+/**
+ * Matches a fully-normalized, complete code: exactly 6 OR exactly 8
+ * alphanumerics (backend `normalizeInviteCode`). 7 or 9 can never be a code.
+ */
+const COMPLETE_CODE_RE = /^(?:[A-Z0-9]{6}|[A-Z0-9]{8})$/;
 
 /**
  * Normalize raw typed/pasted input: uppercase and strip spaces (any
@@ -22,7 +26,7 @@ export function normalizeJoinCode(raw: string): string {
 }
 
 /**
- * True when a normalized code is submit-ready: exactly 6 characters AND
+ * True when a normalized code is submit-ready: exactly 6 or 8 characters AND
  * every character is an uppercase alphanumeric (A-Z0-9) — the same charset
  * `extractJoinCode` already enforces. WB10: length alone let a 6-char string
  * containing stray punctuation (e.g. a mis-paste) enable Submit, guaranteeing
@@ -34,7 +38,7 @@ export function isCompleteJoinCode(code: string): boolean {
 
 /**
  * Clipboard-assist extraction: normalize the clipboard text and return the
- * code ONLY if the whole normalized value is exactly 6 alphanumerics.
+ * code ONLY if the whole normalized value is exactly 6 or 8 alphanumerics.
  * Anything else (sentences, URLs, partial codes) returns null — we never
  * guess at a substring of arbitrary clipboard content.
  */

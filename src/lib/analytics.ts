@@ -970,12 +970,22 @@ export const Analytics = {
 
   // --- Invites ---
   inviteStarted: (circleId: string) => capture('invite_started', { circle_id: circleId }),
-  /** `actor_role`: who sent it, the owner or a manager (mobile parity). */
-  inviteSent: (circleId: string, role: string, actorRole: ActorRole = 'owner') =>
+  /**
+   * `actor_role`: who sent it, the owner or a manager (mobile parity).
+   * `method` (1.4.3): 'email' (typed an address) or 'link' (a shared-link invite
+   * with no address). Enum only.
+   */
+  inviteSent: (
+    circleId: string,
+    role: string,
+    actorRole: ActorRole = 'owner',
+    method: 'email' | 'link' = 'email'
+  ) =>
     capture('invite_sent', {
       circle_id: circleId,
       role,
       actor_role: pickEnum(actorRole, ACTOR_ROLES, 'owner'),
+      method: pickEnum(method, ['email', 'link'] as const, 'email'),
     }),
   inviteFailed: (circleId: string, error: string) =>
     capture('invite_failed', { circle_id: circleId, error: sanitizeErrorText(error) }),

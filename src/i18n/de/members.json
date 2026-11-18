@@ -96,7 +96,9 @@
     "viewOnlyCannotManage": "Mitglieder mit „Nur Ansicht“-Zugriff können den Kreis nicht mitverwalten.",
     "circleInactive": "Dieser Pflegekreis ist nicht mehr aktiv.",
     "pendingInviteSeatAskOwner": "Der kostenlose Platz ist durch eine ausstehende Einladung an {{email}} belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Inhaber, zu Premium zu wechseln.",
-    "pendingInviteSeatAskOwnerUnknown": "Der kostenlose Platz ist durch eine andere ausstehende Einladung belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Inhaber, zu Premium zu wechseln."
+    "pendingInviteSeatAskOwnerUnknown": "Der kostenlose Platz ist durch eine andere ausstehende Einladung belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Inhaber, zu Premium zu wechseln.",
+    "pendingInviteSeatLink": "Sie haben Ihre Einladung bereits verwendet – der kostenlose Platz ist durch einen geteilten Einladungslink belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder wechseln Sie zu Premium, um weitere Pflegepersonen hinzuzufügen.",
+    "pendingInviteSeatAskOwnerLink": "Der kostenlose Platz ist durch einen geteilten Einladungslink belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder fragen Sie den Kreis-Inhaber nach einem Premium-Upgrade."
   },
   "invite": {
     "cta": "Mitglied einladen",
@@ -145,7 +147,14 @@
     "capReachedAskOwner": "Kostenlose Kreise bieten Platz für bis zu zwei Pflegepersonen. Nur der Kreis-Inhaber kann upgraden, um weitere hinzuzufügen.",
     "capReachedAskOwnerNamed": "Kostenlose Kreise bieten Platz für bis zu zwei Pflegepersonen. Nur {{ownerName}}, Kreis-Inhaber, kann upgraden, um weitere hinzuzufügen.",
     "pendingSeatAskOwner": "Der kostenlose Platz ist durch eine ausstehende Einladung an {{email}} belegt. Ziehen Sie sie unter „Ausstehende Einladungen“ zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Inhaber, zu upgraden.",
-    "pendingSeatAskOwnerUnknown": "Der kostenlose Platz ist durch eine andere ausstehende Einladung belegt. Ziehen Sie sie unter „Ausstehende Einladungen“ zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Inhaber, zu upgraden."
+    "pendingSeatAskOwnerUnknown": "Der kostenlose Platz ist durch eine andere ausstehende Einladung belegt. Ziehen Sie sie unter „Ausstehende Einladungen“ zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Inhaber, zu upgraden.",
+    "creatingLink": "Link wird erstellt…",
+    "linkSentTitle": "Einladungslink bereit",
+    "linkSentMessage": "Jede Person mit diesem Link kann einmal beitreten. Er läuft in 7 Tagen ab.",
+    "pendingSeatLink": "Sie haben Ihre Einladung bereits verwendet – der kostenlose Platz ist durch einen geteilten Einladungslink belegt. Ziehen Sie ihn unter „Ausstehende Einladungen“ zurück, um den Platz freizugeben, oder wechseln Sie zu Premium, um weitere Pflegepersonen hinzuzufügen.",
+    "pendingSeatAskOwnerLink": "Der kostenlose Platz ist durch einen geteilten Einladungslink belegt. Ziehen Sie ihn unter „Ausstehende Einladungen“ zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Inhaber, zu upgraden.",
+    "pendingSeatCardMessageLink": "Ihr kostenloser Kreis enthält eine Einladung für eine Pflegeperson, und sie ist durch einen geteilten Einladungslink belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder führen Sie ein Upgrade durch, um weitere Pflegepersonen hinzuzufügen.",
+    "pendingSeatCardMessageAskOwnerLink": "Der Platz für eine Pflegeperson in diesem kostenlosen Kreis ist durch einen geteilten Einladungslink belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Inhaber, zu upgraden."
   },
   "manage": {
     "subheading": "Alle in diesem Pflegekreis. Laden Sie unten Mitglieder ein, entfernen Sie sie oder verwalten Sie sie.",
@@ -202,7 +211,11 @@
     "inviteAgainSuccess": "Einladung an {{email}} gesendet.",
     "removeDeclined": "Entfernen",
     "removeDeclinedLabel": "Abgelehnte Einladung für {{email}} entfernen",
-    "removeDeclinedSuccess": "Abgelehnte Einladung entfernt."
+    "removeDeclinedSuccess": "Abgelehnte Einladung entfernt.",
+    "sharedLink": "Geteilter Link",
+    "sharedLinkInline": "einen geteilten Link",
+    "inviteLinkRenewed": "Einladungslink verlängert",
+    "cancelLinkInviteConfirmBody": "Wer diesen Link hat, kann damit nicht mehr beitreten."
   },
   "pending": {
     "heading": "Ihre Einladungen",

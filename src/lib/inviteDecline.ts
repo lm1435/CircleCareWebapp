@@ -13,6 +13,8 @@ export const DECLINE_ERROR_CODES = [
   'INVITE_ALREADY_USED',
   'INVITE_CANCELLED',
   'INVITE_EXPIRED',
+  // Decline BY CODE (1.4.3): the caller is the inviter or already a member.
+  'NOT_INVITEE',
   'RATE_LIMIT',
   'SERVER_ERROR',
 ] as const;
@@ -55,6 +57,7 @@ export function readDeclineError(error: unknown): DeclineErrorReading {
     case 'RATE_LIMIT':
       return { code, messageKey: 'declineErrorRateLimit', refetch: false };
     case 'EMAIL_MISMATCH':
+    case 'NOT_INVITEE':
     case 'VALIDATION_ERROR':
     case 'USER_NOT_FOUND':
       return { code, messageKey: 'declineErrorGeneric', refetch: true };

@@ -45,7 +45,7 @@
   },
   "joinModal": {
     "title": "Join a circle",
-    "subtitle": "Enter the 6-character code from your invite.",
+    "subtitle": "Enter the code from your invite.",
     "codeLabel": "Invite code",
     "pasteCode": "Paste code",
     "pasteNoCode": "We didn't find an invite code on your clipboard.",

@@ -45,7 +45,7 @@
   },
   "joinModal": {
     "title": "Rejoindre un cercle",
-    "subtitle": "Saisissez le code à 6 caractères figurant dans votre invitation.",
+    "subtitle": "Saisissez le code figurant dans votre invitation.",
     "codeLabel": "Code d’invitation",
     "pasteCode": "Coller le code",
     "pasteNoCode": "Nous n’avons trouvé aucun code d’invitation dans votre presse-papiers.",

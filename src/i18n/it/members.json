@@ -96,7 +96,9 @@
     "viewOnlyCannotManage": "I membri con accesso in sola lettura non possono essere gestori.",
     "circleInactive": "Questa cerchia di cura non è più attiva.",
     "pendingInviteSeatAskOwner": "Il posto gratuito è occupato da un invito in sospeso per {{email}}. Annulla quell'invito per liberarlo, oppure chiedi al titolare della cerchia di passare a Premium.",
-    "pendingInviteSeatAskOwnerUnknown": "Il posto gratuito è occupato da un altro invito in sospeso. Annulla quell'invito per liberarlo, oppure chiedi al titolare della cerchia di passare a Premium."
+    "pendingInviteSeatAskOwnerUnknown": "Il posto gratuito è occupato da un altro invito in sospeso. Annulla quell'invito per liberarlo, oppure chiedi al titolare della cerchia di passare a Premium.",
+    "pendingInviteSeatLink": "Hai già usato il tuo invito: il posto gratuito è occupato da un link di invito condiviso. Annulla quell’invito per liberarlo, oppure passa a Premium per aggiungere altri caregiver.",
+    "pendingInviteSeatAskOwnerLink": "Il posto gratuito è occupato da un link di invito condiviso. Annulla quell’invito per liberarlo, oppure chiedi al proprietario della cerchia di passare a Premium."
   },
   "invite": {
     "cta": "Invita un membro",
@@ -145,7 +147,14 @@
     "capReachedAskOwner": "Le cerchie gratuite includono fino a due caregiver. Solo il titolare della cerchia può passare a Premium per aggiungerne altri.",
     "capReachedAskOwnerNamed": "Le cerchie gratuite includono fino a due caregiver. Solo {{ownerName}}, titolare della cerchia, può passare a Premium per aggiungerne altri.",
     "pendingSeatAskOwner": "Il posto gratuito è occupato da un invito in sospeso per {{email}}. Annullalo in Inviti in sospeso per liberare il posto, oppure chiedi al titolare della cerchia di passare a Premium.",
-    "pendingSeatAskOwnerUnknown": "Il posto gratuito è occupato da un altro invito in sospeso. Annullalo in Inviti in sospeso per liberare il posto, oppure chiedi al titolare della cerchia di passare a Premium."
+    "pendingSeatAskOwnerUnknown": "Il posto gratuito è occupato da un altro invito in sospeso. Annullalo in Inviti in sospeso per liberare il posto, oppure chiedi al titolare della cerchia di passare a Premium.",
+    "creatingLink": "Creazione del link…",
+    "linkSentTitle": "Link di invito pronto",
+    "linkSentMessage": "Chiunque abbia questo link può unirsi una sola volta. Scade tra 7 giorni.",
+    "pendingSeatLink": "Hai già usato il tuo invito: il posto gratuito è occupato da un link di invito condiviso. Annullalo in Inviti in sospeso per liberare il posto, oppure passa a Premium per aggiungere altri caregiver.",
+    "pendingSeatAskOwnerLink": "Il posto gratuito è occupato da un link di invito condiviso. Annullalo in Inviti in sospeso per liberare il posto, oppure chiedi al proprietario della cerchia di passare a Premium.",
+    "pendingSeatCardMessageLink": "La tua cerchia gratuita include un invito per un caregiver, ed è occupato da un link di invito condiviso. Annulla quell’invito per liberare il posto, oppure passa a Premium per aggiungere altri caregiver.",
+    "pendingSeatCardMessageAskOwnerLink": "Il posto da caregiver di questa cerchia gratuita è occupato da un link di invito condiviso. Annulla quell’invito per liberare il posto, oppure chiedi al proprietario della cerchia di passare a Premium."
   },
   "manage": {
     "subheading": "Tutte le persone di questa cerchia di cura. Qui sotto puoi invitare, rimuovere o gestire i membri.",
@@ -202,7 +211,11 @@
     "inviteAgainSuccess": "Invito inviato a {{email}}.",
     "removeDeclined": "Rimuovi",
     "removeDeclinedLabel": "Rimuovi l’invito rifiutato di {{email}}",
-    "removeDeclinedSuccess": "Invito rifiutato rimosso."
+    "removeDeclinedSuccess": "Invito rifiutato rimosso.",
+    "sharedLink": "Link condiviso",
+    "sharedLinkInline": "un link condiviso",
+    "inviteLinkRenewed": "Link di invito rinnovato",
+    "cancelLinkInviteConfirmBody": "Chi ha questo link non potrà più usarlo per unirsi."
   },
   "pending": {
     "heading": "I tuoi inviti",

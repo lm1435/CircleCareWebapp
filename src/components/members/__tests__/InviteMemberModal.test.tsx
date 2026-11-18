@@ -1097,3 +1097,120 @@ describe('InviteMemberModal — manager hint on "Invitation sent" (docs/plans/ma
     expect(screen.queryByText(HINT)).toBeNull();
   });
 });
+
+// ── 1.4.3: "Share invite link" — an invite with NO email ────────────────────
+describe('InviteMemberModal — share invite link (1.4.3)', () => {
+  const stubNavigator = (props: Record<string, unknown>) => {
+    for (const [key, value] of Object.entries(props)) {
+      Object.defineProperty(navigator, key, { value, configurable: true, writable: true });
+    }
+  };
+  afterEach(() => {
+    for (const key of ['share', 'clipboard']) {
+      if (key in navigator) {
+        Object.defineProperty(navigator, key, { value: undefined, configurable: true, writable: true });
+      }
+    }
+  });
+  const LINK = 'https://my.circlecare.app/invite/ABCD2345';
+  const succeedLink = () =>
+    mutate.mockImplementation((_vars, opts) => {
+      opts?.onSuccess?.({ invite: { invited_email: null, invite_code: 'ABCD2345', invite_url: LINK } });
+      opts?.onSettled?.();
+    });
+
+  it('SL-P1: creates the invite with NO email key, shows the link, Copy, and no email receipt', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    stubNavigator({ clipboard: { writeText } });
+    succeedLink();
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+
+    // Enabled without typing an email (the email Send stays disabled).
+    expect(screen.getByRole('button', { name: 'Send invitation' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Share invite link' }));
+
+    expect(mutate).toHaveBeenCalledTimes(1);
+    expect(mutate.mock.calls[0][0]).toEqual({ member_type: 'caregiver' });
+    expect(Object.keys(mutate.mock.calls[0][0])).not.toContain('email');
+    expect(await screen.findByRole('heading', { name: 'Invite link ready' })).toBeInTheDocument();
+    expect(screen.getByText('Anyone with this link can join once. It expires in 7 days.')).toBeInTheDocument();
+    expect(screen.getByText(LINK)).toBeInTheDocument();
+    // SL-N1: no "We also emailed ..." receipt, and never the word null.
+    expect(screen.queryByTestId('invite-email-receipt')).toBeNull();
+    expect(document.body.textContent).not.toMatch(/\bnull\b/);
+    await user.click(screen.getByRole('button', { name: 'Copy link' }));
+    expect(writeText).toHaveBeenCalledWith(LINK);
+  });
+
+  it('SL-P2: opens the share sheet straight away where the browser has one', async () => {
+    const user = userEvent.setup();
+    const share = vi.fn().mockResolvedValue(undefined);
+    stubNavigator({ share, clipboard: { writeText: vi.fn() } });
+    succeedLink();
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Share invite link' }));
+    await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
+    expect(share.mock.calls[0][0].text).toContain(LINK);
+    // Still offered on the sent step, beside Copy.
+    expect(screen.getByRole('button', { name: 'Share invite link' })).toBeInTheDocument();
+  });
+
+  it('SL-P3: carries the chosen role (care recipient)', async () => {
+    const user = userEvent.setup();
+    succeedLink();
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    await user.click(screen.getByTestId('invite-role-recipient'));
+    await user.click(screen.getByRole('button', { name: 'Share invite link' }));
+    expect(mutate.mock.calls[0][0]).toEqual({ member_type: 'care_recipient' });
+  });
+
+  it('SL-N2: the email path is unchanged: Send still posts the address and shows the receipt', async () => {
+    const user = userEvent.setup();
+    mutate.mockImplementation((_vars, opts) =>
+      opts?.onSuccess?.({ invite: { invited_email: 'ana@example.com', invite_code: 'ABC123', invite_url: 'https://x/invite/ABC123' } })
+    );
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    await user.type(screen.getByLabelText(/^Email/), 'ana@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invitation' }));
+    expect(mutate.mock.calls[0][0]).toEqual({ email: 'ana@example.com', member_type: 'caregiver' });
+    expect(await screen.findByRole('heading', { name: 'Invitation sent' })).toBeInTheDocument();
+    expect(screen.getByTestId('invite-email-receipt')).toHaveTextContent('ana@example.com');
+  });
+
+  it('SL-N3: a double press creates exactly ONE link invite (submit guard)', async () => {
+    let settle: (() => void) | undefined;
+    mutate.mockImplementation((_vars, opts) => {
+      settle = () => opts?.onSettled?.();
+    });
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    const button = screen.getByRole('button', { name: 'Share invite link' });
+    act(() => {
+      button.click();
+      button.click();
+    });
+    expect(mutate).toHaveBeenCalledTimes(1);
+    act(() => settle?.());
+  });
+
+  it('SL-N4: a pending-seat 402 held by a SHARED LINK names the link, not "another pending invite"', async () => {
+    const user = userEvent.setup();
+    mutate.mockImplementation((_vars, opts) =>
+      opts?.onError?.({
+        error: {
+          code: 'SUBSCRIPTION_REQUIRED',
+          details: {
+            reason: 'pending_invite_seat',
+            blocking_invite: { id: 'inv-link', invited_email: null },
+          },
+        },
+      })
+    );
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Share invite link' }));
+    const note = await screen.findByRole('alert');
+    expect(note).toHaveTextContent(/shared invite link/i);
+    expect(note).not.toHaveTextContent(/another pending invite/i);
+    expect(note).not.toHaveTextContent(/null/);
+  });
+});
