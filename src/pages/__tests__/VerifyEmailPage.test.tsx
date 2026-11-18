@@ -661,3 +661,48 @@ describe('VerifyEmailPage — double-submit guard', () => {
     expect(mockedPost).toHaveBeenCalledWith('/auth/resend-otp', { email: 'pat@example.com' });
   });
 });
+
+// First run v2 (1.4.3): the code is sent by the SIXTH DIGIT (otp_auto_submitted), and the guard
+// makes the sixth digit plus an immediate press on Verify send ONE request.
+describe('VerifyEmailPage — first run v2 auto-submit', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockedPost.mockReset();
+    tokenAccessor.clear();
+    sessionStorage.clear();
+    useAuthStore.setState({ user: null, isAuthenticated: false, isBootstrapping: false });
+  });
+
+  it('POSITIVE: the sixth digit verifies and reports otp_auto_submitted success', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    const auto = vi.spyOn(Analytics, 'otpAutoSubmitted').mockImplementation(() => {});
+    mockAuthEndpoints();
+    renderVerify();
+    await enterOtp('123456');
+    await waitFor(() => expect(auto).toHaveBeenCalledWith(true));
+    expect(mockedPost).toHaveBeenCalledWith('/auth/verify-otp', { email: 'pat@example.com', otp: '123456' });
+    auto.mockRestore();
+  });
+
+  it('NEGATIVE: the sixth digit plus an immediate Verify press sends ONE verify request', async () => {
+    mockedPost.mockImplementation((() => neverSettles()) as never);
+    renderVerify();
+    const user = await enterOtp('123456');
+    await user.click(screen.getByRole('button', { name: /Verify/ }));
+    const verifies = mockedPost.mock.calls.filter(([url]) => url === '/auth/verify-otp');
+    expect(verifies).toHaveLength(1);
+  });
+
+  it('NEGATIVE: a wrong code reports otp_auto_submitted false, creates nothing, and the field stays usable', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    const auto = vi.spyOn(Analytics, 'otpAutoSubmitted').mockImplementation(() => {});
+    mockedPost.mockImplementation(((url: string) =>
+      url === '/auth/verify-otp' ? Promise.reject(rejectedCode) : Promise.reject(new Error(url))) as never);
+    renderVerify();
+    await enterOtp('000000');
+    await waitFor(() => expect(auto).toHaveBeenCalledWith(false));
+    expect(mockedPost.mock.calls.some(([url]) => String(url).startsWith('/circles'))).toBe(false);
+    await waitFor(() => expect(screen.getByLabelText('Digit 1 of 6')).toBeEnabled());
+    auto.mockRestore();
+  });
+});

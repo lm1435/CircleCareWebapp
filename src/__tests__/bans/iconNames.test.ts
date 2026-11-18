@@ -38,6 +38,8 @@ const SVG_ALLOWLIST = [
   'components/ui/Icon.tsx',
   'components/layout/StoreBadges.tsx',
   'components/auth/OAuthButtons.tsx',
+  // First run v2 circle emblem (motion.md M2): an animated ring drawing, not an icon.
+  'components/circles/firstRun/CircleEmblem.tsx',
   'components/meds/AdherenceRing.tsx',
   'components/vitals/VitalsChart.tsx',
 ];

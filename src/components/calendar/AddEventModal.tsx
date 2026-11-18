@@ -58,6 +58,7 @@ import {
   type TimeChipId,
 } from '@/lib/analytics';
 import { chipForTime } from '@/lib/medTimeOfDay';
+import { FIRST_RUN_MED_TIME, firstRunItemDefault } from '@/lib/firstRunDefaults';
 import { useAuthStore } from '@/store/authStore';
 import { useLargeTextLayoutEvent } from '@/lib/largeText';
 import { TimeChips } from './TimeChips';
@@ -102,6 +103,7 @@ import {
   Icon,
   Modal,
   RequiredMarker,
+  SegmentedControl,
   Spinner,
   Text,
   TextArea,
@@ -214,6 +216,28 @@ export interface AddEventModalProps {
    * and the abandon events). Defaults to 'other'.
    */
   entry?: EntryFormOrigin;
+  /**
+   * FIRST RUN v2 (1.4.3): show the type switch (Medication · Appointment · Task) above the form,
+   * opening on `initialType` (Medication). The WEB FORM HAS NO TYPE SWITCH of its own (one form per
+   * type; the global Create menu picks the type first), so this is the shared `SegmentedControl`,
+   * the same component the mobile form's switcher is. Each tab is the real form for that type.
+   * Create only; ignored when editing.
+   */
+  firstRunTypeSwitch?: boolean;
+  /** First run v2: what was saved, for the All set screen. Any of the three types. */
+  onFirstRunItemSaved?: (item: FirstRunSavedItem) => void;
+}
+
+/** What a first-run save made (first run v2, All set). Never sent to analytics. */
+export interface FirstRunSavedItem {
+  type: FormKind;
+  title: string;
+  /** The recipient's wall clock `HH:MM`, or null ("Any time"). */
+  recipientTime: string | null;
+  scheduledDate: string | null;
+  timezone: string;
+  /** The medication's details (dose, repeat, start), when the type is medication. */
+  medication?: SavedMedicationInfo;
 }
 
 type RecurrenceChoice =
@@ -518,6 +542,10 @@ export function withSeriesContent(
 export function AddEventModal(props: AddEventModalProps): ReactElement | null {
   const { circleId, event, onClose } = props;
   const { t } = useTranslation(['calendar', 'common']);
+  // First run v2: the type switch's current tab. Each tab is a fresh form (keyed below).
+  const [switchKind, setSwitchKind] = useState<FormKind>(props.initialType ?? 'medication');
+  const switchedRef = useRef(false);
+  const showTypeSwitch = !!props.firstRunTypeSwitch && !event;
   const { canEdit } = useCircle(circleId);
   const cachedEvents = useCachedCircleEvents(circleId);
   const { root } = useSeriesRoot(circleId, event, cachedEvents);
@@ -528,7 +556,7 @@ export function AddEventModal(props: AddEventModalProps): ReactElement | null {
 
   if (!canEdit) return null;
   // One form per type: anything that is not a medication, appointment or task (a shift) has no form here.
-  const kind = event ? event.event_type : props.initialType;
+  const kind = event ? event.event_type : showTypeSwitch ? switchKind : props.initialType;
   if (kind !== 'medication' && kind !== 'appointment' && kind !== 'task') return null;
   if (event && root === undefined) {
     return (
@@ -544,7 +572,28 @@ export function AddEventModal(props: AddEventModalProps): ReactElement | null {
       </Modal>
     );
   }
-  return <AddEventForm {...props} event={formEvent} kind={kind} />;
+  return (
+    <AddEventForm
+      // A switch is a fresh form for that type (its own defaults), never a half-converted one.
+      key={showTypeSwitch ? kind : undefined}
+      {...props}
+      event={formEvent}
+      kind={kind}
+      typeSwitch={
+        showTypeSwitch
+          ? {
+              focusOnMount: switchedRef.current,
+              onChange: (next) => {
+                if (next === kind) return;
+                Analytics.firstRunTypeSwitched(kind, next, circleId);
+                switchedRef.current = true;
+                setSwitchKind(next);
+              },
+            }
+          : undefined
+      }
+    />
+  );
 }
 
 function AddEventForm({
@@ -556,7 +605,12 @@ function AddEventForm({
   onSaved,
   firstRun: firstRunProp = false,
   entry: entryOrigin = 'other',
-}: AddEventModalProps & { kind: FormKind }): ReactElement | null {
+  onFirstRunItemSaved,
+  typeSwitch,
+}: AddEventModalProps & {
+  kind: FormKind;
+  typeSwitch?: { focusOnMount: boolean; onChange: (next: FormKind) => void };
+}): ReactElement | null {
   const { t, i18n } = useTranslation(['calendar', 'common']);
   const { showToast } = useToast();
   const { circle, timezone, canEdit, members } = useCircle(circleId);
@@ -608,6 +662,8 @@ function AddEventForm({
 
   const eventType: FormKind = simpleKind;
   const firstRun = firstRunProp && simpleKind === 'medication';
+  /** First run v2: any of the three types (defaults, "Skip for now"); the header stays medication-only. */
+  const firstRunMode = firstRunProp && !event;
   const [title, setTitle] = useState(event?.medication_name || event?.title || '');
   const [dosage, setDosage] = useState(event?.medication_dosage ?? '');
   /** The RxNorm row behind a PICKED medication name; `null` once it is hand-edited. */
@@ -1352,6 +1408,30 @@ function AddEventForm({
   }
   /** The time chip the form's time sits on, or null ("Other time" / no time). */
   const litChip = chipForTime(recipientClock);
+
+  /**
+   * FIRST RUN v2 defaults (owner, locked 2026-11-17): the medication tab opens on 8:00 AM Morning, an
+   * appointment / task on 9:00 AM ("Pick a time"), moved to 9:00 AM TOMORROW once 9:00 has passed on the
+   * recipient's clock (`firstRunItemDefault`). Applied once, when the circle's zone is known, and only on
+   * an untouched form; it then owns the fields like a pick would (`datesTouched`), so the zone resync above
+   * cannot wipe it. Outside first run nothing changes: the forms keep opening on "Any time".
+   */
+  const firstRunDefaultRef = useRef<{ date: string; time: string } | null>(null);
+  useEffect(() => {
+    if (!firstRunMode || !timezone || firstRunDefaultRef.current || datesTouched.current) return;
+    const slot = isMedication
+      ? { date: defaultNewEventDate(timezone), time: FIRST_RUN_MED_TIME }
+      : firstRunItemDefault(timezone);
+    const viewer = eventDatesFromApi({ scheduledDate: slot.date, scheduledTime: slot.time, timezone });
+    if (!viewer.timeStr) return;
+    firstRunDefaultRef.current = slot;
+    datesTouched.current = true;
+    setDateStr(viewer.dateStr);
+    setTimeStr(viewer.timeStr);
+    setChipInstant(viewer.instant ?? null);
+    if (!isMedication) setEndTimeStr(presetEndFor(viewer.timeStr, DEFAULT_DURATION_MINUTES));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the zone is known
+  }, [firstRunMode, timezone, isMedication]);
   /**
    * CREATE only: this medication's start rolls to the next dose (the backend does it,
    * `medicationStartRoll.ts`) because its time already passed today in the recipient's zone.
@@ -1994,8 +2074,9 @@ function AddEventForm({
             startDate: created?.scheduled_date ?? null,
             today: getDateInTimezone(timezone),
           };
+          // First run v2 (1.4.3): All set has no Mark it line (the payoff that held it is gone), so the
+          // first-run save writes the same note and Today offers "Already given today? Mark it".
           if (
-            !firstRun &&
             circleHadNoMedication(circleId, savedInfo.today) &&
             savedInfo.eventId &&
             markItEligible(savedInfo)
@@ -2013,16 +2094,43 @@ function AddEventForm({
             });
           }
         }
-        // The first-run funnel's save event: enums, a boolean and a count (never the name).
-        if (firstRun && data.event_type === 'medication') {
+        // The first-run funnel's save event: enums, booleans and a count (never the name). First run v2:
+        // every type, with which tab, whether the opening time was kept, and whether it has a time.
+        if (firstRunMode) {
+          const savedClock = data.scheduled_time ? data.scheduled_time.slice(0, 5) : null;
+          const isMed = data.event_type === 'medication';
           Analytics.firstRunMedicationSaved({
             circleId,
-            preset: litChip ?? 'other',
-            recurrence:
-              recurrence === 'days_of_week' || recurrence === 'as_needed' ? recurrence : 'daily',
-            dosageFilled: dosage.trim().length > 0,
-            doseCount: Math.max(1, savedDoses.length),
+            preset: isMed ? (litChip ?? 'other') : 'other',
+            recurrence: isMed
+              ? recurrence === 'days_of_week' || recurrence === 'as_needed'
+                ? recurrence
+                : 'daily'
+              : recurrence === 'none' ||
+                  recurrence === 'weekly' ||
+                  recurrence === 'every_other_day' ||
+                  recurrence === 'days_of_week'
+                ? recurrence
+                : recurrence === 'daily'
+                  ? 'daily'
+                  : 'none',
+            dosageFilled: isMed && dosage.trim().length > 0,
+            doseCount: isMed ? Math.max(1, savedDoses.length) : 1,
+            firstItemType: eventType,
+            timeDefaultKept:
+              firstRunDefaultRef.current !== null && savedClock === firstRunDefaultRef.current.time,
+            hasTime: savedClock !== null,
           });
+          if (timezone) {
+            onFirstRunItemSaved?.({
+              type: eventType,
+              title: data.title,
+              recipientTime: savedClock,
+              scheduledDate: data.scheduled_date ?? null,
+              timezone,
+              medication: savedInfo,
+            });
+          }
         }
         if (failedDoseTimes.length > 0) {
           Analytics.entrySaveFailed(circleId, eventType, 'additional_dose_create_failed');
@@ -3957,9 +4065,9 @@ function AddEventForm({
             variant="secondary"
             onClick={handleClose}
             disabled={isPending}
-            data-testid={firstRun ? 'first-run-skip' : undefined}
+            data-testid={firstRunMode ? 'first-run-skip' : undefined}
           >
-            {firstRun ? t('addEvent.firstRun.skip') : t('common:cancel')}
+            {firstRunMode ? t('addEvent.firstRun.skip') : t('common:cancel')}
           </Button>
           {/* Save is always the solid primary button. With a required field
               missing a press does not save: it cancels the submit, focuses the
@@ -4005,6 +4113,19 @@ function AddEventForm({
         noValidate
         aria-describedby={showSeriesEditNote ? 'series-edit-note' : undefined}
       >
+        {typeSwitch && (
+          <SegmentedControl
+            label={t('circles:firstRun.who.itemType')}
+            value={simpleKind}
+            focusOnMount={typeSwitch.focusOnMount}
+            options={[
+              { value: 'medication', label: t('eventTypes.medication') },
+              { value: 'appointment', label: t('eventTypes.appointment') },
+              { value: 'task', label: t('eventTypes.task') },
+            ]}
+            onChange={(next) => typeSwitch.onChange(next as FormKind)}
+          />
+        )}
         {firstRun && (
           <header className="flex flex-col gap-1.5" data-testid="first-run-form-heading">
             <Eyebrow>

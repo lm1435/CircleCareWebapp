@@ -3,6 +3,7 @@ import { test, expect } from '../fixtures';
 import { dbQuery, sqlStr } from '../unhappy';
 import { createAccount, runScopedEmail, ACCOUNT_PASSWORD } from '../isolation';
 import { cookieLogin, uniq } from '../unhappy/auth-invites/_helpers';
+import { startFirstCircle } from '../firstRunV2';
 
 // Onboarding 1.3.1 section 7, the NO-FIRST-MED path: a free owner who creates their first
 // circle and does NOT save a first med (Skip, the x, another first-run action, or closing the
@@ -32,25 +33,18 @@ function trackPaths(page: Page): string[] {
   return seen;
 }
 
+/** First run v2: Start -> the one question -> the circle forms -> the first-item form is open. */
 async function createFirstCircle(page: Page, recipient: string): Promise<string> {
-  await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
-  const modal = page.getByRole('dialog');
-  await modal.locator('#recipient_name').fill(recipient);
-  await modal.getByRole('button', { name: 'Create circle' }).click();
-  await page.waitForURL(/\/circles\/[0-9a-f-]{36}$/, { timeout: 30_000 });
-  await expect(wizard(page)).toBeVisible({ timeout: 20_000 });
-  return /\/circles\/([0-9a-f-]{36})/.exec(page.url())![1];
+  return startFirstCircle(page, recipient);
 }
 
-const wizard = (page: Page) => page.getByRole('dialog', { name: 'Circle created' });
 const offerHeading = (page: Page) => page.getByText('Share the care with everyone who helps.');
 const ls = (page: Page, key: string) => page.evaluate((k) => window.localStorage.getItem(k), key);
 
 test.describe('onboarding paywall: no first med (web)', () => {
   test.setTimeout(90_000);
 
-  test('the x on Setup: paywall once at Today, Continue free lands on Today, a reload never asks again', async ({
+  test('the x on the first-item form: paywall once at Today, Continue free lands on Today, a reload never asks again', async ({
     page,
     context,
     baseURL,
@@ -63,7 +57,7 @@ test.describe('onboarding paywall: no first med (web)', () => {
     expect(await ls(page, `${PENDING_KEY}:${a.userId}`)).not.toBeNull();
     expect(await ls(page, `${SEEN_KEY}:${a.userId}`)).toBeNull();
 
-    await wizard(page).getByRole('button', { name: 'Close setup' }).click();
+    await page.getByRole('dialog').last().getByRole('button', { name: 'Close event form' }).click();
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     await expect(offerHeading(page)).toBeVisible();
     expect(await ls(page, `${SEEN_KEY}:${a.userId}`)).toBe('1');
@@ -89,7 +83,6 @@ test.describe('onboarding paywall: no first med (web)', () => {
     await cookieLogin(context, a, baseURL);
     const circleId = await createFirstCircle(page, uniq('ObForm'));
 
-    await page.getByTestId('first-run-primary').click();
     await expect(page.getByTestId('first-run-form-heading')).toBeVisible();
     await page.getByTestId('first-run-skip').click();
 
@@ -99,30 +92,6 @@ test.describe('onboarding paywall: no first med (web)', () => {
       dbQuery(`select 1 from calendar_events where circle_id = ${sqlStr(circleId)}::uuid`)
     ).toHaveLength(0);
   });
-
-  test('another first-run action (Emergency info): the page opens first, the paywall comes the next time Today shows, once', async ({
-    page,
-    context,
-    baseURL,
-  }) => {
-    const a = await freeAccount('obsem');
-    await cookieLogin(context, a, baseURL);
-    const circleId = await createFirstCircle(page, uniq('ObEm'));
-
-    await wizard(page).getByTestId('first-run-start-with-emergency').click();
-    await page.waitForURL(new RegExp(`/circles/${circleId}/emergency`), { timeout: 30_000 });
-    await expect(offerHeading(page)).toHaveCount(0);
-    expect(await ls(page, `${SEEN_KEY}:${a.userId}`)).toBeNull();
-
-    // Back on Today: now it is asked.
-    await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-    await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
-    await expect(offerHeading(page)).toBeVisible();
-
-    await page.getByRole('button', { name: /Continue with free plan/ }).click();
-    await page.waitForURL(new RegExp(`/circles/${circleId}$`), { timeout: 30_000 });
-    await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
-    expect(new URL(page.url()).pathname).toBe(`/circles/${circleId}`);
-  });
+  // First run v2: the v1 chooser's other actions (an appointment, someone to help, Emergency info) are
+  // gone; the type switch on the first-item form replaces them (first-run-v2.spec.ts).
 });

@@ -1,6 +1,7 @@
 import type { Page, TestInfo } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { checkA11y } from '../helpers';
+import { answerFirstRunQuestion, waitForNewCircle } from '../firstRunV2';
 import { createAccount, runScopedEmail, ACCOUNT_PASSWORD } from '../isolation';
 import {
   cookieLogin,
@@ -119,29 +120,23 @@ test.describe('dark: onboarding', () => {
     await darkScan(page, 'invitee welcome', testInfo);
   });
 
-  test('first-run wizard: Setup, the first-run form, the payoff with Mark it, the onboarding paywall, Today', async ({
+  test('first run v2: the one question, the first-item form, All set, the onboarding paywall, Today', async ({
     page,
     context,
     baseURL,
   }, testInfo) => {
-    const { circleId, wizard } = await freshOwnerWithFirstCircle(page, context, baseURL!, 'dkfr');
-    await expect(page.getByTestId('first-run-primary')).toBeVisible();
-    await darkScan(page, 'wizard setup', testInfo);
+    const { circleId } = await freshOwnerWithFirstCircle(page, context, baseURL!, 'dkfr', testInfo);
 
-    // The ONE simple form in first-run mode, with a PAST time so the payoff offers Mark it.
-    await page.getByTestId('first-run-primary').click();
+    // The first-item form (type switch, 8:00 AM Morning picked).
     await fillPastTimeMed(page, 'Lisinopril');
     await darkScan(page, 'wizard first-run form', testInfo);
 
     await page.getByRole('dialog').last().getByRole('button', { name: 'Add medication' }).click();
-    await expect(wizard.getByText('ALL SET')).toBeVisible({ timeout: 20_000 });
-    await expect(wizard.getByTestId('mark-it-button')).toBeVisible();
-    await darkScan(page, 'wizard payoff with Mark it', testInfo);
+    await expect(page.getByTestId('first-run-all-set')).toBeVisible({ timeout: 20_000 });
+    await darkScan(page, 'first run all set', testInfo);
 
-    // Continue -> the onboarding paywall once -> Today (1.4.2: no invite step; the wizard path's Mark it
-    // lives on the payoff only, docs/plans/onboarding-1-3-1.md section 1).
-    await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
-    await expect(wizard.getByRole('heading', { name: 'Invite someone to help' })).toHaveCount(0);
+    // Go to Today -> the onboarding paywall once -> Today.
+    await page.getByTestId('first-run-go-to-today').click();
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     await expect(page.getByText('Share the care with everyone who helps.')).toBeVisible();
     await darkScan(page, 'onboarding paywall', testInfo);
@@ -156,8 +151,8 @@ test.describe('dark: onboarding', () => {
     context,
     baseURL,
   }, testInfo) => {
-    const { circleId, wizard } = await freshOwnerWithFirstCircle(page, context, baseURL!, 'dkam');
-    await wizard.getByRole('button', { name: 'Skip for now' }).click();
+    const { circleId } = await freshOwnerWithFirstCircle(page, context, baseURL!, 'dkam');
+    await page.getByTestId('first-run-skip').click();
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     await page.getByRole('button', { name: /Continue with free plan/ }).click();
     await page.waitForURL(new RegExp(`/circles/${circleId}$`), { timeout: 30_000 });
@@ -184,27 +179,28 @@ async function freshOwnerWithFirstCircle(
   page: Page,
   context: import('@playwright/test').BrowserContext,
   baseURL: string,
-  prefix: string
+  prefix: string,
+  testInfo?: TestInfo
 ) {
   await stubJson(page, 'GET', '/api/drugs/search', { body: { success: true, data: { drugs: [] } } });
   const email = runScopedEmail(uniq(prefix));
   await createAccount(email, 'free');
   await cookieLogin(context, { email, password: ACCOUNT_PASSWORD }, baseURL);
+  // First run v2: "Start a care circle" -> the one question (scanned dark) -> the circle forms.
   await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
-  const modal = page.getByRole('dialog');
-  await modal.locator('#recipient_name').fill(uniq(prefix));
+  await page.getByTestId('empty-circles').getByRole('button').first().click();
+  await expect(page.getByTestId('first-run-who')).toBeVisible({ timeout: 20_000 });
+  if (testInfo) await darkScan(page, 'first run who', testInfo);
   // The first-run form refuses to save before the circle detail (its timezone) has loaded.
   const circleLoaded = page.waitForResponse(
     (r) => r.request().method() === 'GET' && /^\/api\/circles\/[0-9a-f-]{36}$/.test(new URL(r.url()).pathname) && r.ok(),
     { timeout: 30_000 }
   );
-  await modal.getByRole('button', { name: 'Create circle' }).click();
-  await page.waitForURL(/\/circles\/[0-9a-f-]{36}$/, { timeout: 30_000 });
-  const wizard = page.getByRole('dialog', { name: 'Circle created' });
-  await expect(wizard).toBeVisible({ timeout: 20_000 });
+  await answerFirstRunQuestion(page, uniq(prefix).slice(0, 40));
+  const circleId = await waitForNewCircle(page);
+  await expect(page.getByRole('tablist')).toBeVisible({ timeout: 30_000 });
   await circleLoaded;
-  return { circleId: /\/circles\/([0-9a-f-]{36})/.exec(page.url())![1], wizard };
+  return { circleId };
 }
 
 /** The simple form's name and a PAST time (00:01 in the recipient's day) via "Other time". */

@@ -41,6 +41,11 @@ import { OAuthButtons } from '@/components/auth/OAuthButtons';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
 import { useAuthBack } from '@/components/auth/useAuthBack';
 import { normalizeLocale } from '@/i18n/locales';
+import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
+import { clearFirstRun, peekFirstRunDraft } from '@/lib/firstRunDraft';
+import { firstRunFunnel, setFirstRunPath } from '@/lib/firstRunFunnel';
+import { FirstRunWhoStep } from '@/components/circles/firstRun/FirstRunWhoStep';
+import { FlowProgress } from '@/components/circles/firstRun/FlowProgress';
 
 // Email/password sign-up (mirrors mobile SignUpScreen). The backend creates the
 // user and emails a 6-digit OTP but returns NO session, so on success we route
@@ -78,13 +83,11 @@ const signUpSchema = z
       .regex(PASSWORD_NUMBER)
       .regex(PASSWORD_SPECIAL)
       .refine((value) => utf8ByteLength(value) <= 72, PASSWORD_MAX_LENGTH_ISSUE),
-    confirmPassword: z.string().min(1),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    path: ['confirmPassword'],
   });
 
-const FIELD_ORDER = ['first_name', 'last_name', 'email', 'password', 'confirmPassword'];
+// First run v2 (owner, locked 2026-11-17): no "Confirm password". The eye toggle and the
+// password rules stay; the backend sign-up body never had a confirm field.
+const FIELD_ORDER = ['first_name', 'last_name', 'email', 'password'];
 
 export default function SignUpPage(): ReactElement {
   const { t, i18n } = useTranslation('auth');
@@ -117,7 +120,29 @@ export default function SignUpPage(): ReactElement {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // FIRST RUN v2 (1.4.3): "Who are you caring for?" comes BEFORE the account, on this page, for
+  // owners. Someone holding an invite code never sees it (and any answer is dropped). A draft
+  // already in memory (Back from the code page) goes straight to the account step.
+  const [invited] = useState(() => peekPendingInviteCode() !== null);
+  const [stage, setStage] = useState<'who' | 'account'>(() =>
+    invited || peekFirstRunDraft() ? 'account' : 'who'
+  );
+  useEffect(() => {
+    if (invited) {
+      clearFirstRun();
+      setFirstRunPath('invited');
+    }
+  }, [invited]);
+  useEffect(() => {
+    if (stage === 'account') firstRunFunnel.viewed('account');
+  }, [stage]);
+  const draft = stage === 'account' && !invited ? peekFirstRunDraft() : null;
+  const subtitle = draft
+    ? draft.isSelfCare
+      ? t('signup.subtitleSelf')
+      : t('signup.subtitleForName', { name: draft.recipientName ?? '' })
+    : t('signup.subtitle');
   // REQUIRED consent checkbox — default UNCHECKED; gates both email/password
   // submit and the OAuth buttons (this page is signup-only, so every path out
   // of it creates an account).
@@ -157,10 +182,6 @@ export default function SignUpPage(): ReactElement {
         return rawMessage === PASSWORD_MAX_LENGTH_ISSUE
           ? t('validation.passwordMaxLength')
           : t('signup.errors.passwordRules');
-      case 'confirmPassword':
-        return confirmPassword
-          ? t('validation.passwordsDoNotMatch')
-          : t('validation.confirmPasswordRequired');
       default:
         return t('signup.errors.signUpFailed');
     }
@@ -181,7 +202,6 @@ export default function SignUpPage(): ReactElement {
       last_name: lastName.trim(),
       email: email.trim(),
       password,
-      confirmPassword,
     });
 
     if (!result.success) {
@@ -265,6 +285,7 @@ export default function SignUpPage(): ReactElement {
         queueAnalyticsConsentForSignup(analyticsAccepted, newUserId);
       }
       Analytics.signupCompleted('email');
+      firstRunFunnel.completed('account');
       // Park the address too: router state dies with this history entry, and a
       // browser-back to a blank /signup would otherwise invite a re-submit.
       setPendingSignupEmail(result.data.email);
@@ -342,6 +363,8 @@ export default function SignUpPage(): ReactElement {
     // a completed sign-in, since this handshake can still fail or be cancelled.
     setPendingAnalyticsConsent(analyticsAccepted);
     Analytics.signupStarted(provider);
+    // First run funnel: Apple / Google from here on (never emits `code`).
+    if (!invited) setFirstRunPath(provider);
     // Park the provider so /auth/callback can fire an accurate completion event
     // with the right method after the full-page OAuth redirect (router state
     // and this closure are both gone by then).
@@ -400,10 +423,56 @@ export default function SignUpPage(): ReactElement {
 
   if (parkedEmail) return <></>;
 
+  if (stage === 'who') {
+    return (
+      <AuthShell>
+        <AuthTopBar onBack={goBack} />
+        <div className="mb-6">
+          <FlowProgress current={1} />
+        </div>
+        {/* The pre-auth walkthrough stays at the door (web has no Welcome screen; /signup is it). */}
+        <p className="m-0 -mt-3 mb-4">
+          <Link
+            to="/how-it-works"
+            state={{ previewSource: 'signup' }}
+            className="inline-flex min-h-[44px] items-center text-sm font-semibold text-moss"
+          >
+            {t('preview.seeHowItWorks')}
+          </Link>
+        </p>
+        <FirstRunWhoStep
+          entry="web"
+          initialName={peekFirstRunDraft()?.recipientName ?? ''}
+          onDone={() => setStage('account')}
+        />
+        <p className="m-0 mt-6 text-center text-sm text-ink-3">
+          {t('signup.hasAccount')}{' '}
+          <Link to="/login" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-moss">
+            {t('signup.signIn')}
+          </Link>
+        </p>
+      </AuthShell>
+    );
+  }
+
   return (
     <AuthShell>
-      <AuthTopBar onBack={goBack} />
-      <AuthHeader title={t('signup.title')} subtitle={t('signup.subtitle')} />
+      <AuthTopBar
+        onBack={
+          invited
+            ? goBack
+            : () => {
+                firstRunFunnel.back('account');
+                setStage('who');
+              }
+        }
+      />
+      {invited ? null : (
+        <div className="mb-6">
+          <FlowProgress current={2} />
+        </div>
+      )}
+      <AuthHeader title={t('signup.title')} subtitle={subtitle} />
 
       {formError ? (
         <div ref={errorRef} role="alert" tabIndex={-1} className="mb-4">
@@ -500,21 +569,6 @@ export default function SignUpPage(): ReactElement {
         />
 
         <PasswordRequirements value={password} />
-
-        <TextField
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
-          showToggle
-          toggleLabels={{ show: t('login.showPassword'), hide: t('login.hidePassword') }}
-          label={t('signup.confirmPasswordLabel')}
-          placeholder={t('signup.confirmPasswordPlaceholder')}
-          autoComplete="new-password"
-          required
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          error={fieldErrors.confirmPassword}
-        />
 
         {/* Explicit, REQUIRED consent — a real checkbox control (not a passive
             notice): default-unchecked, keyboard operable (native <input>,

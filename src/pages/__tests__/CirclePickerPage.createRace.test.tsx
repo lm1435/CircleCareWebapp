@@ -1,12 +1,12 @@
-import { render, screen, waitFor, act, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import '@/i18n';
 import CirclePickerPage from '@/pages/CirclePickerPage';
 import { ToastProvider } from '@/components/ui';
-import { getCircles, type Circle } from '@/api/circles';
-import { queryKeys } from '@/lib/queryKeys';
+import { createCircle, getCircles, type Circle } from '@/api/circles';
+import { clearFirstRun, setFirstRunDraft } from '@/lib/firstRunDraft';
+import { resetFirstCircleCreateForTests } from '@/lib/firstRunCreate';
 
 /**
  * PROVEN DEFECT (2026-09-30, docs/plans/prompts-modals-coverage-2026-09-30.md §7):
@@ -24,11 +24,17 @@ import { queryKeys } from '@/lib/queryKeys';
  */
 vi.mock('@/api/circles', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/circles')>();
-  return { ...actual, getCircles: vi.fn() };
+  return { ...actual, getCircles: vi.fn(), createCircle: vi.fn() };
 });
 vi.mock('@/lib/onboardingAnalytics', () => ({ trackCirclesLoaded: vi.fn() }));
 
 const mockGetCircles = vi.mocked(getCircles);
+const mockCreateCircle = vi.mocked(createCircle);
+let lastState: unknown = null;
+function OverviewProbe() {
+  lastState = useLocation().state;
+  return <div data-testid="overview-page" />;
+}
 
 const circle = {
   id: 'c1',
@@ -54,7 +60,7 @@ function renderPicker(): QueryClient {
         <MemoryRouter initialEntries={['/circles']}>
           <Routes>
             <Route path="/circles" element={<CirclePickerPage />} />
-            <Route path="/circles/:circleId" element={<div data-testid="overview-page" />} />
+            <Route path="/circles/:circleId" element={<OverviewProbe />} />
           </Routes>
         </MemoryRouter>
       </ToastProvider>
@@ -66,47 +72,28 @@ function renderPicker(): QueryClient {
 describe('CirclePickerPage: auto-skip never races a create in flight', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('does not jump into the new circle while the create modal is still open', async () => {
-    const user = userEvent.setup();
-    mockGetCircles.mockResolvedValue([]);
-    const queryClient = renderPicker();
+  // First run v2 (1.4.3): the FIRST circle is no longer made by the create modal from the empty
+  // state; the one question + the circle moment make it. The same race (the list refetching to ONE
+  // circle while the create is still finishing) must not auto-skip into the circle WITHOUT its
+  // first-run state: the moment is latched and owns that navigation.
+  it('NEGATIVE: the list landing at one circle mid-moment does not auto-skip; the moment navigates WITH first-run state', async () => {
+    resetFirstCircleCreateForTests();
+    clearFirstRun();
+    setFirstRunDraft({ recipientName: 'Rose', isSelfCare: false });
+    // GET /circles: empty for the page, empty for the create's pre-check, then one circle.
+    mockGetCircles.mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValue([circle]);
+    mockCreateCircle.mockResolvedValue(circle);
+    renderPicker();
 
-    await user.click(await screen.findByRole('button', { name: 'Start a care circle' }));
-    expect(await screen.findByRole('dialog')).toBeInTheDocument();
-
-    // The create's invalidation lands first: the list now holds the one new circle.
-    mockGetCircles.mockResolvedValue([circle]);
-    await act(async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.circles });
-    });
-
-    // The modal (which owns the paywall / first-run hand-off) is still in charge.
-    await new Promise((r) => setTimeout(r, 50));
+    expect(await screen.findByTestId('first-run-circle-moment')).toBeInTheDocument();
+    await waitFor(() => expect(mockCreateCircle).toHaveBeenCalledTimes(1));
+    // The refetch has landed at ONE circle; the moment is still up, no wizard-less skip.
+    await new Promise((r) => setTimeout(r, 100));
     expect(screen.queryByTestId('overview-page')).not.toBeInTheDocument();
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-  });
+    expect(screen.getByTestId('first-run-circle-moment')).toBeInTheDocument();
 
-  // The second half of the race: the modal's onClose is an urgent update and its
-  // navigate a router transition (v7_startTransition), so the picker re-renders with
-  // the modal CLOSED before the route changes. Skipping then replaced the entry the
-  // modal had just pushed (and its first-run / paywall state). So once a create has
-  // started here, the auto-skip is retired for this mount.
-  it('stays retired after the create modal closes (the modal already navigated)', async () => {
-    const user = userEvent.setup();
-    mockGetCircles.mockResolvedValue([]);
-    const queryClient = renderPicker();
-
-    await user.click(await screen.findByRole('button', { name: 'Start a care circle' }));
-    const dialog = await screen.findByRole('dialog');
-    mockGetCircles.mockResolvedValue([circle]);
-    await act(async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.circles });
-    });
-    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-
-    await new Promise((r) => setTimeout(r, 50));
-    expect(screen.queryByTestId('overview-page')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('overview-page')).toBeInTheDocument(), { timeout: 3000 });
+    expect(lastState).toMatchObject({ firstRun: true, firstRunRecipientName: 'Rose' });
   });
 
   it('control: with no modal open, a single circle still auto-skips', async () => {

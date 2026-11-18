@@ -104,13 +104,17 @@ describe('HowItWorksPage', () => {
     expect(screen.getByText('Screen 1 of 2')).toBeInTheDocument();
   });
 
-  it('Get started fires preview_get_started_tapped { step: 2 } and opens Sign up', async () => {
+  it('Get started fires preview_get_started_tapped { step: 2 } and opens Sign up on its first step', async () => {
     const user = userEvent.setup();
     renderAt('/how-it-works');
     await user.click(screen.getByRole('button', { name: 'Next' }));
     await user.click(screen.getByRole('button', { name: 'Get started' }));
     expect(getStarted).toHaveBeenCalledWith(2);
-    expect(await screen.findByRole('heading', { level: 1, name: 'Create account' })).toBeInTheDocument();
+    // First run v2 (1.4.3): sign-up opens on "Who are you caring for?"; Create account is step 2.
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Who are you caring for?' })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Create account' })).not.toBeInTheDocument();
   });
 
   it('is keyboard operable: Enter on Next, then Enter on Get started', async () => {

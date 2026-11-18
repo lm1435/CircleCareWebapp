@@ -7,6 +7,15 @@ import { apiClient } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { clickTwice, neverSettles, submitFormTwice } from '@/test/doubleSubmit';
 import { peekPendingSignupEmail, setPendingSignupEmail } from '@/lib/pendingSignupEmail';
+import { clearFirstRun, setFirstRunDraft } from '@/lib/firstRunDraft';
+
+// First run v2: the account form is step 2, after "Who are you caring for?". These suites test the
+// account form, so each starts with an answer in memory (the who step has its own suite:
+// SignUpPage.firstRun.test.tsx).
+beforeEach(() => {
+  clearFirstRun();
+  setFirstRunDraft({ recipientName: 'Rosa', isSelfCare: false });
+});
 
 // Mirrors LoginPage.test.tsx mocking style: `@/lib/api` + `@/lib/supabase` are
 // mocked by the global setup; here we assert the page calls authApi.signup with
@@ -60,11 +69,10 @@ function submitButton() {
 
 async function fillValidForm(
   user: ReturnType<typeof userEvent.setup>,
-  overrides: Partial<typeof VALID> & { confirmPassword?: string; acceptTerms?: boolean } = {}
+  overrides: Partial<typeof VALID> & { acceptTerms?: boolean } = {}
 ) {
   const values = {
     ...VALID,
-    confirmPassword: VALID.password,
     acceptTerms: true,
     ...overrides,
   };
@@ -74,7 +82,6 @@ async function fillValidForm(
   await user.type(screen.getByLabelText(/^Last Name/), values.lastName);
   await user.type(screen.getByLabelText(/^Email/), values.email);
   await user.type(screen.getByLabelText(/^Password/), values.password);
-  await user.type(screen.getByLabelText(/^Confirm Password/), values.confirmPassword);
   if (values.acceptTerms) {
     await user.click(termsCheckbox());
   }
@@ -167,13 +174,14 @@ describe('SignUpPage', () => {
     expect(termsLink.getAttribute('href')).not.toBe('');
   });
 
-  it('marks the new account email as USERNAME (type stays email) and both passwords as new-password', () => {
+  it('marks the new account email as USERNAME (type stays email) and the password as new-password', () => {
     renderSignUp();
     const email = document.getElementById('email');
     expect(email).toHaveAttribute('autocomplete', 'username');
     expect(email).toHaveAttribute('type', 'email');
     const passwords = Array.from(document.querySelectorAll('input[type="password"]'));
-    expect(passwords).toHaveLength(2);
+    // First run v2 (owner, locked): ONE password field, no "Confirm password".
+    expect(passwords).toHaveLength(1);
     for (const p of passwords) expect(p).toHaveAttribute('autocomplete', 'new-password');
   });
 
@@ -195,7 +203,7 @@ describe('SignUpPage', () => {
     const user = userEvent.setup();
     renderSignUp();
 
-    await fillValidForm(user, { password: 'weak', confirmPassword: 'weak' });
+    await fillValidForm(user, { password: 'weak'});
     await user.click(submitButton());
 
     expect(
@@ -207,16 +215,17 @@ describe('SignUpPage', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('blocks submit when the password confirmation does not match', async () => {
+  it('NEGATIVE: has no "Confirm password" field, and a valid form signs up without one (first run v2)', async () => {
+    mockedPost.mockResolvedValueOnce({ success: true, data: { user: { id: 'u1' } } } as never);
     const user = userEvent.setup();
     renderSignUp();
 
-    await fillValidForm(user, { confirmPassword: 'Different#123' });
+    expect(screen.queryByLabelText(/^Confirm Password/i)).not.toBeInTheDocument();
+    await fillValidForm(user);
     await user.click(submitButton());
 
-    expect(await screen.findByText("Passwords don't match.")).toBeInTheDocument();
-    expect(mockedPost).not.toHaveBeenCalled();
-    expect(mockNavigate).not.toHaveBeenCalled();
+    await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(1));
+    expect(mockedPost.mock.calls[0][1]).not.toHaveProperty('confirmPassword');
   });
 
   // GoTrue rejects passwords over 72 UTF-8 BYTES (bcrypt's limit, not a
@@ -230,7 +239,7 @@ describe('SignUpPage', () => {
     const password = 'Aa1!' + 'x'.repeat(73 - 4);
     expect(password).toHaveLength(73);
 
-    await fillValidForm(user, { password, confirmPassword: password });
+    await fillValidForm(user, { password});
     await user.click(submitButton());
 
     expect(await screen.findByText('Password must be 72 characters or fewer.')).toBeInTheDocument();
@@ -245,7 +254,7 @@ describe('SignUpPage', () => {
     const password = 'Aa1!' + 'é'.repeat(68);
     expect(password).toHaveLength(72);
 
-    await fillValidForm(user, { password, confirmPassword: password });
+    await fillValidForm(user, { password});
     await user.click(submitButton());
 
     expect(await screen.findByText('Password must be 72 characters or fewer.')).toBeInTheDocument();
@@ -266,7 +275,7 @@ describe('SignUpPage', () => {
     const password = 'Aa1!' + 'x'.repeat(72 - 4);
     expect(password).toHaveLength(72);
 
-    await fillValidForm(user, { password, confirmPassword: password });
+    await fillValidForm(user, { password});
     await user.click(submitButton());
 
     await waitFor(() => expect(mockedPost).toHaveBeenCalled());
@@ -614,6 +623,9 @@ describe('SignUpPage', () => {
   });
 
   describe('back navigation (falls back to /login)', () => {
+    // The page's FIRST step ("Who are you caring for?") owns the leave-the-page Back; the account
+    // step's Back returns to the question (SignUpPage.firstRun.test.tsx).
+    beforeEach(() => clearFirstRun());
     it('navigates to /login when there is no prior history', async () => {
       const restore = mockHistoryLength(1);
       try {

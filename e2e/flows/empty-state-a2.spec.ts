@@ -55,12 +55,13 @@ test.describe('Circles empty state (A2)', () => {
       .analyze();
     expect(results.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
 
-    // Doors: Start -> the create dialog; I have an invite code -> the join dialog.
+    // Doors: Start -> the one first-run question (first run v2, 1.4.3: no create dialog for a first
+    // circle); Back returns to the empty state. I have an invite code -> the join dialog.
     await page.getByRole('button', { name: 'Start a care circle', exact: true }).click();
-    await expect(page.getByRole('dialog')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'New care circle' })).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByRole('heading', { level: 1, name: 'Who are you caring for?' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'New care circle' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'I have an invite code', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'I have an invite code', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'Join a circle', exact: true })).toBeVisible();
     await page.keyboard.press('Escape');

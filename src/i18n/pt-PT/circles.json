@@ -40,9 +40,6 @@
   "validation": {
     "nameRequired": "Introduza o nome da pessoa cuidada."
   },
-  "quickWin": {
-    "skipForNow": "Saltar por agora"
-  },
   "firstRun": {
     "whatTitleSelf": "O que toma?",
     "whenTitleSelf": "Quando toma?",
@@ -50,11 +47,9 @@
     "discardMessage": "Nada será guardado.",
     "ready": {
       "titleSelf": "O seu círculo está pronto.",
-      "lede": "Comece pelo que vai verificar mais.",
       "ledeSelf": "Adicione o seu primeiro medicamento. É o lembrete que todo o seu círculo vai partilhar.",
       "appointmentHelper": "As consultas médicas num só calendário que a família vê.",
-      "inviteHelper": "Dividam a carga, para que nem tudo recaia sobre si.",
-      "eyebrowSelf": "O SEU CÍRCULO"
+      "inviteHelper": "Dividam a carga, para que nem tudo recaia sobre si."
     },
     "nextPreview": {
       "everyMorning": "Todas as manhãs às {{time}}. Pode alterar no ecrã seguinte.",
@@ -66,13 +61,23 @@
     "payoff": {
       "titleSelf": "O seu lembrete das {{time}} está definido.",
       "titleMultiSelf": "Os seus lembretes estão definidos.",
-      "lineSelf": "Quando toca em Tomado, quem convidar também vê.",
       "inviteHeadingSelf": "Quem ajuda no seu dia a dia?"
     },
-    "choose": {
-      "primarySelf": "Adicione o seu primeiro medicamento",
-      "promise": "Cerca de um minuto. Todos os que ajudam veem, com um lembrete à hora certa.",
-      "promiseSelf": "Cerca de um minuto. Vai vê-lo aqui, com um lembrete à hora certa."
+    "who": {
+      "label": "O nome ou como chama a pessoa",
+      "previewSub": "Privado. Só as pessoas que convidar podem ver."
+    },
+    "allSet": {
+      "titleAppt": "A consulta de {{name}} foi guardada.",
+      "titleApptSelf": "A sua consulta foi guardada.",
+      "titleTask": "A tarefa de {{name}} foi guardada.",
+      "titleTaskSelf": "A sua tarefa foi guardada.",
+      "circleSelf": "O seu círculo",
+      "seatWaiting": "Link de convite partilhado. A aguardar que a pessoa entre.",
+      "remindersWebTitle": "Os lembretes chegam ao seu telemóvel",
+      "remindersWebSubTime": "Na app CircleCare, às {{time}}",
+      "remindersWebSub": "Na app CircleCare",
+      "inviteFree": "O seu plano gratuito inclui um cuidador."
     }
   },
   "accessLost": {

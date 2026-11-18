@@ -263,10 +263,15 @@ describe("the chips are the recipient's clock (mobile parity)", () => {
     const user = userEvent.setup();
     renderMed({ firstRun: true });
     await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
+    // First run v2: Morning (8:00 AM) is preselected; untick it so Evening is the one dose.
+    await waitFor(() => expect(chip(/Morning/)).toBeChecked());
+    await user.click(chip(/Morning/));
     await user.click(chip(/Evening/));
     await user.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(firstRunSaved).toHaveBeenCalled());
-    expect(firstRunSaved).toHaveBeenCalledWith(expect.objectContaining({ preset: 'evening' }));
+    expect(firstRunSaved).toHaveBeenCalledWith(
+      expect.objectContaining({ preset: 'evening', doseCount: 1, timeDefaultKept: false })
+    );
   });
 
   it('a second chosen chip is an extra dose on the recipient clock (what + Another dose did)', async () => {

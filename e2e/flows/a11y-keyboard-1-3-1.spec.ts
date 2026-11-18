@@ -345,14 +345,18 @@ test.describe('invitee welcome, keyboard only', () => {
 
 // ── 3-5. First-run wizard, payoff Mark it, Today's Mark it ────────────────────
 
-const wizardDialog = (page: Page) => page.getByRole('dialog', { name: 'Circle created' });
+/** First run v2: the wizard's first screen is the first-item form (the dialog with the type switch). */
+const wizardDialog = (page: Page) => page.getByRole('dialog').filter({ has: page.getByRole('tablist') });
+/** First run v2: All set (its hidden title is the eyebrow). */
+const allSetDialog = (page: Page) => page.getByRole('dialog', { name: 'ALL SET' });
 
-/** /circles -> Create circle (keyboard) -> the wizard over the new circle. */
+/** /circles -> Start (keyboard) -> the one question (keyboard) -> the circle forms -> the first-item form. */
 async function createFirstCircleByKeyboard(page: Page, recipient: string): Promise<string> {
   await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await press(page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first());
-  const modal = page.getByRole('dialog');
-  await modal.locator('#recipient_name').fill(recipient);
+  await press(page.getByTestId('empty-circles').getByRole('button').first());
+  // The question's heading takes focus; type the name and press Enter on Continue.
+  await expect(page.getByRole('heading', { level: 1, name: 'Who are you caring for?' })).toBeFocused();
+  await page.locator('#first-run-recipient-name').fill(recipient);
   const circleLoaded = page.waitForResponse(
     (r) =>
       r.request().method() === 'GET' &&
@@ -360,7 +364,7 @@ async function createFirstCircleByKeyboard(page: Page, recipient: string): Promi
       r.ok(),
     { timeout: 30_000 }
   );
-  await press(modal.getByRole('button', { name: 'Create circle' }));
+  await press(page.getByTestId('first-run-who-continue'));
   await page.waitForURL(/\/circles\/[0-9a-f-]{36}$/, { timeout: 30_000 });
   await expect(wizardDialog(page)).toBeVisible({ timeout: 20_000 });
   await circleLoaded;
@@ -411,95 +415,61 @@ async function freeAccount(prefix: string) {
 test.describe('first-run wizard, keyboard only', () => {
   test.setTimeout(120_000);
 
-  test('Setup: heading focused on open, Tab is trapped both ways, a hand-off and Escape give focus back', async ({
+  test('first-item form: focus inside, Tab trapped both ways, the type switch by arrow keys, Escape = skip to Today\'s heading', async ({
     page,
     context,
     baseURL,
   }, testInfo) => {
     const acct = await createScopedAccount('kbwiz');
     await cookieLogin(context, acct, baseURL);
-    const recipient = uniq('kbwiz');
-    const circleId = await createFirstCircleByKeyboard(page, recipient);
+    const circleId = await createFirstCircleByKeyboard(page, uniq('kbwiz'));
     const wizard = wizardDialog(page);
+    await expect.poll(() => wizard.evaluate((d) => d.contains(document.activeElement))).toBe(true);
 
-    // Focus goes to the step's heading (what just happened), not the x.
-    const heading = wizard.getByRole('heading', { name: `${recipient}'s circle is ready.` });
-    await expect(heading).toBeFocused();
-    // The primary is described by its one-line promise.
-    await expect(wizard.getByTestId('first-run-primary')).toHaveAccessibleDescription(/About a minute/);
-
-    // Trap: 12 Tabs and 12 Shift+Tabs never leave the dialog, and every control is a stop.
-    const forward = await tabCycle(page, wizard, 12);
+    const forward = await tabCycle(page, wizard, 14);
     expect(forward.filter((s) => s.startsWith('OUTSIDE:') || s === 'BODY'), forward.join(' > ')).toEqual([]);
-    for (const name of ['Close setup', `Add ${recipient}'s first med`, 'An appointment', 'Someone to help', 'Emergency info', 'Skip for now']) {
-      expect(forward.some((s) => s.includes(name)), `${name} in ${forward.join(' > ')}`).toBe(true);
-    }
-    const backward = await tabCycle(page, wizard, 12, true);
+    const backward = await tabCycle(page, wizard, 14, true);
     expect(backward.filter((s) => s.startsWith('OUTSIDE:') || s === 'BODY'), backward.join(' > ')).toEqual([]);
 
+    // The type switch: a tablist; arrow keys move between Medication / Appointment / Task.
+    await wizard.getByRole('tab', { name: 'Medication' }).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(wizardDialog(page).getByRole('tab', { name: 'Appointment' })).toHaveAttribute('aria-selected', 'true');
+    await expect(wizardDialog(page).getByRole('tab', { name: 'Appointment' })).toBeFocused();
+
     await page.setViewportSize({ width: 320, height: 720 });
-    await checkA11y(page, 'wizard setup @320', testInfo);
+    await checkA11y(page, 'first-item form @320', testInfo);
     await page.setViewportSize({ width: 1280, height: 720 });
 
-    // A hand-off: Enter on "An appointment" puts focus in THAT dialog; Escape returns to Setup.
-    const appointment = wizard.getByTestId('first-run-start-with-appointment');
-    await heading.focus();
-    await tabTo(page, appointment);
-    await expectVisibleRing(page);
-    await page.keyboard.press('Enter');
-    const apptDialog = page.getByRole('dialog', { name: /appointment/i }).first();
-    await expect(apptDialog).toBeVisible();
-    await expect.poll(() => apptDialog.evaluate((d) => d.contains(document.activeElement))).toBe(true);
+    // Escape on the form = skip: the wizard closes and focus lands on Today's heading, not <body>.
     await page.keyboard.press('Escape');
-    await expect(wizard.getByRole('heading', { name: `${recipient}'s circle is ready.` })).toBeFocused();
-
-    // Escape on Setup = skip: the wizard closes and focus lands on Today's heading, not <body>.
-    await page.keyboard.press('Escape');
-    await expect(wizard).toHaveCount(0, { timeout: 10_000 });
+    await expect(wizardDialog(page)).toHaveCount(0, { timeout: 10_000 });
     await expect(page.getByTestId('overview-hero').getByRole('heading', { level: 1 })).toBeFocused();
     expect(dbQuery(`select 1 from calendar_events where circle_id = ${sqlStr(circleId)}::uuid`)).toHaveLength(0);
   });
 
-  test('payoff: heading focused, Mark it is announced and focus moves on; Continue -> paywall -> Today by keyboard', async ({
+  test('All set: heading focused; Go to Today -> paywall -> Today, all by keyboard', async ({
     page,
     context,
     baseURL,
-  }) => {
+  }, testInfo) => {
     await stubJson(page, 'GET', '/api/drugs/search', { body: { success: true, data: { drugs: [] } } });
     const a = await freeAccount('kbpay');
     await cookieLogin(context, a, baseURL);
     const circleId = await createFirstCircleByKeyboard(page, uniq('KbPay'));
-    const wizard = wizardDialog(page);
-
-    await press(wizard.getByTestId('first-run-primary'));
-    const form = page.getByRole('dialog').last();
+    const form = wizardDialog(page);
     await expect(form.getByTestId('first-run-form-heading')).toBeVisible();
-    // Focus moved INTO the form dialog (never left behind on the page).
-    await expect.poll(() => form.evaluate((d) => d.contains(document.activeElement))).toBe(true);
     await fillPastTimeMedByKeyboard(page, 'Lisinopril');
     await press(form.getByRole('button', { name: 'Add medication' }));
 
-    const payoffHeading = wizard.getByRole('heading', { name: /reminder is set\.$/ });
-    await expect(payoffHeading).toBeFocused({ timeout: 20_000 });
-
-    const markIt = wizard.getByTestId('mark-it-button');
-    await tabTo(page, markIt);
+    const allSet = allSetDialog(page);
+    await expect(allSet.getByTestId('first-run-all-set-title')).toBeFocused({ timeout: 20_000 });
+    await checkA11y(page, 'all set', testInfo);
+    const today = allSet.getByTestId('first-run-go-to-today');
+    await tabTo(page, today);
     await expectVisibleRing(page);
-    // The polite region exists, empty, before the tap.
-    const announcer = wizard.getByTestId('mark-it-announcer');
-    await expect(announcer).toHaveAttribute('role', 'status');
-    await expect(announcer).toHaveText('');
     await page.keyboard.press('Enter');
-    await expect(announcer).toHaveText('Marked as taken.', { timeout: 20_000 });
-    // The button is gone; focus moved to the next step (Continue), never to <body>.
-    const cont = wizard.getByRole('button', { name: 'Continue', exact: true });
-    await expect(cont).toBeFocused();
-
-    await page.keyboard.press('Enter');
-    // 1.4.2: Continue ends first run (no invite step): straight to the paywall.
-    await expect(wizard.getByRole('heading', { name: 'Invite someone to help' })).toHaveCount(0);
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
-    // The paywall is a page: its "Continue with free plan" is reachable by Tab.
     const free = page.getByRole('button', { name: /Continue with free plan/ });
     await expect(free).toBeVisible({ timeout: 20_000 });
     await tabTo(page, free, { max: 60 });
@@ -518,8 +488,8 @@ test.describe('first-run wizard, keyboard only', () => {
     await cookieLogin(context, a, baseURL);
     const circleId = await createFirstCircleByKeyboard(page, uniq('KbTd'));
 
-    // Skip Setup by keyboard, take the paywall's free exit.
-    await press(wizardDialog(page).getByRole('button', { name: 'Skip for now' }));
+    // Skip the first item by keyboard, take the paywall's free exit.
+    await press(page.getByTestId('first-run-skip'));
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     await press(page.getByRole('button', { name: /Continue with free plan/ }));
     await page.waitForURL(new RegExp(`/circles/${circleId}$`), { timeout: 30_000 });

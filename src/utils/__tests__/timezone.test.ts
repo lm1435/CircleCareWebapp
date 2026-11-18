@@ -1427,12 +1427,12 @@ describe('BC-6 dual display resolves at the event instant', () => {
     ).toContain('6:00 AM');
   });
 
-  it('the first-run payoff passes the dose day string, not a Date reference (source guard)', () => {
+  it('the first-run All set passes the dose day string, not a Date reference (source guard)', () => {
     const src = fs
-      .readFileSync(path.join(__dirname, '../../components/circles/firstRun/steps.tsx'), 'utf8')
+      .readFileSync(path.join(__dirname, '../../components/circles/firstRun/AllSetStep.tsx'), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/(^|[^:])\/\/.*$/gm, '$1');
     expect(src).not.toContain('zoneReferenceInstant(');
-    expect(src).toMatch(/formatEventTimeForDisplay\(\s*dose\.scheduledTime,\s*saved\.timezone,\s*undefined,\s*dose\.scheduledDate,/);
+    expect(src).toMatch(/formatEventTimeForDisplay\(\s*dose\.scheduledTime,\s*med\.timezone,\s*undefined,\s*dose\.scheduledDate,/);
   });
 });

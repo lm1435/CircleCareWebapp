@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { skipFirstItem, startFirstCircle } from '../firstRunV2';
 import { test, expect } from '../fixtures';
 import { dbQuery, sqlStr } from '../unhappy';
 import { createAccount, runScopedEmail, ACCOUNT_PASSWORD } from '../isolation';
@@ -21,7 +22,6 @@ async function freeAccount(prefix: string) {
   return { email, password: ACCOUNT_PASSWORD, userId };
 }
 
-const wizard = (page: Page) => page.getByRole('dialog', { name: 'Circle created' });
 const card = (page: Page) => page.getByTestId('first-med-mark-it');
 
 interface RootRow {
@@ -71,15 +71,9 @@ async function rolledFirstMed(page: Page, context: any, baseURL: string | undefi
   await stubJson(page, 'GET', '/api/drugs/search', { body: { success: true, data: { drugs: [] } } });
   const a = await freeAccount(prefix);
   await cookieLogin(context, a, baseURL);
-  await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
-  const modal = page.getByRole('dialog');
-  await modal.locator('#recipient_name').fill(uniq('Live'));
-  await modal.getByRole('button', { name: 'Create circle' }).click();
-  await page.waitForURL(/\/circles\/[0-9a-f-]{36}$/, { timeout: 30_000 });
-  const circleId = /\/circles\/([0-9a-f-]{36})/.exec(page.url())![1];
-  await expect(wizard(page)).toBeVisible({ timeout: 20_000 });
-  await wizard(page).getByRole('button', { name: 'Skip for now' }).click();
+  // First run v2: Start -> the one question -> the circle forms -> skip the first item.
+  const circleId = await startFirstCircle(page, uniq('Live'));
+  await skipFirstItem(page);
   await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
   await page.getByRole('button', { name: /Continue with free plan/ }).click();
   await page.waitForURL(new RegExp(`/circles/${circleId}$`), { timeout: 30_000 });

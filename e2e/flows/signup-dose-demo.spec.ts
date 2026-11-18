@@ -12,7 +12,8 @@ test.use({ storageState: { cookies: [], origins: [] } });
 test('/signup has no embedded dose demo; "See how it works" links to the walkthrough', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/signup', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { level: 1, name: 'Create account' })).toBeVisible({ timeout: 20_000 });
+  // First run v2: /signup opens on the one question; the walkthrough link stays on it.
+  await expect(page.getByRole('heading', { level: 1, name: 'Who are you caring for?' })).toBeVisible({ timeout: 20_000 });
 
   await expect(page.getByTestId('dose-demo-card')).toHaveCount(0);
   await expect(page.getByText('Metformin')).toHaveCount(0);

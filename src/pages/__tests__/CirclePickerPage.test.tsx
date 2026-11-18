@@ -386,10 +386,15 @@ describe('CirclePickerPage', () => {
     // hands the user over to the join modal this page already owns.
     it('swaps the create modal for the join modal from inside create', async () => {
       const user = userEvent.setup();
-      mockGetCircles.mockResolvedValue([]);
+      // First run v2: the empty state's Start goes to the one question; the create FORM (and its
+      // join escape hatch) is the header's "Create circle", for a further circle.
+      mockGetCircles.mockResolvedValue([
+        makeCircle(),
+        makeCircle({ id: 'c2', name: "Dad's Circle", recipient_name: 'Hector', role: 'member' }),
+      ]);
       renderPicker();
 
-      await user.click(await screen.findByRole('button', { name: 'Start a care circle' }));
+      await user.click(await screen.findByRole('button', { name: 'Create circle' }));
       await screen.findByRole('heading', { name: 'New care circle' });
 
       // Scoped to the dialog: the empty state behind it offers the same door

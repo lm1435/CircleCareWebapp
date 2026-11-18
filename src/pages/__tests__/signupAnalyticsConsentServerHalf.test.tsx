@@ -3,6 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import SignUpPage from '@/pages/SignUpPage';
+import { clearFirstRun, setFirstRunDraft } from '@/lib/firstRunDraft';
+
+// First run v2: the account form is step 2, after "Who are you caring for?"; start with an answer.
+beforeEach(() => {
+  clearFirstRun();
+  setFirstRunDraft({ recipientName: 'Rosa', isSelfCare: false });
+});
 import AuthCallbackPage from '@/pages/AuthCallbackPage';
 import { apiClient } from '@/lib/api';
 import { setPendingAnalyticsConsent } from '@/lib/pendingAnalyticsConsent';
@@ -155,7 +162,6 @@ async function fillValidForm(user: ReturnType<typeof userEvent.setup>): Promise<
   await user.type(screen.getByLabelText(/^Last Name/), VALID.lastName);
   await user.type(screen.getByLabelText(/^Email/), NEW_USER.email);
   await user.type(screen.getByLabelText(/^Password/), VALID.password);
-  await user.type(screen.getByLabelText(/^Confirm Password/), VALID.password);
   await user.click(termsCheckbox());
 }
 

@@ -107,21 +107,11 @@
     "dobFormat": "Choisissez une date de naissance valide.",
     "dobInvalidDate": "Cette date de naissance n’existe pas dans le calendrier."
   },
-  "quickWin": {
-    "title": "Cercle créé",
-    "skipForNow": "Passer pour l’instant"
-  },
   "firstRun": {
     "steps": {
       "what": "Nom",
       "when": "Heure",
       "repeat": "Répétition"
-    },
-    "choose": {
-      "primary": "Ajoutez le premier médicament de {{name}}",
-      "primarySelf": "Ajoutez votre premier médicament",
-      "promise": "Environ une minute. Tous ceux qui aident le voient, avec un rappel à l’heure prévue.",
-      "promiseSelf": "Environ une minute. Vous le verrez ici, avec un rappel à l’heure prévue."
     },
     "inviteNext": {
       "notNow": "Pas maintenant"
@@ -150,19 +140,12 @@
     "ready": {
       "title": "Le cercle de {{name}} est prêt.",
       "titleSelf": "Votre cercle est prêt.",
-      "lede": "Commencez par ce que vous vérifierez le plus souvent.",
       "ledeSelf": "Ajoutez votre premier médicament. C’est le rappel que tout votre cercle partagera.",
       "toggleShow": "Aucun médicament à suivre ? Voir le reste",
       "toggleHide": "Masquer",
-      "appointmentTitle": "Un rendez-vous",
       "appointmentHelper": "Les visites médicales dans un seul calendrier que la famille consulte.",
-      "inviteTitle": "Quelqu’un pour aider",
       "inviteHelper": "Partagez la charge, pour que tout ne repose pas sur vous.",
-      "emergencyTitle": "Infos d’urgence",
-      "emergencyHelper": "Allergies et médecins, à portée de main quand il le faut.",
-      "eyebrow": "CERCLE DE {{name}}",
-      "eyebrowSelf": "VOTRE CERCLE",
-      "orStartWith": "OU COMMENCEZ PAR"
+      "emergencyHelper": "Allergies et médecins, à portée de main quand il le faut."
     },
     "whatLede": "Le nom suffit. Les détails peuvent attendre.",
     "addDosage": "+ Ajouter le dosage",
@@ -179,8 +162,6 @@
       "titleMulti": "Les rappels de {{name}} sont réglés.",
       "titleSelf": "Votre rappel de {{time}} est réglé.",
       "titleMultiSelf": "Vos rappels sont réglés.",
-      "line": "Quand quelqu’un touche Prise, tout le cercle le voit. Pas de messages de groupe, pas de doute.",
-      "lineSelf": "Quand vous touchez Prise, les personnes que vous invitez le voient aussi.",
       "inviteHeading": "Qui est souvent présent auprès de {{name}} ?",
       "inviteHeadingSelf": "Qui vous aide au quotidien ?",
       "invite": "Inviter quelqu’un",
@@ -190,10 +171,30 @@
       "startsTomorrow": "commence demain",
       "startsOn": "commence le {{date}}"
     },
-    "markIt": {
-      "question": "Déjà pris aujourd’hui ?",
-      "action": "Le marquer",
-      "done": "Marqué comme pris."
+    "who": {
+      "sub": "Son prénom suffit pour créer son cercle de soins.",
+      "label": "Son prénom ou comment vous l’appelez",
+      "preview": "Cercle de {{name}}",
+      "previewSub": "Privé. Seules les personnes que vous invitez le voient.",
+      "forMe": "C’est pour moi",
+      "itemType": "Quoi ajouter en premier",
+      "progress": "Étape {{current}} sur {{total}}"
+    },
+    "allSet": {
+      "titleAppt": "Le rendez-vous de {{name}} est enregistré.",
+      "titleApptSelf": "Votre rendez-vous est enregistré.",
+      "titleTask": "La tâche de {{name}} est enregistrée.",
+      "titleTaskSelf": "Votre tâche est enregistrée.",
+      "circle": "Cercle de {{name}}",
+      "circleSelf": "Votre cercle",
+      "circleSub": "Vous seul pour l’instant",
+      "seatWaiting": "Lien d’invitation partagé. En attente de son arrivée.",
+      "remindersWebTitle": "Les rappels arrivent sur votre téléphone",
+      "remindersWebSubTime": "Dans l’app CircleCare, à {{time}}",
+      "remindersWebSub": "Dans l’app CircleCare",
+      "optional": "Facultatif",
+      "inviteFree": "Votre forfait gratuit inclut un aidant.",
+      "copyInviteLink": "Copier le lien d’invitation"
     }
   },
   "accessLost": {

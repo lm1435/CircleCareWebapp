@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { answerFirstRunQuestion } from '../../firstRunV2';
 import { test, expect } from '../../fixtures';
 import { countRequests } from '../../unhappy';
 import {
@@ -46,6 +47,8 @@ const CANCEL_COPY = "No problem — you can sign in whenever you're ready.";
 /** Park answers exactly as SignUpPage.startOAuth does (terms, analytics DECLINE, provider). */
 async function parkLikeSignup(page: Page): Promise<void> {
   await page.goto('/signup', { waitUntil: 'domcontentloaded' });
+  // First run v2: the account form (with the Google button) is step 2.
+  await answerFirstRunQuestion(page);
   await expect(page.getByRole('heading', { name: 'Create account' })).toBeVisible({ timeout: 20_000 });
   await page.evaluate((k) => {
     sessionStorage.setItem(k.terms, '1');
@@ -161,6 +164,8 @@ async function oauthViaSignupButton(page: Page, acct: ScopedAccount, baseURL: st
   const provider = await stubPkceTokenEndpoint(page, session);
   await routeAuthorizeToCallback(page, provider, baseURL);
   await page.goto('/signup', { waitUntil: 'domcontentloaded' });
+  // First run v2: the account form (with the Google button) is step 2.
+  await answerFirstRunQuestion(page);
   await expect(page.getByRole('heading', { name: 'Create account' })).toBeVisible({ timeout: 20_000 });
   const terms = page.locator('#termsAccepted');
   await terms.check({ force: true });

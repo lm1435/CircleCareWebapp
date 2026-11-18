@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { clearPendingSignupEmail, peekPendingSignupEmail } from '@/lib/pendingSignupEmail';
 import { Analytics } from '@/lib/analytics';
+import { firstRunFunnel } from '@/lib/firstRunFunnel';
 import { classifyFailureCode, isEmailRateLimitError, isRateLimitError } from '@/lib/apiErrors';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { Button, Card, Text, TextField } from '@/components/ui';
@@ -115,7 +116,17 @@ export default function VerifyEmailPage(): ReactElement {
     return null;
   };
 
-  const verify = async (code: string): Promise<void> => {
+  // First run funnel: the code step (email path only; Apple / Google never see this page).
+  useEffect(() => {
+    firstRunFunnel.viewed('code');
+  }, []);
+
+  /**
+   * `auto` = sent by the sixth digit, not the button (first run v2, `otp_auto_submitted`). The
+   * synchronous `submittedRef` below is the double-submit guard: the sixth digit plus an immediate
+   * press on "Verify email" (or a paste that fires change twice) sends ONE request.
+   */
+  const verify = async (code: string, auto = false): Promise<void> => {
     if (isVerifying || submittedRef.current) return;
     setError(null);
     setNotice(null);
@@ -138,6 +149,8 @@ export default function VerifyEmailPage(): ReactElement {
       const response = await authApi.verifyOtp({ email: email.trim(), otp: code });
       const { session, user } = response.data;
       Analytics.otpVerified();
+      if (auto) Analytics.otpAutoSubmitted(true);
+      firstRunFunnel.completed('code');
       // The address is verified — nothing left to protect from a re-submit, and
       // leaving it parked would bounce a later /signup in this tab.
       clearPendingSignupEmail();
@@ -166,6 +179,7 @@ export default function VerifyEmailPage(): ReactElement {
       // A 429 says wait — "tap Resend" would spend the same limiter bucket.
       setError(isRateLimitError(err) ? t('rateLimited') : t('verifyOtp.errors.invalidCode'));
       Analytics.otpFailed();
+      if (auto) Analytics.otpAutoSubmitted(false);
       submittedRef.current = false;
       // A DEFINITELY rejected code is emptied, not left to be typed over. This
       // page submits on every report of a full code, so retyping over a full
@@ -189,7 +203,7 @@ export default function VerifyEmailPage(): ReactElement {
     setOtp(digits);
     // Auto-submit when the code is complete and the email is already known.
     if (digits.length === OTP_LENGTH && hasStateEmail) {
-      void verify(digits);
+      void verify(digits, true);
     }
   };
 

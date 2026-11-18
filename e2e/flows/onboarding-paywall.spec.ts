@@ -1,4 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
+import { answerFirstRunQuestion } from '../firstRunV2';
 import { test, expect } from '../fixtures';
 import { dbQuery, sqlStr } from '../unhappy';
 import { createAccount, runScopedEmail, ACCOUNT_PASSWORD } from '../isolation';
@@ -50,12 +51,11 @@ function trackPaths(page: Page): string[] {
   return seen;
 }
 
+/** First run v2: Start -> the one question -> the circle forms by itself (no create form). */
 async function createFirstCircle(page: Page, recipient: string): Promise<void> {
   await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
-  const modal = page.getByRole('dialog');
-  await modal.locator('#recipient_name').fill(recipient);
-  await modal.getByRole('button', { name: 'Create circle' }).click();
+  await page.getByTestId('empty-circles').getByRole('button').first().click();
+  await answerFirstRunQuestion(page, recipient);
 }
 
 function ownedCircles(userId: string): string[] {
@@ -68,9 +68,10 @@ function planTier(userId: string): string | undefined {
   return dbQuery<{ plan_tier: string }>(`select plan_tier from users where id = ${sqlStr(userId)}`)[0]?.plan_tier;
 }
 
-const wizard = (page: Page) => page.getByRole('dialog', { name: 'Circle created' });
+/** First run v2: the wizard's first screen is the first-item form (the one with the type switch). */
+const wizard = (page: Page) => page.getByRole('dialog').filter({ has: page.getByRole('tablist') });
 const offerHeading = (page: Page) => page.getByText('Share the care with everyone who helps.');
-const skipSetup = (page: Page) => wizard(page).getByRole('button', { name: 'Skip for now' }).click();
+const skipSetup = (page: Page) => page.getByTestId('first-run-skip').click();
 
 test.describe('onboarding paywall (web)', () => {
   test.setTimeout(90_000);
@@ -183,11 +184,10 @@ test.describe('onboarding paywall (web)', () => {
       await cookieLogin(context, a, baseURL);
       const cdp = await context.newCDPSession(page);
       await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-      await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
-      const modal = page.getByRole('dialog');
-      await modal.locator('#recipient_name').fill(uniq('ObSlow'));
+      await page.getByTestId('empty-circles').getByRole('button').first().click();
+      await page.locator('#first-run-recipient-name').fill(uniq('ObSlow'));
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 12 });
-      await modal.getByRole('button', { name: 'Create circle' }).click();
+      await page.getByTestId('first-run-who-continue').click();
       await page.waitForURL(/\/circles\/[0-9a-f-]{36}$/, { timeout: 60_000 });
       await expect(wizard(page)).toBeVisible({ timeout: 40_000 });
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });

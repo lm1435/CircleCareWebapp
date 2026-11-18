@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { answerFirstRunQuestion } from '../firstRunV2';
 import { test, expect } from '../fixtures';
 import { runScopedEmail } from '../isolation';
 import { dbCount, dbQuery, generateSignupOtp, sqlStr } from '../unhappy';
@@ -74,7 +75,6 @@ async function fillSignup(page: Page, email: string): Promise<void> {
   await page.locator('#last_name').fill('Invitee');
   await page.locator('#email').fill(email);
   await page.locator('#password').fill('Str0ng!Passw0rd');
-  await page.locator('#confirmPassword').fill('Str0ng!Passw0rd');
   await page.locator('#termsAccepted').check({ force: true });
 }
 
@@ -153,6 +153,9 @@ test('plain signup with a pending email invite -> verify -> the pending invitati
   if (FALSIFY.has('invite-signup-pending')) expect((await api.delete(`/api/invites/${inviteId}`)).ok()).toBe(true);
 
   await page.goto('/signup', { waitUntil: 'domcontentloaded' });
+  // No invite code parked: an owner-looking signup answers the one question first. The pending
+  // invite found after verify then wins: the answer is dropped and no circle is made.
+  await answerFirstRunQuestion(page);
   await fillSignup(page, email);
   await page.getByRole('button', { name: 'Create account' }).click();
   await verifyWithCode(page, email);

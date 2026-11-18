@@ -1,6 +1,7 @@
 import type { Page, Request } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { sqlExec } from '../db';
+import { startFirstCircle } from '../firstRunV2';
 import { dbQuery, sqlStr } from '../unhappy';
 import {
   cookieLogin,
@@ -216,11 +217,18 @@ test('offline: the create-circle modal\'s "Join with an invite code" explains an
   page,
   context,
   baseURL,
+  request,
 }) => {
   const joiner = await createScopedAccount('offline-cjoin');
+  // First run v2: a FIRST circle goes through the one question, so the create FORM (and its join
+  // hand-off) is the header's "Create circle" for a further circle. Two circles keep the picker on
+  // screen (one would auto-skip into it).
+  const joinerApi = await ownerApi(request, joiner);
+  await createCircle(joinerApi, uniq('offcj-a'));
+  await createCircle(joinerApi, uniq('offcj-b'));
   await cookieLogin(context, joiner, baseURL);
   await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  const createEntry = page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first();
+  const createEntry = page.getByRole('button', { name: 'Create circle', exact: true }).first();
   await expect(createEntry).toBeVisible({ timeout: 30_000 });
   await createEntry.click();
   const createDialog = page.getByRole('dialog');
@@ -301,17 +309,13 @@ test('offline: join by code - an invite looked up online is not accepted offline
   }
 });
 
-test('offline: first-run wizard - every step-1 choice is aria-disabled and explains; Skip for now still closes; nothing sent', async ({
+test('offline: first run v2 - the first-item form\'s Add is aria-disabled and explains; Skip for now still closes; nothing sent', async ({
   page,
   context,
   baseURL,
 }) => {
   const acct = await createScopedAccount('offline-wiz');
   await cookieLogin(context, acct, baseURL);
-  await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
-  const modal = page.getByRole('dialog');
-  await modal.locator('#recipient_name').fill(uniq('offwiz'));
   // The wizard mounts over the new circle; let its circle GET land first.
   const circleLoaded = page.waitForResponse(
     (r) =>
@@ -320,24 +324,14 @@ test('offline: first-run wizard - every step-1 choice is aria-disabled and expla
       r.ok(),
     { timeout: 30_000 }
   );
-  await modal.getByRole('button', { name: 'Create circle' }).click();
-  await page.waitForURL(/\/circles\/[0-9a-f-]{36}/, { timeout: 30_000 });
-  const wizard = page.getByRole('dialog', { name: 'Circle created' });
-  await expect(wizard).toBeVisible({ timeout: 20_000 });
+  const circleId = await startFirstCircle(page, uniq('offwiz'));
   await circleLoaded;
-  const circleId = /\/circles\/([0-9a-f-]{36})/.exec(page.url())![1];
-
-  // Onboarding 1.3.1: the three quiet rows are always visible (no toggle).
-  const choices = [
-    wizard.getByTestId('first-run-primary'),
-    wizard.getByTestId('first-run-start-with-appointment'),
-    wizard.getByTestId('first-run-start-with-invite'),
-    wizard.getByTestId('first-run-start-with-emergency'),
-  ];
-  for (const choice of choices) {
-    await expect(choice).toBeVisible();
-    await expect(choice).not.toHaveAttribute('aria-disabled');
-  }
+  const wizard = page.getByRole('dialog').filter({ has: page.getByRole('tablist') });
+  await expect(wizard).toBeVisible({ timeout: 20_000 });
+  await wizard.getByLabel(/Medication name/i).fill('Metformin');
+  const add = wizard.getByTestId('add-event-save');
+  await expect(add).not.toHaveAttribute('aria-disabled');
+  const choices = [add];
 
   const api = recordApi(page);
   try {
@@ -346,17 +340,15 @@ test('offline: first-run wizard - every step-1 choice is aria-disabled and expla
     for (const choice of choices) {
       await expect(choice).toHaveAttribute('aria-disabled', 'true');
       await choice.click({ force: true });
-      await expect(toast(page, CHANGE).first()).toBeVisible();
-      // Still on step 1 of the wizard: the choice went nowhere.
+      await expect(toast(page, SAVE).first()).toBeVisible();
+      // Still on the first-item form: nothing saved, no All set.
       await expect(wizard).toBeVisible();
-      await expect(wizard.getByTestId('first-run-primary')).toBeVisible();
+      await expect(page.getByTestId('first-run-all-set')).toHaveCount(0);
       await expect(page).toHaveURL(new RegExp(`/circles/${circleId}(/|\\?|$)`));
     }
-    // No other modal opened (appointment / invite / emergency hand-offs).
-    await expect(page.getByRole('dialog')).toHaveCount(1);
 
     // Skip is a close, not a write: it still closes offline.
-    await wizard.getByRole('button', { name: 'Skip for now', exact: true }).click();
+    await page.getByTestId('first-run-skip').click();
     await expect(wizard).toHaveCount(0);
     await page.waitForTimeout(1_000);
     expect(api.writes.map((r) => `${r.method()} ${r.url()}`)).toEqual([]);

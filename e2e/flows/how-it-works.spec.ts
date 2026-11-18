@@ -62,7 +62,8 @@ test('Sign up -> See how it works -> step 2 -> Get started -> Sign up', async ({
 
   await page.getByRole('button', { name: 'Get started' }).click();
   await expect(page).toHaveURL(/\/signup$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'Create account' })).toBeVisible();
+  // First run v2: sign-up opens on the one question (Create account is its step 2).
+  await expect(page.getByRole('heading', { level: 1, name: 'Who are you caring for?' })).toBeVisible();
 
   expect(apiCalls).toEqual([]);
 });

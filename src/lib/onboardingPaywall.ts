@@ -69,17 +69,15 @@ export const PENDING_FIRST_RUN_KEY = 'cc:pendingFirstRun';
 export const ONBOARDING_PAYWALL_PENDING_KEY = 'cc:onboardingPaywallPending';
 
 /**
- * The wizard hand-off, held across a full route change.
+ * The paywall's return target, held across a full route change: the circle id ONLY.
  *
- * `recipientName` is here for the same reason it rides in `location.state`
- * today: the wizard's copy asks about the person by name and the circle detail
- * query has not landed when it opens. It never leaves the browser — it is not
- * an analytics property, and the PHI rules in lib/analytics.ts still forbid it
- * there.
+ * First run v2 (1.4.3): the care recipient's name is NEVER written to browser storage (it
+ * identifies a person; plan.md "Storage"). The record used to carry `recipientName`; nothing read
+ * it (every exit navigates by id and Today reads the name from the circle), so it is gone, and a
+ * record an older build left behind is rewritten without it on first read.
  */
 export interface DeferredFirstRun {
   circleId: string;
-  recipientName: string;
 }
 
 function read(storage: 'local' | 'session', key: string): string | null {
@@ -173,23 +171,21 @@ export function clearOnboardingPaywallPending(): void {
  * route. Returns false (and does nothing) when it was already seen, which is what makes the
  * two entry points (after the first med's payoff; the next Today) safe to race.
  */
-export function consumeOnboardingPaywall(input: {
-  circleId: string;
-  recipientName: string;
-}): boolean {
+export function consumeOnboardingPaywall(input: { circleId: string }): boolean {
   if (hasSeenOnboardingPaywall()) {
     clearOnboardingPaywallPending();
     return false;
   }
   markOnboardingPaywallSeen();
   clearOnboardingPaywallPending();
-  deferFirstRun({ circleId: input.circleId, recipientName: input.recipientName });
+  deferFirstRun({ circleId: input.circleId });
   return true;
 }
 
 /** Park the paywall's return target (the circle whose Today every exit lands on). */
 export function deferFirstRun(record: DeferredFirstRun): void {
-  write('session', scopedKey(PENDING_FIRST_RUN_KEY), JSON.stringify(record));
+  // Explicitly the id alone: never spread a caller's object into storage.
+  write('session', scopedKey(PENDING_FIRST_RUN_KEY), JSON.stringify({ circleId: record.circleId }));
 }
 
 /** Read the deferred wizard without consuming it. */
@@ -197,12 +193,11 @@ export function peekDeferredFirstRun(): DeferredFirstRun | null {
   const raw = read('session', scopedKey(PENDING_FIRST_RUN_KEY));
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as Partial<DeferredFirstRun> | null;
+    const parsed = JSON.parse(raw) as (Partial<DeferredFirstRun> & Record<string, unknown>) | null;
     if (!parsed || typeof parsed.circleId !== 'string' || parsed.circleId === '') return null;
-    return {
-      circleId: parsed.circleId,
-      recipientName: typeof parsed.recipientName === 'string' ? parsed.recipientName : '',
-    };
+    // A record from an older build may still hold a name: rewrite it as the id alone.
+    if (Object.keys(parsed).some((k) => k !== 'circleId')) deferFirstRun({ circleId: parsed.circleId });
+    return { circleId: parsed.circleId };
   } catch {
     // Corrupt payload (hand-edited, or a shape from an older build). Treat it
     // as absent rather than throwing inside a render path.

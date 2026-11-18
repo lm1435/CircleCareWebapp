@@ -107,21 +107,11 @@
     "dobFormat": "Escolha uma data de nascimento válida.",
     "dobInvalidDate": "Essa data de nascimento não é uma data real do calendário."
   },
-  "quickWin": {
-    "title": "Círculo criado",
-    "skipForNow": "Pular por enquanto"
-  },
   "firstRun": {
     "steps": {
       "what": "Nome",
       "when": "Horário",
       "repeat": "Repetição"
-    },
-    "choose": {
-      "primary": "Adicione o primeiro medicamento de {{name}}",
-      "primarySelf": "Adicione seu primeiro medicamento",
-      "promise": "Cerca de um minuto. Todos que ajudam veem, com um lembrete na hora certa.",
-      "promiseSelf": "Cerca de um minuto. Você verá aqui, com um lembrete na hora certa."
     },
     "inviteNext": {
       "notNow": "Agora não"
@@ -150,19 +140,12 @@
     "ready": {
       "title": "O círculo de {{name}} está pronto.",
       "titleSelf": "Seu círculo está pronto.",
-      "lede": "Comece pelo que você vai conferir mais.",
       "ledeSelf": "Adicione seu primeiro medicamento. É o lembrete que todo o seu círculo vai compartilhar.",
       "toggleShow": "Sem medicamentos para acompanhar? Veja o que mais",
       "toggleHide": "Ocultar",
-      "appointmentTitle": "Uma consulta",
       "appointmentHelper": "As consultas médicas em um só calendário que a família vê.",
-      "inviteTitle": "Alguém para ajudar",
       "inviteHelper": "Dividam a carga, para que nem tudo recaia sobre você.",
-      "emergencyTitle": "Informações de emergência",
-      "emergencyHelper": "Alergias e médicos, à mão quando importa.",
-      "eyebrow": "CÍRCULO DE {{name}}",
-      "eyebrowSelf": "SEU CÍRCULO",
-      "orStartWith": "OU COMECE COM"
+      "emergencyHelper": "Alergias e médicos, à mão quando importa."
     },
     "whatLede": "Só o nome já basta. Os detalhes podem esperar.",
     "addDosage": "+ Adicionar dosagem",
@@ -179,8 +162,6 @@
       "titleMulti": "Os lembretes de {{name}} estão definidos.",
       "titleSelf": "Seu lembrete das {{time}} está definido.",
       "titleMultiSelf": "Seus lembretes estão definidos.",
-      "line": "Quando alguém toca em Tomado, todo o círculo vê. Sem mensagens em grupo, sem adivinhar.",
-      "lineSelf": "Quando você toca em Tomado, quem você convidar também vê.",
       "inviteHeading": "Quem costuma estar com {{name}}?",
       "inviteHeadingSelf": "Quem ajuda você?",
       "invite": "Convidar alguém",
@@ -190,10 +171,30 @@
       "startsTomorrow": "começa amanhã",
       "startsOn": "começa em {{date}}"
     },
-    "markIt": {
-      "question": "Já foi dado hoje?",
-      "action": "Marcar",
-      "done": "Marcado como tomado."
+    "who": {
+      "sub": "O nome basta para começar o círculo de cuidado.",
+      "label": "O nome ou como você chama a pessoa",
+      "preview": "Círculo de {{name}}",
+      "previewSub": "Privado. Só as pessoas que você convidar podem ver.",
+      "forMe": "É para mim",
+      "itemType": "O que adicionar primeiro",
+      "progress": "Etapa {{current}} de {{total}}"
+    },
+    "allSet": {
+      "titleAppt": "A consulta de {{name}} foi salva.",
+      "titleApptSelf": "Sua consulta foi salva.",
+      "titleTask": "A tarefa de {{name}} foi salva.",
+      "titleTaskSelf": "Sua tarefa foi salva.",
+      "circle": "Círculo de {{name}}",
+      "circleSelf": "Seu círculo",
+      "circleSub": "Por enquanto, só você",
+      "seatWaiting": "Link de convite compartilhado. Aguardando a pessoa entrar.",
+      "remindersWebTitle": "Os lembretes chegam no seu celular",
+      "remindersWebSubTime": "No app CircleCare, às {{time}}",
+      "remindersWebSub": "No app CircleCare",
+      "optional": "Opcional",
+      "inviteFree": "Seu plano gratuito inclui um cuidador.",
+      "copyInviteLink": "Copiar link do convite"
     }
   },
   "accessLost": {

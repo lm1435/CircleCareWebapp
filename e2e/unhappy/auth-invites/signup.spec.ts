@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { answerFirstRunQuestion } from '../../firstRunV2';
 import { test, expect } from '../../fixtures';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -79,19 +80,20 @@ async function expectSendEmailHookUnreachable(): Promise<void> {
 
 async function openSignup(page: Page): Promise<void> {
   await page.goto('/signup', { waitUntil: 'domcontentloaded' });
+  // First run v2: the account form is step 2, after "Who are you caring for?".
+  await answerFirstRunQuestion(page);
   await expect(page.getByRole('heading', { name: 'Create account' })).toBeVisible({ timeout: 20_000 });
 }
 
 async function fillSignup(
   page: Page,
-  v: { email: string; password?: string; confirm?: string; terms?: boolean }
+  v: { email: string; password?: string; terms?: boolean }
 ): Promise<void> {
   const password = v.password ?? GOOD_PASSWORD;
   await page.locator('#first_name').fill('Ada');
   await page.locator('#last_name').fill('Unhappy');
   await page.locator('#email').fill(v.email);
   await page.locator('#password').fill(password);
-  await page.locator('#confirmPassword').fill(v.confirm ?? password);
   if (v.terms ?? true) {
     const terms = page.locator('#termsAccepted');
     await terms.check({ force: true });
@@ -167,24 +169,21 @@ test('USER_EXISTS: exact copy, no navigation, no consent answer stored', async (
   await expectNoConsentRecorded(page);
 });
 
-test('client-side validation sends no request: weak password, mismatch, missing terms', async ({ page }) => {
+test('client-side validation sends no request: weak password, no confirm field, missing terms', async ({ page }) => {
   await openSignup(page);
   const posts = countRequests(page, 'POST', SIGNUP);
   const email = runScopedEmail(uniq('signup-invalid'));
   const submit = page.getByRole('button', { name: 'Create account' });
 
-  await fillSignup(page, { email, password: 'weakpass', confirm: 'weakpass' });
+  await fillSignup(page, { email, password: 'weakpass' });
   await submit.click();
   await expect(page.getByText(COPY.rules)).toBeVisible();
 
+  // First run v2 (owner, locked): there is no "Confirm password" to mismatch.
+  await expect(page.locator('#confirmPassword')).toHaveCount(0);
   await page.locator('#password').fill(GOOD_PASSWORD);
-  await page.locator('#confirmPassword').fill(`${GOOD_PASSWORD}x`);
-  await submit.click();
-  await expect(page.getByText(COPY.mismatch)).toBeVisible();
-  await expect(page.getByText(COPY.rules)).toHaveCount(0);
 
   // Terms unticked: the button disables, and a programmatic submit hits the form guard.
-  await page.locator('#confirmPassword').fill(GOOD_PASSWORD);
   await page.locator('#termsAccepted').uncheck({ force: true });
   await expect(submit).toBeDisabled();
   await page.locator('form').evaluate((form: HTMLFormElement) => form.requestSubmit());
@@ -230,7 +229,7 @@ test('double submit while the signup is in flight sends exactly one request', as
   });
   await hold.waitForHeld();
   await expect(page.getByRole('button', { name: 'Creating account...' })).toBeDisabled();
-  await page.locator('#confirmPassword').press('Enter');
+  await page.locator('#password').press('Enter');
   await hold.releaseWith(API_ERRORS.validation);
 
   await expect(page.getByRole('alert')).toHaveText(COPY.failed);

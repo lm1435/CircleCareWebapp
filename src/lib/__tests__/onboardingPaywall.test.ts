@@ -133,20 +133,20 @@ describe('the once-ever seen flag', () => {
 
 describe('the deferred first-run wizard', () => {
   it('round-trips the circle and recipient name', () => {
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
 
-    expect(peekDeferredFirstRun()).toEqual({ circleId: 'circle-9', recipientName: 'Rose' });
+    expect(peekDeferredFirstRun()).toEqual({ circleId: 'circle-9' });
   });
 
   it('is CONSUMED by take, so two exits cannot both deliver the wizard', () => {
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
 
-    expect(takeDeferredFirstRun()).toEqual({ circleId: 'circle-9', recipientName: 'Rose' });
+    expect(takeDeferredFirstRun()).toEqual({ circleId: 'circle-9' });
     expect(takeDeferredFirstRun()).toBeNull();
   });
 
   it('lives in sessionStorage — a closed tab drops it, like mobile losing the ref', () => {
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
 
     expect(window.sessionStorage.getItem(`${PENDING_FIRST_RUN_KEY}:${USER_ID}`)).not.toBeNull();
     expect(window.localStorage.getItem(`${PENDING_FIRST_RUN_KEY}:${USER_ID}`)).toBeNull();
@@ -167,8 +167,28 @@ describe('the deferred first-run wizard', () => {
     expect(peekDeferredFirstRun()).toBeNull();
   });
 
+  it('NEGATIVE (first run v2): the stored record never holds the recipient name, even if a caller passes one', () => {
+    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' } as unknown as { circleId: string });
+    const raw = window.sessionStorage.getItem(`${PENDING_FIRST_RUN_KEY}:${USER_ID}`);
+    expect(raw).toBe(JSON.stringify({ circleId: 'circle-9' }));
+    expect(raw).not.toContain('Rose');
+    consumeOnboardingPaywall({ circleId: 'circle-7' });
+    expect(window.sessionStorage.getItem(`${PENDING_FIRST_RUN_KEY}:${USER_ID}`)).not.toContain('Rose');
+  });
+
+  it('NEGATIVE (first run v2): a record an older build left WITH a name is rewritten without it on read', () => {
+    window.sessionStorage.setItem(
+      `${PENDING_FIRST_RUN_KEY}:${USER_ID}`,
+      JSON.stringify({ circleId: 'circle-9', recipientName: 'Rose' })
+    );
+    expect(peekDeferredFirstRun()).toEqual({ circleId: 'circle-9' });
+    expect(window.sessionStorage.getItem(`${PENDING_FIRST_RUN_KEY}:${USER_ID}`)).toBe(
+      JSON.stringify({ circleId: 'circle-9' })
+    );
+  });
+
   it('clears cleanly', () => {
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
     clearDeferredFirstRun();
 
     expect(peekDeferredFirstRun()).toBeNull();
@@ -225,20 +245,20 @@ describe('consumeOnboardingPaywall (exactly once)', () => {
   it('writes the seen flag, clears the owed record and parks the return target', () => {
     markOnboardingPaywallPending('circle-7');
 
-    expect(consumeOnboardingPaywall({ circleId: 'circle-7', recipientName: 'Rose' })).toBe(true);
+    expect(consumeOnboardingPaywall({ circleId: 'circle-7' })).toBe(true);
 
     expect(hasSeenOnboardingPaywall()).toBe(true);
     expect(peekOnboardingPaywallPending()).toBeNull();
-    expect(peekDeferredFirstRun()).toEqual({ circleId: 'circle-7', recipientName: 'Rose' });
+    expect(peekDeferredFirstRun()).toEqual({ circleId: 'circle-7' });
   });
 
   it('a second call (the other entry point) is refused and shows nothing', () => {
     markOnboardingPaywallPending('circle-7');
-    expect(consumeOnboardingPaywall({ circleId: 'circle-7', recipientName: 'Rose' })).toBe(true);
+    expect(consumeOnboardingPaywall({ circleId: 'circle-7' })).toBe(true);
     clearDeferredFirstRun();
 
     markOnboardingPaywallPending('circle-7');
-    expect(consumeOnboardingPaywall({ circleId: 'circle-7', recipientName: 'Rose' })).toBe(false);
+    expect(consumeOnboardingPaywall({ circleId: 'circle-7' })).toBe(false);
     expect(peekDeferredFirstRun()).toBeNull();
     // ...and the stale owed record is released.
     expect(peekOnboardingPaywallPending()).toBeNull();

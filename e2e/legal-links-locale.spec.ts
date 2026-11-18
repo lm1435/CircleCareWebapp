@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { answerFirstRunQuestion } from './firstRunV2';
 import { test, expect } from './fixtures';
 
 // LEGAL LINKS FOLLOW THE APP LANGUAGE (785dd38).
@@ -82,6 +83,8 @@ for (const c of CASES) {
 
     test(`/signup legal links open the ${c.seg || 'English'} pages`, async ({ page }) => {
       await page.goto('/signup', { waitUntil: 'domcontentloaded' });
+      // First run v2: the account form (with its legal links) is step 2.
+      await answerFirstRunQuestion(page);
       await expect(page.locator('#first_name')).toBeVisible({ timeout: 20_000 });
       await expect(page.locator('html')).toHaveAttribute('lang', new RegExp(`^${c.appLocale.split('-')[0]}`));
 

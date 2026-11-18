@@ -196,7 +196,7 @@ describe('UpgradePage — paywall_shown (onboarding 1.3.1)', () => {
   });
 
   it('leaving by browser Back drops the parked return target', async () => {
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
     const { unmount } = renderAt({ paywallContext: 'onboarding' });
     await flushArming();
     unmount();
@@ -281,7 +281,7 @@ describe('UpgradePage — declining the onboarding paywall', () => {
 
   it('continuing free reports the choice, the dismissal, and OPENS THE WIZARD', async () => {
     const user = userEvent.setup();
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
     renderAt({ paywallContext: 'onboarding' });
 
     await user.click(screen.getByRole('button', { name: /Continue with Free plan/i }));
@@ -300,7 +300,7 @@ describe('UpgradePage — declining the onboarding paywall', () => {
 
   it('the close X also reaches Today; the compact paywall has no separate back link', async () => {
     const user = userEvent.setup();
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
     renderAt({ paywallContext: 'onboarding' });
 
     // One free button plus the close control (spec §8): no "Not now" / "Back to Settings".
@@ -317,7 +317,7 @@ describe('UpgradePage — declining the onboarding paywall', () => {
 
   it('records a dismissal exactly ONCE even though the exit also unmounts the page', async () => {
     const user = userEvent.setup();
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
     renderAt({ paywallContext: 'onboarding' });
     await flushArming();
 
@@ -354,7 +354,7 @@ describe('UpgradePage — declining the onboarding paywall', () => {
   it('keeps the original destination for a non-onboarding context', async () => {
     const user = userEvent.setup();
     // A stale deferral must NOT hijack a capacity paywall's back link.
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
     renderAt({ paywallContext: 'capacity' });
 
     await user.click(screen.getByRole('button', { name: 'Close' }));
@@ -443,7 +443,7 @@ describe('UpgradePage — purchase', () => {
 
   it('still runs the deferred wizard after a purchase', async () => {
     const user = userEvent.setup();
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
     mutate.mockImplementation((_plan, opts) => opts?.onSuccess?.());
     renderAt({ paywallContext: 'onboarding' });
 
@@ -473,7 +473,7 @@ describe('UpgradePage — onboarding copy', () => {
 describe('UpgradePage — degraded states still reach the wizard', () => {
   it('delivers the deferral even when checkout is unavailable', async () => {
     const user = userEvent.setup();
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
     mockedPlans.mockReturnValue({ data: undefined, isLoading: false, isError: true });
     renderAt({ paywallContext: 'onboarding' });
 

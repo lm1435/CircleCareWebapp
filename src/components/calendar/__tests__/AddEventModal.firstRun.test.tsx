@@ -114,7 +114,23 @@ async function fillAndSave(u: ReturnType<typeof userEvent.setup>, name = 'Metfor
   await u.click(screen.getByTestId('add-event-save'));
 }
 
+/** First run v2: 8:00 AM Morning is ALREADY picked, so the name is all a first-run save needs. */
+async function fillAndSaveFirstRun(u: ReturnType<typeof userEvent.setup>, name = 'Metformin') {
+  await u.type(screen.getByRole('combobox', { name: /^Medication name/ }), name);
+  await u.click(screen.getByTestId('add-event-save'));
+}
+
 describe('first-run mode', () => {
+  it('POSITIVE (first run v2): opens with 8:00 AM Morning already picked', async () => {
+    renderForm({ firstRun: true });
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: /Morning/ })).toBeChecked());
+  });
+
+  it('NEGATIVE (first run v2): outside first run the medication form opens with NO time picked', () => {
+    renderForm();
+    expect(screen.getByRole('checkbox', { name: /Morning/ })).not.toBeChecked();
+  });
+
   it('is headed by the first-med eyebrow, the big question and the hint; Skip for now replaces Cancel', () => {
     renderForm({ firstRun: true });
     expect(screen.getByText("ROSA'S FIRST MED")).toBeInTheDocument();
@@ -162,7 +178,7 @@ describe('first-run mode', () => {
     const { onClose, onSaved } = renderForm({ firstRun: true });
     const u = user();
     await u.type(screen.getByLabelText(/^Dosage/), '500mg');
-    await fillAndSave(u);
+    await fillAndSaveFirstRun(u);
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -184,6 +200,9 @@ describe('first-run mode', () => {
       recurrence: 'daily',
       dosageFilled: true,
       doseCount: 1,
+      firstItemType: 'medication',
+      timeDefaultKept: true,
+      hasTime: true,
     });
     expect(created).toHaveBeenCalledWith(CIRCLE_ID, true, 'wizard', true);
   });
@@ -192,12 +211,14 @@ describe('first-run mode', () => {
     renderForm({ firstRun: true });
     const u = user();
     await u.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
+    // First run v2: Morning is preselected; untick it so the typed time is the only one.
+    await u.click(screen.getByRole('checkbox', { name: /Morning/ }));
     // "Other…" is the time picker itself (a PickerTile over the hidden input named "Other time").
     await u.click(screen.getByTestId('time-chip-other'));
     fireEvent.change(screen.getByLabelText('Other time', { selector: 'input' }), { target: { value: '09:30' } });
     await u.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(firstRunSaved).toHaveBeenCalled());
-    expect(firstRunSaved.mock.calls[0][0]).toMatchObject({ preset: 'other' });
+    expect(firstRunSaved.mock.calls[0][0]).toMatchObject({ preset: 'other', timeDefaultKept: false });
   });
 
   it('the first-run event does NOT fire outside first-run mode', async () => {
@@ -307,11 +328,11 @@ describe("Today's Mark it note (add-menu path)", () => {
     expect(readFirstMedNote(CIRCLE_ID, TODAY)).toBeNull();
   });
 
-  it('is NOT written in first-run mode (the payoff owns Mark it there)', async () => {
+  it('IS written in first-run mode too (first run v2: All set has no Mark it; Today offers it)', async () => {
     cachePresence(false);
     const { onSaved } = renderForm({ firstRun: true });
-    await fillAndSave(user());
+    await fillAndSaveFirstRun(user());
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
-    expect(readFirstMedNote(CIRCLE_ID, TODAY)).toBeNull();
+    expect(readFirstMedNote(CIRCLE_ID, TODAY)).toMatchObject({ eventId: 'ev-1', name: 'Metformin' });
   });
 });

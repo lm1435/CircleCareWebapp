@@ -107,21 +107,11 @@
     "dobFormat": "Scegli una data di nascita valida.",
     "dobInvalidDate": "Questa data di nascita non esiste nel calendario."
   },
-  "quickWin": {
-    "title": "Cerchia creata",
-    "skipForNow": "Salta per ora"
-  },
   "firstRun": {
     "steps": {
       "what": "Nome",
       "when": "Ora",
       "repeat": "Ripeti"
-    },
-    "choose": {
-      "primary": "Aggiungi il primo farmaco di {{name}}",
-      "primarySelf": "Aggiungi il tuo primo farmaco",
-      "promise": "Circa un minuto. Tutti quelli che aiutano lo vedono, con un promemoria all’ora giusta.",
-      "promiseSelf": "Circa un minuto. Lo vedrai qui, con un promemoria all’ora giusta."
     },
     "inviteNext": {
       "notNow": "Non ora"
@@ -150,19 +140,12 @@
     "ready": {
       "title": "La cerchia di {{name}} è pronta.",
       "titleSelf": "La tua cerchia è pronta.",
-      "lede": "Parti da ciò che controllerai più spesso.",
       "ledeSelf": "Aggiungi il tuo primo farmaco. È il promemoria che tutta la tua cerchia condividerà.",
       "toggleShow": "Nessun farmaco da seguire? Vedi altro",
       "toggleHide": "Nascondi",
-      "appointmentTitle": "Un appuntamento",
       "appointmentHelper": "Le visite mediche in un unico calendario che la famiglia vede.",
-      "inviteTitle": "Qualcuno che aiuti",
       "inviteHelper": "Dividete il carico, così non pesa tutto su di te.",
-      "emergencyTitle": "Informazioni di emergenza",
-      "emergencyHelper": "Allergie e medici, a portata di mano quando serve.",
-      "eyebrow": "CERCHIA DI {{name}}",
-      "eyebrowSelf": "LA TUA CERCHIA",
-      "orStartWith": "OPPURE PARTI DA"
+      "emergencyHelper": "Allergie e medici, a portata di mano quando serve."
     },
     "whatLede": "Basta il nome. I dettagli possono aspettare.",
     "addDosage": "+ Aggiungi dosaggio",
@@ -179,8 +162,6 @@
       "titleMulti": "I promemoria di {{name}} sono impostati.",
       "titleSelf": "Il tuo promemoria delle {{time}} è impostato.",
       "titleMultiSelf": "I tuoi promemoria sono impostati.",
-      "line": "Quando qualcuno tocca Presa, lo vede tutta la cerchia. Niente messaggi di gruppo, niente dubbi.",
-      "lineSelf": "Quando tocchi Presa, lo vedono anche le persone che inviti.",
       "inviteHeading": "Chi è di solito accanto a {{name}}?",
       "inviteHeadingSelf": "Chi ti aiuta?",
       "invite": "Invita qualcuno",
@@ -190,10 +171,30 @@
       "startsTomorrow": "inizia domani",
       "startsOn": "inizia il {{date}}"
     },
-    "markIt": {
-      "question": "Già presa oggi?",
-      "action": "Segna come presa",
-      "done": "Segnata come presa."
+    "who": {
+      "sub": "Basta il nome per creare la sua cerchia di cura.",
+      "label": "Il suo nome o come lo chiami",
+      "preview": "Cerchia di {{name}}",
+      "previewSub": "Privata. La vedono solo le persone che inviti.",
+      "forMe": "È per me",
+      "itemType": "Cosa aggiungere per primo",
+      "progress": "Passo {{current}} di {{total}}"
+    },
+    "allSet": {
+      "titleAppt": "L’appuntamento di {{name}} è salvato.",
+      "titleApptSelf": "Il tuo appuntamento è salvato.",
+      "titleTask": "L’attività di {{name}} è salvata.",
+      "titleTaskSelf": "La tua attività è salvata.",
+      "circle": "Cerchia di {{name}}",
+      "circleSelf": "La tua cerchia",
+      "circleSub": "Per ora solo tu",
+      "seatWaiting": "Link di invito condiviso. In attesa che si unisca.",
+      "remindersWebTitle": "I promemoria arrivano sul tuo telefono",
+      "remindersWebSubTime": "Nell’app CircleCare, alle {{time}}",
+      "remindersWebSub": "Nell’app CircleCare",
+      "optional": "Facoltativo",
+      "inviteFree": "Il tuo piano gratuito include un caregiver.",
+      "copyInviteLink": "Copia link di invito"
     }
   },
   "accessLost": {

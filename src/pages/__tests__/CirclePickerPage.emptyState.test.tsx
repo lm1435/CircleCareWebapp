@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { clearFirstRun, peekFirstRunDraft, setFirstRunDraft } from '@/lib/firstRunDraft';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -91,6 +92,7 @@ function renderPicker(): void {
 describe('CirclePickerPage empty state (A2)', () => {
   let viewed: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
+    clearFirstRun();
     vi.clearAllMocks();
     mockGetPendingInvites.mockResolvedValue([]);
     useAuthStore.setState({
@@ -115,12 +117,24 @@ describe('CirclePickerPage empty state (A2)', () => {
       expect(screen.queryByRole('heading', { name: 'Maria' })).not.toBeInTheDocument();
     });
 
-    it('"Start a care circle" opens the create modal', async () => {
+    it('"Start a care circle" asks the one first-run question (first run v2), not the create form', async () => {
       const user = userEvent.setup();
       mockGetCircles.mockResolvedValue([]);
       renderPicker();
       await user.click(await screen.findByRole('button', { name: 'Start a care circle' }));
-      expect(await screen.findByRole('heading', { name: 'New care circle' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Who are you caring for?' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'New care circle' })).not.toBeInTheDocument();
+    });
+
+    it('NEGATIVE: an invited person (pending invite) never gets the question or an automatic circle, and the stored name is deleted', async () => {
+      setFirstRunDraft({ recipientName: 'Rosa', isSelfCare: false });
+      mockGetCircles.mockResolvedValue([]);
+      mockGetPendingInvites.mockResolvedValue([invite]);
+      renderPicker();
+      expect(await screen.findByText('You have 1 pending invitation')).toBeInTheDocument();
+      expect(screen.queryByTestId('first-run-circle-moment')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('first-run-who')).not.toBeInTheDocument();
+      await waitFor(() => expect(peekFirstRunDraft()).toBeNull());
     });
 
     it('"I have an invite code" opens the join modal', async () => {

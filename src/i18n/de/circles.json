@@ -107,21 +107,11 @@
     "dobFormat": "Bitte wählen Sie ein gültiges Geburtsdatum aus.",
     "dobInvalidDate": "Dieses Geburtsdatum ist kein gültiges Kalenderdatum."
   },
-  "quickWin": {
-    "title": "Kreis erstellt",
-    "skipForNow": "Vorerst überspringen"
-  },
   "firstRun": {
     "steps": {
       "what": "Name",
       "when": "Zeit",
       "repeat": "Wiederholung"
-    },
-    "choose": {
-      "primary": "Erstes Medikament für {{name}} hinzufügen",
-      "primarySelf": "Ihr erstes Medikament hinzufügen",
-      "promise": "Etwa eine Minute. Alle, die helfen, sehen es, mit einer Erinnerung zur richtigen Zeit.",
-      "promiseSelf": "Etwa eine Minute. Sie sehen es hier, mit einer Erinnerung zur richtigen Zeit."
     },
     "inviteNext": {
       "notNow": "Nicht jetzt"
@@ -150,19 +140,12 @@
     "ready": {
       "title": "Der Kreis von {{name}} ist bereit.",
       "titleSelf": "Ihr Kreis ist bereit.",
-      "lede": "Beginnen Sie mit dem, was Sie am häufigsten nachsehen.",
       "ledeSelf": "Fügen Sie Ihr erstes Medikament hinzu. Das ist die Erinnerung, die Ihr ganzer Kreis teilt.",
       "toggleShow": "Keine Medikamente zu erfassen? Weitere Optionen",
       "toggleHide": "Ausblenden",
-      "appointmentTitle": "Ein Termin",
       "appointmentHelper": "Arztbesuche in einem Kalender, den die Familie sieht.",
-      "inviteTitle": "Jemand, der hilft",
       "inviteHelper": "Teilen Sie die Last, damit nicht alles an Ihnen hängt.",
-      "emergencyTitle": "Notfallinformationen",
-      "emergencyHelper": "Allergien und Ärzte, griffbereit, wenn es darauf ankommt.",
-      "eyebrow": "KREIS VON {{name}}",
-      "eyebrowSelf": "IHR KREIS",
-      "orStartWith": "ODER BEGINNEN MIT"
+      "emergencyHelper": "Allergien und Ärzte, griffbereit, wenn es darauf ankommt."
     },
     "whatLede": "Der Name genügt. Details können warten.",
     "addDosage": "+ Dosierung hinzufügen",
@@ -179,8 +162,6 @@
       "titleMulti": "Die Erinnerungen für {{name}} sind eingerichtet.",
       "titleSelf": "Ihre Erinnerung um {{time}} ist eingerichtet.",
       "titleMultiSelf": "Ihre Erinnerungen sind eingerichtet.",
-      "line": "Sobald jemand auf Eingenommen tippt, sieht es der ganze Kreis. Keine Gruppennachrichten, kein Raten.",
-      "lineSelf": "Wenn Sie auf Eingenommen tippen, sehen es auch alle, die Sie einladen.",
       "inviteHeading": "Wer ist meistens bei {{name}}?",
       "inviteHeadingSelf": "Wer unterstützt Sie?",
       "invite": "Jemanden einladen",
@@ -190,10 +171,30 @@
       "startsTomorrow": "beginnt morgen",
       "startsOn": "beginnt am {{date}}"
     },
-    "markIt": {
-      "question": "Heute schon gegeben?",
-      "action": "Abhaken",
-      "done": "Als eingenommen markiert."
+    "who": {
+      "sub": "Der Name genügt, um den Betreuungskreis zu starten.",
+      "label": "Name oder wie Sie die Person nennen",
+      "preview": "Kreis von {{name}}",
+      "previewSub": "Privat. Nur Personen, die Sie einladen, sehen ihn.",
+      "forMe": "Es ist für mich",
+      "itemType": "Was zuerst hinzufügen",
+      "progress": "Schritt {{current}} von {{total}}"
+    },
+    "allSet": {
+      "titleAppt": "Der Termin für {{name}} ist gespeichert.",
+      "titleApptSelf": "Ihr Termin ist gespeichert.",
+      "titleTask": "Die Aufgabe für {{name}} ist gespeichert.",
+      "titleTaskSelf": "Ihre Aufgabe ist gespeichert.",
+      "circle": "Kreis von {{name}}",
+      "circleSelf": "Ihr Kreis",
+      "circleSub": "Bisher nur Sie",
+      "seatWaiting": "Einladungslink geteilt. Warten, bis die Person beitritt.",
+      "remindersWebTitle": "Erinnerungen kommen auf Ihr Handy",
+      "remindersWebSubTime": "In der CircleCare-App, um {{time}}",
+      "remindersWebSub": "In der CircleCare-App",
+      "optional": "Optional",
+      "inviteFree": "Ihr kostenloser Plan umfasst eine betreuende Person.",
+      "copyInviteLink": "Einladungslink kopieren"
     }
   },
   "accessLost": {

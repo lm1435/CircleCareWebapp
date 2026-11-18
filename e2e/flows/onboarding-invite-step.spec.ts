@@ -3,6 +3,7 @@ import { test, expect } from '../fixtures';
 import { dbQuery, sqlStr } from '../unhappy';
 import { createAccount, runScopedEmail, ACCOUNT_PASSWORD } from '../isolation';
 import { cookieLogin, stubJson, uniq } from '../unhappy/auth-invites/_helpers';
+import { startFirstCircle } from '../firstRunV2';
 
 // 1.4.2 REWRITE (file name kept): the setup invite step is gone from first run; the invite question
 // is Today's next-step card. Against the real backend: a FREE owner's first circle -> first med ->
@@ -15,7 +16,8 @@ import { cookieLogin, stubJson, uniq } from '../unhappy/auth-invites/_helpers';
 
 const SEEN_KEY = 'cc:onboardingPaywallSeen';
 
-const wizard = (page: Page) => page.getByRole('dialog', { name: 'Circle created' });
+/** First run v2: the All set dialog (its hidden title is the eyebrow). */
+const wizard = (page: Page) => page.getByRole('dialog', { name: 'ALL SET' });
 
 function trackPaths(page: Page): string[] {
   const seen: string[] = [];
@@ -26,10 +28,6 @@ function trackPaths(page: Page): string[] {
 }
 
 async function createFirstCircle(page: Page, recipient: string): Promise<string> {
-  await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
-  const modal = page.getByRole('dialog');
-  await modal.locator('#recipient_name').fill(recipient);
   const circleLoaded = page.waitForResponse(
     (r) =>
       r.request().method() === 'GET' &&
@@ -37,20 +35,17 @@ async function createFirstCircle(page: Page, recipient: string): Promise<string>
       r.ok(),
     { timeout: 30_000 }
   );
-  await modal.getByRole('button', { name: 'Create circle' }).click();
-  await page.waitForURL(/\/circles\/[0-9a-f-]{36}$/, { timeout: 30_000 });
-  await expect(wizard(page)).toBeVisible({ timeout: 20_000 });
+  const circleId = await startFirstCircle(page, recipient);
   await circleLoaded;
-  return /\/circles\/([0-9a-f-]{36})/.exec(page.url())![1];
+  return circleId;
 }
 
+/** First run v2: the first-item form opens on Medication with 8:00 AM Morning picked. */
 async function saveFirstMed(page: Page): Promise<void> {
-  await page.getByTestId('first-run-primary').click();
   const form = page.getByRole('dialog').last();
   await form.getByLabel(/Medication name/i).fill('Lisinopril');
-  await form.getByRole('checkbox', { name: /Morning/ }).click();
   await form.getByRole('button', { name: 'Add medication' }).click();
-  await expect(wizard(page).getByText('ALL SET')).toBeVisible({ timeout: 20_000 });
+  await expect(wizard(page).getByTestId('first-run-all-set')).toBeVisible({ timeout: 20_000 });
 }
 
 function invites(circleId: string): { invited_email: string; member_type: string }[] {
@@ -59,10 +54,10 @@ function invites(circleId: string): { invited_email: string; member_type: string
   );
 }
 
-test.describe('first run has no invite step; Today next-step card sends the invite (web)', () => {
+test.describe('first run v2: the invite on All set is OPTIONAL; Today next-step card still sends the invite (web)', () => {
   test.setTimeout(150_000);
 
-  test('negative: first run never shows an invite step; positive: the Today invite card sends one invite', async ({
+  test('negative: Go to Today without sharing creates no invite; positive: the Today invite card sends one invite', async ({
     page,
     context,
     baseURL,
@@ -75,13 +70,12 @@ test.describe('first run has no invite step; Today next-step card sends the invi
     const circleId = await createFirstCircle(page, uniq('ObInv'));
     await saveFirstMed(page);
 
-    // NEGATIVE: Continue ends first run. No invite step, in any of its old forms.
-    await wizard(page).getByRole('button', { name: 'Continue', exact: true }).click();
-    await expect(wizard(page).getByRole('heading', { name: 'Invite someone to help' })).toHaveCount(0);
-    await expect(page.getByTestId('first-run-invite-step')).toHaveCount(0);
-    await expect(page.getByTestId('first-run-invite-free-line')).toHaveCount(0);
-    await expect(page.getByTestId('first-run-invite-send')).toHaveCount(0);
-    await expect(page.getByText('Your free plan includes one person.')).toHaveCount(0);
+    // All set offers the invite under "Optional"; nothing is created until it is pressed.
+    await expect(wizard(page).getByText('Optional', { exact: true })).toBeVisible();
+    await expect(wizard(page).getByText('Your free plan includes one caregiver.', { exact: false })).toBeVisible();
+    expect(invites(circleId), 'opening All set holds no seat').toEqual([]);
+    // NEGATIVE: Go to Today without sharing creates no invite.
+    await wizard(page).getByTestId('first-run-go-to-today').click();
 
     // The onboarding paywall, once; "Continue with free plan" -> Today.
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
@@ -91,6 +85,7 @@ test.describe('first run has no invite step; Today next-step card sends the invi
     await page.getByRole('button', { name: /Continue with free plan/ }).click();
     await page.waitForURL(new RegExp(`/circles/${circleId}$`), { timeout: 30_000 });
     await expect(wizard(page)).toHaveCount(0);
+    expect(invites(circleId)).toEqual([]);
 
     // POSITIVE: Today's next-step card asks the invite question (the first med is done).
     const card = page.getByTestId('next-step-card');

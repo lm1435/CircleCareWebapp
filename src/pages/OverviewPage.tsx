@@ -152,12 +152,12 @@ export default function OverviewPage(): ReactElement {
       clearOnboardingPaywallPending();
       return;
     }
-    if (consumeOnboardingPaywall({ circleId, recipientName })) {
+    if (consumeOnboardingPaywall({ circleId })) {
       navigate('/upgrade', {
         state: { paywallContext: 'onboarding', paywallTrigger: 'onboarding' },
       });
     }
-  }, [firstRun, showAddMed, circleId, subscription, recipientName, navigate]);
+  }, [firstRun, showAddMed, circleId, subscription, navigate]);
 
   const nextUp = useNextUp(circleId, timezone);
   // One filled action per region (owner 2026-11-08): when Next up shows a filled Taken / Done, the coaching card's

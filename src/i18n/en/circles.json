@@ -107,21 +107,11 @@
     "dobFormat": "Please choose a valid date of birth.",
     "dobInvalidDate": "That date of birth isn't a real calendar date."
   },
-  "quickWin": {
-    "title": "Circle created",
-    "skipForNow": "Skip for now"
-  },
   "firstRun": {
     "steps": {
       "what": "Name",
       "when": "Time",
       "repeat": "Repeat"
-    },
-    "choose": {
-      "primary": "Add {{name}}'s first med",
-      "primarySelf": "Add your first med",
-      "promise": "About a minute. Everyone helping sees it, with a reminder when it's time.",
-      "promiseSelf": "About a minute. You'll see it here, with a reminder when it's time."
     },
     "inviteNext": {
       "notNow": "Not now"
@@ -150,19 +140,12 @@
     "ready": {
       "title": "{{name}}'s circle is ready.",
       "titleSelf": "Your circle is ready.",
-      "lede": "Start with the thing you'll check most.",
       "ledeSelf": "Add your first medication. That's the reminder everyone in your circle will share.",
       "toggleShow": "No medications to track? See what else",
       "toggleHide": "Hide",
-      "appointmentTitle": "An appointment",
       "appointmentHelper": "Doctor visits on one calendar the family sees.",
-      "inviteTitle": "Someone to help",
       "inviteHelper": "Share the load, so it isn't all on you.",
-      "emergencyTitle": "Emergency info",
-      "emergencyHelper": "Allergies and doctors, ready when it matters.",
-      "eyebrow": "{{name}}'S CIRCLE",
-      "eyebrowSelf": "YOUR CIRCLE",
-      "orStartWith": "OR START WITH"
+      "emergencyHelper": "Allergies and doctors, ready when it matters."
     },
     "whatLede": "Just the name is enough. Details can wait.",
     "addDosage": "+ Add dosage",
@@ -179,8 +162,6 @@
       "titleMulti": "{{name}}'s reminders are set.",
       "titleSelf": "Your {{time}} reminder is set.",
       "titleMultiSelf": "Your reminders are set.",
-      "line": "When someone taps Taken, everyone in the circle sees it. No group texts, no guessing.",
-      "lineSelf": "When you tap Taken, anyone you invite sees it too.",
       "inviteHeading": "Who's usually there with {{name}}?",
       "inviteHeadingSelf": "Who helps you out?",
       "invite": "Invite someone",
@@ -190,10 +171,30 @@
       "startsTomorrow": "starts tomorrow",
       "startsOn": "starts {{date}}"
     },
-    "markIt": {
-      "question": "Already given today?",
-      "action": "Mark it",
-      "done": "Marked as taken."
+    "who": {
+      "sub": "Their name is all we need to start their care circle.",
+      "label": "Their name or what you call them",
+      "preview": "{{name}}'s circle",
+      "previewSub": "Private. Only people you invite can see it.",
+      "forMe": "It's for me",
+      "itemType": "What to add first",
+      "progress": "Step {{current}} of {{total}}"
+    },
+    "allSet": {
+      "titleAppt": "{{name}}'s appointment is saved.",
+      "titleApptSelf": "Your appointment is saved.",
+      "titleTask": "{{name}}'s task is saved.",
+      "titleTaskSelf": "Your task is saved.",
+      "circle": "{{name}}'s circle",
+      "circleSelf": "Your circle",
+      "circleSub": "Just you so far",
+      "seatWaiting": "Invite link shared. Waiting for them to join.",
+      "remindersWebTitle": "Reminders arrive on your phone",
+      "remindersWebSubTime": "In the CircleCare app, at {{time}}",
+      "remindersWebSub": "In the CircleCare app",
+      "optional": "Optional",
+      "inviteFree": "Your free plan includes one caregiver.",
+      "copyInviteLink": "Copy invite link"
     }
   },
   "accessLost": {

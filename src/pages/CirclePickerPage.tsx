@@ -18,6 +18,18 @@ import { PendingInvitesBanner } from '@/components/circles/PendingInvitesBanner'
 import { CreateCircleModal } from '@/components/circles/CreateCircleModal';
 import { JoinCircleModal } from '@/components/circles/JoinCircleModal';
 import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBanner';
+import { CircleButton } from '@/components/ui';
+import { FirstRunWhoStep } from '@/components/circles/firstRun/FirstRunWhoStep';
+import { FirstRunCircleMoment } from '@/components/circles/firstRun/FirstRunCircleMoment';
+import { FlowProgress } from '@/components/circles/firstRun/FlowProgress';
+import {
+  clearFirstRun,
+  isFirstRunStarted,
+  peekFirstRunDraft,
+  type FirstRunDraft,
+} from '@/lib/firstRunDraft';
+import { firstRunFunnel } from '@/lib/firstRunFunnel';
+import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 
 /** Time-of-day greeting key (mirrors mobile's getGreeting). */
 function greetingKey(): 'morning' | 'afternoon' | 'evening' {
@@ -107,6 +119,8 @@ export default function CirclePickerPage(): ReactElement {
   // Mirrors mobile's `hasAutoNavigated` ref (CircleListScreen.tsx) — fires
   // exactly once per mount, not on every circles refetch.
   const autoSkippedRef = useRef(false);
+  /** First run v2: set once the circle starts forming (see `computedFirstRunMode` below). */
+  const momentLatchRef = useRef<FirstRunDraft | null>(null);
 
   /**
    * THE BROWSER-BACK ESCAPE HATCH for the onboarding paywall.
@@ -148,6 +162,11 @@ export default function CirclePickerPage(): ReactElement {
    */
   useEffect(() => {
     if (autoSkippedRef.current || deferredHandledRef.current) return;
+    // The circle moment owns the navigation to the new circle (with the first-run state).
+    if (momentLatchRef.current) {
+      autoSkippedRef.current = true;
+      return;
+    }
     if (isPending || isError) return;
     // A CREATE/JOIN STARTED HERE OWNS THE NAVIGATION — for the rest of this
     // mount, not just while its modal is open. Creating the first circle
@@ -174,19 +193,54 @@ export default function CirclePickerPage(): ReactElement {
   // loaded. It brings its own greeting eyebrow and h1, so the page header below
   // steps aside for it.
   const isEmpty = !isPending && !isError && (!circles || circles.length === 0);
-  const { data: pendingInvites } = usePendingInvites();
+  const { data: pendingInvites, isPending: invitesPending } = usePendingInvites();
   const hasPendingInvite = (pendingInvites?.length ?? 0) > 0;
+
+  /**
+   * FIRST RUN v2 (1.4.3): an owner with NO circle and NO invite waiting goes through the one
+   * question and the automatic create, not the Create circle form:
+   *   - a "Who are you caring for?" answer in memory (asked on /signup)  -> the circle forms
+   *   - a first run started in this tab but the answer was lost (the Apple / Google redirect
+   *     reloads the page; web keeps the name in memory only)            -> ask again
+   *   - "Start a care circle" on the empty state                        -> ask
+   * Someone with a pending invite (or a parked invite code) never sees the question, and any stored
+   * answer is deleted. Nothing is decided until the invites have answered, so an invitee is never
+   * given a circle by the automatic create. The header's Create circle (a second circle) keeps the form.
+   */
+  const invitedHere = hasPendingInvite || peekPendingInviteCode() !== null;
+  const [firstRunDraft, setFirstRunDraft] = useState<FirstRunDraft | null>(() => peekFirstRunDraft());
+  const [askWho, setAskWho] = useState(false);
+  useEffect(() => {
+    if (isEmpty && !invitesPending && invitedHere) clearFirstRun();
+  }, [isEmpty, invitesPending, invitedHere]);
+  const computedFirstRunMode: 'none' | 'wait' | 'moment' | 'who' =
+    !isEmpty || invitedHere
+      ? 'none'
+      : invitesPending && (firstRunDraft || askWho || isFirstRunStarted())
+        ? 'wait'
+        : firstRunDraft
+          ? 'moment'
+          : askWho || isFirstRunStarted()
+            ? 'who'
+            : 'none';
+  // LATCHED once the circle starts forming: the create invalidates the list, which then holds ONE
+  // circle, and neither the empty-state branch nor the single-circle auto-skip may take over while
+  // the moment finishes and hands the new circle (with its first-run state) to Today.
+  if (computedFirstRunMode === 'moment' && firstRunDraft) momentLatchRef.current = firstRunDraft;
+  const firstRunMode = momentLatchRef.current ? 'moment' : computedFirstRunMode;
   // empty_state_viewed: once per page view (per mount), mobile parity.
   const emptyViewedRef = useRef(false);
   useEffect(() => {
-    if (!isEmpty || emptyViewedRef.current) return;
+    if (!isEmpty || firstRunMode !== 'none' || emptyViewedRef.current) return;
     emptyViewedRef.current = true;
     Analytics.emptyStateViewed('a2', hasPendingInvite);
   }, [isEmpty, hasPendingInvite]);
   const greeting = t(`picker.greeting.${greetingKey()}`);
 
   let content: ReactElement;
-  if (isPending) {
+  if (momentLatchRef.current) {
+    content = <FirstRunCircleMoment draft={momentLatchRef.current} />;
+  } else if (isPending) {
     content = (
       <ul
         aria-busy="true"
@@ -210,6 +264,34 @@ export default function CirclePickerPage(): ReactElement {
         </Button>
       </Card>
     );
+  } else if (firstRunMode === 'wait') {
+    content = <div className="min-h-[60vh]" aria-busy="true" />;
+  } else if (firstRunMode === 'moment' && momentLatchRef.current) {
+    content = <FirstRunCircleMoment draft={momentLatchRef.current} />;
+  } else if (firstRunMode === 'who') {
+    content = (
+      <div className="mx-auto w-full max-w-[480px] pt-2 md:pt-8">
+        <div className="mb-6 flex items-center justify-between">
+          {askWho ? (
+            <CircleButton
+              name="arrow-back"
+              label={t('common:nav.back')}
+              shadow={false}
+              onClick={() => {
+                firstRunFunnel.back('who');
+                setAskWho(false);
+                clearFirstRun();
+              }}
+            />
+          ) : (
+            <div className="w-11" aria-hidden="true" />
+          )}
+          <FlowProgress current={1} />
+          <div className="w-11" aria-hidden="true" />
+        </div>
+        <FirstRunWhoStep entry="web" onDone={() => setFirstRunDraft(peekFirstRunDraft())} />
+      </div>
+    );
   } else if (!circles || circles.length === 0) {
     content = (
       // "Start a care circle" (moss) and "I have an invite code" (outline), the
@@ -218,7 +300,7 @@ export default function CirclePickerPage(): ReactElement {
         greeting={firstName ? `${greeting}, ${firstName}` : greeting}
         firstName={firstName || undefined}
         action={
-          <Button size="lg" onClick={() => setShowCreate(true)} offlineKind="change">
+          <Button size="lg" onClick={() => setAskWho(true)} offlineKind="change">
             {t('picker.empty.start')}
           </Button>
         }
@@ -253,7 +335,7 @@ export default function CirclePickerPage(): ReactElement {
   return (
     <section className={`mx-auto w-full p-6 md:p-8 ${isEmpty ? 'max-w-[1120px] md:px-12' : 'max-w-[900px]'}`}>
       <NeedsCircleSelectionBanner />
-      {!isEmpty && (
+      {!isEmpty && !momentLatchRef.current && (
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           {firstName && (

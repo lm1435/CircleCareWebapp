@@ -11,6 +11,7 @@ import { resetAnalytics } from '@/lib/posthog';
 import { flushAnalyticsConsentSync } from '@/lib/analyticsConsentSync';
 import { reconcileAnalyticsConsentOwner } from '@/lib/analyticsConsent';
 import { identifyAfterServerReconcile } from '@/lib/analyticsConsentServerReconcile';
+import { clearFirstRun } from '@/lib/firstRunDraft';
 import { clearPendingInviteCode } from '@/lib/pendingInviteCode';
 import { clearDailyUpdateStorage } from '@/lib/dailyUpdateStorage';
 import { Analytics } from '@/lib/analytics';
@@ -164,6 +165,9 @@ function clearLocalSession(): void {
   // callback pages PEEK the code and forward to /invite/:code, which consumes
   // it on any authenticated arrival).
   clearPendingInviteCode();
+  // First run v2: the "Who are you caring for?" answer (memory) and its started marker belong to
+  // this session; the next account in this tab must never inherit someone else's recipient name.
+  clearFirstRun();
   // BH-024: a care note parked after a failed post (memory only) belongs to this session's user;
   // the next account in this tab must never get it back.
   clearParkedNoteDrafts();

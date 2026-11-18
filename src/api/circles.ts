@@ -186,8 +186,18 @@ export type CreateCircleRequest = z.infer<typeof createCircleSchema>;
  * in `{ success, data: { circle } }`; the apiClient interceptor unwraps axios'
  * `response.data` to that envelope.
  */
-export async function createCircle(data: CreateCircleRequest): Promise<Circle> {
-  const response = (await apiClient.post('/circles', data)) as unknown as {
+export async function createCircle(
+  data: CreateCircleRequest,
+  opts: { idempotencyKey?: string } = {}
+): Promise<Circle> {
+  // First run v2 (1.4.3): the AUTOMATIC create sends an `Idempotency-Key` (16-128 of [A-Za-z0-9_-],
+  // backend/src/routes/circles.ts): a replay with the same key answers 200 with the SAME circle.
+  // The Create circle form sends none (unchanged).
+  const response = (await apiClient.post(
+    '/circles',
+    data,
+    opts.idempotencyKey ? { headers: { 'Idempotency-Key': opts.idempotencyKey } } : undefined
+  )) as unknown as {
     success: boolean;
     data: { circle: Circle };
   };

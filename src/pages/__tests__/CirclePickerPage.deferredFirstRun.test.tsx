@@ -76,7 +76,7 @@ beforeEach(() => {
 
 describe('CirclePickerPage — deferred first run', () => {
   it('delivers the parked paywall return target to the circle Today', async () => {
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
 
     renderPicker();
 
@@ -86,7 +86,7 @@ describe('CirclePickerPage — deferred first run', () => {
   });
 
   it('CONSUMES the record, so returning to the picker later does not re-open it', async () => {
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
 
     renderPicker();
     await screen.findByTestId('today');
@@ -103,7 +103,7 @@ describe('CirclePickerPage — deferred first run', () => {
   });
 
   it('ignores another account deferral on a shared browser', async () => {
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
     useAuthStore.setState({
       user: { id: 'user-2', email: 'other@example.com' } as never,
       isAuthenticated: true,
@@ -125,7 +125,7 @@ describe('CirclePickerPage — deferred first run', () => {
   // fixture in the OTHER auto-skip tests (CirclePickerPage.test.tsx) can
   // never exercise, since none of them ever also park a deferred record.
   it('the deferred wizard wins the single-circle auto-skip race — no bare replace fires', async () => {
-    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    deferFirstRun({ circleId: 'circle-9' });
     mockGetCircles.mockResolvedValue([
       {
         id: 'circle-9',

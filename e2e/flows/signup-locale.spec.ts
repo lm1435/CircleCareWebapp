@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { answerFirstRunQuestion } from '../firstRunV2';
 import { test, expect } from '../fixtures';
 
 // SIGNUP LANGUAGE follows the browser locale through the locale registry.
@@ -50,12 +51,13 @@ async function captureSignup(page: Page): Promise<() => Captured | null> {
 
 async function submitSignup(page: Page): Promise<void> {
   await page.goto('/signup', { waitUntil: 'domcontentloaded' });
+  // First run v2: the account form is step 2, after the one question.
+  await answerFirstRunQuestion(page);
   await expect(page.locator('#first_name')).toBeVisible({ timeout: 20_000 });
   await page.locator('#first_name').fill('Ada');
   await page.locator('#last_name').fill('Lang');
   await page.locator('#email').fill('locale-check@example.com');
   await page.locator('#password').fill(PASSWORD);
-  await page.locator('#confirmPassword').fill(PASSWORD);
   const terms = page.locator('#termsAccepted');
   await terms.check({ force: true });
   await expect(terms).toBeChecked();

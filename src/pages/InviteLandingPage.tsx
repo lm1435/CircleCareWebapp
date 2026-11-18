@@ -22,6 +22,7 @@ import { useOpenJoinedCircle } from '@/hooks/useOpenJoinedCircle';
 import type { AcceptInviteResponse } from '@/api/invites';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { consumePendingInviteCode, setPendingInviteCode } from '@/lib/pendingInviteCode';
+import { setFirstRunPath } from '@/lib/firstRunFunnel';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
 import { failureContext } from '@/lib/apiErrors';
@@ -331,6 +332,7 @@ export default function InviteLandingPage(): ReactElement {
   // that did not exist, got "Invalid email or password", and never came back.
   const handleCreateAccount = useCallback(() => {
     setPendingInviteCode(displayCode);
+    setFirstRunPath('invited');
     navigate('/signup', { state: { from: { pathname: `/invite/${displayCode}` } } });
   }, [navigate, displayCode]);
 
@@ -341,6 +343,7 @@ export default function InviteLandingPage(): ReactElement {
   // full-page redirect, login → signup → verify-email).
   const handleSignIn = useCallback(() => {
     setPendingInviteCode(displayCode);
+    setFirstRunPath('invited');
     navigate('/login', { state: { from: { pathname: `/invite/${displayCode}` } } });
   }, [navigate, displayCode]);
 

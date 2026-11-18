@@ -664,6 +664,90 @@
     }
   }
 
+  /*
+   * First run v2 (1.4.3, docs/mocks-144/first-run-v2/motion.md). Transform, opacity and SVG stroke
+   * offset only. The global prefers-reduced-motion block collapses every duration, and the explicit
+   * block below drops the animations outright, so the END frame is what renders.
+   *   cc-fr-rise    M1 preview row / M5 All set rows: rise 8px + fade, 250ms
+   *   cc-fr-pop     M2 owner dot / M5 checks: scale 0.6 -> 1 on a pop curve
+   *   cc-fr-ring    M2 the moss ring draws to 85% and HOLDS until POST /circles answers
+   *                 ([data-closed] closes it in 250ms; [data-failed] unwinds it in 300ms)
+   *   cc-fr-segment M1 progress segment fill, 400ms
+   */
+  @keyframes cc-fr-rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes cc-fr-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes cc-fr-ring-draw {
+    from {
+      stroke-dashoffset: var(--cc-ring-c);
+    }
+    to {
+      stroke-dashoffset: var(--cc-ring-hold);
+    }
+  }
+
+  .cc-fr-rise {
+    animation: cc-fr-rise 250ms cubic-bezier(0.33, 1, 0.68, 1) both;
+  }
+
+  .cc-fr-pop {
+    animation: cc-fr-pop 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .cc-fr-ring {
+    stroke-dashoffset: var(--cc-ring-hold);
+    animation: cc-fr-ring-draw 600ms cubic-bezier(0.65, 0, 0.35, 1) both;
+    transition: stroke-dashoffset 250ms cubic-bezier(0.33, 1, 0.68, 1);
+  }
+
+  .cc-fr-ring[data-closed='true'] {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+
+  .cc-fr-ring[data-failed='true'] {
+    stroke-dashoffset: var(--cc-ring-c);
+    animation: none;
+    transition-duration: 300ms;
+  }
+
+  .cc-fr-segment {
+    transform-origin: left center;
+    transition: transform 400ms cubic-bezier(0.33, 1, 0.68, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cc-fr-rise,
+    .cc-fr-pop,
+    .cc-fr-ring {
+      animation: none;
+    }
+
+    .cc-fr-ring,
+    .cc-fr-segment {
+      transition: none;
+    }
+  }
+
   /* AddMenu option pop (mobile's staggered zoom). */
   @keyframes zoom-in {
     from {

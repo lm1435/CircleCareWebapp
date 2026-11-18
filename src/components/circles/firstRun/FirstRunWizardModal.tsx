@@ -1,51 +1,38 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AddEventModal } from '@/components/calendar/AddEventModal';
-import { InviteMemberModal } from '@/components/members/InviteMemberModal';
-import { Button, Modal } from '@/components/ui';
+import { AddEventModal, type FirstRunSavedItem } from '@/components/calendar/AddEventModal';
+import { Button, Icon, Modal, useToast } from '@/components/ui';
 import { useCircle } from '@/hooks/useCircle';
 import { useHourCycle } from '@/hooks/useHourCycle';
-import { useMarkFirstDose } from '@/hooks/useMarkFirstDose';
+import { useCreateInvite } from '@/hooks/useInvites';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useAuthStore } from '@/store/authStore';
-import { getCircleOwnerName, viewerCanSuggestManager } from '@/lib/premiumOwnership';
 import { Analytics } from '@/lib/analytics';
-import {
-  consumeOnboardingPaywall,
-  peekOnboardingPaywallPending,
-} from '@/lib/onboardingPaywall';
-import { markItEligible, type SavedMedicationInfo } from '@/utils/firstMedSaved';
-import {
-  firstRunActionRoute,
-  type FirstRunAction,
-  type FirstRunModal,
-} from './firstRunActionRoute';
-import { ChooseActionStep, FirstMedPayoffStep } from './steps';
+import { firstRunFunnel } from '@/lib/firstRunFunnel';
+import { consumeOnboardingPaywall, peekOnboardingPaywallPending } from '@/lib/onboardingPaywall';
+import { withInviteLocale } from '@/utils/inviteShareUrl';
+import { AllSetStep } from './AllSetStep';
 
 /**
- * The post-create first run (onboarding 1.3.1): Setup (1), then the ONE simple medication
- * form in first-run mode, then the payoff.
+ * The post-create first run, v2 (1.4.3, docs/mocks-144/first-run-v2/plan.md):
  *
- * PORT of `mobile/src/screens/onboarding/FirstRunWizardScreen.tsx`, minus the three question
- * steps: name / when / repeat are the real simple form (AddEventModal `firstRun`), so the
- * payload, timezone handling and validation are THAT form's, not a copy's.
+ *   first item  the REAL add form (AddEventModal) in first-run mode WITH the type switch
+ *               (Medication · Appointment · Task), opening on Medication at 8:00 AM Morning;
+ *               appointment / task open on 9:00 AM (tomorrow once 9:00 has passed)
+ *   All set     the finish line: three rows, the Optional invite block, and two same-size buttons:
+ *               "Share invite link" (browser share sheet) or "Copy invite link" (no share sheet),
+ *               and "Go to Today"
  *
- * MOUNTED OVER TODAY, which is what lets the non-medication hand-offs be in-place modal
- * swaps rather than navigations: nothing is pushed, so nothing can be left behind.
+ * The v1 chooser ("{{name}}'s circle is ready" + quiet rows) and the payoff are gone: the one question
+ * and the circle moment come before (CirclePickerPage). WEB DIFFERENCES: no reminders ask (no push),
+ * no haptics; All set says reminders arrive on the phone.
  *
- * NO INVITE STEP (1.4.2): the payoff is the END of first run. The invite question lives in
- * Today's existing next-step card (no snooze is written here), not in this flow. Setup's
- * "Someone to help" row still opens the invite form in place.
- *
- * PAYWALL TIMING (spec section 7): circle creation only records "owed". After the payoff's
- * Continue the onboarding paywall shows exactly once (then
- * Today). Every other way out
- * (Skip, close, an appointment / someone to help / emergency info, the first-run form closed
- * unsaved) leaves it owed, and Today shows it the next time it is on screen.
+ * MOUNTED OVER TODAY. PAYWALL TIMING unchanged: owed at create, shown once after Go to Today
+ * (first circle, free tier, not seen); every other way out leaves it owed for Today to ask.
  */
 
-type Step = 'choose' | 'payoff';
+type Step = 'item' | 'allSet';
 
 export interface FirstRunWizardModalProps {
   circleId: string;
@@ -60,141 +47,77 @@ export function FirstRunWizardModal({
   circleName,
   onClose,
 }: FirstRunWizardModalProps): ReactElement | null {
-  const { t } = useTranslation(['circles', 'calendar', 'common', 'overview']);
+  const { t, i18n } = useTranslation(['circles', 'members', 'invite', 'common']);
   const navigate = useNavigate();
-  const { circle, canEdit, isOwner } = useCircle(circleId);
-  const currentUserId = useAuthStore((s) => s.user?.id);
+  const { showToast } = useToast();
+  const { circle, canEdit } = useCircle(circleId);
+  const user = useAuthStore((s) => s.user);
   const hourCycle = useHourCycle();
   const { data: subscription } = useSubscriptionStatus();
-  const markFirstDose = useMarkFirstDose(circleId, 'payoff');
+  const createInvite = useCreateInvite(circleId);
 
-  const [step, setStep] = useState<Step>('choose');
-  /** The in-place hand-off currently showing in place of Setup, if any. */
-  const [handoff, setHandoff] = useState<FirstRunModal | null>(null);
-  /** What the first-run form just saved (null = nothing / an as-needed med, no card). */
-  const [saved, setSaved] = useState<SavedMedicationInfo | null>(null);
-  /**
-   * Set by a hand-off's success callback. Its `onClose` then means the hand-off is finished:
-   * after an appointment / invite save the wizard closes with it; after the first med the
-   * payoff shows. Before a save (Cancel, x, Escape) the user picked the wrong card, so
-   * Setup comes back as it was (the first-run form instead counts as a skip).
-   */
-  const handoffSavedRef = useRef(false);
-  const savedRef = useRef<SavedMedicationInfo | null>(null);
-  /**
-   * FOCUS: the current step's heading. Passed to the Modal as `initialFocusRef`, so the
-   * wizard opening, and Setup / the payoff coming back after a hand-off (each a fresh Modal),
-   * focus the heading that names what just happened instead of the x.
-   */
-  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
-  const continueRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (step === 'choose') Analytics.firstRunStepViewed(circleId, 'choose');
-  }, [circleId, step]);
+  const [step, setStep] = useState<Step>('item');
+  const [saved, setSaved] = useState<FirstRunSavedItem | null>(null);
+  const savedRef = useRef<FirstRunSavedItem | null>(null);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [seatFilled, setSeatFilled] = useState(false);
+  const [linkPending, setLinkPending] = useState(false);
+  /** ONE link per All set: a second press reuses it (one seat held), never a second invite. */
+  const linkInFlightRef = useRef<Promise<string | null> | null>(null);
+  const sharedRef = useRef(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
-  /** The first-run form is on screen (once per opening). */
-  useEffect(() => {
-    if (handoff === 'firstMed') Analytics.firstRunStepViewed(circleId, 'first_med');
-  }, [circleId, handoff]);
+  const isSelfCare = circle?.is_self_care === true;
+  const recipientName = circle?.recipient_name || circleName;
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
-  // ── Payoff: viewed and the Mark it line ──────────────
-  const markItOffered = step === 'payoff' && saved !== null && canEdit && markItEligible(saved);
   useEffect(() => {
-    if (step !== 'payoff') return;
-    Analytics.onboardingPayoffViewed();
+    if (step === 'item' && canEdit) {
+      Analytics.firstRunStepViewed(circleId, 'first_med');
+      firstRunFunnel.viewed('first_item', circleId);
+    }
+  }, [circleId, step, canEdit]);
+
+  useEffect(() => {
+    if (step !== 'allSet' || !saved) return;
+    firstRunFunnel.viewed('all_set', circleId);
+    Analytics.firstRunAllSetViewed({
+      circleId,
+      path: isSelfCare ? 'self_care' : 'owner',
+      // Web cannot ask for push: reminders arrive on the phone app, never "on" here.
+      remindersOn: false,
+      firstItemType: saved.type,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
   }, [step]);
-  useEffect(() => {
-    if (markItOffered) Analytics.markItShown('payoff');
-  }, [markItOffered]);
 
-  const handleAction = (action: FirstRunAction): void => {
-    // A hand-off that could not render is CANCELLED, not queued (see the gates below):
-    // clearing here makes an ignored click mean what it looked like it meant.
-    setHandoff(null);
+  const handleItemSaved = (item: FirstRunSavedItem): void => {
+    // The form calls this, then onSaved, then onClose in ONE tick: the close reads the ref.
+    savedRef.current = item;
+    setSaved(item);
+    firstRunFunnel.completed('first_item', circleId);
+  };
 
-    if (action === 'medication') {
-      Analytics.firstRunActionSelected(circleId, 'medication', 'primary');
-      // The funnel's denominator: this is the moment the user starts a medication.
-      Analytics.medicationCreationStarted(circleId, 'wizard');
-      setHandoff('firstMed');
+  /** The first-item form closed: saved -> All set; else it was "Skip for now" / x / Escape. */
+  const handleItemClose = (): void => {
+    if (savedRef.current) {
+      setStep('allSet');
       return;
     }
-
-    // `skip` records a DIFFERENT event, then falls through to the dispatch (it is the only
-    // action mapping to `{ scope: 'close' }`).
-    if (action === 'skip') {
-      Analytics.firstRunSkipped(circleId, 'skip_button');
-    } else {
-      Analytics.firstRunActionSelected(circleId, action, 'secondary');
-    }
-
-    const target = firstRunActionRoute(action, { circleId });
-    switch (target.scope) {
-      case 'modal':
-        setHandoff(target.modal);
-        break;
-      case 'navigate':
-        // NOT onClose(): closing would let Today (still mounted this tick) ask the owed
-        // paywall and win the race against this navigation. The route change unmounts Today
-        // and the wizard with it; the paywall is asked the next time Today shows.
-        navigate(target.to);
-        break;
-      case 'close':
-        onClose();
-        break;
-    }
+    Analytics.firstRunSkipped(circleId, 'close');
+    firstRunFunnel.viewed('today', circleId);
+    onClose();
   };
 
-  const handleHandoffSaved = (): void => {
-    handoffSavedRef.current = true;
-  };
-
-  const handleHandoffClose = (): void => {
-    if (handoffSavedRef.current) {
-      onClose();
-      return;
-    }
-    setHandoff(null);
-  };
-
-  /** The first-run form saved. `info` is undefined for an as-needed medication (no card). */
-  const handleFirstMedSaved = (info?: SavedMedicationInfo): void => {
-    handoffSavedRef.current = true;
-    // The form calls onSaved and onClose in ONE tick, before this state has rendered: the
-    // close callback reads the ref, not the state.
-    savedRef.current = info ?? null;
-    setSaved(info ?? null);
-  };
-
-  /** The first-run form closed: saved -> payoff (or straight on for an as-needed med); else skipped. */
-  const handleFirstMedClose = (): void => {
-    setHandoff(null);
-    if (!handoffSavedRef.current) {
-      // Leaving the form unsaved returns to Today and counts as a skip for the paywall rule.
-      Analytics.firstRunSkipped(circleId, 'close');
-      onClose();
-      return;
-    }
-    if (savedRef.current === null) {
-      afterPayoff();
-      return;
-    }
-    setStep('payoff');
-  };
-  /**
-   * Leave the wizard. When the onboarding paywall is owed (first circle, free, not yet seen)
-   * it shows NOW, exactly once, and Today follows its exits; otherwise straight to Today.
-   * An unknown tier (still loading) fails closed here: it stays owed and Today asks.
-   */
+  /** Leave: the onboarding paywall once if owed (first circle, free), otherwise Today. */
   const finish = (): void => {
+    if (!sharedRef.current) {
+      Analytics.firstRunInviteAction({ circleId, method: 'later', completed: false });
+    }
+    firstRunFunnel.completed('all_set', circleId);
     const owed = peekOnboardingPaywallPending() === circleId;
     if (owed && subscription?.tier === 'free') {
-      if (
-        consumeOnboardingPaywall({
-          circleId,
-          recipientName: circle?.recipient_name || circleName,
-        })
-      ) {
+      if (consumeOnboardingPaywall({ circleId })) {
         onClose();
         navigate('/upgrade', {
           state: { paywallContext: 'onboarding', paywallTrigger: 'after_first_med' },
@@ -202,139 +125,132 @@ export function FirstRunWizardModal({
         return;
       }
     }
+    firstRunFunnel.viewed('today', circleId);
     onClose();
   };
 
-  /** Leaving the payoff (or an as-needed save, which has none): the paywall once if owed, then Today. */
-  const afterPayoff = finish;
+  /** Create the link invite (no email) once, when the button is pressed - never on arrival. */
+  const ensureLink = (): Promise<string | null> => {
+    if (inviteUrl) return Promise.resolve(inviteUrl);
+    if (linkInFlightRef.current) return linkInFlightRef.current;
+    setLinkPending(true);
+    const pending = createInvite
+      .mutateAsync({ member_type: 'caregiver' })
+      .then((created) => {
+        const code = created?.invite?.invite_code;
+        const raw =
+          created?.invite?.invite_url ??
+          (code ? `${window.location.origin}/invite/${encodeURIComponent(code)}` : null);
+        const url = raw ? withInviteLocale(raw, i18n.language) : null;
+        setInviteUrl(url);
+        return url;
+      })
+      .catch(() => null) // the hook already toasts the reason (seat held, offline, ...)
+      .finally(() => {
+        linkInFlightRef.current = null;
+        setLinkPending(false);
+      });
+    linkInFlightRef.current = pending;
+    return pending;
+  };
 
-  /** The modal's x / Escape. On Setup that is a skip; on the payoff it is Continue. */
-  const handleClose = (): void => {
-    if (step === 'payoff') {
-      afterPayoff();
+  const shareText = (url: string): string =>
+    isSelfCare
+      ? t('members:invite.shareMessageSelfCare', { inviteUrl: url })
+      : t('members:invite.shareMessage', { recipientName, inviteUrl: url });
+
+  const markShared = (): void => {
+    sharedRef.current = true;
+    setSeatFilled(true);
+  };
+
+  const handleInvite = async (): Promise<void> => {
+    const url = await ensureLink();
+    if (!url) {
+      Analytics.firstRunInviteAction({ circleId, method: 'share_link', completed: false });
       return;
     }
-    Analytics.firstRunSkipped(circleId, 'close');
-    onClose();
+    if (canShare) {
+      try {
+        await navigator.share({ text: shareText(url) });
+        Analytics.inviteLinkShared(circleId, 'caregiver');
+        markShared();
+        Analytics.firstRunInviteAction({ circleId, method: 'share_link', completed: true });
+      } catch {
+        // Dismissed or refused: the seat does NOT fill. The link stays on screen to copy.
+        Analytics.firstRunInviteAction({ circleId, method: 'share_link', completed: false });
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      Analytics.inviteLinkCopied(circleId, 'caregiver');
+      showToast(t('members:invite.linkCopied'), 'success');
+      markShared();
+      Analytics.firstRunInviteAction({ circleId, method: 'share_link', completed: true });
+    } catch {
+      // Clipboard refused: the link is on screen (read-only field) to copy by hand.
+      showToast(t('members:invite.copyFailed'), 'error');
+      Analytics.firstRunInviteAction({ circleId, method: 'share_link', completed: false });
+    }
   };
 
-  // ── Hand-offs, rendered IN PLACE OF Setup ─────────────────────────────────
-  //
-  // Not alongside: two stacked dialogs would trap focus in the wrong one. GATED, each on the
-  // predicate its destination actually refuses on: the two AddEventModal branches on
-  // `canEdit` (what AddEventModal itself returns null for; false while the circle detail is
-  // still in flight, which is exactly when this wizard mounts), the invite branch on `circle`
-  // (InviteMemberModal has no gate of its own and needs the fields below). Rendering an empty
-  // destination as this component's ENTIRE return would replace Setup with nothing. Falling
-  // through re-renders Setup; the hand-off is not latched while it waits.
-  if (handoff === 'firstMed' && canEdit) {
+  if (step === 'item') {
+    // AddEventModal itself renders nothing until the circle detail says the viewer can edit.
+    if (!canEdit) return null;
     return (
       <AddEventModal
         circleId={circleId}
         initialType="medication"
         firstRun
+        firstRunTypeSwitch
         entry="first_run"
-        onSaved={handleFirstMedSaved}
-        onClose={handleFirstMedClose}
+        onFirstRunItemSaved={handleItemSaved}
+        onClose={handleItemClose}
       />
     );
   }
 
-  if (handoff === 'appointment' && canEdit) {
-    return (
-      <AddEventModal
-        circleId={circleId}
-        initialType="appointment"
-        onSaved={handleHandoffSaved}
-        onClose={handleHandoffClose}
-      />
-    );
-  }
-
-  if (handoff === 'invite' && circle) {
-    return (
-      <InviteMemberModal
-        circleId={circleId}
-        isSelfCare={circle.is_self_care}
-        circleName={circle.name}
-        recipientName={circle.recipient_name}
-        viewerIsOwner={isOwner}
-        ownerName={getCircleOwnerName(circle)}
-        canSuggestManager={viewerCanSuggestManager(circle, currentUserId)}
-        circle={circle}
-        onInvited={handleHandoffSaved}
-        onClose={handleHandoffClose}
-      />
-    );
-  }
-
-  const isPayoff = step === 'payoff' && saved !== null;
+  if (!saved) return null;
 
   return (
     <Modal
-      // One heading per dialog: the per-step heading below is the visible title, so the
-      // modal-level title is hidden (it still names the dialog for assistive tech).
-      title={t('quickWin.title')}
+      title={t('firstRun.payoff.eyebrow')}
       hideTitle
-      onClose={handleClose}
+      onClose={finish}
       closeLabel={t('firstRun.close')}
       size="md"
-      // A stray backdrop click must not dismiss the setup.
       closeOnBackdropClick={false}
-      initialFocusRef={stepHeadingRef}
+      initialFocusRef={headingRef}
       footer={
-        isPayoff ? (
-          <div className="flex justify-end">
-            <Button ref={continueRef} onClick={afterPayoff} data-testid="first-run-continue">
-              {t('firstRun.continue')}
-            </Button>
-          </div>
-        ) : (
-          // DOCUMENTED EXCEPTION to "every footer keeps one filled primary": Setup's one
-          // filled primary ("Add the first med") is in the BODY, directly above the quieter
-          // rows it outranks, and each of them both selects AND advances in one tap. Skip is
-          // the only footer-level action a pure-choice step needs.
-          <div className="flex justify-end">
-            <Button variant="ghost" onClick={() => handleAction('skip')}>
-              {t('quickWin.skipForNow')}
-            </Button>
-          </div>
-        )
+        <div className="flex w-full flex-col gap-3">
+          <Button
+            size="lg"
+            fullWidth
+            offlineKind="save"
+            loading={linkPending}
+            onClick={() => void handleInvite()}
+            leftIcon={<Icon name={canShare ? 'share-outline' : 'copy-outline'} size="row" />}
+            data-testid="first-run-invite-link"
+          >
+            {canShare ? t('members:invite.shareLink') : t('firstRun.allSet.copyInviteLink')}
+          </Button>
+          <Button size="lg" fullWidth variant="secondary" onClick={finish} data-testid="first-run-go-to-today">
+            {t('invite:welcome.goToToday')}
+          </Button>
+        </div>
       }
     >
-      {isPayoff && saved ? (
-        <FirstMedPayoffStep
-          recipientName={circleName}
-          isSelfCare={circle?.is_self_care === true}
-          saved={saved}
-          hourCycle={hourCycle}
-          headingRef={stepHeadingRef}
-          onMarked={() => continueRef.current?.focus()}
-          markIt={
-            markItOffered
-              ? {
-                  pending: markFirstDose.pending,
-                  done: markFirstDose.done,
-                  onMark: () => {
-                    if (saved.eventId) {
-                      void markFirstDose.mark({
-                        eventId: saved.eventId,
-                        time: saved.doses[0].scheduledTime,
-                      });
-                    }
-                  },
-                }
-              : null
-          }
-        />
-      ) : (
-        <ChooseActionStep
-          recipientName={circleName}
-          isSelfCare={circle?.is_self_care === true}
-          onSelect={handleAction}
-          headingRef={stepHeadingRef}
-        />
-      )}
+      <AllSetStep
+        recipientName={recipientName}
+        isSelfCare={isSelfCare}
+        ownerFirstName={user?.first_name ?? undefined}
+        item={saved}
+        hourCycle={hourCycle}
+        seatFilled={seatFilled}
+        inviteUrl={inviteUrl}
+        headingRef={headingRef}
+      />
     </Modal>
   );
 }

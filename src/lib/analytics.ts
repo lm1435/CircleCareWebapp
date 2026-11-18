@@ -13,6 +13,25 @@ import {
   REPLY_ACTION_TYPES,
 } from './aiChatSignals';
 
+/** First run v2 funnel steps, in order (plan.md "Funnel"). */
+export const FIRST_RUN_FUNNEL_STEPS = [
+  'welcome',
+  'who',
+  'account',
+  'code',
+  'circle_created',
+  'first_item',
+  'reminders_ask',
+  'all_set',
+  'today',
+  'join',
+  'invitee_welcome',
+] as const;
+export type FirstRunFunnelStep = (typeof FIRST_RUN_FUNNEL_STEPS)[number];
+export type FirstRunPath = 'email' | 'apple' | 'google' | 'invited';
+export type FirstRunDurationBucket = 'under_10s' | '10_to_30s' | '30_to_60s' | '1_to_3m' | 'over_3m';
+export type FirstRunItemType = 'medication' | 'appointment' | 'task';
+
 /**
  * Typed analytics wrapper for the web companion — mirrors mobile's
  * `Analytics` object (mobile/src/services/analytics.ts) so the SAME event names
@@ -1553,12 +1572,105 @@ export const Analytics = {
 
   firstRunStepViewed: (
     circleId: string | undefined,
-    step: 'choose' | 'what' | 'when' | 'repeat' | 'first_med'
+    step: 'choose' | 'what' | 'when' | 'repeat' | 'first_med' | FirstRunFunnelStep,
+    path?: FirstRunPath
   ) =>
     capture('first_run_step_viewed', {
       ...(circleId ? { circle_id: circleId } : {}),
       step,
+      ...(path ? { path } : {}),
     }),
+
+  // --- First run v2 (1.4.3, docs/mocks-144/first-run-v2/plan.md "Events" + "Funnel") ---
+  // Enums, booleans and counts ONLY. `circle_id` only where noted: the anonymous pipeline
+  // (lib/posthog.ts stripIdentifiersForAnonymous) strips it when the person declined.
+
+  /** A funnel step's forward action succeeded (the server answered, not the tap). */
+  firstRunStepCompleted: (
+    step: FirstRunFunnelStep,
+    durationBucket: FirstRunDurationBucket,
+    path?: FirstRunPath,
+    circleId?: string
+  ) =>
+    capture('first_run_step_completed', {
+      ...(circleId ? { circle_id: circleId } : {}),
+      step,
+      duration_bucket: durationBucket,
+      ...(path ? { path } : {}),
+    }),
+
+  firstRunBackTapped: (step: FirstRunFunnelStep) => capture('first_run_back_tapped', { step }),
+
+  firstRunAbandoned: (lastStep: FirstRunFunnelStep) =>
+    capture('first_run_abandoned', { last_step: lastStep }),
+
+  firstRunRecipientViewed: (entry: 'welcome' | 'web') =>
+    capture('first_run_recipient_viewed', { entry }),
+
+  firstRunRecipientSubmitted: (isSelfCare: boolean) =>
+    capture('first_run_recipient_submitted', { is_self_care: isSelfCare }),
+
+  /** The automatic POST /circles after sign-in. `failureReason` is a closed-set code. */
+  circleAutoCreated: (opts: {
+    circleId?: string;
+    isSelfCare: boolean;
+    success: boolean;
+    failureReason?: string;
+    retried: boolean;
+  }) =>
+    capture('circle_auto_created', {
+      ...(opts.circleId ? { circle_id: opts.circleId } : {}),
+      is_self_care: opts.isSelfCare,
+      success: opts.success,
+      ...(opts.failureReason ? { failure_reason: sanitizeErrorText(opts.failureReason) } : {}),
+      retried: opts.retried,
+    }),
+
+  firstRunCircleMoment: (opts: {
+    circleId?: string;
+    skipped: boolean;
+    durationBucket: 'fast' | 'normal' | 'slow' | 'failed';
+  }) =>
+    capture('first_run_circle_moment', {
+      ...(opts.circleId ? { circle_id: opts.circleId } : {}),
+      skipped: opts.skipped,
+      duration_bucket: opts.durationBucket,
+    }),
+
+  firstRunTypeSwitched: (from: FirstRunItemType, to: FirstRunItemType, circleId?: string) =>
+    capture('first_run_type_switched', {
+      ...(circleId ? { circle_id: circleId } : {}),
+      from,
+      to,
+    }),
+
+  /** Web: `reminders_on` is always false (no push on web; reminders arrive on the phone app). */
+  firstRunAllSetViewed: (opts: {
+    circleId?: string;
+    path: 'owner' | 'self_care';
+    remindersOn: boolean;
+    firstItemType: FirstRunItemType;
+  }) =>
+    capture('first_run_all_set_viewed', {
+      ...(opts.circleId ? { circle_id: opts.circleId } : {}),
+      path: opts.path,
+      reminders_on: opts.remindersOn,
+      first_item_type: opts.firstItemType,
+    }),
+
+  firstRunInviteAction: (opts: {
+    circleId?: string;
+    method: 'share_link' | 'later';
+    completed: boolean;
+  }) =>
+    capture('first_run_invite_action', {
+      ...(opts.circleId ? { circle_id: opts.circleId } : {}),
+      method: opts.method,
+      completed: opts.completed,
+    }),
+
+  /** The code was sent by the sixth digit (no button press); `success` = verified. */
+  otpAutoSubmitted: (success: boolean) => capture('otp_auto_submitted', { success }),
 
   /**
    * Onboarding 1.3.1: `tier` says WHICH Setup (1) control was used, 'primary' =
@@ -1615,6 +1727,10 @@ export const Analytics = {
     recurrence: 'daily' | 'every_other_day' | 'weekly' | 'none' | 'days_of_week' | 'as_needed';
     dosageFilled: boolean;
     doseCount: number;
+    /** First run v2 (1.4.3): which tab was saved, whether the opening time was kept, and whether it has a time. */
+    firstItemType?: FirstRunItemType;
+    timeDefaultKept?: boolean;
+    hasTime?: boolean;
   }) =>
     capture('first_run_medication_saved', {
       ...(opts.circleId ? { circle_id: opts.circleId } : {}),
@@ -1622,6 +1738,9 @@ export const Analytics = {
       recurrence: opts.recurrence,
       dosage_filled: opts.dosageFilled,
       dose_count: opts.doseCount,
+      ...(opts.firstItemType ? { first_item_type: opts.firstItemType } : {}),
+      ...(typeof opts.timeDefaultKept === 'boolean' ? { time_default_kept: opts.timeDefaultKept } : {}),
+      ...(typeof opts.hasTime === 'boolean' ? { has_time: opts.hasTime } : {}),
     }),
 
   onboardingPayoffViewed: () => capture('onboarding_payoff_viewed'),

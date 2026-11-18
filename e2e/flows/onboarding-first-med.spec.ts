@@ -5,6 +5,7 @@ import { createAccount, runScopedEmail, ACCOUNT_PASSWORD } from '../isolation';
 import { sqlExec } from '../db';
 import { refuseZoneSync } from '../helpers';
 import { cookieLogin, stubJson, uniq } from '../unhappy/auth-invites/_helpers';
+import { startFirstCircle } from '../firstRunV2';
 
 // Onboarding 1.3.1 (docs/plans/onboarding-1-3-1.md), the FIRST-MED path end to end against the
 // real backend: owner creates their first circle -> Setup (1) -> the ONE simple form in
@@ -22,7 +23,8 @@ async function freeAccount(prefix: string) {
   return { email, password: ACCOUNT_PASSWORD, userId };
 }
 
-const wizard = (page: Page) => page.getByRole('dialog', { name: 'Circle created' });
+/** First run v2: the All set dialog (its hidden title is the eyebrow). */
+const wizard = (page: Page) => page.getByRole('dialog', { name: 'ALL SET' });
 const offerHeading = (page: Page) => page.getByText('Share the care with everyone who helps.');
 const ls = (page: Page, key: string) => page.evaluate((k) => window.localStorage.getItem(k), key);
 
@@ -34,11 +36,8 @@ function trackPaths(page: Page): string[] {
   return seen;
 }
 
+/** First run v2: Start -> the one question -> the circle forms -> the first-item form is open. */
 async function createFirstCircle(page: Page, recipient: string): Promise<string> {
-  await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
-  const modal = page.getByRole('dialog');
-  await modal.locator('#recipient_name').fill(recipient);
   // The first-run form refuses to save before the circle detail (its timezone) has loaded.
   const circleLoaded = page.waitForResponse(
     (r) =>
@@ -47,11 +46,9 @@ async function createFirstCircle(page: Page, recipient: string): Promise<string>
       r.ok(),
     { timeout: 30_000 }
   );
-  await modal.getByRole('button', { name: 'Create circle' }).click();
-  await page.waitForURL(/\/circles\/[0-9a-f-]{36}$/, { timeout: 30_000 });
-  await expect(wizard(page)).toBeVisible({ timeout: 20_000 });
+  const circleId = await startFirstCircle(page, recipient);
   await circleLoaded;
-  return /\/circles\/([0-9a-f-]{36})/.exec(page.url())![1];
+  return circleId;
 }
 
 /** Fill the simple form's name and a PAST time (00:01 in the recipient's day) via "Other time". */
@@ -92,11 +89,10 @@ test.describe('onboarding first med: the schedule means the circle clock (BC-8)'
     sqlExec(`update users set timezone = ${sqlStr('America/Denver')} where id = ${sqlStr(a.userId)}::uuid;`);
     await cookieLogin(context, a, baseURL);
     const circleId = await createFirstCircle(page, uniq('ObTz'));
-    await page.getByTestId('first-run-primary').click();
     const form = page.getByRole('dialog').last();
     await form.getByLabel(/Medication name/i).fill('Metformin');
+    // First run v2: Morning (the circle's 8:00 AM) is already picked.
     const morning = form.getByRole('checkbox', { name: /Morning$/ });
-    await morning.click();
     await expect(morning).toBeChecked();
     await form.getByRole('button', { name: 'Add medication' }).click();
     await expect(wizard(page).getByText('ALL SET')).toBeVisible({ timeout: 20_000 });
@@ -111,7 +107,11 @@ test.describe('onboarding first med: the schedule means the circle clock (BC-8)'
 test.describe('onboarding first med (web)', () => {
   test.setTimeout(120_000);
 
-  test('wizard: past time -> payoff Mark it -> paywall once -> Today', async ({ page, context, baseURL }) => {
+  test('first run v2: past time -> All set (starts tomorrow) -> paywall once -> Today offers Mark it -> Taken', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
     await stubJson(page, 'GET', '/api/drugs/search', { body: { success: true, data: { drugs: [] } } });
     const a = await freeAccount('obfm');
     await cookieLogin(context, a, baseURL);
@@ -119,26 +119,20 @@ test.describe('onboarding first med (web)', () => {
     const recipient = uniq('ObFm');
     const circleId = await createFirstCircle(page, recipient);
 
-    await page.getByTestId('first-run-primary').click();
     await fillPastTimeMed(page, 'Lisinopril');
     await page.getByRole('dialog').last().getByRole('button', { name: 'Add medication' }).click();
 
-    // Payoff: ALL SET, starts tomorrow, the Mark it line, NO invite question.
-    await expect(wizard(page).getByText('ALL SET')).toBeVisible({ timeout: 20_000 });
+    // All set: starts tomorrow, the Optional invite; no Mark it on All set (Today carries it).
+    await expect(wizard(page).getByTestId('first-run-all-set')).toBeVisible({ timeout: 20_000 });
     await expect(wizard(page).getByText(/starts tomorrow/)).toBeVisible();
-    await expect(wizard(page).getByText(/who.s usually there/i)).toHaveCount(0);
+    await expect(wizard(page).getByText(/who.s usually there/i)).toBeVisible();
+    await expect(wizard(page).getByTestId('mark-it-button')).toHaveCount(0);
     const root = rootMed(circleId)!;
     expect(confirmations(root.id)).toHaveLength(0);
 
-    await wizard(page).getByTestId('mark-it-button').click();
-    await expect(wizard(page).getByText('Marked as taken.')).toBeVisible({ timeout: 20_000 });
-    // ONE Taken, by the opt-in flag, on the primary root.
-    await expect.poll(() => confirmations(root.id).map((c) => c.status)).toEqual(['taken']);
-
-    // Not asked yet: Continue goes straight to the paywall (1.4.2: no invite step).
+    // Not asked yet: Go to Today goes to the paywall once.
     expect(await ls(page, `${SEEN_KEY}:${a.userId}`)).toBeNull();
-    await wizard(page).getByRole('button', { name: 'Continue', exact: true }).click();
-    await expect(wizard(page).getByRole('heading', { name: 'Invite someone to help' })).toHaveCount(0);
+    await wizard(page).getByTestId('first-run-go-to-today').click();
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     await expect(offerHeading(page)).toBeVisible();
     expect(await ls(page, `${SEEN_KEY}:${a.userId}`)).toBe('1');
@@ -146,27 +140,28 @@ test.describe('onboarding first med (web)', () => {
     await page.getByRole('button', { name: /Continue with free plan/ }).click();
     await page.waitForURL(new RegExp(`/circles/${circleId}$`), { timeout: 30_000 });
     await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 20_000 });
-    // Today: no wizard, no second paywall, no Mark it line (it was used), the dose is Taken.
     await expect(wizard(page)).toHaveCount(0);
-    await expect(page.getByTestId('mark-it-line')).toHaveCount(0);
+    // Today's Tomorrow row with Mark it (written by the first-run save).
+    const row = page.getByTestId('first-med-mark-it');
+    await expect(row).toBeVisible({ timeout: 20_000 });
+    await row.getByTestId('mark-it-button').click();
+    await expect(row.getByText('Taken by you', { exact: false })).toBeVisible({ timeout: 20_000 });
+    await expect.poll(() => confirmations(root.id).map((c) => c.status)).toEqual(['taken']);
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 20_000 });
     await page.waitForTimeout(1500);
     expect(paths.filter((p) => p === '/upgrade')).toHaveLength(1);
     expect(confirmations(root.id)).toHaveLength(1);
-    // The backend moved the root's start back to today (the pre-roll date): never after it.
-    expect(rootMed(circleId)!.scheduled_date <= root.scheduled_date).toBe(true);
   });
 
-  test('wizard: Continue without tapping Mark it records nothing', async ({ page, context, baseURL }) => {
+  test('first run v2: Go to Today without tapping Mark it records nothing', async ({ page, context, baseURL }) => {
     const a = await freeAccount('obfn');
     await cookieLogin(context, a, baseURL);
     const circleId = await createFirstCircle(page, uniq('ObFn'));
-    await page.getByTestId('first-run-primary').click();
     await fillPastTimeMed(page, 'Metformin');
     await page.getByRole('dialog').last().getByRole('button', { name: 'Add medication' }).click();
-    await expect(wizard(page).getByTestId('mark-it-button')).toBeVisible({ timeout: 20_000 });
-    await wizard(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(wizard(page).getByTestId('first-run-all-set')).toBeVisible({ timeout: 20_000 });
+    await wizard(page).getByTestId('first-run-go-to-today').click();
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     expect(confirmations(rootMed(circleId)!.id)).toHaveLength(0);
   });
@@ -180,8 +175,8 @@ test.describe('onboarding first med (web)', () => {
     const a = await freeAccount('obtw');
     await cookieLogin(context, a, baseURL);
     const circleId = await createFirstCircle(page, uniq('ObTw'));
-    // Skip Setup, take the paywall exit, land on Today with no medication.
-    await wizard(page).getByRole('button', { name: 'Skip for now' }).click();
+    // Skip the first item, take the paywall exit, land on Today with no medication.
+    await page.getByTestId('first-run-skip').click();
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     await page.getByRole('button', { name: /Continue with free plan/ }).click();
     await page.waitForURL(new RegExp(`/circles/${circleId}$`), { timeout: 30_000 });
