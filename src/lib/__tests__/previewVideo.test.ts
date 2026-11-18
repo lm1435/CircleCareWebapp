@@ -1,10 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import {
-  previewVideoSource,
-  previewVideoStorageBase,
-  PREVIEW_VIDEO_FALLBACK_BASE,
-} from '@/lib/previewVideo';
+import { previewVideoSource, previewVideoStorageBase } from '@/lib/previewVideo';
 
 // 1.4.3 "See how it works" video: a FIXED address per app language (no app
 // config). Mirrors mobile src/__tests__/utils/previewVideo.test.ts.
@@ -22,13 +18,13 @@ describe('previewVideoSource', () => {
   });
 
   it('P: the cut is part of the name (4x5 on the phone, 16x9 on the web)', () => {
-    expect(previewVideoSource('es', '4x5', HOST).src).toBe(`${DIR}/preview-demo-es-4x5.mp4`);
+    expect(previewVideoSource('es', '4x5', HOST)?.src).toBe(`${DIR}/preview-demo-es-4x5.mp4`);
   });
 
   it('P: regional tags resolve as i18n does (es-MX -> es, pt_PT -> pt-PT, fr-ca -> fr-CA)', () => {
-    expect(previewVideoSource('es-MX', '16x9', HOST).language).toBe('es');
-    expect(previewVideoSource('pt_PT', '16x9', HOST).language).toBe('pt-PT');
-    expect(previewVideoSource('fr-ca', '16x9', HOST).src).toBe(`${DIR}/preview-demo-fr-CA-16x9.mp4`);
+    expect(previewVideoSource('es-MX', '16x9', HOST)?.language).toBe('es');
+    expect(previewVideoSource('pt_PT', '16x9', HOST)?.language).toBe('pt-PT');
+    expect(previewVideoSource('fr-ca', '16x9', HOST)?.src).toBe(`${DIR}/preview-demo-fr-CA-16x9.mp4`);
   });
 
   it.each(['ja', 'zz-ZZ', '', null, undefined])('P: unknown language %p -> en', (lang) => {
@@ -43,18 +39,21 @@ describe('previewVideoSource', () => {
     expect(previewVideoStorageBase(`${HOST}/`)).toBe(HOST);
   });
 
-  it('N: never an http: URL (a local http Supabase or junk -> the fixed https base)', () => {
-    for (const base of ['http://127.0.0.1:55321', 'not a url', '', null]) {
-      const { src, poster } = previewVideoSource('en', '16x9', base);
-      expect(src.startsWith(`${PREVIEW_VIDEO_FALLBACK_BASE}/storage/v1/object/public/help-videos/`)).toBe(true);
-      expect(src).not.toMatch(/^http:/);
-      expect(poster).not.toMatch(/^http:/);
+  it.each(['http://127.0.0.1:55321', 'http://x.supabase.co', 'not a url', '', '   ', null])(
+    'N: base %p (not https) -> NO video (null), so the page shows the carousel; never an http URL',
+    (base) => {
+      expect(previewVideoStorageBase(base)).toBeNull();
+      expect(previewVideoSource('en', '16x9', base)).toBeNull();
     }
-    expect(PREVIEW_VIDEO_FALLBACK_BASE).toMatch(/^https:\/\/[a-z0-9]+\.supabase\.co$/);
+  );
+
+  it('N: no Supabase host is hard-coded in the source (mobile parity, 630d46cb)', () => {
+    const text = readFileSync(resolve(process.cwd(), 'src/lib/previewVideo.ts'), 'utf8');
+    expect(text).not.toMatch(/supabase\.co|prdfxaljwlsiqsqworzy/);
   });
 
   it('N: the default base is the build env (no argument -> still https, never app config)', () => {
-    expect(previewVideoSource('de', '16x9').src).toMatch(/^https:\/\/.+\/help-videos\/preview-demo-de-16x9\.mp4$/);
+    expect(previewVideoSource('de', '16x9')?.src).toMatch(/^https:\/\/.+\/help-videos\/preview-demo-de-16x9\.mp4$/);
   });
 
   it('N: no app-config read anywhere for the video (source scan)', () => {

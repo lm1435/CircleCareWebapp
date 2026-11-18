@@ -14,10 +14,11 @@ import { normalizeLocale, type SupportedLanguage } from '@/i18n/locales';
  * cut, the phone the 4:5 cut. A file that fails to load (network) hands over to
  * the carousel in the caller.
  *
- * The base is VITE_SUPABASE_URL when it is https (production builds); a local
- * http Supabase (dev) never serves the video, so the production storage base
- * below is used instead: the address is never http.
- * Mirrors mobile/src/utils/previewVideo.ts.
+ * The base is VITE_SUPABASE_URL when it is https (production builds). A local
+ * http Supabase (dev / e2e) gets NO video (null): the caller shows the carousel.
+ * The address is never http, and no Supabase host is hard-coded here (a
+ * production fallback put the production host into every test bundle).
+ * Mirrors mobile/src/utils/previewVideo.ts (630d46cb).
  */
 
 export type PreviewVideoCut = '4x5' | '16x9';
@@ -29,27 +30,28 @@ export interface PreviewVideoSource {
   language: SupportedLanguage;
 }
 
-/** Production Supabase project (public storage host; already shipped in every bundle). */
-export const PREVIEW_VIDEO_FALLBACK_BASE = 'https://prdfxaljwlsiqsqworzy.supabase.co';
 const BUCKET_PATH = '/storage/v1/object/public/help-videos/';
 
-export function previewVideoStorageBase(configured: string | null | undefined): string {
+/** The configured https storage base (trailing slash trimmed), or null: no video. */
+export function previewVideoStorageBase(configured: string | null | undefined): string | null {
   const raw = (configured ?? '').trim().replace(/\/+$/, '');
   try {
     if (raw && new URL(raw).protocol === 'https:') return raw;
   } catch {
-    // not a URL: use the fixed base
+    // not a URL: no video
   }
-  return PREVIEW_VIDEO_FALLBACK_BASE;
+  return null;
 }
 
-/** The fixed preview-video file for the app language and cut. */
+/** The fixed preview-video file for the app language and cut; null when the build has no https storage base. */
 export function previewVideoSource(
   language: string | null | undefined,
   cut: PreviewVideoCut,
   base: string | null | undefined = env.VITE_SUPABASE_URL
-): PreviewVideoSource {
+): PreviewVideoSource | null {
+  const storage = previewVideoStorageBase(base);
+  if (!storage) return null;
   const lang = normalizeLocale(language);
-  const name = `${previewVideoStorageBase(base)}${BUCKET_PATH}preview-demo-${lang}-${cut}`;
+  const name = `${storage}${BUCKET_PATH}preview-demo-${lang}-${cut}`;
   return { src: `${name}.mp4`, poster: `${name}.jpg`, language: lang };
 }

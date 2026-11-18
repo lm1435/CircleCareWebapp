@@ -142,6 +142,21 @@ describe('HowItWorksPage video', () => {
     expect(Analytics.previewVideoStarted).toHaveBeenCalledWith(file, 'web');
   });
 
+  it('N: a build with a local http storage base shows the carousel, no player source, no video events (mobile 630d46cb)', () => {
+    const original = env.VITE_SUPABASE_URL;
+    (env as { VITE_SUPABASE_URL?: string }).VITE_SUPABASE_URL = 'http://127.0.0.1:55321';
+    try {
+      renderPage();
+      expect(screen.queryByTestId('preview-video')).toBeNull();
+      expect(document.querySelector('video')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Siguiente' })).toBeInTheDocument();
+      expect(Analytics.previewVideoFailed).not.toHaveBeenCalled();
+      expect(Analytics.previewVideoStarted).not.toHaveBeenCalled();
+    } finally {
+      (env as { VITE_SUPABASE_URL?: string }).VITE_SUPABASE_URL = original;
+    }
+  });
+
   it('N: never an http: URL, and no app-config request for the video', () => {
     renderPage();
     expect(video().getAttribute('src')).toMatch(/^https:\/\//);
