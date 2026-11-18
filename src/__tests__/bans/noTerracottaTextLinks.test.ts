@@ -16,6 +16,10 @@ const FILES = [
   'components/emergency/EmergencySection.tsx',
   'components/emergency/EmergencyMedications.tsx',
   'components/emergency/SosCard.tsx',
+  'pages/MedicationsPage.tsx',
+  'components/meds/TodaysMeds.tsx',
+  'pages/DocumentsPage.tsx',
+  'pages/UpgradePage.tsx',
   'components/overview/TodayCareTeam.tsx',
   'pages/OverviewPage.tsx',
 ];

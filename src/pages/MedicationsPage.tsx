@@ -670,10 +670,11 @@ function MedCard({
             )}
             {/* Low stock, in the slot the INACTIVE badge uses — the two are
                 mutually exclusive, so they share it the way they do on mobile.
-                The text states the fact in full ("Low stock · 12 days left"),
-                so terracotta is reinforcement and never the only signal. */}
+                The text states the fact in full ("Low stock · 12 days left").
+                A caution, not an alarm: the clay (meds section) pill, never
+                terracotta text (owner a11y rule; red stays on SOS and allergies). */}
             {lowStockDays !== null && (
-              <span className={`${STATUS_PILL.overdue} text-terracotta`}>
+              <span className={STATUS_PILL.dueSoon}>
                 {t('meds:page.stock.lowStock')} ·{' '}
                 {t('meds:page.stock.daysLeft', { count: lowStockDays })}
               </span>

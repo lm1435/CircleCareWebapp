@@ -678,7 +678,7 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
           <section aria-labelledby="meds-needs-attention" className="mb-4">
             <h3
               id="meds-needs-attention"
-              className="m-0 text-sm font-semibold text-terracotta-deep"
+              className="m-0 text-sm font-semibold text-ink"
             >
               {t('needsAttention')}
             </h3>

@@ -227,7 +227,7 @@ export default function DocumentsPage(): ReactElement {
                         {t('documents:upload.emptyButton')}
                       </Button>
                       {storageFull && (
-                        <Text variant="caption" className="text-terracotta">
+                        <Text variant="caption">
                           {storageFullMessage}
                         </Text>
                       )}
