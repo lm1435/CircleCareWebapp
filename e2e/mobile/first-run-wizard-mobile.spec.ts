@@ -231,7 +231,7 @@ test.describe('first-run wizard, phone (onboarding 1.3.1: Setup -> the ONE simpl
     // First run v2: the first time chip (Mañana, 8:00 a. m.) is already picked.
     await expect(form.locator('#time-chips').getByRole('checkbox').first()).toBeChecked();
     await form.getByRole('button', { name: c.save }).click();
-    await expect(page.getByText('TODO LISTO')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('first-run-all-set').getByText('TODO LISTO')).toBeVisible({ timeout: 20_000 });
     expect(
       dbQuery(
         `select 1 from calendar_events where circle_id = ${sqlStr(circleId)}::uuid
@@ -275,7 +275,7 @@ test.describe('first-run wizard, phone (onboarding 1.3.1: Setup -> the ONE simpl
       await expect(page.getByLabel(COPY.en.nameLabel)).toHaveValue('Doliprane');
       const form = page.getByRole('dialog').last();
       await form.getByRole('button', { name: 'Add medication' }).click();
-      await expect(page.getByText('ALL SET')).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByTestId('first-run-all-set').getByText('ALL SET')).toBeVisible({ timeout: 20_000 });
       expect(
         dbQuery(
           `select 1 from calendar_events where circle_id = ${sqlStr(circleId)}::uuid

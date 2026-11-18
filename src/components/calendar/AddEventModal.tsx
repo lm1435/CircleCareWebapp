@@ -546,6 +546,18 @@ export function AddEventModal(props: AddEventModalProps): ReactElement | null {
   const [switchKind, setSwitchKind] = useState<FormKind>(props.initialType ?? 'medication');
   const switchedRef = useRef(false);
   const showTypeSwitch = !!props.firstRunTypeSwitch && !event;
+  // A switch remounts the form (and its dialog, whose own initial focus runs on mount): give the
+  // focus back to the tab just chosen AFTER that, so an arrow-key switch keeps focus on the
+  // tablist (WCAG 2.4.3) instead of dropping it on the dialog's first control.
+  useEffect(() => {
+    if (!switchedRef.current) return;
+    const id = window.setTimeout(() => {
+      document
+        .querySelector<HTMLElement>('[data-first-run-type-switch] [role="tab"][aria-selected="true"]')
+        ?.focus();
+    }, 50);
+    return () => window.clearTimeout(id);
+  }, [switchKind]);
   const { canEdit } = useCircle(circleId);
   const cachedEvents = useCachedCircleEvents(circleId);
   const { root } = useSeriesRoot(circleId, event, cachedEvents);
@@ -2076,8 +2088,10 @@ function AddEventForm({
           };
           // First run v2 (1.4.3): All set has no Mark it line (the payoff that held it is gone), so the
           // first-run save writes the same note and Today offers "Already given today? Mark it".
+          // A first-run circle was created a moment ago, so it has no medication by definition (its
+          // presence query may not be cached yet: Today is still loading under the wizard).
           if (
-            circleHadNoMedication(circleId, savedInfo.today) &&
+            (firstRunMode || circleHadNoMedication(circleId, savedInfo.today)) &&
             savedInfo.eventId &&
             markItEligible(savedInfo)
           ) {
@@ -4114,6 +4128,7 @@ function AddEventForm({
         aria-describedby={showSeriesEditNote ? 'series-edit-note' : undefined}
       >
         {typeSwitch && (
+          <div data-first-run-type-switch>
           <SegmentedControl
             label={t('circles:firstRun.who.itemType')}
             value={simpleKind}
@@ -4125,6 +4140,7 @@ function AddEventForm({
             ]}
             onChange={(next) => typeSwitch.onChange(next as FormKind)}
           />
+          </div>
         )}
         {firstRun && (
           <header className="flex flex-col gap-1.5" data-testid="first-run-form-heading">

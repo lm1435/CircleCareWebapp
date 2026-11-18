@@ -376,6 +376,10 @@ async function fillPastTimeMedByKeyboard(page: Page, name: string): Promise<void
   // The form's own dialog (the time picker it opens is a dialog too, and would be `.last()` while open).
   const form = page.locator('[role="dialog"]:has([data-testid="simple-medication-form"])').last();
   await form.getByLabel(/Medication name/i).fill(name);
+  // First run v2: 8:00 AM Morning is preselected on the first-run form; untick it so the typed time
+  // is the ONE dose (a second time would be an extra dose, by design). The add-menu form has none.
+  const morning = form.getByRole('checkbox', { name: /Morning$/ });
+  if (await morning.isChecked()) await morning.click();
   // "Other…" (build 11) is the time picker: opened by keyboard, closed with Escape (focus back on it), then the
   // value goes into its hidden #scheduled_time.
   const other = form.getByTestId('time-chip-other');

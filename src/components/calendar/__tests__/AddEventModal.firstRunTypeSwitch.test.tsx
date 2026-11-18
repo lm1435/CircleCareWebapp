@@ -142,6 +142,14 @@ describe('first run v2: the type switch', () => {
     expect(switched).toHaveBeenLastCalledWith('appointment', 'task', CIRCLE_ID);
   });
 
+  it('a11y: an arrow-key switch keeps focus on the chosen tab (the form remounts under it)', async () => {
+    renderForm({ firstRun: true, firstRunTypeSwitch: true });
+    screen.getByRole('tab', { name: 'Medication' }).focus();
+    await user().keyboard('{ArrowRight}');
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Appointment' })).toHaveAttribute('aria-selected', 'true'));
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Appointment' })).toHaveFocus());
+  });
+
   it('POSITIVE: appointment and task keep their own titles (no first-med header)', async () => {
     renderForm({ firstRun: true, firstRunTypeSwitch: true });
     await switchTo('Appointment');

@@ -328,6 +328,14 @@ describe("Today's Mark it note (add-menu path)", () => {
     expect(readFirstMedNote(CIRCLE_ID, TODAY)).toBeNull();
   });
 
+  it('IS written in first-run mode even with a COLD presence cache (the circle was just created)', async () => {
+    // No cachePresence(): Today is still loading under the wizard.
+    const { onSaved } = renderForm({ firstRun: true });
+    await fillAndSaveFirstRun(user());
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(readFirstMedNote(CIRCLE_ID, TODAY)).toMatchObject({ eventId: 'ev-1' });
+  });
+
   it('IS written in first-run mode too (first run v2: All set has no Mark it; Today offers it)', async () => {
     cachePresence(false);
     const { onSaved } = renderForm({ firstRun: true });

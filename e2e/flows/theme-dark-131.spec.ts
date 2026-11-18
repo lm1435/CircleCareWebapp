@@ -207,6 +207,10 @@ async function freshOwnerWithFirstCircle(
 async function fillPastTimeMed(page: Page, name: string): Promise<void> {
   const form = page.getByRole('dialog').last();
   await form.getByLabel(/Medication name/i).fill(name);
+  // First run v2: 8:00 AM Morning is preselected on the first-run form; untick it so the typed time
+  // is the ONE dose (a second time would be an extra dose, by design). The add-menu form has none.
+  const morning = form.getByRole('checkbox', { name: /Morning$/ });
+  if (await morning.isChecked()) await morning.click();
   // "Other…" is the time picker over the hidden #scheduled_time (build 11): the value goes straight in.
   await form.locator('#scheduled_time').fill('00:01');
   await expect(form.getByTestId('dose-past-time-note')).toBeVisible();
