@@ -4,6 +4,7 @@ import type { CalendarEvent } from '@/api/calendarEvents';
 import { useCircle } from '@/hooks/useCircle';
 import { useAuthStore } from '@/store/authStore';
 import { ShiftSavedDialog } from '../ShiftSavedDialog';
+import { hasShiftEnded } from '../shiftUtils';
 import { cityOf, recipientZoneOtherThanViewer } from '@/test/viewerZone';
 
 vi.mock('@/hooks/useCircle', () => ({ useCircle: vi.fn() }));
@@ -45,6 +46,14 @@ function shift(over: Partial<CalendarEvent>): CalendarEvent {
 function renderSaved(s: CalendarEvent) {
   render(<ShiftSavedDialog circleId="c" shift={s} onAddNext={vi.fn()} onAddTask={vi.fn()} onDone={vi.fn()} />);
 }
+
+// The fixture shift is Tue 2026-10-20 08:00-14:00: pin the wall clock BEFORE it, or on the real clock it has
+// ENDED and (correctly, 1.4.3) loses "Add a task to this shift". Ended shifts have their own cases below.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-19T12:00:00Z'));
+});
+afterEach(() => vi.useRealTimers());
 
 beforeEach(() => {
   vi.mocked(useCircle).mockReturnValue({
@@ -156,5 +165,78 @@ describe('ShiftSavedDialog: ONE filled button (approved mock 2026-11-08)', () =>
     expect(filled(screen.getByRole('button', { name: 'Add a task to this shift' }))).toBe(true);
     expect(filled(screen.getByRole('button', { name: 'Add another shift' }))).toBe(false);
     expect(screen.getByRole('dialog').querySelectorAll('button[class*="bg-primary-fill"]')).toHaveLength(1);
+  });
+});
+
+// 1.4.3 (real user): a shift saved for a time that had already passed offered "Add a task to this shift", and
+// the task save failed twice with 409 SHIFT_ENDED. Offered only while the occurrence has not ended, by the
+// backend's rule (end <= now is ended), in the RECIPIENT's zone (useCircle().timezone), never the viewer's.
+describe('ShiftSavedDialog: no "Add a task" on a shift that has already ended (1.4.3)', () => {
+  const zone = (tz: string) =>
+    vi.mocked(useCircle).mockReturnValue({ timezone: tz, members } as unknown as ReturnType<typeof useCircle>);
+  const addTask = () => screen.queryByTestId('shift-saved-add-task');
+  const filled = (el: HTMLElement) => el.className.includes('bg-primary-fill');
+
+  it('P saved-add-task-upcoming: before the start the dialog offers it', () => {
+    zone('America/Denver');
+    vi.setSystemTime(new Date('2026-10-20T13:00:00Z')); // 07:00 MDT
+    renderSaved(shift({}));
+    expect(addTask()).toBeInTheDocument();
+  });
+
+  it('P saved-add-task-in-progress: one minute before the end still offers it', () => {
+    zone('America/Denver');
+    vi.setSystemTime(new Date('2026-10-20T19:59:00Z')); // 13:59 MDT
+    renderSaved(shift({}));
+    expect(addTask()).toBeInTheDocument();
+  });
+
+  it('P saved-add-task-overnight-after-midnight: 22:00 + 10 h, at 02:30 the next day, still offers it', () => {
+    zone('America/Denver');
+    vi.setSystemTime(new Date('2026-10-21T08:30:00Z')); // 02:30 MDT on the 21st
+    renderSaved(shift({ scheduled_time: '22:00:00', duration_minutes: 600 }));
+    expect(addTask()).toBeInTheDocument();
+  });
+
+  it('N saved-add-task-ended: after the end there is no "Add a task"; add-next is the one filled button', () => {
+    zone('America/Denver');
+    vi.setSystemTime(new Date('2026-10-20T21:00:00Z')); // 15:00 MDT
+    renderSaved(shift({ recurrence_rule: 'daily' }));
+    expect(addTask()).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add a task to this shift' })).not.toBeInTheDocument();
+    const next = screen.getByRole('button', { name: 'Add another shift' });
+    expect(filled(next)).toBe(true);
+    expect(screen.getByRole('dialog').querySelectorAll('button[class*="bg-primary-fill"]')).toHaveLength(1);
+    expect(screen.getByTestId('shift-saved-done')).toBeInTheDocument();
+  });
+
+  it('N saved-add-task-end-instant: AT the end instant counts as ended (backend: end <= now)', () => {
+    zone('America/Denver');
+    vi.setSystemTime(new Date('2026-10-20T20:00:00Z')); // 14:00 MDT
+    renderSaved(shift({}));
+    expect(addTask()).not.toBeInTheDocument();
+  });
+
+  it("N saved-add-task-recipient-zone-ended: ended in Tokyo, not by a Denver viewer's clock -> hidden", () => {
+    zone('Asia/Tokyo');
+    vi.setSystemTime(new Date('2026-10-20T06:00:00Z')); // 15:00 Tokyo; 00:00 MDT
+    expect(hasShiftEnded(shift({}), 'America/Denver')).toBe(false);
+    renderSaved(shift({}));
+    expect(addTask()).not.toBeInTheDocument();
+  });
+
+  it("N saved-add-task-recipient-zone-open: ended by a Denver viewer's clock, in progress in Honolulu -> offered", () => {
+    zone('Pacific/Honolulu');
+    vi.setSystemTime(new Date('2026-10-20T22:00:00Z')); // 12:00 Honolulu; 16:00 MDT
+    expect(hasShiftEnded(shift({}), 'America/Denver')).toBe(true);
+    renderSaved(shift({}));
+    expect(addTask()).toBeInTheDocument();
+  });
+
+  it("N saved-add-task-repeating-future: a daily shift starting tomorrow offers it although today's slot has passed", () => {
+    zone('America/Denver');
+    vi.setSystemTime(new Date('2026-10-20T21:00:00Z')); // 15:00 MDT on the 20th
+    renderSaved(shift({ scheduled_date: '2026-10-21', recurrence_rule: 'daily' }));
+    expect(addTask()).toBeInTheDocument();
   });
 });

@@ -8,6 +8,7 @@ import { useCircle } from '@/hooks/useCircle';
 import { useAuthStore } from '@/store/authStore';
 import { getDeviceTimezone } from '@/utils/timezone';
 import { ShiftDetailModal } from '../ShiftDetailModal';
+import { hasShiftEnded } from '../shiftUtils';
 
 // The approved "middle" layout (owner 2026-11-08), the mirror of mobile's ShiftDetailScreen tests:
 // title + status chip on one WRAPPING row, ONE details card (When full width, Repeats + Reminder side by
@@ -290,5 +291,78 @@ describe('one filled button per screen', () => {
     renderDetail(shift());
     expect(screen.queryByRole('button', { name: 'Take shift' })).not.toBeInTheDocument();
     expect(listProps.value?.primaryAllowed).toBe(true);
+  });
+});
+
+// 1.4.3 (real user: "Add task" on a shift that had already ended failed twice with 409 SHIFT_ENDED). The detail
+// hands the list `ended` (the list then shows no add control, ShiftTaskList.test.tsx) by the backend's rule
+// (end <= now is ended) in the RECIPIENT's zone. Sun 2026-11-01 14:00-20:00 Tokyo ends at 11:00Z.
+describe('add task on an ended shift occurrence (1.4.3)', () => {
+  const sunday = (over: Partial<CalendarEvent> = {}) =>
+    shift({ id: 'root_2026-11-01', scheduled_date: '2026-11-01', scheduled_time: '14:00:00', duration_minutes: 360, ...over });
+  const canAdd = () => listProps.value?.canWrite === true && listProps.value?.ended === false;
+
+  it('P add-task-upcoming: an occurrence that has not started offers Add', () => {
+    vi.setSystemTime(new Date('2026-11-01T04:00:00Z'));
+    renderDetail(sunday(), 'Asia/Tokyo');
+    expect(canAdd()).toBe(true);
+  });
+
+  it('P add-task-in-progress: one minute before the end still offers Add', () => {
+    vi.setSystemTime(new Date('2026-11-01T10:59:00Z'));
+    renderDetail(sunday(), 'Asia/Tokyo');
+    expect(canAdd()).toBe(true);
+  });
+
+  it('P add-task-overnight-after-midnight: 22:00 + 10 h, at 02:30 the next day there, still offers Add', () => {
+    vi.setSystemTime(new Date('2026-11-01T17:30:00Z'));
+    renderDetail(sunday({ scheduled_time: '22:00:00', duration_minutes: 600 }), 'Asia/Tokyo');
+    expect(canAdd()).toBe(true);
+  });
+
+  it('N add-task-ended / end-instant: at and after the end, Add is not offered', () => {
+    vi.setSystemTime(new Date('2026-11-01T11:00:00Z'));
+    renderDetail(sunday(), 'Asia/Tokyo');
+    expect(listProps.value?.ended).toBe(true);
+    cleanup();
+    vi.setSystemTime(new Date('2026-11-01T12:00:00Z'));
+    renderDetail(sunday(), 'Asia/Tokyo');
+    expect(listProps.value?.ended).toBe(true);
+  });
+
+  it("N add-task-recipient-zone-ended: ended in Tokyo, not by a Denver viewer's clock -> hidden", () => {
+    vi.setSystemTime(new Date('2026-11-01T11:30:00Z')); // 20:30 Tokyo; 04:30 MST
+    expect(hasShiftEnded(sunday(), 'America/Denver')).toBe(false);
+    renderDetail(sunday(), 'Asia/Tokyo');
+    expect(listProps.value?.ended).toBe(true);
+  });
+
+  it("N add-task-recipient-zone-open: ended by a Denver viewer's clock, in progress in Honolulu -> offered", () => {
+    vi.setSystemTime(new Date('2026-11-01T22:00:00Z')); // 12:00 Honolulu; 15:00 MST
+    const occ = sunday({ scheduled_time: '08:00:00' });
+    expect(hasShiftEnded(occ, 'America/Denver')).toBe(true);
+    renderDetail(occ, 'Pacific/Honolulu');
+    expect(canAdd()).toBe(true);
+  });
+
+  it('N add-task-actions-unaffected: Take on an open in-progress shift, Drop on mine; neither once ended', () => {
+    vi.setSystemTime(new Date('2026-11-01T10:59:00Z'));
+    renderDetail(sunday(), 'Asia/Tokyo');
+    expect(screen.getByRole('button', { name: 'Take shift' })).toBeInTheDocument();
+    cleanup();
+    renderDetail(sunday({ assigned_to: 'u-me' }), 'Asia/Tokyo');
+    expect(screen.getByTestId('shift-detail-drop')).toBeInTheDocument();
+    expect(canAdd()).toBe(true);
+    cleanup();
+    vi.setSystemTime(new Date('2026-11-01T11:00:00Z'));
+    renderDetail(sunday(), 'Asia/Tokyo');
+    expect(screen.queryByRole('button', { name: 'Take shift' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('shift-detail-drop')).not.toBeInTheDocument();
+  });
+
+  it("N add-task-repeating-future: today's occurrence has ended; tomorrow's still offers Add", () => {
+    vi.setSystemTime(new Date('2026-11-01T12:00:00Z'));
+    renderDetail(sunday({ id: 'root_2026-11-02', scheduled_date: '2026-11-02' }), 'Asia/Tokyo');
+    expect(canAdd()).toBe(true);
   });
 });

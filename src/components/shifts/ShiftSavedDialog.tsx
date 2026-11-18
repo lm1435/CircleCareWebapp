@@ -7,7 +7,7 @@ import { useHourCycle } from '@/hooks/useHourCycle';
 import { formatWeekdayList } from '@/components/calendar/recurrenceLabel';
 import { shiftAssignee } from './shiftPeople';
 import { parseCycleRule } from './shiftRotation';
-import { formatShiftRange, isShiftOpen, shiftEnd } from './shiftUtils';
+import { formatShiftRange, hasShiftEnded, isShiftOpen, shiftEnd } from './shiftUtils';
 import { formatTimeOfDay } from '@/utils/timezone';
 import { useAuthStore } from '@/store/authStore';
 import { Analytics } from '@/lib/analytics';
@@ -87,13 +87,17 @@ export function ShiftSavedDialog({
     ? t('saved.addNextHint', { time: nextStart, repeat })
     : t('saved.addNextHintOnce', { time: nextStart });
   const addNextLabel = repeating ? t('saved.addAnother') : t('saved.addNext');
+  // A shift whose time has already passed (in the recipient's zone) takes no task: the server answers
+  // 409 SHIFT_ENDED, so no "Add a task to this shift" (real user, 1.4.3; mobile ShiftFormScreen parity).
+  const ended = hasShiftEnded(shift, timezone);
+  const taskLeads = repeating && !ended;
   // EXACTLY ONE filled button (approved mock 2026-11-08, mobile ShiftSavedSheet): a one-off leads with
   // "Add the next shift"; a repeating shift already covers its next days, so "Add a task to this shift" leads
   // and "Add another shift" follows. Done is the quiet neutral text button, last.
   const addNext = (
     <Button
       key="next"
-      variant={repeating ? 'secondary' : 'primary'}
+      variant={taskLeads ? 'secondary' : 'primary'}
       fullWidth
       aria-describedby={hintId}
       data-testid="shift-saved-add-next"
@@ -102,10 +106,10 @@ export function ShiftSavedDialog({
       {addNextLabel}
     </Button>
   );
-  const addTask = (
+  const addTask = ended ? null : (
     <Button
       key="task"
-      variant={repeating ? 'primary' : 'secondary'}
+      variant={taskLeads ? 'primary' : 'secondary'}
       fullWidth
       offlineKind="change"
       data-testid="shift-saved-add-task"
@@ -124,7 +128,7 @@ export function ShiftSavedDialog({
         <p className="m-0 mb-1 text-base text-ink-2" data-testid="shift-saved-summary">
           {summary}
         </p>
-        {repeating ? [addTask, addNext] : [addNext, addTask]}
+        {taskLeads ? [addTask, addNext] : [addNext, addTask]}
         <span id={hintId} className="sr-only">
           {nextHint}
         </span>
