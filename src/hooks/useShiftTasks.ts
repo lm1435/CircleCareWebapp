@@ -4,6 +4,7 @@ import type { CalendarEvent } from '@/api/calendarEvents';
 import {
   createShiftTask,
   getShiftTaskDeleteImpact,
+  SHIFT_TASK_HANDLED_CODES,
   type CreateShiftTaskBody,
   type ShiftTaskDeleteImpact,
 } from '@/api/shiftTasks';
@@ -49,7 +50,7 @@ export function useAddShiftTask(
 ): UseMutationResult<CalendarEvent, unknown, { shift: CalendarEvent; body: CreateShiftTaskBody }> {
   const queryClient = useQueryClient();
   // The cache / paywall half of a failed shift write; the words are the form's (inline or toast).
-  const onError = useShiftMutationOnError(circleId, 'create');
+  const onError = useShiftMutationOnError(circleId, 'create', SHIFT_TASK_HANDLED_CODES);
   return useMutation({
     mutationFn: ({ shift, body }) => createShiftTask(circleId, shift.id, body),
     onError,

@@ -244,7 +244,9 @@ type ShiftAction = 'take' | 'drop' | 'assign' | 'save' | 'delete';
  */
 export function useShiftMutationOnError(
   circleId: string,
-  action: FailureAction
+  action: FailureAction,
+  /** Codes the calling surface answers with its own copy: reported as `handled: true|false`. */
+  handledCodes?: ReadonlySet<string>
 ): (error: unknown) => void {
   const queryClient = useQueryClient();
   // Owner-aware: only the circle's OWNER is offered Upgrade; everyone else gets
@@ -255,7 +257,13 @@ export function useShiftMutationOnError(
     (error: unknown) => {
       // `error_occurred` for the admin digest: enums only, no circle_id.
       // A 402 SUBSCRIPTION_REQUIRED is a paywall moment (the upgrade prompt below), not an error.
-      if (!isPaywallRefusal(error)) Analytics.errorOccurred('shifts', `shifts_${action}_failed`, failureContext('shifts', action, error));
+      if (!isPaywallRefusal(error)) {
+        const code = (error as { error?: { code?: unknown } } | null)?.error?.code;
+        const extra = handledCodes
+          ? { handled: typeof code === 'string' && handledCodes.has(code) }
+          : undefined;
+        Analytics.errorOccurred('shifts', `shifts_${action}_failed`, failureContext('shifts', action, error, extra));
+      }
       const kind = classifyShiftFailure(error);
       if (kind === 'already_taken') Analytics.shiftTakeConflict();
       if (kind === 'subscription') {
@@ -266,7 +274,7 @@ export function useShiftMutationOnError(
       if (kind === 'permission') invalidateCircleAccessFlags(queryClient, circleId);
       invalidateShifts(queryClient, circleId);
     },
-    [circleId, promptUpgrade, queryClient, action]
+    [circleId, promptUpgrade, queryClient, action, handledCodes]
   );
 }
 

@@ -4,9 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { createShiftTask } from '@/api/shiftTasks';
+import { createShiftTask, SHIFT_TASK_HANDLED_CODES } from '@/api/shiftTasks';
 import { ToastProvider } from '@/components/ui';
 import { Analytics } from '@/lib/analytics';
+import { markPaywallRefusal } from '@/lib/apiErrors';
 import { useCircle } from '@/hooks/useCircle';
 import { ShiftTaskFormModal } from '../ShiftTaskFormModal';
 
@@ -204,6 +205,68 @@ describe('shift task form', () => {
       expect(Analytics.shiftTaskAdded).not.toHaveBeenCalled();
     }
   );
+
+  // error_occurred (1.4.3): the refusals answered with their own words are `handled: true`, the code is
+  // the bounded backend constant, and the digest bucket (`error`) is unchanged.
+  it.each([
+    ['SHIFT_TASK_OUTSIDE_SHIFT', 'validation', true],
+    ['SHIFT_TASK_TIME_UNSUPPORTED', 'validation', true],
+    ['SHIFT_ENDED', 'conflict', true],
+    ['SHIFT_NOT_FOUND', 'not_found', true],
+    ['SHIFT_INVALID_DATE', 'validation', true],
+    ['FORBIDDEN', 'forbidden', false],
+  ])('%s reports error_occurred with kind %s and handled=%s', async (code, kind, handled) => {
+    vi.mocked(createShiftTask).mockRejectedValueOnce({
+      success: false,
+      error: { code, message: 'Margaret shift at 5 Elm St' },
+    });
+    const { user } = setup();
+    await user.type(screen.getByLabelText(/Task name/), 'Insulin');
+    await user.click(screen.getByRole('button', { name: 'Add task' }));
+    await waitFor(() => expect(Analytics.errorOccurred).toHaveBeenCalledTimes(1));
+    expect(Analytics.errorOccurred).toHaveBeenCalledWith('shifts', 'shifts_create_failed', {
+      source: 'shifts',
+      action: 'create',
+      error_kind: kind,
+      code,
+      fatal: false,
+      handled,
+    });
+    const json = JSON.stringify(vi.mocked(Analytics.errorOccurred).mock.calls);
+    for (const leak of ['Margaret', 'Elm', 'Insulin', 'root_2026-11-10', '"c"']) {
+      expect(json).not.toContain(leak);
+    }
+  });
+
+  it('SHIFT_TASK_HANDLED_CODES is exactly the codes this form answers with its own words', () => {
+    expect([...SHIFT_TASK_HANDLED_CODES].sort()).toEqual(
+      ['SHIFT_ENDED', 'SHIFT_INVALID_DATE', 'SHIFT_NOT_FOUND', 'SHIFT_TASK_OUTSIDE_SHIFT', 'SHIFT_TASK_TIME_UNSUPPORTED']
+    );
+  });
+
+  it('negative: a 402 paywall refusal sends no error event', async () => {
+    const paywall = { success: false, error: { code: 'SUBSCRIPTION_REQUIRED' } };
+    markPaywallRefusal(paywall);
+    vi.mocked(createShiftTask).mockRejectedValueOnce(paywall);
+    const { user, onClose } = setup();
+    await user.type(screen.getByLabelText(/Task name/), 'Lunch');
+    await user.click(screen.getByRole('button', { name: 'Add task' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(Analytics.errorOccurred).not.toHaveBeenCalled();
+  });
+
+  it('negative: a network failure is handled=false with code network_error', async () => {
+    vi.mocked(createShiftTask).mockRejectedValueOnce({ code: 'ERR_NETWORK', message: 'Network Error' });
+    const { user } = setup();
+    await user.type(screen.getByLabelText(/Task name/), 'Lunch');
+    await user.click(screen.getByRole('button', { name: 'Add task' }));
+    await waitFor(() => expect(Analytics.errorOccurred).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(Analytics.errorOccurred).mock.calls[0][2]).toMatchObject({
+      error_kind: 'network',
+      code: 'network_error',
+      handled: false,
+    });
+  });
 
   it('a network failure keeps the form and the typed input, with the words inline', async () => {
     vi.mocked(createShiftTask).mockRejectedValueOnce(new Error('network'));

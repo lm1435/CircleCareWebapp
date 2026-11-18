@@ -68,3 +68,17 @@ export const isShiftTaskOutsideError = (err: unknown): boolean =>
 /** 400 SHIFT_TASK_TIME_UNSUPPORTED: a monthly / yearly shift cannot carry an after-midnight task. */
 export const isShiftTaskTimeUnsupportedError = (err: unknown): boolean =>
   codeOf(err) === 'SHIFT_TASK_TIME_UNSUPPORTED';
+
+/**
+ * The save refusals ShiftTaskFormModal answers with its OWN copy (not the generic "couldn't add").
+ * `useAddShiftTask` reports them with `handled: true` so the digest can tell a handled refusal from a
+ * failure. Keep in step with the modal's branches (pinned by its test). Mobile twin:
+ * `SHIFT_TASK_HANDLED_CODES` in mobile/src/utils/shiftTasks.ts.
+ */
+export const SHIFT_TASK_HANDLED_CODES: ReadonlySet<string> = new Set([
+  'SHIFT_TASK_OUTSIDE_SHIFT',
+  'SHIFT_TASK_TIME_UNSUPPORTED',
+  'SHIFT_INVALID_DATE',
+  'SHIFT_ENDED',
+  'SHIFT_NOT_FOUND',
+]);

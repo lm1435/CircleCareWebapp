@@ -712,10 +712,55 @@ const CODE_KINDS: Readonly<Record<string, FailureKind>> = {
   SERVER_ERROR: 'server',
   INTERNAL_ERROR: 'server',
   DATABASE_ERROR: 'server',
+  // CARE SHIFTS (backend/src/constants/shiftErrorCodes.ts), each by the HTTP status the backend
+  // answers it with. Before 1.4.3 most fell through the shape rules ('SHIFT_ENDED' matches none),
+  // so a handled shift-task refusal reached the digest as error_kind 'unknown'.
+  SHIFT_ALREADY_TAKEN: 'conflict', // 409
+  SHIFT_ASSIGN_FORBIDDEN: 'forbidden', // 403
+  SHIFT_DROP_FORBIDDEN: 'forbidden', // 403
+  SHIFT_NOT_ASSIGNED: 'conflict', // 409
+  SHIFT_NOT_FOUND: 'not_found', // 404
+  SHIFT_INVALID_DATE: 'validation', // 400
+  SHIFT_ENDED: 'conflict', // 409
+  SHIFT_TASK_OUTSIDE_SHIFT: 'validation', // 400
+  SHIFT_TASK_TIME_UNSUPPORTED: 'validation', // 400
+  RESCHEDULE_REQUIRED: 'conflict', // 409
+  INVALID_START: 'validation', // 400
+  INVALID_ASSIGNEE: 'validation', // 400
+  SERVICE_UNAVAILABLE: 'server', // 503
+
+  // Other write-path codes that matched no shape rule (same gap, audited 1.4.3), by status.
+  VIEW_ONLY: 'forbidden', // 403, middleware/circleAccess.ts: every write by a view-only seat
+  READ_ONLY_MEMBER: 'forbidden', // 403, documents
+  FEATURE_DISABLED: 'forbidden', // 403
+  CIRCLE_LIMIT_REACHED: 'forbidden', // 403
+  EMERGENCY_INFO_CHANGED: 'conflict', // 409
+  IDEMPOTENCY_IN_PROGRESS: 'conflict', // 409
+  IDEMPOTENCY_KEY_REUSED: 'validation', // 422
+  VOICE_TRY_USED: 'conflict', // 409
+  AS_NEEDED_IMMUTABLE: 'validation', // 400
+  AS_NEEDED_UNSCHEDULED: 'validation', // 400
+  RECURRENCE_DAYS_EXCLUDE_START: 'validation', // 400
+  OCCURRENCE_DATE_MISMATCH: 'validation', // 400
+  NOT_SCHEDULED: 'validation', // 400
+  NOT_SUPPORTED: 'validation', // 400
+  RANGE_TOO_LARGE: 'validation', // 400
+  DATE_OUT_OF_RANGE: 'validation', // 400
+  NOTE_DATE_IN_FUTURE: 'validation', // 400
+  PAYLOAD_TOO_LARGE: 'validation', // 413
+  STORAGE_LIMIT_EXCEEDED: 'validation', // 413
+  STORAGE_ERROR: 'server', // 500
+  PARTIAL_FAILURE: 'server', // 500
+  UPSTREAM_TIMEOUT: 'timeout', // 504
 };
 
 function kindFromCodeShape(code: string): FailureKind | undefined {
-  if (code.includes('RATE_LIMIT') || code.startsWith('FORBIDDEN') || code.startsWith('UNAUTHORIZED')) {
+  if (
+    code.includes('RATE_LIMIT') ||
+    code.startsWith('FORBIDDEN') ||
+    code.endsWith('_FORBIDDEN') ||
+    code.startsWith('UNAUTHORIZED')
+  ) {
     return 'forbidden';
   }
   if (code.endsWith('_NOT_FOUND')) return 'not_found';
@@ -780,14 +825,25 @@ export type FailureAction = 'create' | 'update' | 'delete';
  * The shared `error_occurred` context for a failed save/delete: enums and a
  * bounded code only — no circle_id, no message, no user content. Spread it into
  * `Analytics.errorOccurred(...)`'s context.
+ *
+ * `handled` (1.4.3, mirrors mobile `reportMutationFailure`): true when the
+ * surface answers this refusal with its own specific copy (e.g. SHIFT_ENDED on
+ * the shift-task form), false when it falls back to generic handling. Omitted
+ * when the caller does not assess it, so every other event keeps its shape.
  */
-export function failureContext(source: string, action: FailureAction, err: unknown) {
+export function failureContext(
+  source: string,
+  action: FailureAction,
+  err: unknown,
+  extra?: { handled?: boolean }
+) {
   return {
     source,
     action,
     error_kind: classifyFailure(err),
     code: classifyFailureCode(err),
     fatal: false,
+    ...(typeof extra?.handled === 'boolean' ? { handled: extra.handled } : {}),
   } as const;
 }
 
