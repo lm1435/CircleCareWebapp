@@ -52,8 +52,8 @@ export function TodayCareTeam({ circleId }: TodayCareTeamProps): ReactElement | 
           action={
             // card-shell-ok: the member-count pill (mobile memberCountPill), a word-sized label.
             <span
-              data-testid="today-care-team-count"
               className="inline-flex items-center rounded-full border border-line-2 bg-bg-2 px-3 py-1 text-sm font-medium text-ink-2"
+              data-testid="today-care-team-count"
             >
               {/* Mobile's rule exactly: the singular for one member, the plural otherwise. */}
               {members.length === 1
