@@ -1,5 +1,6 @@
-// Notifications inbox: flag, types and pure helpers (contract: client flag
-// `notifications_inbox`, 3-day window, row copy, push-tap destinations).
+// Notifications inbox: types and pure helpers (contract: 3-day window, row copy,
+// push-tap destinations). The inbox is ALWAYS on: there is no flag (owner decision
+// 2026-11-17; production web once shipped without it because an env var was unset).
 //
 // Everything here is pure and dependency-light so the page, the bell and the
 // tests share one definition.
@@ -7,29 +8,6 @@
 import { formatTimeOfDay, type TimeLanguage } from '@/utils/timezone';
 import type { HourCycle } from '@/utils/hourCycle';
 import type { InboxSource } from '@/lib/analytics';
-
-// ── Flag ──────────────────────────────────────────────────────────────────
-
-/**
- * `VITE_NOTIFICATIONS_INBOX` ('on' | 'off'). Unset => ON everywhere (the inbox is
- * live; production web shipped without it from 1.3.1 to 1.4.2 because the prod env
- * never set the flag). 'off' is the kill switch: no bell, no route content, no request.
- * `isProd` is kept in the signature so the kill switch is testable per environment.
- * Read at call time (not module load) so tests can stub the env per case.
- */
-export function inboxFlagValue(value: string | undefined, isProd: boolean): boolean {
-  if (value === 'on') return true;
-  if (value === 'off') return false;
-  void isProd;
-  return true;
-}
-
-export function isInboxEnabled(): boolean {
-  return inboxFlagValue(
-    import.meta.env.VITE_NOTIFICATIONS_INBOX as string | undefined,
-    Boolean(import.meta.env.PROD)
-  );
-}
 
 // ── Wire types ────────────────────────────────────────────────────────────
 

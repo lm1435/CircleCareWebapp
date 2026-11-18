@@ -105,7 +105,6 @@ function cardLink(name: string): HTMLElement {
 describe('CirclePickerPage: per-circle unread counts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv('VITE_NOTIFICATIONS_INBOX', 'on');
     useAuthStore.setState({ isAuthenticated: true });
     mockGetCircles.mockResolvedValue(TWO);
     vi.spyOn(Analytics, 'circleListUnreadShown').mockImplementation(() => {});
@@ -201,14 +200,15 @@ describe('CirclePickerPage: per-circle unread counts', () => {
     expect(Analytics.circleListUnreadShown).not.toHaveBeenCalled();
   });
 
-  it('flag off: no request, no count', async () => {
+  it("NEGATIVE: VITE_NOTIFICATIONS_INBOX='off' in a production build does NOT hide the counts", async () => {
     vi.stubEnv('VITE_NOTIFICATIONS_INBOX', 'off');
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('MODE', 'production');
     serve({ unread_count: 2, by_circle: { [MOM]: 2 } });
     renderPicker();
     await screen.findByText('Dad');
-    await new Promise((r) => setTimeout(r, 20));
-    expect(mockUnread).not.toHaveBeenCalled();
-    expect(screen.queryByTestId('circle-unread-count')).toBeNull();
+    await waitFor(() => expect(mockUnread).toHaveBeenCalled());
+    expect(await screen.findByTestId('circle-unread-count')).toBeInTheDocument();
   });
 });
 

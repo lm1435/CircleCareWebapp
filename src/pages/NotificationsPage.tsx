@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, Eyebrow, Icon, Skeleton, Text } from '@/components/ui';
 import { RemovedState } from '@/components/RemovedState';
@@ -13,7 +13,6 @@ import {
   groupInbox,
   inboxSourceFromState,
   inboxTypeEnum,
-  isInboxEnabled,
   resolveInboxDestination,
   rowCopy,
   rowMeta,
@@ -26,11 +25,8 @@ import {
  * `/notifications`: the account-level inbox (spans circles). Last 3 local days
  * (Today / Yesterday / 2 days ago). A row opens the same place a push tap would
  * and is marked read; a row whose target is gone opens the shared removed state.
- *
- * Flag off => redirect away; nothing is rendered and no request is made.
  */
 export default function NotificationsPage(): ReactElement {
-  if (!isInboxEnabled()) return <Navigate to="/circles" replace />;
   return <InboxPage />;
 }
 

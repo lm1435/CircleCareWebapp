@@ -14,12 +14,11 @@ import {
   type InboxUnread,
   type MarkInboxReadInput,
 } from '@/api/inbox';
-import { isInboxEnabled } from '@/lib/notificationsInbox';
 import { queryKeys } from '@/lib/queryKeys';
 import { useAuthStore } from '@/store/authStore';
 
-// Notifications inbox hooks. Every hook is gated on the `notifications_inbox`
-// flag AND a signed-in session: flag off => no request is ever made.
+// Notifications inbox hooks. Always on (no flag); every hook is gated on a signed-in
+// session only.
 
 /** Modest polling for the bell badge; window focus refetches too. */
 export const UNREAD_POLL_MS = 60_000;
@@ -33,7 +32,7 @@ export function useInbox(circleId?: string): UseQueryResult<InboxList> {
   return useQuery({
     queryKey: circleId ? queryKeys.inboxForCircle(circleId) : queryKeys.inbox,
     queryFn: () => getInbox(circleId),
-    enabled: isInboxEnabled() && isAuthenticated,
+    enabled: isAuthenticated,
     // Opening the page always shows fresh rows.
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
@@ -45,7 +44,7 @@ function useUnreadQuery<T>(select: (data: InboxUnread) => T): UseQueryResult<T> 
   return useQuery({
     queryKey: queryKeys.inboxUnread,
     queryFn: getInboxUnread,
-    enabled: isInboxEnabled() && isAuthenticated,
+    enabled: isAuthenticated,
     refetchOnWindowFocus: true,
     refetchInterval: UNREAD_POLL_MS,
     select,

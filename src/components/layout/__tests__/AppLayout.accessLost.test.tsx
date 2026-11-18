@@ -14,6 +14,8 @@ import { __resetEmailLinkLandingForTests } from '@/lib/emailLinkLanding';
  */
 
 // StoreReviewBanner owns its own tests; here it would need a QueryClient.
+// The inbox bell is always on (no flag); it has its own suite. Stub it so this suite needs no QueryClient.
+vi.mock('@/components/layout/NotificationBell', () => ({ NotificationBell: () => null }));
 vi.mock('@/components/StoreReviewBanner', () => ({
   StoreReviewBanner: () => null,
 }));

@@ -65,7 +65,6 @@ describe('NotificationsPage', () => {
     vi.clearAllMocks();
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 9, 29, 15, 0, 0));
-    vi.stubEnv('VITE_NOTIFICATIONS_INBOX', 'on');
     useAuthStore.setState({ isAuthenticated: true });
     circles(1);
     mockMark.mockResolvedValue(1);
@@ -76,12 +75,15 @@ describe('NotificationsPage', () => {
     vi.unstubAllEnvs();
   });
 
-  it('flag off: nothing renders, no request, redirected away', async () => {
+  it("NEGATIVE: VITE_NOTIFICATIONS_INBOX='off' in a production build does NOT hide or redirect the page", async () => {
     vi.stubEnv('VITE_NOTIFICATIONS_INBOX', 'off');
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('MODE', 'production');
+    serve([makeItem({ title: 'T-today', updated_at: local(2026, 10, 29, 9) })]);
     renderPage();
-    expect(await screen.findByText('elsewhere')).toBeInTheDocument();
-    expect(screen.queryByTestId('notifications-page')).toBeNull();
-    expect(mockGet).not.toHaveBeenCalled();
+    expect(await screen.findByText('T-today')).toBeInTheDocument();
+    expect(screen.getByTestId('notifications-page')).toBeInTheDocument();
+    expect(screen.queryByText('elsewhere')).toBeNull();
   });
 
   it('groups into Today / Yesterday / 2 days ago, then Earlier', async () => {
@@ -475,12 +477,15 @@ describe('NotificationsPage', () => {
       );
     });
 
-    it('flag off: redirected to the circle, no request', async () => {
-      vi.stubEnv('VITE_NOTIFICATIONS_INBOX', 'off');
+    it("NEGATIVE: VITE_NOTIFICATIONS_INBOX='off' in a production build does NOT redirect the circle inbox", async () => {
+    vi.stubEnv('VITE_NOTIFICATIONS_INBOX', 'off');
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('MODE', 'production');
+      serve([makeItem({ title: 'T-scoped', circle_id: CIRCLE_A, updated_at: local(2026, 10, 29, 9) })]);
       renderScoped();
-      expect(await screen.findByText('elsewhere')).toBeInTheDocument();
-      expect(screen.getByTestId('where')).toHaveTextContent(`/circles/${CIRCLE_A}`);
-      expect(mockGet).not.toHaveBeenCalled();
+      expect(await screen.findByText('T-scoped')).toBeInTheDocument();
+      expect(screen.queryByText('elsewhere')).toBeNull();
+      expect(mockGet).toHaveBeenCalled();
     });
   });
 });

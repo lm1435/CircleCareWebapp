@@ -71,7 +71,6 @@ function renderBell() {
 describe('NotificationBell', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv('VITE_NOTIFICATIONS_INBOX', 'on');
     useAuthStore.setState({ isAuthenticated: true });
   });
   afterEach(() => vi.unstubAllEnvs());
@@ -165,11 +164,12 @@ describe('NotificationBell', () => {
     });
   });
 
-  it('flag off: renders nothing and makes no request', async () => {
+  it("NEGATIVE: VITE_NOTIFICATIONS_INBOX='off' in a production build does NOT hide the bell", async () => {
     vi.stubEnv('VITE_NOTIFICATIONS_INBOX', 'off');
-    const { container } = renderBell();
-    await new Promise((r) => setTimeout(r, 20));
-    expect(container).toBeEmptyDOMElement();
-    expect(mockUnread).not.toHaveBeenCalled();
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('MODE', 'production');
+    mockCount.mockResolvedValue(3);
+    renderBell();
+    expect(await screen.findByRole('link', { name: 'Notifications, 3 unread' })).toBeInTheDocument();
   });
 });

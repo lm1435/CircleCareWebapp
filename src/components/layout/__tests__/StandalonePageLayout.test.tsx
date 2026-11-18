@@ -159,9 +159,7 @@ describe('StandalonePageLayout', () => {
     expect(screen.getByRole('main')).toBe(main);
   });
 
-  describe('notification bell (inbox flag on)', () => {
-    beforeEach(() => vi.stubEnv('VITE_NOTIFICATIONS_INBOX', 'on'));
-    afterEach(() => vi.unstubAllEnvs());
+  describe('notification bell (always on)', () => {
 
     it('is hidden on the circle list (each card carries its own count)', () => {
       renderLayout(['/circles']);

@@ -3,7 +3,6 @@ import { CIRCLE_A, EVENT_ID, MED_ID, local, makeItem } from '@/test/fixtures/inb
 import {
   groupInbox,
   inboxTypeEnum,
-  inboxFlagValue,
   resolveInboxDestination,
   rowCopy,
   rowMeta,
@@ -14,22 +13,6 @@ import i18n from '@/i18n';
 const NOW = new Date(2026, 9, 29, 15, 0, 0); // Thu Oct 29 2026, 15:00 local
 const t = (key: string, options?: Record<string, unknown>): string =>
   i18n.t(key, { ns: 'common', lng: 'en', ...options }) as string;
-
-describe('inboxFlagValue', () => {
-  it('honours an explicit on/off', () => {
-    expect(inboxFlagValue('on', true)).toBe(true);
-    expect(inboxFlagValue('off', false)).toBe(false);
-  });
-  it('POSITIVE: unset is ON in every environment, production included', () => {
-    expect(inboxFlagValue(undefined, false)).toBe(true);
-    expect(inboxFlagValue(undefined, true)).toBe(true);
-    expect(inboxFlagValue('', true)).toBe(true);
-  });
-  it('NEGATIVE: the kill switch "off" hides it in production and elsewhere', () => {
-    expect(inboxFlagValue('off', true)).toBe(false);
-    expect(inboxFlagValue('off', false)).toBe(false);
-  });
-});
 
 describe('unreadBucket / inboxTypeEnum', () => {
   it('buckets the unread count', () => {

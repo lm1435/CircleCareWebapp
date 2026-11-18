@@ -128,8 +128,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/circles', element: <CirclePickerPage /> },
           { path: '/invites', element: <PendingInvitesPage /> },
-          // Notifications inbox: account-level (spans circles). Renders nothing with
-          // the `notifications_inbox` flag off.
+          // Notifications inbox: account-level (spans circles). Always on (no flag).
           { path: '/notifications', element: <NotificationsPage /> },
           { path: '/profile', element: <ProfilePage /> },
           // One settings page per row of the profile list (lib/settingsSections.ts).
@@ -167,7 +166,7 @@ export const router = createBrowserRouter([
           // inbox row, the paused notice). Mobile deep link: circles/:circleId/routine-check-in.
           { path: 'routine-check-in', element: <RoutineCheckInPage /> },
           // One circle's notifications (the circle card's count, the in-circle bell).
-          // `/notifications` stays the all-circles inbox. Flag off: redirects to the circle.
+          // `/notifications` stays the all-circles inbox.
           { path: 'notifications', element: <CircleNotificationsPage /> },
         ],
       },

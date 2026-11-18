@@ -10,6 +10,8 @@ import { useCircles } from '@/hooks/useCircles';
 // land on the section's DEFAULT view, so the switcher drops the search string
 // (Meds `?tab=history&medication=x`) and hash instead of carrying them over.
 
+// The inbox bell is always on (no flag); it has its own suite. Stub it so this suite needs no QueryClient.
+vi.mock('@/components/layout/NotificationBell', () => ({ NotificationBell: () => null }));
 vi.mock('@/hooks/useCircles', () => ({ useCircles: vi.fn() }));
 
 function LocationSpy(): ReactElement {

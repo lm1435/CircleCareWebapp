@@ -35,18 +35,20 @@ function setup() {
 describe('useInbox hooks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv('VITE_NOTIFICATIONS_INBOX', 'on');
     useAuthStore.setState({ isAuthenticated: true });
   });
   afterEach(() => vi.unstubAllEnvs());
 
-  it('flag off: no request is made', async () => {
+  it("NEGATIVE: VITE_NOTIFICATIONS_INBOX='off' in a production build still requests", async () => {
     vi.stubEnv('VITE_NOTIFICATIONS_INBOX', 'off');
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('MODE', 'production');
+    mockGet.mockResolvedValue({ items: [], unread_count: 0 });
+    mockCount.mockResolvedValue({ unread_count: 0, by_circle: {} });
     const { wrapper } = setup();
     renderHook(() => ({ a: useInbox(), b: useInboxUnreadCount() }), { wrapper });
-    await new Promise((r) => setTimeout(r, 20));
-    expect(mockGet).not.toHaveBeenCalled();
-    expect(mockCount).not.toHaveBeenCalled();
+    await waitFor(() => expect(mockGet).toHaveBeenCalled());
+    await waitFor(() => expect(mockCount).toHaveBeenCalled());
   });
 
   it('signed out: no request is made', async () => {

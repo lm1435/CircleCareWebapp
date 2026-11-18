@@ -6,7 +6,6 @@ import { useCircles } from '@/hooks/useCircles';
 import { useInboxUnreadSummary } from '@/hooks/useInbox';
 import {
   circleInboxPath,
-  isInboxEnabled,
   type InboxLocationState,
 } from '@/lib/notificationsInbox';
 
@@ -81,12 +80,8 @@ function BellLink({ circleId, circles }: BellLinkProps): ReactElement {
   );
 }
 
-/**
- * Header bell with the unread count. Flag off => renders nothing and makes no
- * request (the hooks live in BellLink, which never mounts).
- */
-export function NotificationBell({ circleId }: NotificationBellProps = {}): ReactElement | null {
-  if (!isInboxEnabled()) return null;
+/** Header bell with the unread count. Always rendered: the inbox has no flag. */
+export function NotificationBell({ circleId }: NotificationBellProps = {}): ReactElement {
   return circleId ? <InCircleBell circleId={circleId} /> : <BellLink />;
 }
 

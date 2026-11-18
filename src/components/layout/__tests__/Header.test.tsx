@@ -10,6 +10,8 @@ import { Avatar } from '@/components/ui';
 import { useCircles } from '@/hooks/useCircles';
 import { useAuthStore } from '@/store/authStore';
 
+// The inbox bell is always on (no flag); it has its own suite. Stub it so this suite needs no QueryClient.
+vi.mock('@/components/layout/NotificationBell', () => ({ NotificationBell: () => null }));
 vi.mock('@/hooks/useCircles', () => ({ useCircles: vi.fn() }));
 const mockUseCircles = vi.mocked(useCircles);
 
