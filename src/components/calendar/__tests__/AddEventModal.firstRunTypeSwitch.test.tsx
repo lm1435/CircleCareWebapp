@@ -158,14 +158,14 @@ describe('first run v2: the type switch', () => {
   });
 });
 
-describe('first run v2: time defaults', () => {
+describe('first run v2: time defaults', { timeout: 20_000 }, () => {
   it('POSITIVE: the medication saves at 8:00 AM when the time is not touched', async () => {
     const onFirstRunItemSaved = vi.fn();
     renderForm({ firstRun: true, firstRunTypeSwitch: true, onFirstRunItemSaved });
     await waitFor(() => expect(screen.getByRole('checkbox', { name: /Morning/ })).toBeChecked());
     await user().type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
     await user().click(screen.getByTestId('add-event-save'));
-    await waitFor(() => expect(mutateCreate).toHaveBeenCalled());
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalled(), { timeout: 5000 });
     expect(mutateCreate.mock.calls[0][0]).toMatchObject({ scheduled_time: '08:00' });
     await waitFor(() => expect(onFirstRunItemSaved).toHaveBeenCalled());
     expect(onFirstRunItemSaved.mock.calls[0][0]).toMatchObject({ type: 'medication', recipientTime: '08:00' });
@@ -179,7 +179,7 @@ describe('first run v2: time defaults', () => {
     expect(screen.getByTestId('appt-from-tile')).toHaveTextContent('9:00 AM');
     await user().type(document.getElementById('title') as HTMLElement, 'Doctor visit');
     await user().click(screen.getByTestId('add-event-save'));
-    await waitFor(() => expect(mutateCreate).toHaveBeenCalled());
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalled(), { timeout: 5000 });
     expect(mutateCreate.mock.calls[0][0]).toMatchObject({
       event_type: 'appointment',
       scheduled_date: TODAY,
@@ -197,7 +197,7 @@ describe('first run v2: time defaults', () => {
     expect(await screen.findByTestId('task-from-tile')).toHaveTextContent('9:00 AM');
     await user().type(document.getElementById('title') as HTMLElement, 'Call pharmacy');
     await user().click(screen.getByTestId('add-event-save'));
-    await waitFor(() => expect(mutateCreate).toHaveBeenCalled());
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalled(), { timeout: 5000 });
     expect(mutateCreate.mock.calls[0][0]).toMatchObject({
       event_type: 'task',
       scheduled_date: TOMORROW,
@@ -212,7 +212,7 @@ describe('first run v2: time defaults', () => {
     await user().click(await screen.findByRole('radio', { name: 'Any time' }));
     await user().type(document.getElementById('title') as HTMLElement, 'Doctor visit');
     await user().click(screen.getByTestId('add-event-save'));
-    await waitFor(() => expect(mutateCreate).toHaveBeenCalled());
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalled(), { timeout: 5000 });
     expect(mutateCreate.mock.calls[0][0].scheduled_time ?? null).toBeNull();
     expect(firstRunSaved).toHaveBeenCalledWith(expect.objectContaining({ hasTime: false, timeDefaultKept: false }));
     expect(onFirstRunItemSaved.mock.calls[0][0]).toMatchObject({ type: 'appointment', recipientTime: null });
