@@ -259,7 +259,7 @@ describe.each(['en', 'es'] as const)('compact paywall (%s)', (lng) => {
   it('P4_monthly_shows_no_trial_and_monthly_terms_line', async () => {
     const user = userEvent.setup();
     renderAt({ paywallContext: 'onboarding' });
-    await user.click(screen.getByRole('radio', { name: lng === 'en' ? /^Monthly/ : /^Mensual/ }));
+    await user.click(screen.getByRole('button', { name: lng === 'en' ? /^Monthly/ : /^Mensual/ }));
     expect(screen.getByRole('button', { name: L.monthlyCta })).toBeInTheDocument();
     const terms = screen.getByTestId('upgrade-terms');
     expect(terms).toHaveTextContent(L.monthlyTerms);
@@ -274,7 +274,8 @@ describe.each(['en', 'es'] as const)('compact paywall (%s)', (lng) => {
       const tok = el.className.split(/\s+/).find((c) => c in PX);
       return tok ? PX[tok] : 0;
     };
-    const annual = container.querySelector('[data-plan-key="annual"]') as HTMLElement;
+    void container;
+    const annual = screen.getByTestId('plan-price-card');
     const price = annual.querySelector('[data-price]') as HTMLElement;
     const perMonth = annual.querySelector('[data-per-month]') as HTMLElement;
     expect(price.textContent).toBe('$59.99');
@@ -346,7 +347,7 @@ describe.each(['en', 'es'] as const)('compact paywall (%s)', (lng) => {
     for (const annual of [plan({ hasFreeTrial: false, trialPeriod: null }), plan({ trialPeriod: null })]) {
       setPlans(annual);
       const { unmount } = renderAt({ paywallContext: 'onboarding' });
-      const card = screen.getByRole('radio', { name: lng === 'en' ? /^Annual/ : /^Anual/ });
+      const card = screen.getByTestId('plan-price-card');
       const cta = screen.getByRole('button', { name: L.annualNoTrialCta });
       const terms = screen.getByTestId('upgrade-terms');
       for (const el of [card, cta, terms]) expect(el.textContent).not.toMatch(L.freeWord);
@@ -423,9 +424,9 @@ describe('compact paywall footer', () => {
   it('plan_selection_plan_changed fires only on an actual change', async () => {
     const user = userEvent.setup();
     renderAt({ paywallContext: 'general' });
-    await user.click(screen.getByRole('radio', { name: /^Annual/ }));
+    await user.click(screen.getByRole('button', { name: /^Annual/ }));
     expect(Analytics.planSelectionPlanChanged).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('radio', { name: /^Monthly/ }));
+    await user.click(screen.getByRole('button', { name: /^Monthly/ }));
     expect(Analytics.planSelectionPlanChanged).toHaveBeenCalledTimes(1);
     expect(Analytics.planSelectionPlanChanged).toHaveBeenCalledWith('monthly', 'general');
   });
@@ -549,8 +550,8 @@ describe('compact paywall copy, every locale', () => {
     const user = userEvent.setup();
     renderAt({ paywallContext: 'onboarding' });
     await user.click(screen.getByRole('button', { name: 'See everything included' }));
-    await user.click(screen.getByRole('radio', { name: /^Monthly/ }));
-    await user.click(screen.getByRole('radio', { name: /^Annual/ }));
+    await user.click(screen.getByRole('button', { name: /^Monthly/ }));
+    await user.click(screen.getByRole('button', { name: /^Annual/ }));
     await user.click(screen.getByRole('button', { name: 'Start 7-day free trial' }));
     const all = Object.values(Analytics).flatMap((fn) => (fn as ReturnType<typeof vi.fn>).mock.calls);
     expect(all.length).toBeGreaterThan(3);

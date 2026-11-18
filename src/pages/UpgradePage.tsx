@@ -4,14 +4,12 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent,
   type ReactElement,
   type ReactNode,
 } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Badge,
   Button,
   Card,
   CircleButton,
@@ -730,7 +728,7 @@ interface PlansViewProps {
  * everything included" (expands in place), and a footer with the buy button,
  * the renewal terms and the legal links. Moss appears once: the buy button.
  *
- * Plan control stays two radio cards on the web (mobile has a segmented toggle).
+ * Plan control: the annual / monthly toggle and ONE price card, as mobile (1.4.3).
  * NO RESTORE LINK ON THE WEB: signing in IS the restore here (the subscription
  * belongs to the account, and `alreadyPremium` covers a subscriber who lands on
  * this page), so a Restore control would be a dead link.
@@ -857,42 +855,10 @@ function PlansView({
     Analytics.planSelectionDetailsToggled(next, paywallContext, secondsSinceView());
   };
 
-  // ── Roving tabindex (WAI-ARIA APG radiogroup) ─────────────────────────────
-  // Exactly one Card is a tab stop (`tabIndex={selected ? 0 : -1}`, set at each
-  // PlanOption below); the arrow keys move BOTH the selection and focus, which
-  // is why this lives on the radiogroup container rather than each card.
-  const radioGroupRef = useRef<HTMLDivElement>(null);
-  // DOM order of the plans actually rendered — a plan that doesn't exist is
-  // never a stop, so Home/End/arrow wraparound only ever land on a real card.
+  // The plans actually offered, annual first (mobile's toggle order). A plan that does not exist is
+  // never a tab; with only one, there is nothing to toggle and the card alone shows.
   const planOrder: PlanKey[] = [annual ? 'annual' : null, monthly ? 'monthly' : null].filter(
     (key): key is PlanKey => key !== null
-  );
-
-  const focusPlan = useCallback((key: PlanKey) => {
-    radioGroupRef.current?.querySelector<HTMLElement>(`[data-plan-key="${key}"]`)?.focus();
-  }, []);
-
-  const handleRadioGroupKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLDivElement>) => {
-      if (planOrder.length < 2) return;
-      const currentIndex = planOrder.indexOf(selectedKey);
-      let nextIndex: number | null = null;
-      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-        nextIndex = (currentIndex + 1) % planOrder.length;
-      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-        nextIndex = (currentIndex - 1 + planOrder.length) % planOrder.length;
-      } else if (event.key === 'Home') {
-        nextIndex = 0;
-      } else if (event.key === 'End') {
-        nextIndex = planOrder.length - 1;
-      }
-      if (nextIndex === null) return;
-      event.preventDefault();
-      const nextKey = planOrder[nextIndex];
-      choose(nextKey);
-      focusPlan(nextKey);
-    },
-    [planOrder, selectedKey, focusPlan, choose]
   );
 
   const reasonRow = (id: BenefitId): ReactElement => (
@@ -944,46 +910,80 @@ function PlansView({
         {headline}
       </Text>
 
-      {/* Real ARIA radios via the Card primitive (role="radio" + aria-checked),
-          not native inputs — the whole card is the hit target and one Card per
-          option is the only focusable control. Roving tabindex per the WAI-ARIA
-          APG radiogroup pattern. */}
-      <div
-        ref={radioGroupRef}
-        role="radiogroup"
-        aria-label={t('choosePlan')}
-        onKeyDown={handleRadioGroupKeyDown}
-        className="mt-5 grid w-full grid-cols-1 items-stretch gap-3 sm:grid-cols-2"
-      >
-        {annual && (
-          <PlanOption
-            planKey="annual"
-            selected={selectedPlan === annual}
-            onSelect={() => choose('annual')}
-            label={t('plans.annual')}
-            price={annual.formattedPrice}
-            currency={annual.currency}
-            period={t('plans.perYear')}
-            badge={savePercent ? t('plans.savePercent', { percent: savePercent }) : null}
-            billing={billingLine(annual, 'annual')}
-            perMonth={perMonthEquivalent ? t('plans.perMonthBilled', { price: perMonthEquivalent }) : null}
-          />
-        )}
-        {monthly && (
-          <PlanOption
-            planKey="monthly"
-            selected={selectedPlan === monthly}
-            onSelect={() => choose('monthly')}
-            label={t('plans.monthly')}
-            price={monthly.formattedPrice}
-            currency={monthly.currency}
-            period={t('plans.perMonth')}
-            badge={null}
-            billing={billingLine(monthly, 'monthly')}
-            perMonth={null}
-          />
-        )}
-      </div>
+      {/* Annual / monthly toggle + ONE price card (1.4.3, mobile parity: PlanSelectionScreen's
+          `plan-toggle` and `plan-price-card`). Two pressed-state buttons, annual first with the
+          honest savings badge; the card below shows only the chosen plan. Prices come from the
+          store (RevenueCat Web Billing) exactly as before: nothing here is a literal. */}
+      {planOrder.length > 1 && (
+        <div
+          role="group"
+          aria-label={t('choosePlan')}
+          data-testid="plan-toggle"
+          className="mt-5 grid w-full grid-cols-2 gap-1 rounded-full bg-bg-2 p-1"
+        >
+          {planOrder.map((key) => {
+            const on = selectedKey === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={on}
+                data-testid={`plan-toggle-tab-${key}`}
+                onClick={() => choose(key)}
+                className={[
+                  'inline-flex min-h-11 flex-wrap items-center justify-center gap-x-2 gap-y-0.5 rounded-full px-3 py-1.5 text-md font-semibold transition-colors',
+                  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink',
+                  on ? 'bg-selected-fill text-on-selected' : 'text-ink-2 hover:text-ink',
+                ].join(' ')}
+              >
+                <span>{key === 'annual' ? t('plans.annual') : t('plans.monthly')}</span>
+                {key === 'annual' && savePercent ? (
+                  // A solid card-surface pill: it sits on the dark selected fill or the pale
+                  // track, and a translucent Badge ground failed contrast on the former.
+                  <span
+                    data-testid="plan-savings"
+                    className="inline-flex items-center rounded-full bg-cream px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-ink"
+                  >
+                    {t('plans.savePercent', { percent: savePercent })}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {selectedPlan && (
+        <Card
+          variant="outlined"
+          padding="md"
+          data-testid="plan-price-card"
+          aria-live="polite"
+          className="mt-3 flex flex-col text-left"
+        >
+          <p className="m-0 flex flex-wrap items-baseline gap-x-1.5">
+            <Text variant="pageTitle" as="span" data-price="">
+              {selectedPlan.formattedPrice}
+            </Text>
+            <Text variant="caption" as="span">
+              {selectedPlan.currency}
+            </Text>
+            <Text variant="caption" as="span">
+              {selectedKey === 'annual' ? t('plans.perYear') : t('plans.perMonth')}
+            </Text>
+          </p>
+          {billingLine(selectedPlan, selectedKey) && (
+            <span data-billing="" className="block text-sm font-semibold text-ink">
+              {billingLine(selectedPlan, selectedKey)}
+            </span>
+          )}
+          {selectedKey === 'annual' && perMonthEquivalent && (
+            <Text variant="caption" as="span" data-per-month="" className="block">
+              {t('plans.perMonthBilled', { price: perMonthEquivalent })}
+            </Text>
+          )}
+        </Card>
+      )}
 
       {/* Three reasons, text only: semibold title, one muted line, hairline between. */}
       <ul data-reasons="" className="m-0 mt-4 list-none p-0">
@@ -1078,132 +1078,6 @@ function PlansView({
         </div>
       </div>
     </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-
-interface PlanOptionProps {
-  /** DOM anchor for the radiogroup's roving-tabindex focus management. */
-  planKey: PlanKey;
-  selected: boolean;
-  onSelect: () => void;
-  label: string;
-  price: string;
-  /** ISO 4217 code shown beside the price. Every market we sell to on the web
-   *  (US/CA/AU/NZ) renders a bare `$` in its own locale, so the symbol alone
-   *  never says WHICH dollar. */
-  currency: string;
-  period: string;
-  badge: string | null;
-  /** Line 2: billing cadence and any trial ("7 days free, then billed yearly"). */
-  billing: string | null;
-  /** Line 3, annual only, smaller: the per-month equivalent. */
-  perMonth: string | null;
-}
-
-/**
- * A real ARIA radio (role="radio" + aria-checked) rendered on the `Card`
- * primitive's own `onPress` button. The whole card is the hit target;
- * `RadioDot` is a purely decorative echo of the checked state.
- *
- * SELECTION IS NEUTRAL (one accent: moss is the buy button only). The selected
- * card recolours its 1px border to the selected-fill ink and adds a 1px ring
- * (box-shadow, no layout), so both states share one border width and the
- * content never moves.
- *
- * The accessible name carries EVERY line of the card: `aria-label` on a button
- * replaces its contents, so a name of just "Annual, $59.99" would hide the
- * trial terms and the per-month price from a screen reader.
- *
- * THE BILLED AMOUNT IS THE LARGEST PRICE (Apple 3.1.2, Google): page-title size;
- * the per-month equivalent is caption size.
- */
-function PlanOption({
-  planKey,
-  selected,
-  onSelect,
-  label,
-  price,
-  currency,
-  period,
-  badge,
-  billing,
-  perMonth,
-}: PlanOptionProps): ReactElement {
-  const name = [`${label}, ${price} ${currency} ${period}`, billing, perMonth, badge]
-    .filter(Boolean)
-    .join(', ');
-  return (
-    <Card
-      variant="outlined"
-      padding="md"
-      onPress={onSelect}
-      role="radio"
-      aria-checked={selected}
-      aria-label={name}
-      data-plan-key={planKey}
-      tabIndex={selected ? 0 : -1}
-      className={[
-        'relative flex flex-col text-left transition-shadow',
-        'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-coral has-[:focus-visible]:ring-offset-2',
-        // `!` on the colours: Card's own `border-line-2` is emitted LATER in the
-        // compiled stylesheet, so a plain override loses the cascade.
-        selected
-          ? 'border-selected-fill! ring-1 ring-selected-fill'
-          : 'border-line! hover:shadow-md',
-      ].join(' ')}
-    >
-      <div className="flex min-h-6 items-center justify-between gap-2">
-        <span className="flex items-center gap-2.5">
-          <RadioDot selected={selected} />
-          <Text variant="h3" as="span">
-            {label}
-          </Text>
-        </span>
-        {badge && (
-          <Badge variant="default" size="sm">
-            {badge}
-          </Badge>
-        )}
-      </div>
-
-      <p className="m-0 mt-2 flex flex-wrap items-baseline gap-x-1.5">
-        <Text variant="pageTitle" as="span" data-price="">
-          {price}
-        </Text>
-        <Text variant="caption" as="span">
-          {currency}
-        </Text>
-        <Text variant="caption" as="span">
-          {period}
-        </Text>
-      </p>
-      {billing && (
-        <span data-billing="" className="block text-sm font-semibold text-ink">
-          {billing}
-        </span>
-      )}
-      {perMonth && (
-        <Text variant="caption" as="span" data-per-month="" className="block">
-          {perMonth}
-        </Text>
-      )}
-    </Card>
-  );
-}
-
-function RadioDot({ selected }: { selected: boolean }): ReactElement {
-  return (
-    <span
-      aria-hidden="true"
-      className={[
-        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2',
-        selected ? 'border-selected-fill bg-selected-fill' : 'border-ink/30',
-      ].join(' ')}
-    >
-      {selected && <span className="h-2 w-2 rounded-full bg-on-selected" />}
-    </span>
   );
 }
 

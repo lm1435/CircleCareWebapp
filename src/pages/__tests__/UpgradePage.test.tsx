@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 import i18n from '@/i18n';
@@ -181,38 +181,56 @@ describe('UpgradePage', () => {
   it('has no trial hero pill; the trial is stated on the card and in the terms line', () => {
     renderPage();
     expect(screen.queryByText(/nothing due today/)).toBeNull();
-    const annualRadio = screen.getByRole('radio', { name: /Annual/ });
-    expect(annualRadio).toHaveTextContent('1 week free, then billed yearly');
+    expect(screen.getByTestId('plan-price-card')).toHaveTextContent('1 week free, then billed yearly');
     expect(screen.getByTestId('upgrade-terms')).toHaveTextContent(
       '1 week free, then $59.99 per year. Renews every year until you cancel in your account settings.'
     );
   });
 
-  it('renders both plans with their Stripe prices', () => {
+  // 1.4.3 mobile parity: an annual / monthly toggle and ONE price card (PlanSelectionScreen).
+  it('POSITIVE: one price card shows the selected plan\'s store price; the toggle swaps it', () => {
     renderPage();
-    expect(screen.getByText('$6.99')).toBeInTheDocument();
-    expect(screen.getByText('$59.99')).toBeInTheDocument();
+    const card = screen.getByTestId('plan-price-card');
+    expect(card).toHaveTextContent('$59.99');
+    expect(card).toHaveTextContent('/year');
+    expect(screen.queryByText('$6.99')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Monthly/ }));
+    expect(screen.getByTestId('plan-price-card')).toHaveTextContent('$6.99');
+    expect(screen.getByTestId('plan-price-card')).toHaveTextContent('/month');
+    expect(screen.queryByText('$59.99')).toBeNull();
+  });
+
+  it('NEGATIVE: the page source hardcodes no price (prices come from the store only)', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const src = readFileSync(join(__dirname, '..', 'UpgradePage.tsx'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|[^:'"`\\])\/\/.*$/gm, '$1');
+    expect(src.match(/['"`][^'"`\n]*[$€£]\s?\d+(?:[.,]\d{2})?[^'"`\n]*['"`]/g) ?? []).toEqual([]);
+  });
+
+  it('NEGATIVE: never two plan cards and no radio cards (mobile has one card)', () => {
+    renderPage();
+    expect(screen.getAllByTestId('plan-price-card')).toHaveLength(1);
+    expect(screen.queryAllByRole('radio')).toHaveLength(0);
+    expect(screen.queryByRole('radiogroup')).toBeNull();
   });
 
   // All four markets we sell to on the web (US, CA, AU, NZ) use a bare `$` in
   // their own locale, so the symbol alone never says WHICH dollar.
-  it('names the currency beside each price', () => {
+  it('names the currency beside the price', () => {
     renderPage();
-    expect(screen.getAllByText('USD').length).toBe(2);
+    expect(within(screen.getByTestId('plan-price-card')).getByText('USD')).toBeInTheDocument();
   });
 
-  // `aria-label` on a button REPLACES its contents, so every line of the card has
-  // to be in the name or a screen reader never hears the trial terms.
-  it('puts the currency AND every card line in the radio accessible name', () => {
+  it('POSITIVE: the toggle is two pressed-state buttons, Annual first with its savings', () => {
     renderPage();
-    expect(
-      screen.getByRole('radio', {
-        name: 'Annual, $59.99 USD /year, 1 week free, then billed yearly, $5.00/mo billed annually, 28% off',
-      })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('radio', { name: 'Monthly, $6.99 USD /month, Billed monthly. No free trial.' })
-    ).toBeInTheDocument();
+    const group = screen.getByRole('group', { name: 'Choose a plan' });
+    const [annual, monthly] = within(group).getAllByRole('button');
+    expect(annual).toHaveTextContent(/^Annual28% off$/);
+    expect(monthly).toHaveTextContent(/^Monthly$/);
+    expect(annual).toHaveAttribute('aria-pressed', 'true');
+    expect(monthly).toHaveAttribute('aria-pressed', 'false');
   });
 
   // One accent (moss = the buy button). The eyebrow is neutral grey, never coral.
@@ -230,103 +248,36 @@ describe('UpgradePage', () => {
     expect(screen.getByText('$5.00/mo billed annually')).toBeInTheDocument();
   });
 
-  it('offers both plans as radio options, annual selected by default', () => {
+  it('selects annual by default, with one shared CTA', () => {
     renderPage();
-    expect(screen.getByRole('radio', { name: /Annual/ })).toBeChecked();
-    expect(screen.getByRole('radio', { name: /Monthly/ })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: /^Annual/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /^Monthly/ })).toHaveAttribute('aria-pressed', 'false');
     // One shared CTA, reflecting the default (annual → free trial, length from the store)
     expect(screen.getByRole('button', { name: 'Start 1-week free trial' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Subscribe/ })).not.toBeInTheDocument();
   });
 
   // Selection is NEUTRAL (owner rule: one accent; moss only on the buy button).
-  // Drawn as a border COLOUR plus a 1px ring (box-shadow, no layout), so both
-  // states share one border width and the box/content never move.
-  it('marks the selected plan card in neutral ink with no layout-shifting border change, and flips on click', () => {
+  it('marks the selected toggle tab in neutral ink, never moss or coral, and flips on click', () => {
     renderPage();
-    const annualRadio = screen.getByRole('radio', { name: /Annual/ });
-    const monthlyRadio = screen.getByRole('radio', { name: /Monthly/ });
-    const tokens = (el: HTMLElement): string[] => el.className.split(/\s+/);
-    const borderWidth = (el: HTMLElement): string[] =>
-      tokens(el).filter((c) => /^border(-[0-9]+)?$/.test(c) || /^border-[xytrbl]-?[0-9]*$/.test(c));
-
-    const assertSelected = (el: HTMLElement): void => {
-      expect(el).toHaveAttribute('aria-checked', 'true');
-      const c = tokens(el);
-      expect(c).toContain('border-selected-fill!');
-      expect(c).toContain('ring-1');
-      expect(c).toContain('ring-selected-fill');
-      expect(el.className).not.toMatch(/moss|bg-coral-soft|border-2/);
-    };
-    const assertUnselected = (el: HTMLElement): void => {
-      expect(el).toHaveAttribute('aria-checked', 'false');
-      const c = tokens(el);
-      expect(c).toContain('border-line!');
-      expect(c).not.toContain('ring-1');
-      expect(el.className).not.toMatch(/moss|bg-coral-soft|border-2/);
-    };
-
-    assertSelected(annualRadio);
-    assertUnselected(monthlyRadio);
-    expect(borderWidth(annualRadio)).toEqual(['border']);
-    expect(borderWidth(monthlyRadio)).toEqual(['border']);
-
-    fireEvent.click(monthlyRadio);
-
-    assertSelected(monthlyRadio);
-    assertUnselected(annualRadio);
-    expect(borderWidth(annualRadio)).toEqual(['border']);
-    expect(borderWidth(monthlyRadio)).toEqual(['border']);
-  });
-
-  it('keeps the plan cards free of moss and coral (savings badge and billing line neutral)', () => {
-    renderPage();
-    const save = screen.getByText('28% off');
-    expect(save.className).not.toMatch(/moss|coral/);
-    const annualRadio = screen.getByRole('radio', { name: /Annual/ });
-    expect(annualRadio.innerHTML).not.toMatch(/moss|coral/);
-    const monthlyRadio = screen.getByRole('radio', { name: /Monthly/ });
-    expect(monthlyRadio.innerHTML).not.toMatch(/moss|coral/);
+    const annual = screen.getByRole('button', { name: /^Annual/ });
+    const monthly = screen.getByRole('button', { name: /^Monthly/ });
+    expect(annual.className).toContain('bg-selected-fill');
+    expect(monthly.className).not.toContain('bg-selected-fill');
+    fireEvent.click(monthly);
+    expect(monthly).toHaveAttribute('aria-pressed', 'true');
+    expect(annual).toHaveAttribute('aria-pressed', 'false');
+    expect(monthly.className).toContain('bg-selected-fill');
+    for (const el of [annual, monthly, screen.getByTestId('plan-price-card')]) {
+      expect(el.outerHTML).not.toMatch(/moss|coral/);
+    }
+    expect(screen.queryByText('28% off')?.className ?? '').not.toMatch(/moss|coral/);
   });
 
   // The single headline never leaves a one-word last line (pageTitle balances).
   it('balances the headline so it never leaves a one-word last line', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1 }).className.split(/\s+/)).toContain('text-balance');
-  });
-
-  it('gives exactly one plan card a tab stop (roving tabindex)', () => {
-    renderPage();
-    const annualRadio = screen.getByRole('radio', { name: /Annual/ });
-    const monthlyRadio = screen.getByRole('radio', { name: /Monthly/ });
-
-    expect(annualRadio).toHaveAttribute('tabIndex', '0');
-    expect(monthlyRadio).toHaveAttribute('tabIndex', '-1');
-
-    fireEvent.click(monthlyRadio);
-
-    expect(monthlyRadio).toHaveAttribute('tabIndex', '0');
-    expect(annualRadio).toHaveAttribute('tabIndex', '-1');
-  });
-
-  it('ArrowRight selects the other plan and moves focus to it (WAI-ARIA APG radiogroup)', () => {
-    renderPage();
-    const annualRadio = screen.getByRole('radio', { name: /Annual/ });
-    const monthlyRadio = screen.getByRole('radio', { name: /Monthly/ });
-
-    annualRadio.focus();
-    expect(annualRadio).toHaveFocus();
-
-    fireEvent.keyDown(annualRadio, { key: 'ArrowRight' });
-
-    expect(monthlyRadio).toHaveAttribute('aria-checked', 'true');
-    expect(monthlyRadio).toHaveAttribute('tabIndex', '0');
-    expect(annualRadio).toHaveAttribute('tabIndex', '-1');
-    expect(monthlyRadio).toHaveFocus();
-
-    fireEvent.keyDown(monthlyRadio, { key: 'ArrowLeft' });
-    expect(annualRadio).toHaveAttribute('aria-checked', 'true');
-    expect(annualRadio).toHaveFocus();
   });
 
   it('confirms the selected plan (annual by default) via the shared CTA', () => {
@@ -338,7 +289,7 @@ describe('UpgradePage', () => {
 
   it('switches the CTA and the confirmed plan when monthly is selected', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('radio', { name: /Monthly/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Monthly/ }));
     // Monthly has no trial → the CTA names the store price per month
     const cta = screen.getByRole('button', { name: 'Subscribe: $6.99/mo' });
     fireEvent.click(cta);
@@ -407,8 +358,8 @@ describe('UpgradePage — country gate', () => {
   const blockedZone = 'America/Mexico_City';
 
   const queryPlanControls = (): HTMLElement[] => [
-    ...screen.queryAllByRole('radiogroup'),
-    ...screen.queryAllByRole('radio'),
+    ...screen.queryAllByTestId('plan-toggle'),
+    ...screen.queryAllByTestId('plan-price-card'),
     ...screen.queryAllByRole('button', { name: /^Subscribe/ }),
     ...screen.queryAllByRole('button', { name: /free trial/ }),
   ];
@@ -417,7 +368,7 @@ describe('UpgradePage — country gate', () => {
     setAccountZone('America/Toronto');
     setBrowserZone('America/Vancouver');
     renderPage();
-    expect(screen.getByRole('radio', { name: /Annual/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Annual/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start 1-week free trial' })).toBeInTheDocument();
   });
 
@@ -429,7 +380,7 @@ describe('UpgradePage — country gate', () => {
       setAccountZone(zone);
       setBrowserZone(zone);
       renderPage();
-      expect(screen.getByRole('radiogroup')).toBeInTheDocument();
+      expect(screen.getByTestId('plan-toggle')).toBeInTheDocument();
     }
   );
 

@@ -36,7 +36,7 @@ async function openUpgrade(page: Page, paywallContext: string): Promise<void> {
   await expect(page).toHaveURL(/\/upgrade$/);
   // The plans must have loaded: this spec is about the plan view, not the
   // "checkout unavailable" card. Fail loudly if the sandbox offering is missing.
-  await expect(page.getByRole('radiogroup'), 'RevenueCat web offering loaded').toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId('plan-toggle'), 'RevenueCat web offering loaded').toBeVisible({ timeout: 20_000 });
 }
 
 const LANGS = [
@@ -66,7 +66,7 @@ for (const L of LANGS) {
         expect(await footer.evaluate((el) => getComputedStyle(el).position)).toBe('sticky');
 
         // The selected plan's billed price is above the pinned footer, not under it.
-        const price = page.locator('[data-plan-key="annual"] [data-price]');
+        const price = page.getByTestId('plan-price-card').locator('[data-price]');
         const priceBox = await price.boundingBox();
         const footerBox = await footer.boundingBox();
         expect(priceBox && footerBox && priceBox.y + priceBox.height <= footerBox.y).toBe(true);
@@ -78,6 +78,16 @@ for (const L of LANGS) {
         await toggle.click();
         await expect(page.getByRole('button', { name: L.less })).toHaveAttribute('aria-expanded', 'true');
         await expect(page.locator('#upgrade-details [data-details] li')).toHaveCount(5);
+
+        // 1.4.3 mobile parity: the annual / monthly toggle swaps the ONE price card, with the
+        // store's prices (never two cards, never a literal).
+        const annualPrice = await price.textContent();
+        await page.getByTestId('plan-toggle-tab-monthly').click();
+        await expect(page.getByTestId('plan-toggle-tab-monthly')).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.getByTestId('plan-price-card')).toHaveCount(1);
+        await expect(price).not.toHaveText(annualPrice ?? '');
+        await page.getByTestId('plan-toggle-tab-annual').click();
+        await expect(price).toHaveText(annualPrice ?? '');
 
         await checkA11y(page, `/upgrade compact (${L.name} 390px)`, testInfo);
         await page.screenshot({ path: testInfo.outputPath(`upgrade-compact-${L.code}-expanded.png`) });
@@ -114,7 +124,7 @@ test.describe('N8 footer at large zoom', () => {
     // At the short viewport, the top of the page (the price) is not covered by anything.
     await page.setViewportSize({ width: 360, height: 420 });
     await page.evaluate(() => window.scrollTo(0, 0));
-    const price = page.locator('[data-plan-key="annual"] [data-price]');
+    const price = page.getByTestId('plan-price-card').locator('[data-price]');
     await price.scrollIntoViewIfNeeded();
     const box = await price.boundingBox();
     expect(box).not.toBeNull();
