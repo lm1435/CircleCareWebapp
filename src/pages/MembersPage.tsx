@@ -1,49 +1,19 @@
 import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, type ReactElement } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCircle } from '@/hooks/useCircle';
 import {
-  useRemoveMember,
-  useLeaveCircle,
-  useSetMedicationResponsible,
-  useSetMemberRole,
-} from '@/hooks/useCircleMembers';
-import { useCancelInvite, useCreateInvite, useResendInvite } from '@/hooks/useInvites';
-import { formatInviteExpiryDate } from '@/lib/inviteExpiry';
-import {
-  Badge,
   Button,
   Card,
-  ConfirmDialog,
   EmptyState,
-  IconTile,
-  MoreMenu,
   SectionHeader,
   Sheet,
-  SheetRow,
   Skeleton,
-  useToast,
-  type MoreMenuEntry,
 } from '@/components/ui';
 import { PageMasthead } from '@/components/layout/PageMasthead';
 import { MemberRow } from '@/components/members/MemberRow';
-import { InviteMemberModal } from '@/components/members/InviteMemberModal';
-import { Analytics } from '@/lib/analytics';
-import { useAuthStore } from '@/store/authStore';
-import { getInviteExpiryState, isPendingInviteExpired } from '@/api/circleMembers';
-import type { CircleMember, DeclinedCircleInvite, PendingCircleInvite } from '@/api/circleMembers';
-import { blockOfflineWrite } from '@/lib/offlineWrite';
-import {
-  getCircleOwnerName,
-  memberRowActions,
-  viewerCanManageMembers,
-  viewerCanSuggestManager,
-  viewerOwnsCircle,
-} from '@/lib/premiumOwnership';
-
-/** `circle.declined_invites` is ABSENT when there are none (1.4.3). Module-level: a stable ref. */
-const EMPTY_DECLINED: DeclinedCircleInvite[] = [];
+import { useCareTeamManager } from '@/components/members/useCareTeamManager';
 
 function MemberRowSkeleton(): ReactElement {
   return (
@@ -55,11 +25,6 @@ function MemberRowSkeleton(): ReactElement {
       </div>
     </li>
   );
-}
-
-function memberName(member: CircleMember): string {
-  const name = [member.first_name, member.last_name].filter(Boolean).join(' ');
-  return name || member.email;
 }
 
 /**
@@ -79,43 +44,15 @@ function memberName(member: CircleMember): string {
  * independently — UI gating is cosmetic.
  */
 export default function MembersPage(): ReactElement {
-  const { t, i18n } = useTranslation('members');
+  const { t } = useTranslation('members');
   const navigate = useNavigate();
-  const { showToast } = useToast();
   const { circleId = '' } = useParams<{ circleId: string }>();
-  const currentUserId = useAuthStore((s) => s.user?.id);
 
   const { circle, members, isLoading, isError, refetch } = useCircle(circleId);
-  const isOwner = viewerOwnsCircle(circle, currentUserId);
-  const canManageMembers = viewerCanManageMembers(circle, currentUserId);
-  const isCurrentUserRecipient = members.some((m) => m.id === currentUserId && m.is_care_recipient);
-  const pendingInvites: PendingCircleInvite[] = circle?.pending_invites ?? [];
-  // 1.4.3: owner + current managers only (the server sends the key to nobody
-  // else; absent = none). Never counted as a seat or as "someone invited".
-  const declinedInvites: DeclinedCircleInvite[] = circle?.declined_invites ?? EMPTY_DECLINED;
-  // Live (non-lapsed) invites only. An expired invite is not "someone you
-  // invited" — nobody can join through it — so it must not suppress the
-  // solo-owner nudge the same way a live one does. It still renders in the
-  // pending list below with its Expired badge + Resend, so the owner has both
-  // paths: retry the old one, or invite someone new.
-  const liveInvites = pendingInvites.filter((invite) => !isPendingInviteExpired(invite));
-  // "Empty" for the help link (mobile InviteMemberScreen's rule): no caregiver besides the viewer
-  // and no invite out. Unknown (circle not loaded) reads as not empty.
-  const careTeamEmpty =
-    !!circle && members.filter((m) => !m.is_care_recipient).length <= 1 && pendingInvites.length === 0;
-
-  const removeMember = useRemoveMember(circleId);
-  const leaveCircle = useLeaveCircle(circleId);
-  const setMedResponsible = useSetMedicationResponsible(circleId);
-  const cancelInvite = useCancelInvite(circleId);
-  const resendInvite = useResendInvite(circleId);
-  const createInvite = useCreateInvite(circleId);
-  // Declined rows: which one is mid-action, and which one's "Invite again" confirm is open.
-  const [declinedBusyId, setDeclinedBusyId] = useState<string | null>(null);
-  const [declinedToReinvite, setDeclinedToReinvite] = useState<DeclinedCircleInvite | null>(null);
-  const setMemberRole = useSetMemberRole(circleId);
-
-  const [showInvite, setShowInvite] = useState(false);
+  // Every action and confirm lives in `useCareTeamManager`, shared with the care team on Today.
+  const team = useCareTeamManager(circleId);
+  const { isOwner, canManageMembers, pendingInvites, declinedInvites, liveInvites, careTeamEmpty } =
+    team;
 
   // The assistant's "Invite someone" button (1.4.2, aiReplyActions `open_invite`) lands here with
   // `state.openInvite`: open the same invite dialog the header button opens, for a viewer who may
@@ -124,182 +61,12 @@ export default function MembersPage(): ReactElement {
   const location = useLocation();
   const openInviteRequested =
     (location.state as { openInvite?: unknown } | null)?.openInvite === true;
+  const { openInvite } = team;
   useEffect(() => {
     if (!openInviteRequested || circle == null) return;
-    if (canManageMembers) setShowInvite(true);
+    if (canManageMembers) openInvite();
     navigate(location.pathname, { replace: true, state: null });
-  }, [openInviteRequested, circle, canManageMembers, navigate, location.pathname]);
-  const [memberToRemove, setMemberToRemove] = useState<CircleMember | null>(null);
-  const [inviteToCancel, setInviteToCancel] = useState<PendingCircleInvite | null>(null);
-  // Which row is mid-resend. The mutation's own `isPending` is shared by every
-  // row, so it can't disable just the one that was clicked.
-  const [invitePendingResend, setInvitePendingResend] = useState<string | null>(null);
-  const [showLeave, setShowLeave] = useState(false);
-  // The member whose manager role is being changed (confirm dialog open).
-  const [roleTarget, setRoleTarget] = useState<CircleMember | null>(null);
-
-  const handleRemove = (): void => {
-    if (!memberToRemove) return;
-    const name = memberName(memberToRemove);
-    removeMember.mutate(
-      { userId: memberToRemove.id },
-      {
-        onSuccess: () => {
-          showToast(t('manage.removeSuccess', { name }), 'success');
-          setMemberToRemove(null);
-        },
-        onError: () => setMemberToRemove(null),
-      }
-    );
-  };
-
-  const handleLeave = (): void => {
-    leaveCircle.mutate(undefined, {
-      onSuccess: () => {
-        showToast(t('manage.leaveSuccess'), 'success');
-        setShowLeave(false);
-        // REPLACE, not push: the page this was done on belongs to a circle the
-        // user is no longer in, so browser Back must not return to it (mobile
-        // parity: returnToCircleList pops the left circle off the stack).
-        // `fromSwitcher`: land ON the picker even when one circle is left — no
-        // auto-skip into the other circle (mobile shows its list, 2026-10-17).
-        navigate('/circles', { replace: true, state: { fromSwitcher: true } });
-      },
-      onError: () => setShowLeave(false),
-    });
-  };
-
-  const handleCancelInvite = (): void => {
-    if (!inviteToCancel) return;
-    cancelInvite.mutate(
-      { inviteId: inviteToCancel.id },
-      {
-        onSuccess: () => {
-          showToast(t('manage.cancelInviteSuccess'), 'success');
-          setInviteToCancel(null);
-        },
-        onError: () => setInviteToCancel(null),
-      }
-    );
-  };
-
-  /**
-   * Resend a lapsed OR soon-to-lapse invite (the backend extends it by 7 days
-   * and re-sends the email). Guarded in-handler (not via the `disabled` prop) —
-   * `disabled` only lands on the next render commit, so a double tap would fire
-   * two resends. Errors are toasted by the hook's shared onError mapper.
-   */
-  const handleCopyInviteLink = (invite: PendingCircleInvite): void => {
-    const url = invite.invite_url;
-    if (!url) return;
-    // Unlike the invite modal, the URL is not on screen here, so a clipboard
-    // failure must be surfaced rather than swallowed.
-    void (async () => {
-      try {
-        await navigator.clipboard.writeText(url);
-      } catch {
-        showToast(t('invite.copyFailed'), 'error');
-        return;
-      }
-      Analytics.inviteLinkCopied(circleId, invite.member_type ?? 'caregiver');
-      showToast(t('invite.linkCopied'), 'success');
-    })();
-  };
-
-  const handleResendInvite = (invite: PendingCircleInvite): void => {
-    if (blockOfflineWrite('change')) return;
-    // Guard THIS row only. Guarding on "any resend in flight" made a second
-    // expired invite's button a silent dead click: the `disabled` prop is
-    // applied per-row, so that row looked live, showed no spinner, and produced
-    // no toast. The guard exists to stop a double tap on one button, not to
-    // serialise unrelated rows.
-    if (invitePendingResend === invite.id) return;
-    setInvitePendingResend(invite.id);
-    resendInvite.mutate(
-      { inviteId: invite.id },
-      {
-        onSuccess: () => {
-          showToast(
-            t('manage.resendInviteSuccess', { email: invite.invited_email }),
-            'success'
-          );
-          setInvitePendingResend(null);
-        },
-        onError: () => setInvitePendingResend(null),
-      }
-    );
-  };
-
-  // ── Declined invites (1.4.3, docs/plans/invite-decline-1-4-3.md) ──────────
-  // "Invite again" = the normal create (a NEW pending invite with the full seat
-  // checks; errors toast through the shared invite onError). "Remove" = the
-  // existing cancel (DELETE), which dismisses the declined row. Never Resend.
-  const handleInviteAgain = (): void => {
-    const invite = declinedToReinvite;
-    if (!invite || declinedBusyId) return;
-    setDeclinedBusyId(invite.id);
-    createInvite.mutate(
-      { email: invite.invited_email, member_type: invite.member_type },
-      {
-        onSuccess: () => {
-          Analytics.declinedInviteReinvited(invite.member_type);
-          showToast(t('manage.inviteAgainSuccess', { email: invite.invited_email }), 'success');
-          setDeclinedBusyId(null);
-          setDeclinedToReinvite(null);
-        },
-        onError: () => {
-          setDeclinedBusyId(null);
-          setDeclinedToReinvite(null);
-        },
-      }
-    );
-  };
-
-  const handleRemoveDeclined = (invite: DeclinedCircleInvite): void => {
-    if (blockOfflineWrite('change')) return;
-    if (declinedBusyId) return;
-    setDeclinedBusyId(invite.id);
-    cancelInvite.mutate(
-      { inviteId: invite.id },
-      {
-        onSuccess: () => {
-          Analytics.declinedInviteRemoved(invite.member_type);
-          showToast(t('manage.removeDeclinedSuccess'), 'success');
-          setDeclinedBusyId(null);
-        },
-        onError: () => setDeclinedBusyId(null),
-      }
-    );
-  };
-
-  const handleToggleMedResponsible = (member: CircleMember): void => {
-    if (blockOfflineWrite('change')) return;
-    const next = member.is_medication_responsible ? null : member.id;
-    setMedResponsible.mutate(next, {
-      onSuccess: () => {
-        showToast(
-          next
-            ? t('manage.medResponsibleSet', {
-                name: memberName(member),
-                recipientName: circle?.recipient_name,
-              })
-            : t('manage.medResponsibleCleared', { recipientName: circle?.recipient_name }),
-          'success'
-        );
-      },
-    });
-  };
-
-  const handleRoleChange = (): void => {
-    if (!roleTarget) return;
-    const name = memberName(roleTarget);
-    const role = roleTarget.role === 'manager' ? 'member' : 'manager';
-    setMemberRole.mutate(
-      { userId: roleTarget.id, role, name },
-      { onSettled: () => setRoleTarget(null) }
-    );
-  };
-
+  }, [openInviteRequested, circle, canManageMembers, navigate, location.pathname, openInvite]);
   let content: ReactElement;
   if (isLoading) {
     content = (
@@ -335,66 +102,9 @@ export default function MembersPage(): ReactElement {
     // cut off each row's `MoreMenu`, which renders inline inside the row.
     content = (
       <Sheet as="ul" padding="none" className="mx-5">
-        {members.map((member) => {
-          // Never the care recipient, the owner row, or yourself; a manager
-          // only acts on plain members, and only to remove them. One rule,
-          // shared with the Home care team (`memberRowActions`).
-          const allowed = memberRowActions(circle, currentUserId, member);
-          const items: MoreMenuEntry[] = [];
-          if (allowed.medResponsible) {
-            items.push({
-              id: 'toggle-med',
-              label: t('manage.medReminders'),
-              description: member.is_medication_responsible
-                ? isCurrentUserRecipient
-                  ? t('manage.medRemindersSetDescSelf')
-                  : t('manage.medRemindersSetDesc', { recipientName: circle?.recipient_name })
-                : t('manage.medRemindersDesc', {
-                    name: memberName(member),
-                    recipientName: circle?.recipient_name,
-                  }),
-              checked: member.is_medication_responsible,
-              icon: 'notifications-outline',
-              onSelect: () => handleToggleMedResponsible(member),
-              disabled: setMedResponsible.isPending,
-            });
-          }
-          if (allowed.managerRole) {
-            items.push({
-              id: 'toggle-manager',
-              label:
-                member.role === 'manager' ? t('manage.removeManager') : t('manage.makeManager'),
-              description:
-                member.role === 'manager'
-                  ? t('manage.removeManagerDesc')
-                  : t('manage.makeManagerDesc'),
-              icon: 'people-outline',
-              onSelect: () => {
-                if (blockOfflineWrite('change')) return;
-                setRoleTarget(member);
-              },
-              disabled: setMemberRole.isPending,
-            });
-          }
-          if (allowed.remove) {
-            if (items.length > 0) items.push({ divider: true, id: 'divider' });
-            items.push({
-              id: 'remove',
-              label: t('manage.remove'),
-              icon: 'trash-outline',
-              danger: true,
-              onSelect: () => setMemberToRemove(member),
-            });
-          }
-          const actions =
-            items.length > 0 ? (
-              <MoreMenu
-                label={t('manage.memberActionsLabel', { name: memberName(member) })}
-                items={items}
-              />
-            ) : undefined;
-          return <MemberRow key={member.id} member={member} actions={actions} />;
-        })}
+        {members.map((member) => (
+          <MemberRow key={member.id} member={member} actions={team.memberActions(member)} />
+        ))}
       </Sheet>
     );
   }
@@ -418,7 +128,7 @@ export default function MembersPage(): ReactElement {
             ? {
                 name: 'share-outline',
                 label: t('invite.cta'),
-                onClick: () => setShowInvite(true),
+                onClick: team.openInvite,
                 offlineKind: 'change',
               }
             : undefined
@@ -443,7 +153,7 @@ export default function MembersPage(): ReactElement {
         <Card padding="lg" className="mx-5 mt-6 text-center">
           <h2 className="m-0 text-lg font-semibold text-ink">{t('list.soloTitle')}</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">{t('list.soloBody')}</p>
-          <Button className="mt-6" onClick={() => setShowInvite(true)} offlineKind="change">
+          <Button className="mt-6" onClick={team.openInvite} offlineKind="change">
             {t('list.soloCta')}
           </Button>
         </Card>
@@ -461,99 +171,7 @@ export default function MembersPage(): ReactElement {
               often ONE row tall, so clipping left the cancel/resend menu with
               nowhere to go: it flipped up and 64% of it went unpainted. */}
           <Sheet as="ul" padding="none" className="mx-5">
-            {pendingInvites.map((invite) => {
-              const expiry = getInviteExpiryState(invite);
-              const isExpired = expiry.state === 'expired';
-              // Resend covers `soon` too, not just `expired`. The backend
-              // extends a live invite by 7 days and re-sends the email, and it
-              // consumes no extra seat (that invite already holds one), so the
-              // owner can rescue an invitation BEFORE it dies rather than only
-              // after.
-              // Resend is EXPIRED-ONLY. The backend also permits resending a
-              // live invite, but offering it here misreads the situation:
-              // "Resend" implies the first one failed to arrive, and on a live
-              // invite nothing has — the recipient holds a working link. It
-              // would just re-email them to reset a clock they cannot see. The
-              // countdown informs; the button appears when it is actually needed.
-              const canResend = isExpired;
-              const menuItems: MoreMenuEntry[] = [];
-              // `invite_url` (owner/managers; absent on older backends) — no URL, no
-              // item. Expired links are dead, so never offered for those.
-              if (!isExpired && invite.invite_url) {
-                menuItems.push({
-                  id: 'copy-link',
-                  label: t('invite.copyLink'),
-                  icon: 'copy-outline',
-                  onSelect: () => handleCopyInviteLink(invite),
-                });
-              }
-              if (canResend) {
-                menuItems.push({
-                  id: 'resend',
-                  label: t('manage.resendInvite'),
-                  icon: 'mail-outline',
-                  onSelect: () => handleResendInvite(invite),
-                  disabled: invitePendingResend === invite.id,
-                });
-              }
-              menuItems.push({
-                id: 'cancel',
-                label: t('manage.cancelInvite'),
-                icon: 'trash-outline',
-                danger: true,
-                onSelect: () => setInviteToCancel(invite),
-              });
-
-              return (
-                <SheetRow as="li" key={invite.id} className="gap-3 px-[18px] py-3.5">
-                  <IconTile size={36} tone="coral" name="mail-outline" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <p className="m-0 min-w-0 truncate text-md text-ink">
-                        {invite.invited_email}
-                      </p>
-                      {isExpired ? (
-                        <Badge variant="warning" size="sm">
-                          {t('manage.inviteExpired')}
-                        </Badge>
-                      ) : null}
-                    </div>
-                    {/* Countdown line. Emphasized caution tone (clay-deep,
-                        8.03:1 on the cream row) inside the 3-day window, muted
-                        otherwise — never the terracotta/emergency tone, this is
-                        a heads-up and not a failure. Hidden entirely when the
-                        deadline is unknown (missing/garbage `expires_at`), so
-                        we never invent a countdown.
-                        The visible text repeats verbatim across rows, so the
-                        announced copy carries the email — same per-row
-                        disambiguation as the menu trigger's aria-label. An
-                        aria-label on a <p> would be a prohibited-attr
-                        violation, hence the sr-only/aria-hidden pair. */}
-                    {!isExpired && expiry.daysLeft != null ? (
-                      <p
-                        className={`m-0 text-sm ${
-                          expiry.state === 'soon' ? 'font-semibold text-clay-deep' : 'text-ink-3'
-                        }`}
-                      >
-                        <span className="sr-only">
-                          {t('manage.inviteExpiresInLabel', {
-                            count: expiry.daysLeft,
-                            email: invite.invited_email,
-                          })}
-                        </span>
-                        <span aria-hidden="true">
-                          {t('manage.inviteExpiresIn', { count: expiry.daysLeft })}
-                        </span>
-                      </p>
-                    ) : null}
-                  </div>
-                  <MoreMenu
-                    label={t('manage.inviteActionsLabel', { email: invite.invited_email })}
-                    items={menuItems}
-                  />
-                </SheetRow>
-              );
-            })}
+            {pendingInvites.map(team.renderPendingInvite)}
           </Sheet>
         </div>
       ) : null}
@@ -564,50 +182,7 @@ export default function MembersPage(): ReactElement {
         <div className="mt-10" data-testid="declined-invites-section">
           <SectionHeader title={t('manage.declinedHeading')} className="mx-5" />
           <Sheet as="ul" padding="none" className="mx-5">
-            {declinedInvites.map((invite) => {
-              const declinedOn = formatInviteExpiryDate(invite.declined_at, i18n.language);
-              const busy = declinedBusyId === invite.id;
-              return (
-                <SheetRow
-                  as="li"
-                  key={invite.id}
-                  className="flex-wrap gap-3 px-[18px] py-3.5"
-                  data-testid={`declined-invite-${invite.id}`}
-                >
-                  <IconTile size={36} tone="neutral" name="mail-outline" />
-                  <div className="min-w-0 flex-1">
-                    <p className="m-0 min-w-0 truncate text-md text-ink">{invite.invited_email}</p>
-                    <Badge variant="default" size="sm">
-                      {declinedOn
-                        ? t('manage.inviteDeclinedOn', { date: declinedOn })
-                        : t('manage.inviteDeclined')}
-                    </Badge>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      offlineKind="change"
-                      disabled={busy}
-                      onClick={() => setDeclinedToReinvite(invite)}
-                      aria-label={t('manage.inviteAgainLabel', { email: invite.invited_email })}
-                    >
-                      {t('manage.inviteAgain')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      offlineKind="change"
-                      disabled={busy}
-                      onClick={() => handleRemoveDeclined(invite)}
-                      aria-label={t('manage.removeDeclinedLabel', { email: invite.invited_email })}
-                    >
-                      {t('manage.removeDeclined')}
-                    </Button>
-                  </div>
-                </SheetRow>
-              );
-            })}
+            {declinedInvites.map(team.renderDeclinedInvite)}
           </Sheet>
         </div>
       ) : null}
@@ -615,109 +190,13 @@ export default function MembersPage(): ReactElement {
       {/* Non-owner: leave circle. */}
       {circle != null && !isOwner ? (
         <div className="mx-5 mt-10 border-t border-line-2 pt-6">
-          <Button variant="ghost" onClick={() => setShowLeave(true)}>
+          <Button variant="ghost" onClick={team.openLeave}>
             {t('manage.leave')}
           </Button>
         </div>
       ) : null}
 
-      {showInvite && circle != null ? (
-        <InviteMemberModal
-          circleId={circleId}
-          isSelfCare={circle.is_self_care}
-          circleName={circle.name}
-          recipientName={circle.recipient_name}
-          viewerIsOwner={isOwner}
-          ownerName={getCircleOwnerName(circle)}
-          canSuggestManager={viewerCanSuggestManager(circle, currentUserId)}
-          showHelpLink={careTeamEmpty}
-          circle={circle}
-          onClose={() => setShowInvite(false)}
-        />
-      ) : null}
-
-      {memberToRemove ? (
-        <ConfirmDialog
-          offlineKind="change"
-          icon="person-outline"
-          title={t('manage.removeConfirmTitle')}
-          message={t('manage.removeConfirmBody', { name: memberName(memberToRemove) })}
-          confirmLabel={t('manage.remove')}
-          cancelLabel={t('common:cancel')}
-          destructive
-          confirmDisabled={removeMember.isPending}
-          onConfirm={handleRemove}
-          onCancel={() => setMemberToRemove(null)}
-        />
-      ) : null}
-
-      {roleTarget ? (
-        <ConfirmDialog
-          offlineKind="change"
-          icon="people-outline"
-          title={
-            roleTarget.role === 'manager'
-              ? t('manage.removeManagerConfirmTitle', { name: memberName(roleTarget) })
-              : t('manage.makeManagerConfirmTitle', { name: memberName(roleTarget) })
-          }
-          message={
-            roleTarget.role === 'manager'
-              ? t('manage.removeManagerConfirmBody', { name: memberName(roleTarget) })
-              : t('manage.makeManagerConfirmBody', { name: memberName(roleTarget) })
-          }
-          confirmLabel={
-            roleTarget.role === 'manager' ? t('manage.removeManager') : t('manage.makeManager')
-          }
-          cancelLabel={t('common:cancel')}
-          confirmDisabled={setMemberRole.isPending}
-          onConfirm={handleRoleChange}
-          onCancel={() => setRoleTarget(null)}
-        />
-      ) : null}
-
-      {inviteToCancel ? (
-        <ConfirmDialog
-          offlineKind="change"
-          icon="mail-outline"
-          title={t('manage.cancelInviteConfirmTitle')}
-          message={t('manage.cancelInviteConfirmBody', { email: inviteToCancel.invited_email })}
-          confirmLabel={t('manage.cancelInviteConfirm')}
-          cancelLabel={t('manage.keepInvite')}
-          destructive
-          confirmDisabled={cancelInvite.isPending}
-          onConfirm={handleCancelInvite}
-          onCancel={() => setInviteToCancel(null)}
-        />
-      ) : null}
-
-      {declinedToReinvite ? (
-        <ConfirmDialog
-          offlineKind="change"
-          icon="mail-outline"
-          title={t('manage.inviteAgainConfirmTitle')}
-          message={t('manage.inviteAgainConfirmBody', { email: declinedToReinvite.invited_email })}
-          confirmLabel={t('manage.inviteAgain')}
-          cancelLabel={t('common:cancel')}
-          confirmDisabled={declinedBusyId != null}
-          onConfirm={handleInviteAgain}
-          onCancel={() => setDeclinedToReinvite(null)}
-        />
-      ) : null}
-
-      {showLeave ? (
-        <ConfirmDialog
-          offlineKind="change"
-          icon="log-out-outline"
-          title={t('manage.leaveConfirmTitle')}
-          message={t('manage.leaveConfirmBody')}
-          confirmLabel={t('manage.leave')}
-          cancelLabel={t('common:cancel')}
-          destructive
-          confirmDisabled={leaveCircle.isPending}
-          onConfirm={handleLeave}
-          onCancel={() => setShowLeave(false)}
-        />
-      ) : null}
+      {team.dialogs}
     </section>
   );
 }

@@ -23,10 +23,8 @@
     "activity": "Attività"
   },
   "appointments": {
-    "title": "Prossimi appuntamenti",
     "today": "Oggi",
-    "tomorrow": "Domani",
-    "viewAll": "Vedi tutti"
+    "tomorrow": "Domani"
   },
   "today": {
     "title": "Oggi per {{name}}",
@@ -96,6 +94,21 @@
       "action": "Segna come presa",
       "takenByYou": "Presa da te",
       "taken": "Presa"
+    },
+    "careTeam": {
+      "title": "Team di cura",
+      "titleMine": "Il mio team di cura",
+      "countOne": "{{count}} membro",
+      "countOther": "{{count}} membri",
+      "invite": "Invita un membro",
+      "viewOnly": "Accesso in sola lettura",
+      "pending": "Inviti in sospeso",
+      "declined": "Inviti rifiutati"
+    },
+    "manage": {
+      "title": "Gestisci",
+      "editCircle": "Modifica cerchia",
+      "deleteCircle": "Elimina cerchia"
     }
   }
 }

@@ -23,10 +23,8 @@
     "activity": "Activity"
   },
   "appointments": {
-    "title": "Upcoming appointments",
     "today": "Today",
-    "tomorrow": "Tomorrow",
-    "viewAll": "View all"
+    "tomorrow": "Tomorrow"
   },
   "today": {
     "title": "Today for {{name}}",
@@ -96,6 +94,21 @@
       "action": "Mark it",
       "takenByYou": "Taken by you",
       "taken": "Taken"
+    },
+    "careTeam": {
+      "title": "Care team",
+      "titleMine": "My care team",
+      "countOne": "{{count}} member",
+      "countOther": "{{count}} members",
+      "invite": "Invite member",
+      "viewOnly": "View only access",
+      "pending": "Pending invitations",
+      "declined": "Declined invites"
+    },
+    "manage": {
+      "title": "Manage",
+      "editCircle": "Edit circle",
+      "deleteCircle": "Delete circle"
     }
   }
 }

@@ -20,8 +20,9 @@ test('circle root lands on Today with Next up and Quick access', async ({ page, 
   await expect(page.getByTestId('quick-access-grid')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Quick access' })).toBeVisible();
 
-  // What Today no longer carries: the old Overview blocks.
-  for (const gone of ['Open tasks', 'Care team', 'Get started', 'Upcoming appointments']) {
+  // What Today no longer carries: the old Overview blocks. (The care team came back in 1.4.3,
+  // mobile parity: today-care-team.spec.ts.)
+  for (const gone of ['Open tasks', 'Get started', 'Upcoming appointments']) {
     await expect(page.getByRole('heading', { name: gone })).toHaveCount(0);
   }
 

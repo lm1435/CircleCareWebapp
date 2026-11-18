@@ -23,10 +23,8 @@
     "activity": "Aktivität"
   },
   "appointments": {
-    "title": "Anstehende Termine",
     "today": "Heute",
-    "tomorrow": "Morgen",
-    "viewAll": "Alle anzeigen"
+    "tomorrow": "Morgen"
   },
   "today": {
     "title": "Heute für {{name}}",
@@ -96,6 +94,21 @@
       "action": "Abhaken",
       "takenByYou": "Von Ihnen eingenommen",
       "taken": "Eingenommen"
+    },
+    "careTeam": {
+      "title": "Pflegeteam",
+      "titleMine": "Mein Pflegeteam",
+      "countOne": "{{count}} Mitglied",
+      "countOther": "{{count}} Mitglieder",
+      "invite": "Mitglied einladen",
+      "viewOnly": "Nur Lesezugriff",
+      "pending": "Offene Einladungen",
+      "declined": "Abgelehnte Einladungen"
+    },
+    "manage": {
+      "title": "Verwalten",
+      "editCircle": "Kreis bearbeiten",
+      "deleteCircle": "Kreis löschen"
     }
   }
 }

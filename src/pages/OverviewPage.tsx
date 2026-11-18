@@ -12,10 +12,7 @@ import { FirstRunWizardModal } from '@/components/circles/firstRun/FirstRunWizar
 import { Hero } from '@/components/overview/Hero';
 import { QuickAccess } from '@/components/overview/QuickAccess';
 import { DailyUpdateCard } from '@/components/overview/DailyUpdateCard';
-import {
-  UpcomingAppointments,
-  useHasUpcomingAppointments,
-} from '@/components/overview/UpcomingAppointments';
+import { TodayCareTeam } from '@/components/overview/TodayCareTeam';
 import { NextUp, NEXT_UP_VISIBLE, nextUpHasFilledAction } from '@/components/overview/NextUp';
 import { NextStepCard } from '@/components/overview/NextStepCard';
 import { FirstMedMarkIt } from '@/components/overview/FirstMedMarkIt';
@@ -76,15 +73,16 @@ type Coaching = 'dose_alerts' | 'next_step' | 'shifts' | 'dose_hint' | 'none';
  *   ONE coaching element at most: next-step card > shifts nudge > first-dose hint
  *   Next up (meds, appointments, tasks in time order; first 3 + "All of today")
  *   Quick access (2x2 + quiet links)
+ *   Care team, then Manage (owner) or Leave circle (1.4.3, mobile parity: CircleDetailScreen)
  *
  * Wide screens put Next up and Quick access side by side (same order, more
  * room); at 200% zoom / large root font everything is one column and rows stack.
  *
  * No Say it / voice on web: voice quick-add is mobile-only.
  *
- * The adherence card is gone (it moves to the Meds page), and so are the care
- * team and manage rows (Members and Circle settings live in the header menu),
- * the appointments / open-tasks / today's-meds cards (Next up replaces them),
+ * The adherence card is gone (it moves to the Meds page), and so are the
+ * appointments / open-tasks / today's-meds cards (Next up replaces them: today's
+ * appointments are rows in it, exactly as mobile merged its Upcoming appointments card),
  * the getting-started checklist and the "watch how it works" card (the
  * next-step card replaces them).
  */
@@ -283,10 +281,7 @@ export default function OverviewPage(): ReactElement {
   // caregiver in the last 14 days and has no shifts yet. Once per user per circle.
   const shiftsEntry = resolveShiftsEntry({ viewOnly, isPremiumCircle, isOwner, hasShifts });
 
-  // Today-grid arrangement: appointments on the right when there are any
-  // (loading counts — the skeleton holds the column), Quick access under Next
-  // up; with no appointments Quick access takes the right column instead.
-  const hasUpcomingAppts = useHasUpcomingAppointments(circleId, timezone);
+  // Today grid: Next up on the left, Quick access on the right from xl (one column below).
   const quickAccess = (
     <QuickAccess
       circleId={circleId}
@@ -502,18 +497,14 @@ export default function OverviewPage(): ReactElement {
               }}
             />
           )}
-          {/* With appointments on the right, Quick access sits under Next up
-              (owner call, 2026-11-04); without them it moves to the right
-              column below, so neither column is ever empty. */}
-          {hasUpcomingAppts && <div className="mt-6">{quickAccess}</div>}
         </div>
-        <div className="min-w-0">
-          {hasUpcomingAppts && timezone !== null ? (
-            <UpcomingAppointments circleId={circleId} timezone={timezone} />
-          ) : (
-            quickAccess
-          )}
-        </div>
+        <div className="min-w-0">{quickAccess}</div>
+      </div>
+
+      {/* Care team + Manage / Leave circle, under Quick access as on mobile (1.4.3). The Members
+          and Settings pages keep their routes. */}
+      <div className="px-5 pb-8">
+        <TodayCareTeam circleId={circleId} />
       </div>
 
       {firstRun && (

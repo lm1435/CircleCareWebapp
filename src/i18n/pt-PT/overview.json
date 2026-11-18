@@ -24,6 +24,15 @@
     },
     "markIt": {
       "takenByYou": "Tomado por si"
+    },
+    "careTeam": {
+      "title": "Equipa de cuidado",
+      "titleMine": "A minha equipa de cuidado",
+      "viewOnly": "Acesso apenas de visualização"
+    },
+    "manage": {
+      "title": "Gerir",
+      "deleteCircle": "Eliminar círculo"
     }
   },
   "quickAccess": {

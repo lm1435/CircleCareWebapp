@@ -24,10 +24,8 @@
     "activity": "Atividade"
   },
   "appointments": {
-    "title": "Próximas consultas",
     "today": "Hoje",
-    "tomorrow": "Amanhã",
-    "viewAll": "Ver todas"
+    "tomorrow": "Amanhã"
   },
   "today": {
     "title": "Hoje para {{name}}",
@@ -99,6 +97,21 @@
       "action": "Marcar",
       "takenByYou": "Tomado por você",
       "taken": "Tomado"
+    },
+    "careTeam": {
+      "title": "Equipe de cuidado",
+      "titleMine": "Minha equipe de cuidado",
+      "countOne": "{{count}} membro",
+      "countOther": "{{count}} membros",
+      "invite": "Convidar membro",
+      "viewOnly": "Acesso somente de visualização",
+      "pending": "Convites pendentes",
+      "declined": "Convites recusados"
+    },
+    "manage": {
+      "title": "Gerenciar",
+      "editCircle": "Editar círculo",
+      "deleteCircle": "Excluir círculo"
     }
   }
 }

@@ -78,12 +78,11 @@ vi.mock('@/components/overview/QuickAccess', () => ({
     />
   ),
 }));
-const { mockUseHasUpcomingAppts } = vi.hoisted(() => ({
-  mockUseHasUpcomingAppts: vi.fn((): boolean => false),
-}));
-vi.mock('@/components/overview/UpcomingAppointments', () => ({
-  UpcomingAppointments: () => <div data-testid="upcoming-appointments" />,
-  useHasUpcomingAppointments: mockUseHasUpcomingAppts,
+// The care team + Manage rows have their own suite (TodayCareTeam.test.tsx); here only its place.
+vi.mock('@/components/overview/TodayCareTeam', () => ({
+  TodayCareTeam: ({ circleId }: { circleId: string }) => (
+    <div data-testid="today-care-team" data-circle-id={circleId} />
+  ),
 }));
 
 vi.mock('@/components/overview/DailyUpdateCard', () => ({
@@ -284,7 +283,6 @@ describe('Today (OverviewPage)', () => {
     setCircle();
     setNextUp([]);
     setNextStep({ status: 'none' });
-    mockUseHasUpcomingAppts.mockReturnValue(false);
     vi.spyOn(Analytics, 'todayViewed').mockImplementation(() => {});
     vi.spyOn(Analytics, 'largeTextLayout').mockImplementation(() => {});
   });
@@ -293,21 +291,12 @@ describe('Today (OverviewPage)', () => {
     document.documentElement.style.fontSize = '';
   });
 
-  it('with upcoming appointments: Quick access sits under Next up, appointments take the right column', () => {
-    mockUseHasUpcomingAppts.mockReturnValue(true);
-    renderToday();
-    const grid = screen.getByTestId('today-grid');
-    const [left, right] = Array.from(grid.children);
-    expect(left.querySelector('[data-testid="quick-access"]')).not.toBeNull();
-    expect(right.querySelector('[data-testid="upcoming-appointments"]')).not.toBeNull();
-    expect(right.querySelector('[data-testid="quick-access"]')).toBeNull();
-  });
-
-  it('without upcoming appointments: Quick access takes the right column, so neither column is empty', () => {
+  it('POSITIVE: Next up on the left, Quick access on the right; no separate appointments card (merged into Next up, as mobile)', () => {
     renderToday();
     expect(screen.queryByTestId('upcoming-appointments')).toBeNull();
     const grid = screen.getByTestId('today-grid');
     const [left, right] = Array.from(grid.children);
+    expect(left.querySelector('[data-testid="next-up"]')).not.toBeNull();
     expect(left.querySelector('[data-testid="quick-access"]')).toBeNull();
     expect(right.querySelector('[data-testid="quick-access"]')).not.toBeNull();
   });
@@ -326,22 +315,22 @@ describe('Today (OverviewPage)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Today' })).toBeInTheDocument();
   });
 
-  it('orders the blocks: header, daily update, Next up, Quick access', () => {
+  it('orders the blocks like mobile: header, daily update, Next up, Quick access, care team', () => {
     renderToday();
+    const order = ['overview-hero', 'daily-update-card', 'next-up', 'quick-access', 'today-care-team'];
     const ids = Array.from(document.querySelectorAll('[data-testid]'))
       .map((el) => el.getAttribute('data-testid'))
-      .filter((id) => ['overview-hero', 'daily-update-card', 'next-up', 'quick-access'].includes(id!));
-    expect(ids).toEqual(['overview-hero', 'daily-update-card', 'next-up', 'quick-access']);
+      .filter((id) => order.includes(id!));
+    expect(ids).toEqual(order);
+    expect(screen.getByTestId('today-care-team')).toHaveAttribute('data-circle-id', 'c1');
   });
 
-  it('has none of the old Home blocks: no adherence, checklist, help card, care team, settings, meds/tasks cards', () => {
+  it('has none of the old Home blocks: no adherence, checklist, help card, meds/tasks/appointments cards', () => {
     renderToday();
     for (const id of [
       'adherence-card',
       'getting-started',
       'help-home-card',
-      'care-team',
-      'settings-rows',
       'todays-meds',
       'upcoming-appointments',
       'open-tasks-card',
