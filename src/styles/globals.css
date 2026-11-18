@@ -416,6 +416,12 @@
     /* Store badges stay black with white text (brand rules) plus a hairline. */
     --color-badge: #000000;
     --color-on-badge: #ffffff;
+    /* SOS card: the SAME values as light (invariant, as mobile th.sos). */
+    --color-sos: #a84b3a;
+    --color-on-sos: #ffffff;
+    --color-on-sos-soft: rgba(255, 255, 255, 0.9);
+    --color-sos-chip: rgba(255, 255, 255, 0.16);
+    --color-sos-chip-line: rgba(255, 255, 255, 0.24);
     --color-badge-line: rgba(255, 255, 255, 0.28);
     /* Sign in with Apple: the BLACK variant with a light outline. */
     --color-apple-fill: #000000;
