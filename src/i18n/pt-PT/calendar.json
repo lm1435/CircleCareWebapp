@@ -69,7 +69,10 @@
     },
     "firstRun": {
       "eyebrowSelf": "O SEU PRIMEIRO MEDICAMENTO",
-      "hint": "Só o nome, a palavra grande na embalagem. A dose é opcional."
+      "discard": {
+        "message": "O que escreveu aqui não será guardado.",
+        "keep": "Continuar a editar"
+      }
     },
     "simple": {
       "whatNeedsDoing": "O que é preciso fazer?",
@@ -92,6 +95,16 @@
     "photoSizeError": "Esta fotografia é demasiado grande. Escolha uma com menos de 2 MB.",
     "validation": {
       "alertDaysRange": "Introduza um número de 1 a 90."
+    },
+    "titleSuggestions": {
+      "appointment": {
+        "followUp": "Consulta de seguimento"
+      },
+      "task": {
+        "pickUpPrescriptions": "Levantar receitas",
+        "checkInCall": "Telefonar para saber como está",
+        "refillPillOrganizer": "Reabastecer a caixa de comprimidos"
+      }
     }
   },
   "deleteEvent": {

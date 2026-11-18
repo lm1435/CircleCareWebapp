@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import i18n from '@/i18n';
@@ -66,22 +66,18 @@ function renderModal(overrides: Partial<Parameters<typeof JoinCircleModal>[0]> =
   return { onClose, onJoined };
 }
 
-// The invite code is now a six-box alphanumeric OtpInput (no single labeled
-// text field). `codeGroup` finds the accessible group; `codeBoxes` its six
-// textboxes; `pasteCode` focuses box 0 and pastes — OtpInput's alphanumeric
-// mode uppercases and strips stray punctuation/whitespace itself.
-function codeGroup(label = 'Invite code') {
-  return screen.getByRole('group', { name: label });
+// The invite code is ONE text field (1.4.3, mobile parity: 6 OR 8 characters). `codeField` finds it
+// by its label; `pasteCode` focuses it and pastes (the field uppercases and strips spaces / dashes).
+function codeField(label = 'Invite code'): HTMLInputElement {
+  return screen.getByLabelText(new RegExp(`^${label}`)) as HTMLInputElement;
 }
-
-function codeBoxes(label = 'Invite code') {
-  return within(codeGroup(label)).getAllByRole('textbox');
+const codeGroup = codeField;
+function codeBoxes(label = 'Invite code'): HTMLInputElement[] {
+  return [codeField(label)];
 }
 
 function codeValue(label = 'Invite code') {
-  return codeBoxes(label)
-    .map((box) => (box as HTMLInputElement).value)
-    .join('');
+  return codeField(label).value;
 }
 
 async function pasteCode(
@@ -89,8 +85,7 @@ async function pasteCode(
   code: string,
   label = 'Invite code'
 ) {
-  const [first] = codeBoxes(label);
-  await user.click(first);
+  await user.click(codeField(label));
   await user.paste(code);
 }
 
@@ -101,7 +96,7 @@ beforeEach(() => {
 describe('JoinCircleModal', () => {
   // WCAG 2.4.3: Modal always used to grab initial focus for its own close
   // button, which made OtpInput's own `autoFocus` dead on arrival.
-  it('focuses the first invite-code box on open, not the close button', () => {
+  it('focuses the invite-code field on open, not the close button', () => {
     renderModal();
     expect(codeBoxes()[0]).toHaveFocus();
   });
@@ -321,23 +316,38 @@ describe('JoinCircleModal', () => {
       expect(submit).toBeDisabled();
       await pasteCode(user, 'ABC12');
       expect(submit).toBeDisabled();
-      // The paste above left focus on the last (6th, still-empty) box.
+      // Focus stays in the one field: the sixth character completes the code.
       await user.paste('3');
       expect(submit).toBeEnabled();
     });
 
-    // 1.4.3: codes are 6 OR 8 characters (eight boxes; six filled is complete).
-    it('JM-P1: an 8-character code fills eight boxes, enables submit and looks up as typed', async () => {
+    // 1.4.3: codes are 6 OR 8 characters, in ONE field (mobile parity; no row of boxes).
+    it('JM-P1: an 8-character code fills the one field, enables submit and looks up as typed', async () => {
       const user = userEvent.setup();
       lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(INVITE));
       renderModal();
-      expect(codeBoxes()).toHaveLength(8);
+      expect(screen.queryByRole('group', { name: 'Invite code' })).not.toBeInTheDocument();
       await pasteCode(user, 'abcd-2345');
       expect(codeValue()).toBe('ABCD2345');
       const submit = screen.getByRole('button', { name: 'Find circle' });
       expect(submit).toBeEnabled();
       await user.click(submit);
       expect(lookupMutate.mock.calls[0][0]).toBe('ABCD2345');
+    });
+
+    it('JM-P2: a legacy 6-character code is complete in the same field (no empty boxes)', async () => {
+      const user = userEvent.setup();
+      renderModal();
+      await pasteCode(user, 'abc123');
+      expect(codeValue()).toBe('ABC123');
+      expect(screen.getByRole('button', { name: 'Find circle' })).toBeEnabled();
+    });
+
+    it('JM-N2: more than 8 characters is cut at 8 (never a 9-character code)', async () => {
+      const user = userEvent.setup();
+      renderModal();
+      await pasteCode(user, 'ABCD23456');
+      expect(codeValue()).toBe('ABCD2345');
     });
 
     it('JM-N1: a 7-character code keeps submit disabled', async () => {

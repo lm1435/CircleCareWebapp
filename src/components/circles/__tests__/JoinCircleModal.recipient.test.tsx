@@ -34,8 +34,7 @@ async function preview(memberType: 'care_recipient' | 'caregiver', inviter = bas
       <JoinCircleModal onClose={vi.fn()} onJoined={vi.fn()} />
     </MemoryRouter>
   );
-  const group = screen.getByRole('group', { name: /Invite code|Código de invitación/ });
-  await user.click(group.querySelectorAll('input')[0] as HTMLElement);
+  await user.click(screen.getByLabelText(/^(Invite code|Código de invitación)/));
   await user.paste('abc123');
   await user.click(screen.getByRole('button', { name: /Find circle|Buscar círculo/ }));
 }

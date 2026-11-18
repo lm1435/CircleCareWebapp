@@ -172,8 +172,8 @@
       "startsOn": "inizia il {{date}}"
     },
     "who": {
-      "sub": "Basta il nome per creare la sua cerchia di cura.",
-      "label": "Il suo nome o come lo chiami",
+      "sub": "Basta il suo nome per avviare la sua cerchia di cura.",
+      "label": "Il suo nome o come la chiami",
       "preview": "Cerchia di {{name}}",
       "previewSub": "Privata. La vedono solo le persone che inviti.",
       "forMe": "È per me",
@@ -183,8 +183,8 @@
     "allSet": {
       "titleAppt": "L’appuntamento di {{name}} è salvato.",
       "titleApptSelf": "Il tuo appuntamento è salvato.",
-      "titleTask": "L’attività di {{name}} è salvata.",
-      "titleTaskSelf": "La tua attività è salvata.",
+      "titleTask": "L’incarico di {{name}} è salvato.",
+      "titleTaskSelf": "Il tuo incarico è salvato.",
       "circle": "Cerchia di {{name}}",
       "circleSelf": "La tua cerchia",
       "circleSub": "Per ora solo tu",

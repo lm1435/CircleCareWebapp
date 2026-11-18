@@ -118,6 +118,9 @@ const STACK_ACTIVE_GROUND: Record<number, string> = {
  * >30px of slack even in a 294px container.
  */
 const SQUEEZE_PADDING: Record<number, string> = {
+  // 3 segments on a phone (the first-item type switch: "Medicamento | Cita | Tarea" in a ~310px modal
+  // body): tighter padding and the 12px step so the longest label never touches the selected thumb.
+  3: '@max-[360px]:px-1 @max-[360px]:text-xs @max-[360px]:tracking-normal',
   4: '@max-[416px]:px-2 @max-[384px]:px-1',
 };
 

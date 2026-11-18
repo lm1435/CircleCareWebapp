@@ -170,7 +170,7 @@ test('the owner typing their own code into the Join modal sees the note and "Go 
   await open.click();
   const dialog = page.getByRole('dialog', { name: 'Join a circle', exact: true });
   await expect(dialog).toBeVisible();
-  await dialog.getByLabel('Character 1 of 8', { exact: true }).click();
+  await dialog.getByLabel(/^Invite code/).click();
   await page.keyboard.type(invite.code.toLowerCase(), { delay: 15 });
   await dialog.getByRole('button', { name: 'Find circle', exact: true }).click();
 

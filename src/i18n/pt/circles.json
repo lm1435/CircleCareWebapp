@@ -172,8 +172,8 @@
       "startsOn": "começa em {{date}}"
     },
     "who": {
-      "sub": "O nome basta para começar o círculo de cuidado.",
-      "label": "O nome ou como você chama a pessoa",
+      "sub": "Só precisamos do nome para começar o círculo de cuidado.",
+      "label": "Nome ou como você chama essa pessoa",
       "preview": "Círculo de {{name}}",
       "previewSub": "Privado. Só as pessoas que você convidar podem ver.",
       "forMe": "É para mim",
@@ -181,10 +181,10 @@
       "progress": "Etapa {{current}} de {{total}}"
     },
     "allSet": {
-      "titleAppt": "A consulta de {{name}} foi salva.",
-      "titleApptSelf": "Sua consulta foi salva.",
-      "titleTask": "A tarefa de {{name}} foi salva.",
-      "titleTaskSelf": "Sua tarefa foi salva.",
+      "titleAppt": "A consulta de {{name}} foi registrada.",
+      "titleApptSelf": "Sua consulta foi registrada.",
+      "titleTask": "A tarefa de {{name}} foi registrada.",
+      "titleTaskSelf": "Sua tarefa foi registrada.",
       "circle": "Círculo de {{name}}",
       "circleSelf": "Seu círculo",
       "circleSub": "Por enquanto, só você",
@@ -193,7 +193,7 @@
       "remindersWebSubTime": "No app CircleCare, às {{time}}",
       "remindersWebSub": "No app CircleCare",
       "optional": "Opcional",
-      "inviteFree": "Seu plano gratuito inclui um cuidador.",
+      "inviteFree": "Seu plano gratuito inclui uma pessoa cuidadora.",
       "copyInviteLink": "Copiar link do convite"
     }
   },

@@ -46,6 +46,8 @@ import { clearFirstRun, peekFirstRunDraft } from '@/lib/firstRunDraft';
 import { firstRunFunnel, setFirstRunPath } from '@/lib/firstRunFunnel';
 import { FirstRunWhoStep } from '@/components/circles/firstRun/FirstRunWhoStep';
 import { FlowProgress } from '@/components/circles/firstRun/FlowProgress';
+import { JoinCodeField } from '@/components/circles/JoinCodeField';
+import { isCompleteJoinCode } from '@/lib/joinCode';
 
 // Email/password sign-up (mirrors mobile SignUpScreen). The backend creates the
 // user and emails a 6-digit OTP but returns NO session, so on success we route
@@ -125,7 +127,7 @@ export default function SignUpPage(): ReactElement {
   // owners. Someone holding an invite code never sees it (and any answer is dropped). A draft
   // already in memory (Back from the code page) goes straight to the account step.
   const [invited] = useState(() => peekPendingInviteCode() !== null);
-  const [stage, setStage] = useState<'who' | 'account'>(() =>
+  const [stage, setStage] = useState<'who' | 'code' | 'account'>(() =>
     invited || peekFirstRunDraft() ? 'account' : 'who'
   );
   useEffect(() => {
@@ -134,10 +136,19 @@ export default function SignUpPage(): ReactElement {
       setFirstRunPath('invited');
     }
   }, [invited]);
+  // A step change moves focus to the new step's heading (the question's own heading takes it on
+  // mount); without this, Continue unmounts and focus drops to <body> (WCAG 2.4.3).
+  const cameFromWhoRef = useRef(false);
   useEffect(() => {
     if (stage === 'account') firstRunFunnel.viewed('account');
+    if (stage === 'account' && cameFromWhoRef.current) {
+      document.getElementById('signup-account-heading')?.focus();
+    }
+    if (stage === 'who') cameFromWhoRef.current = true;
+    if (stage === 'code') document.getElementById('signup-code-heading')?.focus();
   }, [stage]);
   const draft = stage === 'account' && !invited ? peekFirstRunDraft() : null;
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
   const subtitle = draft
     ? draft.isSelfCare
       ? t('signup.subtitleSelf')
@@ -423,6 +434,51 @@ export default function SignUpPage(): ReactElement {
 
   if (parkedEmail) return <></>;
 
+  /**
+   * "I have an invite code" (mobile Welcome's door, 1.4.3): web has no Welcome, so the door sits on
+   * the question step. A code-holder never answers the care question: any answer is dropped, the
+   * funnel path is `invited`, and the code goes to the existing join flow, /invite/:code (preview,
+   * then "Create an account to join", which parks the code so sign-up skips the question).
+   */
+  if (stage === 'code') {
+    const ready = isCompleteJoinCode(inviteCodeInput);
+    return (
+      <AuthShell>
+        <AuthTopBar
+          onBack={() => {
+            setInviteCodeInput('');
+            setStage('who');
+          }}
+        />
+        <AuthHeader
+          title={t('signup.inviteCode.title')}
+          subtitle={t('circles:joinModal.subtitle')}
+          headingId="signup-code-heading"
+        />
+        <form
+          noValidate
+          className="flex flex-col gap-4"
+          data-testid="signup-invite-code"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!ready) return;
+            navigate(`/invite/${encodeURIComponent(inviteCodeInput)}`);
+          }}
+        >
+          <JoinCodeField
+            id="signup-invite-code-input"
+            label={t('circles:joinModal.codeLabel')}
+            value={inviteCodeInput}
+            onChange={setInviteCodeInput}
+          />
+          <Button type="submit" size="lg" fullWidth disabled={!ready} data-testid="signup-invite-code-continue">
+            {t('circles:firstRun.continue')}
+          </Button>
+        </form>
+      </AuthShell>
+    );
+  }
+
   if (stage === 'who') {
     return (
       <AuthShell>
@@ -445,6 +501,23 @@ export default function SignUpPage(): ReactElement {
           initialName={peekFirstRunDraft()?.recipientName ?? ''}
           onDone={() => setStage('account')}
         />
+        <div className="mt-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            fullWidth
+            data-testid="signup-have-invite-code"
+            onClick={() => {
+              // A code-holder is an invitee: drop any answer, never ask the care question.
+              clearFirstRun();
+              setFirstRunPath('invited');
+              setStage('code');
+            }}
+          >
+            {t('signup.inviteCode.haveCode')}
+          </Button>
+        </div>
         <p className="m-0 mt-6 text-center text-sm text-ink-3">
           {t('signup.hasAccount')}{' '}
           <Link to="/login" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-moss">
@@ -472,7 +545,7 @@ export default function SignUpPage(): ReactElement {
           <FlowProgress current={2} />
         </div>
       )}
-      <AuthHeader title={t('signup.title')} subtitle={subtitle} />
+      <AuthHeader title={t('signup.title')} subtitle={subtitle} headingId="signup-account-heading" />
 
       {formError ? (
         <div ref={errorRef} role="alert" tabIndex={-1} className="mb-4">

@@ -82,4 +82,44 @@ describe('SignUpPage first run v2', () => {
     expect(JSON.stringify(mockNavigate.mock.calls)).not.toContain('Rosa');
     expect(window.location.href).not.toContain('Rosa');
   });
+
+  it('a11y POSITIVE: Continue on the question moves focus to the Create account heading (not <body>)', async () => {
+    renderSignUp();
+    const u = userEvent.setup();
+    await u.type(screen.getByLabelText(/^Their name/), 'Rosa');
+    await u.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Create account' })).toHaveFocus();
+  });
+
+  it('POSITIVE: "I have an invite code" on the question step opens code entry; a 6-character code goes to the join flow', async () => {
+    renderSignUp();
+    const u = userEvent.setup();
+    await u.click(screen.getByRole('button', { name: 'I have an invite code' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Enter your invite code' })).toHaveFocus();
+    const continueBtn = screen.getByTestId('signup-invite-code-continue');
+    await u.type(screen.getByLabelText(/^Invite code/), 'abc-123');
+    expect(continueBtn).toBeEnabled();
+    await u.click(continueBtn);
+    expect(mockNavigate).toHaveBeenCalledWith('/invite/ABC123');
+  });
+
+  it('NEGATIVE: a code-holder never sees the care question; any answer is dropped and the path is invited', async () => {
+    setFirstRunDraft({ recipientName: 'Rosa', isSelfCare: false });
+    clearFirstRun();
+    renderSignUp();
+    await userEvent.setup().type(screen.getByLabelText(/^Their name/), 'Rosa');
+    await userEvent.setup().click(screen.getByRole('button', { name: 'I have an invite code' }));
+    expect(screen.queryByRole('heading', { name: 'Who are you caring for?' })).not.toBeInTheDocument();
+    expect(peekFirstRunDraft()).toBeNull();
+    expect(sessionStorage.getItem('cc.firstRun.path')).toBe('invited');
+  });
+
+  it('NEGATIVE: a 7-character code cannot continue (codes are 6 or 8)', async () => {
+    renderSignUp();
+    const u = userEvent.setup();
+    await u.click(screen.getByRole('button', { name: 'I have an invite code' }));
+    await u.type(screen.getByLabelText(/^Invite code/), 'ABCD234');
+    expect(screen.getByTestId('signup-invite-code-continue')).toBeDisabled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
 });

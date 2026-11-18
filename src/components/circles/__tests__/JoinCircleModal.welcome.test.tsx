@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import { MemoryRouter } from 'react-router-dom';
@@ -50,8 +50,7 @@ async function join(viewOnly: boolean) {
     </MemoryRouter>
   );
   const user = userEvent.setup();
-  const [first] = within(screen.getByRole('group', { name: 'Invite code' })).getAllByRole('textbox');
-  await user.click(first);
+  await user.click(screen.getByLabelText(/^Invite code/));
   await user.paste('ABC123');
   await user.click(screen.getByRole('button', { name: /look up|find|continue|next/i }));
   await user.click(await screen.findByRole('button', { name: 'Join circle' }));

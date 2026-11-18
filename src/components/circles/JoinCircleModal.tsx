@@ -1,14 +1,14 @@
 import { useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card, Modal, Text, useToast } from '@/components/ui';
-import { OtpInput, type OtpInputHandle } from '@/components/auth/OtpInput';
 import { getApiError } from '@/api/auth';
 import { useLookupInviteByCode, useAcceptInviteByCode } from '@/hooks/useJoinCircle';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { joinedCircleMessage } from '@/hooks/useOpenJoinedCircle';
 import { useAuth } from '@/hooks/useAuth';
 import { recordPendingInviteeWelcome } from '@/lib/inviteeWelcome';
-import { JOIN_CODE_LENGTH, extractJoinCode, isCompleteJoinCode } from '@/lib/joinCode';
+import { extractJoinCode, isCompleteJoinCode } from '@/lib/joinCode';
+import { JoinCodeField } from './JoinCodeField';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
 import { isOwnOrMemberInvite, type InviteByCode } from '@/api/invites';
@@ -113,7 +113,7 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
   // OtpInput's own `autoFocus` (below) is dead inside Modal — the shell always
   // claims initial focus for its close button. `initialFocusRef` on the Modal
   // (further down) is how the first code box wins that race instead.
-  const codeFieldRef = useRef<OtpInputHandle>(null);
+  const codeFieldRef = useRef<HTMLInputElement>(null);
 
   const { user } = useAuth();
   const userId = user?.id;
@@ -268,7 +268,6 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
     >
       {!invite ? (
         <>
-          <Text variant="label" as="p">{t('joinModal.codeLabel')}</Text>
           <p className="m-0 text-sm text-ink-3">{t('joinModal.subtitle')}</p>
 
           {error ? (
@@ -285,19 +284,17 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
             onSubmit={handleLookup}
             className="flex flex-col gap-4"
           >
-            {/* 8 boxes (1.4.3 codes); a legacy 6-character code fills six and is
-                already complete (`isCompleteJoinCode` accepts 6 or 8). */}
-            <OtpInput
+            {/* ONE field (mobile parity): a code is 6 OR 8 characters (`isCompleteJoinCode`). */}
+            <JoinCodeField
               ref={codeFieldRef}
-              alphanumeric
-              length={JOIN_CODE_LENGTH}
+              id="join-invite-code"
+              label={t('joinModal.codeLabel')}
               value={code}
               onChange={(next) => {
                 setCode(next);
                 setError(null);
                 setPasteMiss(false);
               }}
-              label={t('joinModal.codeLabel')}
             />
             {clipboardAvailable && (
               <div className="flex flex-col items-start gap-1">

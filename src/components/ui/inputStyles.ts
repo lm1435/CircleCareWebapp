@@ -269,7 +269,9 @@ export const CHOICE_TILE_BOX =
   'flex min-h-[48px] max-w-full min-w-[44px] flex-col items-start justify-center gap-px rounded-2xl border px-3.5 py-2 text-left transition-colors duration-fast';
 
 /** A choice tile's label line ("Morning", "Every day") and second line ("8:00 AM"). */
-export const CHOICE_TILE_LABEL = 'max-w-full text-base font-medium';
+// A single long word ("Personalizado…") wraps inside its tile instead of running into the border
+// (hyphenated where the browser knows the page language, else broken anywhere as a last resort).
+export const CHOICE_TILE_LABEL = 'max-w-full text-base font-medium hyphens-auto [overflow-wrap:anywhere]';
 export function choiceTileSubClass(selected: boolean): string {
   return `max-w-full text-sm ${selected ? 'text-cream/80' : 'text-ink-2'}`;
 }
@@ -324,7 +326,7 @@ export function optionRow(selected: boolean, disabled?: boolean, plain?: boolean
  * (`VALUE_TILE_CLEAR_BUTTON`).
  */
 export const VALUE_TILE_CLEARABLE_BOX =
-  'flex min-h-[48px] w-full min-w-0 items-center rounded-2xl border transition-colors duration-fast';
+  'flex min-h-[48px] w-full min-w-0 flex-1 items-center rounded-2xl border transition-colors duration-fast';
 export const VALUE_TILE_CLEARABLE_BODY =
   'flex min-h-[48px] min-w-0 flex-1 cursor-pointer flex-col items-start justify-center gap-px rounded-2xl border-0 bg-transparent py-2 pr-1 pl-3.5 text-left text-ink hover:bg-bg-2';
 export const VALUE_TILE_CLEAR_BUTTON =

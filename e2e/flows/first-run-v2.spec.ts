@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { checkA11y } from '../helpers';
+import { setProfileLanguage } from '../notesFirstClassShared';
 import { runScopedEmail } from '../isolation';
 import { dbCount, dbQuery, generateSignupOtp, sqlStr } from '../unhappy';
 import {
@@ -312,3 +313,138 @@ test.describe('first run v2 (web)', () => {
     expect(running).toEqual([]);
   });
 });
+
+// ── Visual review fixes (owner 2026-11-18) ───────────────────────────────────────────────────────
+
+async function startForScoped(page: Page, context: import('@playwright/test').BrowserContext, baseURL: string | undefined, prefix: string, lang: 'en' | 'es' = 'en') {
+  await stubDrugs(page);
+  const account = await createScopedAccount(prefix);
+  await cookieLogin(context, account, baseURL);
+  if (lang === 'es') await setProfileLanguage(page, 'es');
+  await page.goto('/circles', { waitUntil: 'domcontentloaded' });
+  await page.getByTestId('empty-circles').getByRole('button').first().click();
+  await page.locator('#first-run-recipient-name').fill('Rosa');
+  await page.getByTestId('first-run-who-continue').click();
+  await waitForFirstItemForm(page);
+  return account;
+}
+
+test.describe('first run v2: review fixes', () => {
+  test('first-item form: opens on the name field; Escape with a typed name asks "Discard changes?"; Keep editing keeps it; Discard leaves', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    test.slow();
+    await startForScoped(page, context, baseURL, 'fr2-discard');
+    const name = page.getByRole('combobox', { name: /^Medication name/ });
+    await expect(name).toBeFocused();
+    await name.fill('Metformin');
+    // The first Escape may only close the suggestion list; keep pressing until the dialog answers.
+    await page.keyboard.press('Escape');
+    if (!(await page.getByText('Discard changes?').isVisible())) await page.keyboard.press('Escape');
+    await expect(page.getByText('Discard changes?')).toBeVisible();
+    await expect(page).not.toHaveURL(/\/upgrade$/);
+    await page.getByRole('button', { name: 'Keep editing' }).last().click();
+    await expect(name).toHaveValue('Metformin');
+    await page.getByRole('button', { name: 'Close event form' }).click();
+    await page.getByRole('button', { name: 'Discard', exact: true }).click();
+    await expect(page.getByRole('tablist')).toHaveCount(0, { timeout: 10_000 });
+  });
+
+  test('NEGATIVE: a clean first-item form closes on Escape with no confirm', async ({ page, context, baseURL }) => {
+    test.slow();
+    await startForScoped(page, context, baseURL, 'fr2-clean');
+    await page.keyboard.press('Escape');
+    await expect(page.getByText('Discard changes?')).toHaveCount(0);
+    await expect(page.getByRole('tablist')).toHaveCount(0, { timeout: 10_000 });
+  });
+
+  for (const lang of ['en', 'es'] as const) {
+    test(`All set at 390x844 (${lang}): the three rows and the Optional card sit above the two buttons`, async ({
+      page,
+      context,
+      baseURL,
+    }) => {
+      test.slow();
+      await page.setViewportSize({ width: 390, height: 844 });
+      await startForScoped(page, context, baseURL, `fr2-fold-${lang}`, lang);
+      await page.getByRole('combobox').first().fill('Metformin');
+      await page.getByTestId('add-event-save').click();
+      const card = page.locator('[aria-labelledby="first-run-invite-heading"]');
+      await expect(card).toBeVisible({ timeout: 20_000 });
+      const cardBox = (await card.boundingBox())!;
+      const share = (await page.getByTestId('first-run-invite-link').boundingBox())!;
+      expect(cardBox.y + cardBox.height, 'Optional card ends above the buttons').toBeLessThanOrEqual(share.y);
+      // ...and it is not hidden in a scrolled-away part of the body.
+      // Visible WITHOUT scrolling: inside the dialog's scroll area while it is at the top.
+      const inView = await card.evaluate((el) => {
+        let box: HTMLElement | null = el.parentElement;
+        while (box && !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) box = box.parentElement;
+        if (!box) return { ok: true, card: [], box: [] };
+        box.scrollTop = 0;
+        const r = el.getBoundingClientRect();
+        const b = box.getBoundingClientRect();
+        return { ok: r.top >= b.top - 1 && r.bottom <= b.bottom + 1, card: [r.top, r.bottom], box: [b.top, b.bottom] };
+      });
+      expect(inView.ok, JSON.stringify(inView)).toBe(true);
+    });
+  }
+
+  test('Spanish at 390: the type switch labels fit their segments; "Personalizado…" stays in its tile; the date tiles are one height', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    test.slow();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await startForScoped(page, context, baseURL, 'fr2-es390', 'es');
+    for (const tab of await page.getByRole('tab').all()) {
+      const fits = await tab.evaluate((el) => el.scrollWidth <= el.clientWidth + 1);
+      expect(fits, `${await tab.textContent()} fits its segment`).toBe(true);
+    }
+    const custom = page.getByRole('dialog').last().getByText('Personalizado…', { exact: true });
+    await custom.scrollIntoViewIfNeeded();
+    const inside = await custom.evaluate((el) => {
+      const tile = el.closest('button, [role="radio"], label') as HTMLElement;
+      const r = el.getBoundingClientRect();
+      const t = tile.getBoundingClientRect();
+      return r.right <= t.right - 4;
+    });
+    expect(inside, '"Personalizado…" ends inside its tile border').toBe(true);
+    await page.getByRole('tab', { name: 'Cita' }).click();
+    const tiles = page.getByTestId('when-date-tiles').locator(':scope > div > button, :scope > div > div');
+    const heights = await tiles.evaluateAll((els) => els.slice(0, 2).map((e) => Math.round(e.getBoundingClientRect().height)));
+    expect(heights[0]).toBe(heights[1]);
+  });
+
+  test('NEGATIVE: "I have an invite code" on the sign-up question goes to the join flow and never asks the care question', async ({
+    page,
+    request,
+  }) => {
+    test.slow();
+    const api = await ownerApi(request, await createScopedAccount('fr2-door-owner'));
+    const circleId = await createCircle(api, uniq('fr2-door'));
+    const created = await api.post(`/api/circles/${circleId}/invites`, { member_type: 'caregiver' });
+    const code = ((await created.json()) as { data: { invite: { invite_code: string } } }).data.invite.invite_code;
+
+    await page.goto('/signup', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('button', { name: 'I have an invite code' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Enter your invite code' })).toBeFocused();
+    await expect(page.getByTestId('first-run-who')).toHaveCount(0);
+    await page.getByLabel(/^Invite code/).fill(code.toLowerCase());
+    await page.getByTestId('signup-invite-code-continue').click();
+    await expect(page).toHaveURL(new RegExp(`/invite/${code}$`), { timeout: 20_000 });
+    await page.getByRole('button', { name: 'Create an account to join' }).click();
+    await expect(page.getByRole('heading', { name: 'Create account' })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('first-run-who')).toHaveCount(0);
+  });
+
+  test('a11y: Continue on the question lands focus on the Create account heading', async ({ page }) => {
+    await page.goto('/signup', { waitUntil: 'domcontentloaded' });
+    await page.locator('#first-run-recipient-name').fill('Rosa');
+    await page.getByTestId('first-run-who-continue').click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Create account' })).toBeFocused();
+  });
+});
+

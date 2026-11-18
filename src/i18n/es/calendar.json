@@ -163,16 +163,16 @@
     "titleSuggestions": {
       "label": "Sugerencias de título",
       "appointment": {
-        "doctorVisit": "Visita al doctor",
-        "labWork": "Análisis de laboratorio",
-        "followUp": "Consulta de seguimiento",
+        "doctorVisit": "Consulta médica",
+        "labWork": "Exámenes de laboratorio",
+        "followUp": "Seguimiento",
         "dentist": "Dentista",
         "eyeExam": "Examen de la vista"
       },
       "task": {
-        "pickUpPrescriptions": "Recoger las recetas",
+        "pickUpPrescriptions": "Recoger medicamentos",
         "groceryRun": "Hacer las compras",
-        "checkInCall": "Llamada para ver cómo está",
+        "checkInCall": "Llamada de chequeo",
         "driveToAppointment": "Llevar a la cita",
         "refillPillOrganizer": "Rellenar el pastillero"
       }
@@ -382,8 +382,14 @@
       "eyebrowSelf": "TU PRIMER MEDICAMENTO",
       "title": "¿Qué toma {{name}}?",
       "titleSelf": "¿Qué tomas?",
-      "hint": "Solo el nombre, la palabra grande en el frasco. La dosis es opcional.",
-      "skip": "Omitir por ahora"
+      "hint": "Solo el nombre, la palabra grande del frasco. La dosis es opcional.",
+      "skip": "Omitir por ahora",
+      "discard": {
+        "title": "¿Descartar los cambios?",
+        "message": "Lo que escribiste aquí no se guardará.",
+        "confirm": "Descartar",
+        "keep": "Seguir editando"
+      }
     },
     "medicationPhoto": "Foto del medicamento",
     "photoRowTitle": "Agregar una foto",

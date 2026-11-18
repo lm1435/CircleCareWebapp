@@ -64,7 +64,7 @@
       "inviteHeadingSelf": "Quem ajuda no seu dia a dia?"
     },
     "who": {
-      "label": "O nome ou como chama a pessoa",
+      "label": "O nome ou como lhe chama",
       "previewSub": "Privado. Só as pessoas que convidar podem ver."
     },
     "allSet": {
@@ -77,7 +77,8 @@
       "remindersWebTitle": "Os lembretes chegam ao seu telemóvel",
       "remindersWebSubTime": "Na app CircleCare, às {{time}}",
       "remindersWebSub": "Na app CircleCare",
-      "inviteFree": "O seu plano gratuito inclui um cuidador."
+      "inviteFree": "O seu plano gratuito inclui uma pessoa cuidadora.",
+      "circleSub": "Ainda sem mais ninguém"
     }
   },
   "accessLost": {

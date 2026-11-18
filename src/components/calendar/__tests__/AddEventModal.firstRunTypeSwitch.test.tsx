@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import { Analytics } from '@/lib/analytics';
@@ -229,5 +229,65 @@ describe('first run v2: time defaults', { timeout: 20_000 }, () => {
     await user().click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(firstRunSaved).toHaveBeenCalled());
     expect(JSON.stringify(firstRunSaved.mock.calls[0][0])).not.toContain('Metformin');
+  });
+});
+
+describe('first run v2: leaving the first-item form', () => {
+  it('a11y POSITIVE: the dialog opens on the name field, not on the x', async () => {
+    renderForm({ firstRun: true, firstRunTypeSwitch: true });
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: /^Medication name/ })).toHaveFocus()
+    );
+  });
+
+  it('NEGATIVE: Escape on a form with a typed name asks "Discard changes?" and does NOT close', async () => {
+    const { onClose } = renderForm({ firstRun: true, firstRunTypeSwitch: true });
+    await user().type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
+    fireEvent.keyDown(screen.getByRole('combobox', { name: /^Medication name/ }), { key: 'Escape' });
+    // A first Escape may only close the suggestion list; a second reaches the dialog.
+    if (!screen.queryByRole('alertdialog') && !screen.queryByText('Discard changes?')) {
+      fireEvent.keyDown(screen.getByRole('combobox', { name: /^Medication name/ }), { key: 'Escape' });
+    }
+    expect(await screen.findByText('Discard changes?')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    // The dialog's x shares the Keep editing name; the footer button is the last one.
+    const keep = screen.getAllByRole('button', { name: 'Keep editing' });
+    await user().click(keep[keep.length - 1]);
+    expect(screen.queryByText('Discard changes?')).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('combobox', { name: /^Medication name/ })).toHaveValue('Metformin');
+  });
+
+  it('POSITIVE: the x on a dirty form, then Discard, closes (as a skip)', async () => {
+    const { onClose } = renderForm({ firstRun: true, firstRunTypeSwitch: true });
+    await user().type(screen.getByLabelText(/^Dosage/), '500 mg');
+    await user().click(screen.getByRole('button', { name: 'Close event form' }));
+    expect(await screen.findByText('Discard changes?')).toBeInTheDocument();
+    await user().click(screen.getByRole('button', { name: 'Discard' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
+  it('POSITIVE: a clean form closes at once on the x (no confirm), even after switching type', async () => {
+    const { onClose } = renderForm({ firstRun: true, firstRunTypeSwitch: true });
+    await switchTo('Appointment');
+    await user().click(screen.getByRole('button', { name: 'Close event form' }));
+    expect(screen.queryByText('Discard changes?')).not.toBeInTheDocument();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('NEGATIVE: outside first run the x never asks (unchanged behaviour)', async () => {
+    const { onClose } = renderForm();
+    await user().type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
+    await user().click(screen.getByRole('button', { name: 'Close event form' }));
+    expect(screen.queryByText('Discard changes?')).not.toBeInTheDocument();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('POSITIVE: "Skip for now" is an explicit choice and closes without a confirm', async () => {
+    const { onClose } = renderForm({ firstRun: true, firstRunTypeSwitch: true });
+    await user().type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
+    await user().click(screen.getByTestId('first-run-skip'));
+    expect(screen.queryByText('Discard changes?')).not.toBeInTheDocument();
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

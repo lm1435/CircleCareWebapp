@@ -153,10 +153,14 @@ export function AllSetStep({
   const ownerInitial = ownerFirstName?.trim()[0]?.toLocaleUpperCase();
 
   return (
-    <div className="flex flex-col gap-4" data-testid="first-run-all-set" data-first-item-type={item.type}>
+    // COMPACT TOP (owner 2026-11-18, mobile parity): at 390x844 the three rows AND the Optional card
+    // must sit above the two buttons, so the hero is tightened (emblem 44, motion.md's small size; small gaps,
+    // row padding),
+    // nothing is moved or dropped.
+    <div className="flex flex-col gap-1.5" data-testid="first-run-all-set" data-first-item-type={item.type}>
       <FlowProgress current={WEB_FIRST_RUN_STEPS} />
-      <div className="flex flex-col items-center gap-2 text-center">
-        <CircleEmblem initial={initial} ownerInitial={ownerInitial} state="ready" size={88} seatFilled={seatFilled} />
+      <div className="flex flex-col items-center gap-0.5 text-center">
+        <CircleEmblem initial={initial} ownerInitial={ownerInitial} state="ready" size={44} seatFilled={seatFilled} />
         <Eyebrow>{t('firstRun.payoff.eyebrow')}</Eyebrow>
         <h3 ref={headingRef} tabIndex={-1} className={`${TEXT_CLASS.h2} m-0 outline-none`} data-testid="first-run-all-set-title">
           {title}
@@ -169,7 +173,7 @@ export function AllSetStep({
             <li
               key={row.id}
               data-testid={`first-run-all-set-row-${row.id}`}
-              className={`flex items-start gap-3 px-4 py-3 ${i > 0 ? 'border-t border-line-2' : ''} ${still ? '' : 'cc-fr-rise'}`}
+              className={`flex items-start gap-3 px-4 py-1 ${i > 0 ? 'border-t border-line-2' : ''} ${still ? '' : 'cc-fr-rise'}`}
               style={still ? undefined : { animationDelay: `${i * 120}ms` }}
             >
               <Icon
@@ -188,14 +192,14 @@ export function AllSetStep({
         </ul>
       </Card>
 
-      <Card variant="filled" padding="md" as="section" aria-labelledby="first-run-invite-heading">
+      <Card variant="filled" padding="sm" as="section" aria-labelledby="first-run-invite-heading">
         <Eyebrow color="ink-2">{t('firstRun.allSet.optional')}</Eyebrow>
-        <Text variant="h3" as="h4" id="first-run-invite-heading" className="mt-1">
+        <Text variant="h3" as="h4" id="first-run-invite-heading" className="mt-0.5">
           {isSelfCare
             ? t('firstRun.payoff.inviteHeadingSelf')
             : t('firstRun.payoff.inviteHeading', { name: recipientName })}
         </Text>
-        <Text variant="caption" as="p" className="m-0 mt-1">
+        <Text variant="caption" as="p" className="m-0 mt-0.5">
           {t('firstRun.ready.inviteHelper')} {t('firstRun.allSet.inviteFree')}
         </Text>
         {inviteUrl ? (

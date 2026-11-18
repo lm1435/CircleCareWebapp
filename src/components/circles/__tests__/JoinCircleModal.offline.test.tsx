@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
@@ -51,8 +51,7 @@ function renderModal() {
 
 /** Online: type the code and look it up, landing on the details step. */
 async function reachDetails() {
-  const boxes = within(screen.getByRole('group', { name: 'Invite code' })).getAllByRole('textbox');
-  fireEvent.paste(boxes[0], { clipboardData: { getData: () => 'ABC123' } });
+  fireEvent.change(screen.getByLabelText(/^Invite code/), { target: { value: 'ABC123' } });
   await waitFor(() => expect(screen.getByRole('button', { name: 'Find circle' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'Find circle' }));
   await screen.findByText("Rose's Circle");

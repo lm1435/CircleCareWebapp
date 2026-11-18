@@ -172,10 +172,10 @@
       "startsOn": "beginnt am {{date}}"
     },
     "who": {
-      "sub": "Der Name genügt, um den Betreuungskreis zu starten.",
+      "sub": "Mehr als den Namen brauchen wir nicht, um den Pflegekreis zu starten.",
       "label": "Name oder wie Sie die Person nennen",
-      "preview": "Kreis von {{name}}",
-      "previewSub": "Privat. Nur Personen, die Sie einladen, sehen ihn.",
+      "preview": "Kreis für {{name}}",
+      "previewSub": "Privat. Nur Personen, die Sie einladen, können ihn sehen.",
       "forMe": "Es ist für mich",
       "itemType": "Was zuerst hinzufügen",
       "progress": "Schritt {{current}} von {{total}}"
@@ -185,7 +185,7 @@
       "titleApptSelf": "Ihr Termin ist gespeichert.",
       "titleTask": "Die Aufgabe für {{name}} ist gespeichert.",
       "titleTaskSelf": "Ihre Aufgabe ist gespeichert.",
-      "circle": "Kreis von {{name}}",
+      "circle": "Kreis für {{name}}",
       "circleSelf": "Ihr Kreis",
       "circleSub": "Bisher nur Sie",
       "seatWaiting": "Einladungslink geteilt. Warten, bis die Person beitritt.",
@@ -193,7 +193,7 @@
       "remindersWebSubTime": "In der CircleCare-App, um {{time}}",
       "remindersWebSub": "In der CircleCare-App",
       "optional": "Optional",
-      "inviteFree": "Ihr kostenloser Plan umfasst eine betreuende Person.",
+      "inviteFree": "Ihr kostenloser Tarif umfasst eine Pflegeperson.",
       "copyInviteLink": "Einladungslink kopieren"
     }
   },

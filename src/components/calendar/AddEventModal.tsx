@@ -985,6 +985,8 @@ function AddEventForm({
   const [pendingPastTime, setPendingPastTime] = useState<CreateEventRequest | null>(null);
   /** The ⓘ explainer behind the Reminders heading (mobile's info bottom sheet). */
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  /** First run v2: "Discard changes?" before the x / Escape drops what was typed. */
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   /**
    * Re-hydrate once the recipient timezone actually resolves.
@@ -2316,6 +2318,24 @@ function AddEventForm({
     onClose();
   }
 
+  /**
+   * FIRST RUN v2: the x and Escape on a DIRTY first-item form ask "Discard changes?" first (mobile's
+   * useDiscardChangesGuard words); a clean form closes at once, as before. "Skip for now" is an explicit
+   * choice and still closes directly. Dirty = a typed name / title or dose (owner, mobile parity):
+   * switching the type and the preselected times never count.
+   */
+  const firstRunDirty = firstRunMode && (title.trim() !== '' || dosage.trim() !== '');
+  function requestDismiss(): void {
+    if (firstRunDirty) {
+      setConfirmDiscard(true);
+      return;
+    }
+    handleClose();
+  }
+  /** First run v2: the dialog opens on the name field, not on the x. */
+  const nameFocus = useRef({ focus: () => document.getElementById(titleFieldId)?.focus() });
+  nameFocus.current.focus = () => document.getElementById(titleFieldId)?.focus();
+
   // Hidden entirely when the user can't edit — the read-only path keeps the
   // EventDetailModal download CTA instead (Task 1.6 gating).
   if (!canEdit) return null;
@@ -3188,7 +3208,9 @@ function AddEventForm({
 
   /** A value tile's look (owner 2026-11-10): outlined, label small over the value, a trailing chevron. */
   const valueTileClass = (invalid: boolean, disabled: boolean): string =>
-    `${CHOICE_TILE_BOX} w-full min-w-0 ${invalid ? 'border-terracotta text-ink hover:bg-bg-2' : CHIP_UNSELECTED}${disabled ? ' cursor-default opacity-50' : ' cursor-pointer'}`;
+    // flex-1: the two tiles of a row are as tall as each other (a value that wraps in one tile,
+    // "Wed, Nov 18" / "No se repite", no longer leaves its neighbour short).
+    `${CHOICE_TILE_BOX} w-full min-w-0 flex-1 ${invalid ? 'border-terracotta text-ink hover:bg-bg-2' : CHIP_UNSELECTED}${disabled ? ' cursor-default opacity-50' : ' cursor-pointer'}`;
   const valueTileContent = (label: string, value: string, chevron = true): ReactElement => (
     <>
       <span className={VALUE_TILE_LABEL}>{label}</span>
@@ -4059,10 +4081,11 @@ function AddEventForm({
                 : t('addEvent.newTitle')
       }
       hideTitle={firstRun}
-      onClose={handleClose}
+      onClose={firstRunMode ? requestDismiss : handleClose}
       closeLabel={t('addEvent.close')}
       size="lg"
       closeOnBackdropClick={false}
+      initialFocusRef={firstRunMode ? nameFocus : undefined}
       footer={
         <>
           {showSeriesEditNote && (
@@ -4162,6 +4185,21 @@ function AddEventForm({
         {simpleFields}
       </form>
     </Modal>
+
+    {confirmDiscard && (
+      <ConfirmDialog
+        title={t('addEvent.firstRun.discard.title')}
+        message={t('addEvent.firstRun.discard.message')}
+        confirmLabel={t('addEvent.firstRun.discard.confirm')}
+        cancelLabel={t('addEvent.firstRun.discard.keep')}
+        destructive
+        onConfirm={() => {
+          setConfirmDiscard(false);
+          handleClose();
+        }}
+        onCancel={() => setConfirmDiscard(false)}
+      />
+    )}
 
     {/* "How notifications work" — a sibling of the form's Modal, not a child of
         it, exactly as the past-time confirm below is. */}

@@ -223,7 +223,7 @@ export function FirstRunWizardModal({
       closeOnBackdropClick={false}
       initialFocusRef={headingRef}
       footer={
-        <div className="flex w-full flex-col gap-3">
+        <div className="flex w-full flex-col gap-2">
           <Button
             size="lg"
             fullWidth

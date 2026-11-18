@@ -383,7 +383,13 @@
       "title": "What does {{name}} take?",
       "titleSelf": "What do you take?",
       "hint": "Just the name, the big word on the bottle. Dose is optional.",
-      "skip": "Skip for now"
+      "skip": "Skip for now",
+      "discard": {
+        "title": "Discard changes?",
+        "message": "What you typed here won't be saved.",
+        "confirm": "Discard",
+        "keep": "Keep editing"
+      }
     },
     "medicationPhoto": "Medication photo",
     "photoRowTitle": "Add a photo",

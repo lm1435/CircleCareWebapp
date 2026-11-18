@@ -171,8 +171,8 @@
       },
       "task": {
         "pickUpPrescriptions": "Buscar receitas",
-        "groceryRun": "Compras no mercado",
-        "checkInCall": "Ligação para saber como está",
+        "groceryRun": "Ir ao mercado",
+        "checkInCall": "Ligar para saber como está",
         "driveToAppointment": "Levar à consulta",
         "refillPillOrganizer": "Reabastecer o porta-comprimidos"
       }
@@ -382,8 +382,14 @@
       "eyebrowSelf": "SEU PRIMEIRO MEDICAMENTO",
       "title": "O que {{name}} toma?",
       "titleSelf": "O que você toma?",
-      "hint": "Só o nome, a palavra grande no frasco. A dose é opcional.",
-      "skip": "Pular por enquanto"
+      "hint": "Só o nome, a palavra grande na embalagem. A dose é opcional.",
+      "skip": "Pular por enquanto",
+      "discard": {
+        "title": "Descartar alterações?",
+        "message": "O que você digitou aqui não será salvo.",
+        "confirm": "Descartar",
+        "keep": "Continuar editando"
+      }
     },
     "medicationPhoto": "Foto do medicamento",
     "photoRowTitle": "Adicionar uma foto",

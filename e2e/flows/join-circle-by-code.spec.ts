@@ -81,7 +81,7 @@ const COPY = {
     find: 'Find circle',
     join: 'Join circle',
     different: 'Enter a different code',
-    char: (n: number) => `Character ${n} of 6`,
+    field: /^Invite code/,
     invalid: "We couldn't find that invite code. Double-check it and try again.",
     expired: 'This invite has expired. Ask the person who invited you for a new one.',
     used: 'This invite has already been used. Ask the person who invited you to send you a new one.',
@@ -98,7 +98,7 @@ const COPY = {
     find: 'Buscar círculo',
     join: 'Unirte al círculo',
     different: 'Ingresar otro código',
-    char: (n: number) => `Carácter ${n} de 6`,
+    field: /^Código de invitación/,
     invalid: 'No encontramos ese código de invitación. Verifícalo e intenta de nuevo.',
     expired: 'Esta invitación venció. Pídele a quien te invitó una nueva.',
     used: 'Esta invitación ya fue utilizada. Pídele a quien te invitó que te envíe una nueva.',
@@ -160,14 +160,12 @@ async function cancelInvite(oc: OwnerCircle, inviteId: string): Promise<void> {
   expect(inviteStatus(inviteId)).toBe('cancelled');
 }
 
-const codeBoxes = (dialog: Locator, lang: Lang): Locator[] =>
-  Array.from({ length: 6 }, (_, i) => dialog.getByLabel(COPY[lang].char(i + 1), { exact: true }));
+/** The invite code is ONE field (1.4.3, mobile parity: 6 or 8 characters), not a row of boxes. */
+const codeField = (dialog: Locator, lang: Lang): Locator => dialog.getByLabel(COPY[lang].field);
 
 /**
- * Type `code` into the six-box field from the first box. It types OVER whatever the boxes hold, as a
- * person fixing a rejected code does: no clearing first. Lower case by default, on purpose: the field
- * upper-cases. A lower-case letter typed over its own upper-case twin is a REAL change to the DOM, so
- * pass `lower: false` when equal characters are the point (the re-typing tests below).
+ * Type `code` into the field, replacing what it holds (as a person fixing a rejected code selects it and
+ * types again). Lower case by default, on purpose: the field upper-cases.
  */
 async function typeCode(
   page: Page,
@@ -176,10 +174,11 @@ async function typeCode(
   code: string,
   { lower = true }: { lower?: boolean } = {}
 ): Promise<void> {
-  const boxes = codeBoxes(dialog, lang);
-  await boxes[0].click();
+  const field = codeField(dialog, lang);
+  await field.click();
+  await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.type(lower ? code.toLowerCase() : code, { delay: 15 });
-  for (let i = 0; i < 6; i++) await expect(boxes[i]).toHaveValue(code[i]);
+  await expect(field).toHaveValue(code.toUpperCase());
 }
 
 async function lookUp(dialog: Locator, lang: Lang): Promise<void> {
@@ -293,8 +292,7 @@ for (const lang of ['en', 'es'] as const) {
 
     const dialog = await openJoinModal(page, lang, 'header');
     const alert = dialog.getByRole('alert');
-    const codeBoxesVisible = async () =>
-      expect(dialog.getByLabel(c.char(1), { exact: true })).toBeVisible();
+    const codeBoxesVisible = async () => expect(codeField(dialog, lang)).toBeVisible();
 
     // --- (a) a code nobody issued ---
     const unknownCode = 'ZZZ9Q7';
@@ -306,7 +304,8 @@ for (const lang of ['en', 'es'] as const) {
     await expect(alert).toHaveText(c.invalid, { timeout: 20_000 });
     await codeBoxesVisible(); // still on the code step
     // Editing the code clears the message.
-    await dialog.getByLabel(c.char(6), { exact: true }).click();
+    await codeField(dialog, lang).click();
+    await page.keyboard.press('End');
     await page.keyboard.press('Backspace');
     await expect(alert).toHaveCount(0);
 
@@ -392,19 +391,12 @@ for (const lang of ['en', 'es'] as const) {
   });
 }
 
-// RE-TYPING OVER A FILLED CODE (OtpInput). The boxes are maxLength=1 and select their character on
-// focus. A keystroke that EQUALS the character already in the box leaves the DOM value unchanged, so
-// React fired no change event, focus did not advance, the selection collapsed and maxLength swallowed
-// every following key. The usual way in: a wrong code is rejected, the person clicks the first box
-// and types the whole code again with one character fixed (every other position is equal). Found by
-// a probe that re-typed random codes over random codes: 11 of 60 rounds lost keystrokes, each at a
-// position where the old and new character matched. Fixed in OtpInput (typed characters are applied
-// on keydown; an input-event fallback covers keyboards without usable keys).
-// FALSIFY (10-02): with the old OtpInput.tsx put back, the three tests below go red. The tests above
-// now re-type over rejected codes without clearing first (typeCode no longer does), which only stalls
-// when two random codes happen to share a character in the same position, so they are not the pin.
+// RE-TYPING A CODE. The code is ONE field since 1.4.3 (mobile parity), so the old box-by-box
+// re-typing traps (OtpInput maxLength=1 boxes swallowing an equal character) cannot happen; these pin
+// the single field: a rejected code is fixed by selecting it and typing again, and a keyboard that
+// inserts text without key events (IME, dictation, soft keyboard) fills it too.
 
-test('re-typing a rejected code over itself with one character fixed ends on the fixed code and finds the circle', async ({
+test('re-typing a rejected code with one character fixed ends on the fixed code and finds the circle', async ({
   page,
   context,
   request,
@@ -416,27 +408,20 @@ test('re-typing a rejected code over itself with one character fixed ends on the
   setLanguage(joiner, 'en');
   await cookieLogin(context, joiner, baseURL);
   const dialog = await openJoinModal(page, 'en', 'empty-state');
-  const boxes = codeBoxes(dialog, 'en');
   const alert = dialog.getByRole('alert');
 
-  // The same code with only its LAST character changed: a code nobody issued.
-  const wrong = [...'Q7ZK9W'].map((ch) => invite.code.slice(0, 5) + ch).find(
+  const wrong = [...'Q7ZK9W'].map((ch) => invite.code.slice(0, invite.code.length - 1) + ch).find(
     (candidate) =>
       candidate !== invite.code &&
       dbCount(`select 1 from invites where invite_code = ${sqlStr(candidate)}`) === 0
   );
   expect(wrong, 'a one-character-off code that no invite owns').toBeTruthy();
-  // Upper case on purpose: a lower-case letter over its upper-case twin is a real DOM change, an equal
-  // character is not, and the first five characters here are equal by construction.
   await typeCode(page, dialog, 'en', wrong!, { lower: false });
   await lookUp(dialog, 'en');
   await expect(alert).toHaveText(COPY.en.invalid, { timeout: 20_000 });
 
-  // The person fixes it: click the first box and type the real code from the start.
   await typeCode(page, dialog, 'en', invite.code, { lower: false });
-  expect((await Promise.all(boxes.map((b) => b.inputValue()))).join('')).toBe(invite.code);
-  await expect(boxes[5]).toBeFocused();
-  // Editing the code (its last character changed) cleared the message.
+  await expect(codeField(dialog, 'en')).toHaveValue(invite.code);
   await expect(alert).toHaveCount(0);
 
   await lookUp(dialog, 'en');
@@ -444,40 +429,32 @@ test('re-typing a rejected code over itself with one character fixed ends on the
   expect(inviteStatus(invite.id), 'a look-up spends nothing').toBe('pending');
 });
 
-test('re-typing a code over the same characters takes every keystroke, however many positions match', async ({
+test('the code field: 6 or 8 characters, normalized, never more than 8; Find circle only when complete', async ({
   page,
   context,
   baseURL,
 }) => {
-  const joiner = await createScopedAccount('jbc-otpbug');
+  const joiner = await createScopedAccount('jbc-field');
   setLanguage(joiner, 'en');
   await cookieLogin(context, joiner, baseURL);
   const dialog = await openJoinModal(page, 'en', 'empty-state');
-  const boxes = codeBoxes(dialog, 'en');
-  const value = async () => (await Promise.all(boxes.map((b) => b.inputValue()))).join('');
+  const field = codeField(dialog, 'en');
+  const find = dialog.getByRole('button', { name: COPY.en.find, exact: true });
 
-  await boxes[0].click();
-  await page.keyboard.type('ABC234', { delay: 40 });
-  await expect(boxes[5]).toHaveValue('4');
-
-  // The person fixes the last character by typing the whole code again from the first box.
-  await boxes[0].click();
-  await page.keyboard.type('ABC235', { delay: 40 });
-  expect(await value(), 'the re-typed code').toBe('ABC235');
-  await expect(boxes[5]).toBeFocused();
-
-  // The same code again (every position equal), then one that differs in the middle, lower case.
-  await boxes[0].click();
-  await page.keyboard.type('ABC235', { delay: 40 });
-  expect(await value(), 'the same code typed over itself').toBe('ABC235');
-  await expect(boxes[5]).toBeFocused();
-  await boxes[0].click();
-  await page.keyboard.type('abx235', { delay: 40 });
-  expect(await value(), 'a code that differs only at position 3').toBe('ABX235');
-  await expect(boxes[5]).toBeFocused();
+  await typeCode(page, dialog, 'en', 'abc23');
+  await expect(find).toBeDisabled();
+  await typeCode(page, dialog, 'en', 'abc234');
+  await expect(find).toBeEnabled();
+  await typeCode(page, dialog, 'en', 'abcd234');
+  await expect(find).toBeDisabled();
+  await field.click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.type('ab-cd 2345x', { delay: 15 });
+  await expect(field).toHaveValue('ABCD2345');
+  await expect(find).toBeEnabled();
 });
 
-test('a keyboard that inserts text without key events (IME, dictation, soft keyboard) also advances over an equal character', async ({
+test('a keyboard that inserts text without key events (IME, dictation, soft keyboard) fills the field', async ({
   page,
   context,
   baseURL,
@@ -486,16 +463,8 @@ test('a keyboard that inserts text without key events (IME, dictation, soft keyb
   setLanguage(joiner, 'en');
   await cookieLogin(context, joiner, baseURL);
   const dialog = await openJoinModal(page, 'en', 'empty-state');
-  const boxes = codeBoxes(dialog, 'en');
-
-  await boxes[0].click();
-  await page.keyboard.type('ABC234', { delay: 40 });
-  await expect(boxes[5]).toHaveValue('4');
-
-  // insertText fires beforeinput + input with no keydown/keypress: how a soft keyboard commits a key.
-  // focus() (not a click) so the box's own select-on-focus selection is what the text replaces.
-  await boxes[0].focus();
-  for (const ch of 'ABC235') await page.keyboard.insertText(ch);
-  expect((await Promise.all(boxes.map((b) => b.inputValue()))).join('')).toBe('ABC235');
-  await expect(boxes[5]).toBeFocused();
+  const field = codeField(dialog, 'en');
+  await field.focus();
+  for (const ch of 'abc235') await page.keyboard.insertText(ch);
+  await expect(field).toHaveValue('ABC235');
 });
