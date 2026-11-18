@@ -166,6 +166,12 @@
   --color-photo-scrim: #1a1916;
   --color-badge: #1a1916;
   --color-on-badge: #ffffff;
+  /* SOS card (Emergency info): INVARIANT, the same in light and dark, as mobile's th.sos. */
+  --color-sos: #a84b3a;
+  --color-on-sos: #ffffff;
+  --color-on-sos-soft: rgba(255, 255, 255, 0.9);
+  --color-sos-chip: rgba(255, 255, 255, 0.16);
+  --color-sos-chip-line: rgba(255, 255, 255, 0.24);
   --color-badge-line: rgba(255, 255, 255, 0.15);
   --color-apple-fill: #1a1916;
   --color-on-apple: #ffffff;

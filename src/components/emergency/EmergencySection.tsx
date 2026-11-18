@@ -1,6 +1,6 @@
 import { Fragment, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Accordion, Button, Card, EmptyState, Icon, Text } from '@/components/ui';
+import { Button, Card, EmptyState, Icon, Text } from '@/components/ui';
 
 export interface EmergencySectionProps {
   /** Anchor id used by the in-page nav (e.g. "doctors"). */
@@ -69,7 +69,7 @@ export function EmptySection({ message, action }: EmptySectionProps): ReactEleme
             {t('downloadToEdit')}{' '}
             <a
               href="https://circlecare.app"
-              className="font-medium text-terracotta-deep underline underline-offset-2 hover:text-ink"
+              className="font-medium text-moss-deep underline underline-offset-2 hover:text-ink"
             >
               {t('downloadCta')}
             </a>
@@ -80,15 +80,10 @@ export function EmptySection({ message, action }: EmptySectionProps): ReactEleme
   );
 }
 
-export interface EmergencyAccordionSectionProps<T> {
-  /** Accordion id (in-page nav anchor + accordion-group key). */
+export interface EmergencyListSectionProps<T> {
+  /** Section id (in-page nav anchor). */
   id: string;
   title: string;
-  /** Controlled accordion open state (see `useAccordionGroup`). */
-  open: boolean;
-  onToggle: (id: string) => void;
-  /** Header meta count (e.g. number of doctors). Hidden when 0. */
-  count: number;
   items: T[];
   renderItem: (item: T, index: number) => ReactNode;
   /** Whether the requester can add/edit/delete — gates the Add button. */
@@ -100,32 +95,22 @@ export interface EmergencyAccordionSectionProps<T> {
 }
 
 /**
- * One collapsible Emergency Info section (doctors/contacts/insurance):
- * `Accordion` header + either the mapped `items` (with a trailing Add button
- * when `canEdit`) or `EmptySection` (whose own Add button replaces the
- * download-app CTA when `canEdit`).
- *
- * Extracted from three near-identical ~90-line blocks that used to live
- * inline in EmergencyInfoPage — wrapper, count meta, mapped cards, add
- * Button, EmptySection with its own add Button — differing only in which
- * card component and which callbacks they used. `T` stays generic so each
- * caller supplies its own item shape and its own `renderItem` (a DoctorCard,
- * ContactCard, or InsuranceCard invocation); this component owns only the
- * shared shell.
+ * One Emergency Info list section (doctors/contacts/insurance), ALWAYS OPEN as on mobile
+ * (1.4.3: the web-only collapsible accordions are gone): heading + either the mapped `items`
+ * (with a trailing Add button when `canEdit`) or `EmptySection` (whose own Add button replaces
+ * the download-app CTA when `canEdit`). `T` stays generic so each caller supplies its own item
+ * shape and `renderItem` (a DoctorCard, ContactCard or InsuranceCard).
  */
-export function EmergencyAccordionSection<T>({
+export function EmergencyListSection<T>({
   id,
   title,
-  open,
-  onToggle,
-  count,
   items,
   renderItem,
   canEdit,
   onAdd,
   addLabel,
   emptyMessage,
-}: EmergencyAccordionSectionProps<T>): ReactElement {
+}: EmergencyListSectionProps<T>): ReactElement {
   const addButton = (
     <Button
       variant="secondary"
@@ -139,14 +124,8 @@ export function EmergencyAccordionSection<T>({
   );
 
   return (
-    <Accordion
-      id={id}
-      title={title}
-      open={open}
-      onToggle={onToggle}
-      meta={count > 0 ? count : undefined}
-    >
-      {count > 0 ? (
+    <EmergencySection id={id} title={title}>
+      {items.length > 0 ? (
         <>
           {items.map((item, index) => (
             <Fragment key={index}>{renderItem(item, index)}</Fragment>
@@ -156,6 +135,6 @@ export function EmergencyAccordionSection<T>({
       ) : (
         <EmptySection message={emptyMessage} action={canEdit ? addButton : undefined} />
       )}
-    </Accordion>
+    </EmergencySection>
   );
 }

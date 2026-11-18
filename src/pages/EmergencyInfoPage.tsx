@@ -16,7 +16,12 @@ import {
   RecipientHeader,
 } from '@/components/emergency';
 // Not (yet) re-exported from the barrel above — see EmergencySection.tsx.
-import { EmergencyAccordionSection } from '@/components/emergency/EmergencySection';
+import { EmergencyListSection } from '@/components/emergency/EmergencySection';
+import { EmergencyMedications } from '@/components/emergency/EmergencyMedications';
+import { SosCard } from '@/components/emergency/SosCard';
+import { AddEventModal } from '@/components/calendar/AddEventModal';
+import { useEmergencyMedications } from '@/hooks/useEmergencyMedications';
+import { getEmergencyNumber } from '@/lib/emergencyNumber';
 import { synthesizeEmptyEmergencyInfo } from '@/components/emergency/emptyEmergencyInfo';
 import {
   buildEmergencyDelete,
@@ -32,7 +37,6 @@ import {
   ConfirmDialog,
   EmptyState,
   Skeleton,
-  useAccordionGroup,
 } from '@/components/ui';
 import { PageMasthead, type MastheadAction } from '@/components/layout/PageMasthead';
 import { HealthTabs } from '@/components/layout/HealthTabs';
@@ -61,17 +65,15 @@ const SKELETON_SECTIONS = [0, 1, 2];
 // conditions) live in the always-visible at-a-glance tiles, not a section
 // (Round 7 merge — docs/plans/condition-tags.md R7-4).
 const SECTIONS = [
+  { id: 'medications', key: 'medications' },
   { id: 'doctors', key: 'doctors' },
   { id: 'contacts', key: 'contacts' },
   { id: 'insurance', key: 'insurance' },
 ] as const;
 
-// The three sections that live inside collapsible accordions.
-const COLLAPSIBLE_SECTION_IDS = ['doctors', 'contacts', 'insurance'];
-
 // Print break-avoidance for one section inside the `.emergency-sections`
-// masonry (spec §6.6). Applied on a plain wrapper div rather than
-// `Accordion`'s own `<section>` (it has no `className` prop).
+// masonry (spec §6.6). Sections are always open, as on mobile (1.4.3: the
+// web-only collapsible accordions are gone).
 const SECTION_WRAP_CLASS = 'mb-10 break-inside-avoid lg:mt-0';
 
 // Open-modal descriptor. `target` is the doctor target ('primary' | index |
@@ -80,7 +82,8 @@ type OpenModal =
   | { kind: 'doctor'; target: 'primary' | number | undefined }
   | { kind: 'contact'; index?: number }
   | { kind: 'insurance'; index?: number }
-  | { kind: 'medical' };
+  | { kind: 'medical' }
+  | { kind: 'medication' };
 
 // Pending delete descriptor (per-item, confirmed via ConfirmDialog). `base` is the
 // emergency-info snapshot the list was rendered from when the user picked Delete:
@@ -97,10 +100,10 @@ type PendingDelete = EmergencyDeleteTarget & {
   providerId?: string | null;
 };
 
-// One row of the doctors accordion: the primary doctor (flat fields on
+// One row of the doctors section: the primary doctor (flat fields on
 // `EmergencyInfo`, at most one) or an entry from `additional_doctors` (needs
 // its array index for edit/delete). Unified so both can share one
-// `EmergencyAccordionSection<DoctorRow>` instead of a special-cased primary
+// `EmergencyListSection<DoctorRow>` instead of a special-cased primary
 // slot outside the generic list.
 type DoctorRow =
   | ({ kind: 'primary' } & Pick<
@@ -199,6 +202,10 @@ export default function EmergencyInfoPage(): ReactElement {
   // GET /circles list does NOT. (verified: src/api/circleMembers.ts)
   const { data: circleDetail } = useCircleMembers(circleId);
   const { canEdit, timezone: careRecipientTimezone } = useCircle(circleId);
+  // Current medications (mobile parity, 1.4.3): the care summary's own window and selection.
+  const medications = useEmergencyMedications(circleId, careRecipientTimezone);
+  // SOS card: the browser's verified local number, or nothing (never a guess). Read once.
+  const [emergencyNumber] = useState(getEmergencyNumber);
   const update = useUpdateEmergencyInfo(circleId);
   // Notes by doctor: removing a doctor archives it (its visits keep the link);
   // the active list also carries each doctor's visit count for the card rows.
@@ -211,10 +218,6 @@ export default function EmergencyInfoPage(): ReactElement {
   const [openModal, setOpenModal] = useState<OpenModal | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [privacyOpen, setPrivacyOpen] = useState(false);
-
-  // Collapsible (accordion) sections — expanded by default. The at-a-glance
-  // summary + the recipient header are always visible.
-  const accordion = useAccordionGroup(COLLAPSIBLE_SECTION_IDS, { defaultOpen: true });
 
   const recipientName =
     circles?.find((circle) => circle.id === circleId)?.recipient_name ??
@@ -360,22 +363,25 @@ export default function EmergencyInfoPage(): ReactElement {
   // synthesize a blank record for the modals rather than passing null through.
   const infoForModals = info ?? synthesizeEmptyEmergencyInfo(circleId);
 
+  // Medications count as data (a view-only member must see them, never the download card), and
+  // while their read is still in flight the page is NOT called empty (no card swapped under them).
+  const hasMedications =
+    medications.isLoading ||
+    medications.active.length + medications.asNeeded.length + medications.recent.length +
+      medications.stopped.length >
+      0;
   const sectionHasData: Record<(typeof SECTIONS)[number]['key'], boolean> = info
     ? {
+        medications: hasMedications,
         doctors: hasDoctors(info),
         contacts: hasContacts(info),
         insurance: hasInsurance(info),
       }
-    : { doctors: false, contacts: false, insurance: false };
+    : { medications: hasMedications, doctors: false, contacts: false, insurance: false };
 
-  // Header counts for the accordion meta slot (e.g. number of doctors).
-  const doctorCount =
-    (info?.primary_doctor_name ? 1 : 0) + (info?.additional_doctors?.length ?? 0);
-  const contactCount = info?.emergency_contacts?.length ?? 0;
-  const insuranceCount = info?.insurance_plans?.length ?? 0;
 
-  // Items + renderItem for the three collapsible sections' shared
-  // `EmergencyAccordionSection`. The primary doctor is prepended as its own
+  // Items + renderItem for the three list sections' shared
+  // `EmergencyListSection`. The primary doctor is prepended as its own
   // `DoctorRow` so it renders through the same list as `additional_doctors`.
   const doctorItems: DoctorRow[] = [
     ...(info?.primary_doctor_name
@@ -468,8 +474,8 @@ export default function EmergencyInfoPage(): ReactElement {
   // showed a VIEW-ONLY member the download CTA instead of "Penicillin". Editors
   // never saw it, because `&& !canEdit` falls through for them.
   const isFullyEmpty =
-    !info ||
-    (!hasCriticalInfo(info) && SECTIONS.every((section) => !sectionHasData[section.key]));
+    (!info || !hasCriticalInfo(info)) &&
+    SECTIONS.every((section) => !sectionHasData[section.key]);
 
   // Fully-empty AND can't edit: one clear card with the download CTA. (When the
   // user CAN edit, fall through to the sectioned view so the Add buttons show.)
@@ -487,7 +493,7 @@ export default function EmergencyInfoPage(): ReactElement {
             >
               <a
                 href="https://circlecare.app"
-                className="font-medium text-terracotta-deep underline underline-offset-2 hover:text-ink"
+                className="font-medium text-moss-deep underline underline-offset-2 hover:text-ink"
               >
                 {t('downloadCta')}
               </a>
@@ -552,7 +558,7 @@ export default function EmergencyInfoPage(): ReactElement {
               {t('downloadToEdit')}{' '}
               <a
                 href="https://circlecare.app"
-                className="font-medium text-terracotta-deep underline underline-offset-2 hover:text-ink"
+                className="font-medium text-moss-deep underline underline-offset-2 hover:text-ink"
               >
                 {t('downloadCta')}
               </a>
@@ -561,6 +567,21 @@ export default function EmergencyInfoPage(): ReactElement {
         )}
 
         <div className="emergency-content mt-8 flex flex-col gap-10">
+          {/* SOS card first, as on mobile (only when the browser's region has a verified number;
+              never a guess). Off the printed fridge sheet, which is unchanged. */}
+          {emergencyNumber ? (
+            <div className="no-print">
+              <SosCard number={emergencyNumber} />
+            </div>
+          ) : null}
+
+          {/* At-a-glance tiles absorb the former Medical Information section
+              (Round 7 merge). The Edit affordance now lives in the masthead's
+              right action, which keeps the add path reachable even when
+              nothing medical is recorded yet (tiles absent). Mobile order: At a
+              glance, then the care recipient. */}
+          {info && <GlanceTiles info={info} />}
+
           {circleDetail && (
             <RecipientHeader
               name={recipientName}
@@ -569,33 +590,25 @@ export default function EmergencyInfoPage(): ReactElement {
             />
           )}
 
-          {/* At-a-glance tiles absorb the former Medical Information section
-              (Round 7 merge). The Edit affordance now lives in the masthead's
-              right action, which keeps the add path reachable even when
-              nothing medical is recorded yet (tiles absent). */}
-          {info && <GlanceTiles info={info} />}
-
-          {/* Expand/Collapse all — controls only the collapsible sections below.
-              Hidden in print (everything prints regardless). */}
-          <div className="no-print -mb-4 flex justify-end">
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-expanded={accordion.allOpen}
-              onClick={() => (accordion.allOpen ? accordion.collapseAll() : accordion.expandAll())}
-            >
-              {accordion.allOpen ? t('common:collapseAll') : t('common:expandAll')}
-            </Button>
-          </div>
-
+          {/* Every section is always open, as on mobile (1.4.3: the web-only collapsible
+              accordions and Expand / Collapse all are gone). Mobile order: Current medications,
+              Doctors, Emergency contacts, Insurance. */}
           <div className="emergency-sections lg:columns-2 lg:gap-x-8">
             <div className={SECTION_WRAP_CLASS}>
-              <EmergencyAccordionSection
+              {careRecipientTimezone !== null ? (
+                <EmergencyMedications
+                  meds={medications}
+                  timezone={careRecipientTimezone}
+                  canEdit={canEdit}
+                  onAdd={() => setOpenModal({ kind: 'medication' })}
+                />
+              ) : null}
+            </div>
+
+            <div className={SECTION_WRAP_CLASS}>
+              <EmergencyListSection
                 id="doctors"
                 title={t('sections.doctors')}
-                open={accordion.isOpen('doctors')}
-                onToggle={accordion.toggle}
-                count={doctorCount}
                 items={doctorItems}
                 renderItem={renderDoctorRow}
                 canEdit={canEdit}
@@ -606,12 +619,9 @@ export default function EmergencyInfoPage(): ReactElement {
             </div>
 
             <div className={SECTION_WRAP_CLASS}>
-              <EmergencyAccordionSection
+              <EmergencyListSection
                 id="contacts"
                 title={t('sections.contacts')}
-                open={accordion.isOpen('contacts')}
-                onToggle={accordion.toggle}
-                count={contactCount}
                 items={contactItems}
                 renderItem={renderContactRow}
                 canEdit={canEdit}
@@ -622,12 +632,9 @@ export default function EmergencyInfoPage(): ReactElement {
             </div>
 
             <div className={SECTION_WRAP_CLASS}>
-              <EmergencyAccordionSection
+              <EmergencyListSection
                 id="insurance"
                 title={t('sections.insurance')}
-                open={accordion.isOpen('insurance')}
-                onToggle={accordion.toggle}
-                count={insuranceCount}
                 items={insuranceItems}
                 renderItem={renderInsuranceRow}
                 canEdit={canEdit}
@@ -641,6 +648,14 @@ export default function EmergencyInfoPage(): ReactElement {
       </div>
 
       {/* ── Section edit modals (gated on canEdit at the call sites). ── */}
+      {openModal?.kind === 'medication' && (
+        // The add-medication form, over Emergency info (mobile navigates to AddEvent and back).
+        <AddEventModal
+          circleId={circleId}
+          initialType="medication"
+          onClose={() => setOpenModal(null)}
+        />
+      )}
       {openModal?.kind === 'medical' && (
         <EditMedicalInfoModal
           circleId={circleId}

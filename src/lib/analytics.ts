@@ -1930,6 +1930,9 @@ export const Analytics = {
   // happened and WHICH top-level fields changed. ---
   emergencyInfoViewed: (circleId: string) =>
     capture('emergency_info_viewed', { circle_id: circleId }),
+  /** The SOS card's call button (1.4.3, web gained the card). No number, no region, no circle:
+   *  only that it was pressed. Mobile's card fires no event yet (owner: mobile unchanged). */
+  emergencySosDialTapped: () => capture('emergency_sos_dial_tapped', {}),
   /** `fieldsUpdated` is FIELD NAMES only (e.g. `Object.keys(partial)`) —
    *  never the values, which can carry PHI (blood type, allergies, DOB). */
   emergencyInfoUpdated: (circleId: string, fieldsUpdated: string[]) =>

@@ -30,7 +30,8 @@
     "medicalInfo": "Informations médicales",
     "doctors": "Médecins",
     "contacts": "Contacts d’urgence",
-    "insurance": "Assurance maladie"
+    "insurance": "Assurance maladie",
+    "medications": "Médicaments en cours"
   },
   "medicalInfo": {
     "bloodType": "Groupe sanguin",
@@ -59,7 +60,8 @@
     "medicalInfo": "Ajoutez le groupe sanguin, les allergies et les problèmes de santé pour que les secours connaissent votre proche en quelques secondes.",
     "doctors": "Ajoutez les médecins qui suivent votre proche pour que le cercle puisse les joindre rapidement.",
     "contacts": "Ajoutez les personnes à appeler en premier en cas d’urgence, pour que personne n’ait à deviner.",
-    "insurance": "Ajoutez les informations d’assurance pour que la couverture soit prête quand les soins ne peuvent pas attendre."
+    "insurance": "Ajoutez les informations d’assurance pour que la couverture soit prête quand les soins ne peuvent pas attendre.",
+    "noMedications": "Aucun médicament en cours"
   },
   "edit": {
     "add": "Ajouter",
@@ -147,7 +149,8 @@
       "medicationAllergiesPlaceholder": "Rechercher ou ajouter une allergie médicamenteuse…",
       "otherAllergiesPlaceholder": "Rechercher ou ajouter une allergie…",
       "conditionsPlaceholder": "Rechercher ou ajouter un problème de santé…"
-    }
+    },
+    "addMedication": "Ajouter un médicament"
   },
   "errors": {
     "permissionDenied": "Vous n’avez pas l’autorisation de modifier ce cercle.",
@@ -435,5 +438,12 @@
       "addAppointment": "Ajouter un rendez-vous",
       "unnamedAuthor": "Quelqu’un"
     }
-  }
+  },
+  "sos": {
+    "tapToCall": "Appuyez pour appeler",
+    "dial": "Composer le {{number}}"
+  },
+  "recentMedications": "Récents (30 derniers jours)",
+  "stoppedOn": "Arrêté : {{date}}",
+  "medicationsLoadError": "Impossible de charger ces informations"
 }

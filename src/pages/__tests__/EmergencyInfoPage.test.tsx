@@ -131,6 +131,9 @@ const fullInfo: EmergencyInfo = {
   updated_at: '2026-01-01T00:00:00.000Z',
 };
 
+/** The medication window GET /circles/:id/events answers (Current medications). */
+let mockEvents: unknown[] = [];
+
 function mockApi(emergencyInfo: EmergencyInfo | null, canEdit = false): void {
   const detail = {
     ...circleDetailEnvelope,
@@ -153,6 +156,9 @@ function mockApi(emergencyInfo: EmergencyInfo | null, canEdit = false): void {
     // about the sections, so the answer is "no counts yet" (providers.test covers them).
     if (url === `/circles/${CIRCLE_ID}/providers`) {
       return { success: true, data: { providers: [] } };
+    }
+    if (url === `/circles/${CIRCLE_ID}/events`) {
+      return { success: true, data: { events: mockEvents } };
     }
     throw new Error(`Unexpected GET in test: ${url}`);
   });
@@ -178,6 +184,7 @@ function renderPage() {
 describe('EmergencyInfoPage', () => {
   beforeEach(() => {
     mockedGet.mockReset();
+    mockEvents = [];
     mockedPut.mockReset();
     mockedPost.mockReset();
     mockExportPdf.mockReset();
@@ -579,12 +586,16 @@ describe('EmergencyInfoPage', () => {
 
     const nav = await screen.findByRole('navigation', { name: 'On this page' });
     expect(nav).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Current medications' })).toHaveAttribute(
+      'href',
+      '#medications'
+    );
     expect(screen.getByRole('link', { name: 'Doctors' })).toHaveAttribute('href', '#doctors');
     expect(screen.getByRole('link', { name: 'Insurance' })).toHaveAttribute('href', '#insurance');
     // Code status is hidden on web (decision T1): no anchor, no target.
     expect(screen.queryByRole('link', { name: 'Code Status' })).not.toBeInTheDocument();
     expect(nav.querySelector('a[href="#directives"]')).toBeNull();
-    expect(within(nav).getAllByRole('link')).toHaveLength(3);
+    expect(within(nav).getAllByRole('link')).toHaveLength(4);
     // Round 7: no Medical Information section, so no nav anchor for it.
     expect(screen.queryByRole('link', { name: 'Medical Information' })).not.toBeInTheDocument();
   });
@@ -838,52 +849,117 @@ describe('EmergencyInfoPage', () => {
 
   // ── Collapsible accordion sections ──────────────────────────────────────
 
-  it('collapses a section but keeps its content in the DOM (for print/SR)', async () => {
+  // ── 1.4.3 mobile parity: sections always open, Current medications, SOS card ──
+  it('NEGATIVE: no collapsible sections and no Expand / Collapse all (mobile has none)', async () => {
     mockApi(fullInfo);
     renderPage();
-
-    const doctorsHeader = await screen.findByRole('button', { name: /Doctors/ });
-    expect(doctorsHeader).toHaveAttribute('aria-expanded', 'true');
-
-    fireEvent.click(doctorsHeader);
-    expect(doctorsHeader).toHaveAttribute('aria-expanded', 'false');
-
-    // Collapsed = visually hidden, but the panel + its content stay mounted so
-    // window.print() (panels are print:block) still reveals everything.
-    const panel = document.getElementById('doctors-accordion-panel');
-    expect(panel).not.toBeNull();
-    // Collapsed = grid row collapsed to 0fr (visually hidden) but still
-    // 1fr under print, and `inert` keeps it out of focus/the a11y tree.
-    expect(panel?.className).toContain('[grid-template-rows:0fr]');
-    expect(panel?.className).toContain('print:[grid-template-rows:1fr]');
-    expect(panel).toHaveAttribute('inert');
-    expect(within(panel as HTMLElement).getByText('Dr. Chen')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Doctors' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Collapse all|Expand all/ })).toBeNull();
+    expect(document.querySelector('[aria-expanded][aria-controls$="-accordion-panel"]')).toBeNull();
+    expect(screen.getByText('Dr. Chen')).toBeVisible();
+    expect(screen.getAllByText("Sarah")[0]).toBeVisible();
   });
 
-  it('Expand all / Collapse all flips every collapsible section', async () => {
+  it('POSITIVE: sections in mobile order: At a glance, recipient, medications, doctors, contacts, insurance', async () => {
     mockApi(fullInfo);
     renderPage();
-
-    // Default: all open → control reads "Collapse all".
-    const control = await screen.findByRole('button', { name: 'Collapse all' });
-    fireEvent.click(control);
-
-    // Now all four collapsible headers are collapsed; control reads "Expand all".
-    expect(screen.getByRole('button', { name: 'Expand all' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Doctors/ })).toHaveAttribute(
-      'aria-expanded',
-      'false'
+    await screen.findByRole('heading', { level: 2, name: 'Insurance' });
+    const ids = ['sos-card', 'medications', 'doctors', 'contacts', 'insurance'].map((id) =>
+      id === 'sos-card' ? screen.getByTestId('sos-card') : document.getElementById(id)!
     );
-    expect(screen.getByRole('button', { name: /Insurance/ })).toHaveAttribute(
-      'aria-expanded',
-      'false'
-    );
+    for (let i = 1; i < ids.length; i++) {
+      expect(ids[i - 1].compareDocumentPosition(ids[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
-    expect(screen.getByRole('button', { name: /Doctors/ })).toHaveAttribute(
-      'aria-expanded',
-      'true'
+  it('POSITIVE: Current medications lists active (cadence + time), as-needed, and stopped (with its stop date)', async () => {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+    mockEvents = [
+      {
+        id: 'm1', circle_id: CIRCLE_ID, event_type: 'medication', title: 'Lisinopril',
+        medication_name: 'Lisinopril', medication_dosage: '10 mg', scheduled_date: today,
+        scheduled_time: '08:00:00', recurrence_rule: 'daily', parent_event_id: null,
+      },
+      {
+        id: 'm2', circle_id: CIRCLE_ID, event_type: 'medication', title: 'Tylenol',
+        medication_name: 'Tylenol', medication_dosage: '500 mg', scheduled_date: today,
+        scheduled_time: null, recurrence_rule: null, as_needed: true, as_needed_reason: 'pain',
+      },
+      {
+        id: 'm3', circle_id: CIRCLE_ID, event_type: 'medication', title: 'Warfarin',
+        medication_name: 'Warfarin', medication_dosage: '5 mg', scheduled_date: today,
+        scheduled_time: '20:00:00', recurrence_rule: 'daily', parent_event_id: null,
+        discontinued_at: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+      },
+    ];
+    mockApi(fullInfo);
+    renderPage();
+    const section = await screen.findByRole('region', { name: 'Current medications' }).catch(() =>
+      screen.findByRole('heading', { level: 2, name: 'Current medications' }).then((h) => h.closest('section')!)
     );
+    await within(section as HTMLElement).findByText('Lisinopril');
+    const rows = within(section as HTMLElement).getAllByTestId('emergency-med-row');
+    expect(rows.map((r) => r.textContent)).toEqual([
+      expect.stringMatching(/Lisinopril.*Daily.*10 mg · 8:00\s?AM/),
+      expect.stringMatching(/Tylenol.*As needed · pain.*500 mg/),
+      expect.stringMatching(/Warfarin.*Stopped .+5 mg/),
+    ]);
+    expect(within(section as HTMLElement).getByText('Recent (last 30 days)')).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a viewer gets no Add medication; an empty list reads "No current medications"', async () => {
+    mockApi(fullInfo, false);
+    renderPage();
+    expect(await screen.findByText('No current medications')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add medication' })).toBeNull();
+  });
+
+  it('POSITIVE: an editor can add a medication from the section', async () => {
+    mockApi(fullInfo, true);
+    renderPage();
+    expect(await screen.findByText('No current medications')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add medication' })).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: medications alone keep a view-only member off the "fully empty" download card', async () => {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+    mockEvents = [
+      {
+        id: 'm1', circle_id: CIRCLE_ID, event_type: 'medication', title: 'Lisinopril',
+        medication_name: 'Lisinopril', medication_dosage: '10 mg', scheduled_date: today,
+        scheduled_time: '08:00:00', recurrence_rule: 'daily', parent_event_id: null,
+      },
+    ];
+    mockApi(null, false);
+    renderPage();
+    expect(await screen.findByText('Lisinopril')).toBeInTheDocument();
+    expect(screen.queryByText('No emergency info yet')).toBeNull();
+  });
+
+  it('NEGATIVE: no SOS card when the browser has no verified region (never a guessed number)', async () => {
+    vi.spyOn(navigator, 'languages', 'get').mockReturnValue(['en']);
+    vi.spyOn(navigator, 'language', 'get').mockReturnValue('en');
+    try {
+      mockApi(fullInfo);
+      renderPage();
+      expect(await screen.findByRole('heading', { level: 2, name: 'Doctors' })).toBeInTheDocument();
+      expect(screen.queryByTestId('sos-card')).toBeNull();
+      expect(document.querySelector('a[href^="tel:9"], a[href^="tel:1"]')).toBeNull();
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  it('POSITIVE: the SOS card shows the local number as large, selectable text plus a tel: link', async () => {
+    mockApi(fullInfo);
+    renderPage();
+    const card = await screen.findByTestId('sos-card');
+    const number = within(card).getByTestId('sos-number');
+    expect(number).toHaveTextContent('Dial 911');
+    expect(number.tagName).not.toBe('A');
+    expect(number.className).toContain('select-text');
+    const dial = within(card).getByRole('link', { name: 'Dial 911' });
+    expect(dial).toHaveAttribute('href', 'tel:911');
   });
 
   it('scopes print styles to this page via a body class', async () => {

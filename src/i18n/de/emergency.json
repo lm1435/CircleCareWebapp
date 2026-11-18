@@ -30,7 +30,8 @@
     "medicalInfo": "Medizinische Informationen",
     "doctors": "Ärztinnen und Ärzte",
     "contacts": "Notfallkontakte",
-    "insurance": "Versicherung"
+    "insurance": "Versicherung",
+    "medications": "Aktuelle Medikamente"
   },
   "medicalInfo": {
     "bloodType": "Blutgruppe",
@@ -59,7 +60,8 @@
     "medicalInfo": "Fügen Sie Blutgruppe, Allergien und Erkrankungen hinzu, damit Rettungskräfte Ihre Angehörige oder Ihren Angehörigen in Sekunden einschätzen können.",
     "doctors": "Fügen Sie die behandelnden Ärztinnen und Ärzte hinzu, damit der Kreis sie schnell erreichen kann.",
     "contacts": "Fügen Sie die Personen hinzu, die im Notfall zuerst angerufen werden sollen, damit niemand raten muss.",
-    "insurance": "Fügen Sie Versicherungsdaten hinzu, damit der Versicherungsschutz bereitsteht, wenn es schnell gehen muss."
+    "insurance": "Fügen Sie Versicherungsdaten hinzu, damit der Versicherungsschutz bereitsteht, wenn es schnell gehen muss.",
+    "noMedications": "Keine aktuellen Medikamente"
   },
   "edit": {
     "add": "Hinzufügen",
@@ -147,7 +149,8 @@
       "medicationAllergiesPlaceholder": "Medikamentenallergie suchen oder hinzufügen …",
       "otherAllergiesPlaceholder": "Allergie suchen oder hinzufügen …",
       "conditionsPlaceholder": "Erkrankung suchen oder hinzufügen …"
-    }
+    },
+    "addMedication": "Medikament hinzufügen"
   },
   "errors": {
     "permissionDenied": "Sie haben keine Berechtigung, diesen Kreis zu bearbeiten.",
@@ -435,5 +438,12 @@
       "addAppointment": "Termin hinzufügen",
       "unnamedAuthor": "Jemand"
     }
-  }
+  },
+  "sos": {
+    "tapToCall": "Zum Anrufen tippen",
+    "dial": "{{number}} wählen"
+  },
+  "recentMedications": "Zuletzt (letzte 30 Tage)",
+  "stoppedOn": "Abgesetzt am {{date}}",
+  "medicationsLoadError": "Diese Informationen konnten nicht geladen werden"
 }

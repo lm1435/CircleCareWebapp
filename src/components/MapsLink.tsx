@@ -9,7 +9,8 @@ import { isMapsOpenable, mapsUrl, singleLineAddress } from '@/lib/maps';
  * link that opens a maps site in a new tab (no geocoding, no embedded map). Anything else
  * ("Mom's house", "Room 3", a Zoom link) is plain text with no link role or new-tab hint;
  * nothing when it is empty.
- * Styled like PhoneLink (terracotta-deep, medium weight, 44px target).
+ * The normal link style (moss-deep, medium weight, 44px target): red is kept for the SOS card
+ * and allergy pills (1.4.3, never terracotta as text).
  */
 export function MapsLink({ address }: { address?: string | null }): ReactElement | null {
   const { t } = useTranslation('common');
@@ -26,7 +27,7 @@ export function MapsLink({ address }: { address?: string | null }): ReactElement
         rel="noopener noreferrer"
         aria-label={t('maps.openAria', { address: line })}
         aria-describedby={hintId}
-        className="inline-flex min-h-[44px] max-w-full items-center gap-1.5 break-words font-medium text-terracotta-deep [overflow-wrap:anywhere] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta-deep"
+        className="inline-flex min-h-[44px] max-w-full items-center gap-1.5 break-words font-medium text-moss-deep underline underline-offset-2 [overflow-wrap:anywhere] hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-deep"
       >
         <Icon name="location-outline" size="inline" className="shrink-0" />
         <span>{line}</span>

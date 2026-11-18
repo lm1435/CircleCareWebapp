@@ -30,7 +30,8 @@
     "medicalInfo": "Informações médicas",
     "doctors": "Médicos",
     "contacts": "Contatos de emergência",
-    "insurance": "Plano de saúde"
+    "insurance": "Plano de saúde",
+    "medications": "Medicamentos atuais"
   },
   "medicalInfo": {
     "bloodType": "Tipo sanguíneo",
@@ -59,7 +60,8 @@
     "medicalInfo": "Adicione tipo sanguíneo, alergias e condições de saúde para que os socorristas conheçam seu ente querido em segundos.",
     "doctors": "Adicione os médicos que cuidam do seu ente querido para que o círculo possa falar com eles rapidamente.",
     "contacts": "Adicione as pessoas a quem ligar primeiro em uma emergência, para que ninguém fique na dúvida.",
-    "insurance": "Adicione os dados do plano de saúde para que a cobertura esteja pronta quando o cuidado não puder esperar."
+    "insurance": "Adicione os dados do plano de saúde para que a cobertura esteja pronta quando o cuidado não puder esperar.",
+    "noMedications": "Nenhum medicamento atual"
   },
   "edit": {
     "add": "Adicionar",
@@ -147,7 +149,8 @@
       "medicationAllergiesPlaceholder": "Pesquise ou adicione uma alergia a medicamento…",
       "otherAllergiesPlaceholder": "Pesquise ou adicione uma alergia…",
       "conditionsPlaceholder": "Pesquise ou adicione uma condição…"
-    }
+    },
+    "addMedication": "Adicionar medicamento"
   },
   "errors": {
     "permissionDenied": "Você não tem permissão para editar este círculo.",
@@ -435,5 +438,12 @@
       "addAppointment": "Adicionar consulta",
       "unnamedAuthor": "Alguém"
     }
-  }
+  },
+  "sos": {
+    "tapToCall": "Toque para ligar",
+    "dial": "Discar {{number}}"
+  },
+  "recentMedications": "Recentes (últimos 30 dias)",
+  "stoppedOn": "Suspenso em {{date}}",
+  "medicationsLoadError": "Não foi possível carregar estas informações"
 }

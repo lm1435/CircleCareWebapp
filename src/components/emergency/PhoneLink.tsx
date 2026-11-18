@@ -74,7 +74,7 @@ export function PhoneLink({
       <a
         href={href}
         aria-label={ariaLabel}
-        className="inline-flex min-h-[44px] items-center gap-1.5 font-medium text-terracotta-deep"
+        className="inline-flex min-h-[44px] items-center gap-1.5 font-medium text-moss-deep underline underline-offset-2 hover:text-ink"
       >
         <Icon name="call-outline" size="inline" />
         {display}

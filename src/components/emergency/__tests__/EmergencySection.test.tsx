@@ -1,12 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { useState } from 'react';
 import '@/i18n';
-import { EmergencyAccordionSection } from '../EmergencySection';
+import { EmergencyListSection } from '../EmergencySection';
 
-// Generic accordion shell shared by the doctors/contacts/insurance sections
-// (EmergencyInfoPage). Exercised here with a trivial string-item type — the
-// real callers supply Doctor/Contact/InsurancePlan and a card-rendering
-// `renderItem`, but the shell itself doesn't care about the item shape.
+// Generic list section shared by the doctors/contacts/insurance sections
+// (EmergencyInfoPage). ALWAYS OPEN, as on mobile (1.4.3: the web-only accordions
+// are gone). Exercised with a trivial string-item type.
 
 function Host({
   items,
@@ -17,16 +15,12 @@ function Host({
   canEdit: boolean;
   onAdd: () => void;
 }) {
-  const [open, setOpen] = useState(true);
   return (
-    <EmergencyAccordionSection
+    <EmergencyListSection
       id="doctors"
       title="Doctors"
-      open={open}
-      onToggle={() => setOpen((o) => !o)}
-      count={items.length}
       items={items}
-      renderItem={(item, index) => <p key={index}>{item}</p>}
+      renderItem={(item: string, index: number) => <p key={index}>{item}</p>}
       canEdit={canEdit}
       onAdd={onAdd}
       addLabel="Add doctor"
@@ -35,64 +29,47 @@ function Host({
   );
 }
 
-describe('EmergencyAccordionSection', () => {
-  it('renders the Accordion header with the item count as meta', () => {
+describe('EmergencyListSection', () => {
+  it('POSITIVE: a heading section (anchor id) whose items are always visible', () => {
     render(<Host items={['Dr. Chen', 'Dr. Patel']} canEdit={false} onAdd={vi.fn()} />);
-
-    const header = screen.getByRole('button', { name: /Doctors/ });
-    expect(header).toHaveAttribute('aria-expanded', 'true');
-    expect(header).toHaveTextContent('2');
-
-    const region = screen.getByRole('region', { name: 'Doctors' });
-    expect(region).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Doctors' })).toBeInTheDocument();
+    expect(document.getElementById('doctors')).not.toBeNull();
+    expect(screen.getByText('Dr. Chen')).toBeVisible();
+    expect(screen.getByText('Dr. Patel')).toBeVisible();
   });
 
-  it('maps items through renderItem inside the panel', () => {
-    render(<Host items={['Dr. Chen', 'Dr. Patel']} canEdit={false} onAdd={vi.fn()} />);
+  it('NEGATIVE: no collapse control (no expandable header), as on mobile', () => {
+    render(<Host items={['Dr. Chen']} canEdit={false} onAdd={vi.fn()} />);
+    expect(document.querySelector('[aria-expanded]')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Doctors/ })).toBeNull();
+  });
 
-    expect(screen.getByText('Dr. Chen')).toBeInTheDocument();
-    expect(screen.getByText('Dr. Patel')).toBeInTheDocument();
-    // No count -> no add button, no empty state, when there ARE items and
-    // canEdit is false.
+  it('NEGATIVE: no Add button for a viewer, and no empty state when there are items', () => {
+    render(<Host items={['Dr. Chen']} canEdit={false} onAdd={vi.fn()} />);
     expect(screen.queryByRole('button', { name: 'Add doctor' })).not.toBeInTheDocument();
     expect(screen.queryByText('No doctors added yet')).not.toBeInTheDocument();
   });
 
-  it('shows a trailing Add button after the items when canEdit is true', () => {
+  it('POSITIVE: a trailing Add button after the items when canEdit is true', () => {
     const onAdd = vi.fn();
     render(<Host items={['Dr. Chen']} canEdit onAdd={onAdd} />);
-
-    const addButton = screen.getByRole('button', { name: 'Add doctor' });
-    fireEvent.click(addButton);
-    expect(onAdd).toHaveBeenCalledTimes(1);
-  });
-
-  it('renders EmptySection (no meta count) when there are no items', () => {
-    render(<Host items={[]} canEdit={false} onAdd={vi.fn()} />);
-
-    const header = screen.getByRole('button', { name: 'Doctors' });
-    expect(header).not.toHaveTextContent(/\d/);
-    expect(screen.getByText('No doctors added yet')).toBeInTheDocument();
-    // Not editable -> the download-app CTA, not an Add button.
-    expect(screen.queryByRole('button', { name: 'Add doctor' })).not.toBeInTheDocument();
-    expect(screen.getByText('Download the app')).toBeInTheDocument();
-  });
-
-  it('replaces the download CTA with an Add button in the empty state when canEdit is true', () => {
-    const onAdd = vi.fn();
-    render(<Host items={[]} canEdit onAdd={onAdd} />);
-
-    expect(screen.queryByText('Download the app')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add doctor' }));
     expect(onAdd).toHaveBeenCalledTimes(1);
   });
 
-  it('collapses via onToggle while keeping panel content mounted', () => {
-    render(<Host items={['Dr. Chen']} canEdit={false} onAdd={vi.fn()} />);
+  it('empty + viewer: the empty message and the download link, in the normal link style', () => {
+    render(<Host items={[]} canEdit={false} onAdd={vi.fn()} />);
+    expect(screen.getByText('No doctors added yet')).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'Download the app' });
+    expect(link.className).toContain('text-moss-deep');
+    expect(link.className).not.toMatch(/terracotta/);
+  });
 
-    const header = screen.getByRole('button', { name: /Doctors/ });
-    fireEvent.click(header);
-    expect(header).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getByText('Dr. Chen')).toBeInTheDocument();
+  it('empty + editor: an Add button replaces the download link', () => {
+    const onAdd = vi.fn();
+    render(<Host items={[]} canEdit onAdd={onAdd} />);
+    expect(screen.queryByText('Download the app')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add doctor' }));
+    expect(onAdd).toHaveBeenCalledTimes(1);
   });
 });

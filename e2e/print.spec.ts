@@ -99,5 +99,7 @@ test('emergency info prints as a clean single column with whole cards', async ({
   // object) — the negative lookahead keeps that plural node out of the count.
   const pageMatches = pdf.toString('latin1').match(/\/Type\s*\/Page(?!s)\b/g) ?? [];
   expect(pageMatches.length).toBeGreaterThan(0);
-  expect(pageMatches.length).toBeLessThanOrEqual(4);
+  // 5, not 4: since 1.4.3 the sheet also prints Current medications (mobile parity), the list a
+  // paramedic asks for first.
+  expect(pageMatches.length).toBeLessThanOrEqual(5);
 });

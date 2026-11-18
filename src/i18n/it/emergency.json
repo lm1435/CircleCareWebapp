@@ -30,7 +30,8 @@
     "medicalInfo": "Informazioni mediche",
     "doctors": "Medici",
     "contacts": "Contatti di emergenza",
-    "insurance": "Assicurazione"
+    "insurance": "Assicurazione",
+    "medications": "Farmaci attuali"
   },
   "medicalInfo": {
     "bloodType": "Gruppo sanguigno",
@@ -59,7 +60,8 @@
     "medicalInfo": "Aggiungi gruppo sanguigno, allergie e patologie, così i soccorritori conoscono la tua persona cara in pochi secondi.",
     "doctors": "Aggiungi i medici che seguono la tua persona cara, così la cerchia può raggiungerli subito.",
     "contacts": "Aggiungi le persone da chiamare per prime in caso di emergenza, così nessuno deve improvvisare.",
-    "insurance": "Aggiungi i dati dell'assicurazione, così la copertura è pronta quando la cura non può aspettare."
+    "insurance": "Aggiungi i dati dell'assicurazione, così la copertura è pronta quando la cura non può aspettare.",
+    "noMedications": "Nessun farmaco attuale"
   },
   "edit": {
     "add": "Aggiungi",
@@ -147,7 +149,8 @@
       "medicationAllergiesPlaceholder": "Cerca o aggiungi un'allergia a un farmaco…",
       "otherAllergiesPlaceholder": "Cerca o aggiungi un'allergia…",
       "conditionsPlaceholder": "Cerca o aggiungi una patologia…"
-    }
+    },
+    "addMedication": "Aggiungi farmaco"
   },
   "errors": {
     "permissionDenied": "Non hai il permesso di modificare questa cerchia.",
@@ -435,5 +438,12 @@
       "addAppointment": "Aggiungi un appuntamento",
       "unnamedAuthor": "Qualcuno"
     }
-  }
+  },
+  "sos": {
+    "tapToCall": "Tocca per chiamare",
+    "dial": "Chiama {{number}}"
+  },
+  "recentMedications": "Recenti (ultimi 30 giorni)",
+  "stoppedOn": "Interrotto il {{date}}",
+  "medicationsLoadError": "Impossibile caricare queste informazioni"
 }

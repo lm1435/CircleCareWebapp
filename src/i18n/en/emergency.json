@@ -30,7 +30,8 @@
     "medicalInfo": "Medical Information",
     "doctors": "Doctors",
     "contacts": "Emergency Contacts",
-    "insurance": "Insurance"
+    "insurance": "Insurance",
+    "medications": "Current medications"
   },
   "medicalInfo": {
     "bloodType": "Blood Type",
@@ -59,7 +60,8 @@
     "medicalInfo": "Add blood type, allergies, and conditions so first responders know your loved one in seconds.",
     "doctors": "Add the doctors who care for your loved one so the circle can reach them fast.",
     "contacts": "Add the people to call first in an emergency so no one is left guessing.",
-    "insurance": "Add insurance details so coverage is ready when care can't wait."
+    "insurance": "Add insurance details so coverage is ready when care can't wait.",
+    "noMedications": "No current medications"
   },
   "edit": {
     "add": "Add",
@@ -147,7 +149,8 @@
       "medicationAllergiesPlaceholder": "Search or add a medication allergy…",
       "otherAllergiesPlaceholder": "Search or add an allergy…",
       "conditionsPlaceholder": "Search or add a condition…"
-    }
+    },
+    "addMedication": "Add medication"
   },
   "errors": {
     "permissionDenied": "You don't have permission to edit this circle.",
@@ -435,5 +438,12 @@
       "addAppointment": "Add an appointment",
       "unnamedAuthor": "Someone"
     }
-  }
+  },
+  "sos": {
+    "tapToCall": "Tap to call",
+    "dial": "Dial {{number}}"
+  },
+  "recentMedications": "Recent (last 30 days)",
+  "stoppedOn": "Stopped {{date}}",
+  "medicationsLoadError": "Could not load this information"
 }

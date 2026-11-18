@@ -150,5 +150,8 @@
       "loading": "A carregar visitas",
       "emptyBody": "As visitas aparecerão aqui quando escolher {{name}} como médico numa consulta."
     }
+  },
+  "sos": {
+    "dial": "Marcar {{number}}"
   }
 }
