@@ -1,5 +1,4 @@
-import { type ReactElement } from 'react';
-import { Helmet } from 'react-helmet-async';
+import { useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -8,8 +7,22 @@ import { useTranslation } from 'react-i18next';
  * Rendered once high in the router tree. Maps the current pathname to an i18n
  * page-title key; dynamic circle routes are matched by their trailing segment.
  *
- * `/invite/:code` is deliberately excluded — InviteLandingPage owns its own
- * <title> via Helmet, so we render nothing there to avoid double-setting.
+ * `/invite/:code` and `/help/*` are deliberately excluded — InviteLandingPage,
+ * HelpArticlePage and HelpCategoryPage own their <title> via Helmet. Unknown
+ * paths (NotFoundPage, which sets "Page not found" via Helmet) are left alone too.
+ *
+ * WHY NOT <Helmet> HERE: RouteTitle sits above the lazy pages, under App.tsx's
+ * single <Suspense>. A signed-in boot renders it while AuthGuard is still
+ * bootstrapping; bootstrap then resolves through the zustand store (a SYNC update,
+ * not a router transition), the lazy page suspends and React hides the visible
+ * tree. Hiding calls componentWillUnmount on react-helmet-async's class
+ * Dispatcher, which removes it from the instance list, and on reveal it is never
+ * re-added (its `rendered` flag is already set). Every later title change was then
+ * computed without it, so the tab froze on "Choose a circle" (prod bug 1.4.3,
+ * RouteTitle.circleNavigation.test.tsx). A layout effect is re-created on reveal
+ * and re-runs on every title change, so it cannot be orphaned that way. It runs
+ * before the Helmet pages' deferred (requestAnimationFrame) write, so their own
+ * titles still win where they set one.
  */
 const STATIC_TITLES: Record<string, string> = {
   '/login': 'pageTitles.login',
@@ -74,22 +87,30 @@ function titleKeyForPath(pathname: string): string | null {
   return null;
 }
 
-export function RouteTitle(): ReactElement | null {
-  const { pathname } = useLocation();
-  const { t } = useTranslation('common');
-
+export function routeTitleFor(
+  pathname: string,
+  t: (key: string) => string
+): string | null {
   // InviteLandingPage sets its own title — never override it.
   // HelpArticlePage and HelpCategoryPage (/help/c/:category) set theirs the same way.
   if (pathname.startsWith('/invite/') || pathname.startsWith('/help/')) {
     return null;
   }
-
   const key = titleKeyForPath(pathname);
-  const title = key ? `${t(key)} · CircleCare` : 'CircleCare';
+  // No key: NotFoundPage (or a redirect hop) — the page owns the title.
+  return key ? `${t(key)} · CircleCare` : null;
+}
 
-  return (
-    <Helmet>
-      <title>{title}</title>
-    </Helmet>
-  );
+export function RouteTitle(): null {
+  const { pathname } = useLocation();
+  const { t } = useTranslation('common');
+  const title = routeTitleFor(pathname, t);
+
+  useLayoutEffect(() => {
+    if (title !== null) {
+      document.title = title;
+    }
+  }, [title]);
+
+  return null;
 }
