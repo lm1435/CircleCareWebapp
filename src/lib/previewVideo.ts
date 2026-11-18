@@ -1,76 +1,55 @@
-import { baseLocale, normalizeLocale, type SupportedLanguage } from '@/i18n/locales';
+import { env } from '@/lib/env';
+import { normalizeLocale, type SupportedLanguage } from '@/i18n/locales';
 
 /**
- * "See how it works" preview video (1.4.3). The backend serves one URL per app
- * language as app config `preview_video_url_<lang>` (en, es, de, fr, fr-CA, it,
- * pt, pt-PT; a key is ABSENT until the owner sets it) plus the legacy
- * `preview_video_url` that 1.4.2 apps read.
+ * "See how it works" preview video (1.4.3): a FIXED address per app language,
+ * no app config, no settings. Every language has a file; replacing a video =
+ * overwriting the file in the public `help-videos` bucket.
  *
- * Order: the app language's key -> its base language's key (a regional variant
- * like fr-CA / pt-PT with no cut of its own) -> the legacy key -> null (the
- * caller shows today's carousel). Never English for a Spanish reader unless the
- * owner pointed the legacy key there.
+ *   {SUPABASE_URL}/storage/v1/object/public/help-videos/preview-demo-{lang}-{cut}.mp4
+ *   poster: the same name with `.jpg`
  *
- * The configured URL is the phone cut (`...-4x5.mp4`). The web shows the 16:9
- * cut by the upload convention `...-16x9.mp4` next to it; the poster is the same
- * path with `.jpg` (help-videos/preview-demo-{lang}-{4x5,16x9}.{mp4,jpg}). A
- * missing derived file just fails to load, and the caller falls back.
- * Mirrors mobile/src/utils/previewVideo.ts (same order, same derivation).
+ * `lang` is the app's resolved UI language exactly as i18n uses it (en, es, fr,
+ * fr-CA, de, it, pt, pt-PT); anything else maps to en. The web shows the 16:9
+ * cut, the phone the 4:5 cut. A file that fails to load (network) hands over to
+ * the carousel in the caller.
+ *
+ * The base is VITE_SUPABASE_URL when it is https (production builds); a local
+ * http Supabase (dev) never serves the video, so the production storage base
+ * below is used instead: the address is never http.
+ * Mirrors mobile/src/utils/previewVideo.ts.
  */
 
 export type PreviewVideoCut = '4x5' | '16x9';
-/** Analytics enum: which key won ('default' = the legacy key). */
-export type PreviewVideoLanguage = SupportedLanguage | 'default';
 
 export interface PreviewVideoSource {
   src: string;
-  poster: string | null;
-  language: PreviewVideoLanguage;
+  poster: string;
+  /** Analytics enum: the language of the file. Never put the URL in analytics. */
+  language: SupportedLanguage;
 }
 
-/** The app-config payload (any object; only the preview keys are read). */
-type PreviewVideoConfig = object | null | undefined;
+/** Production Supabase project (public storage host; already shipped in every bundle). */
+export const PREVIEW_VIDEO_FALLBACK_BASE = 'https://prdfxaljwlsiqsqworzy.supabase.co';
+const BUCKET_PATH = '/storage/v1/object/public/help-videos/';
 
-const VIDEO_EXT = /\.(mp4|mov|m3u8|webm)$/i;
-
-/** A direct, https video file (not a YouTube / Vimeo page that needs a browser). */
-export function isDirectVideoUrl(url: string): boolean {
+export function previewVideoStorageBase(configured: string | null | undefined): string {
+  const raw = (configured ?? '').trim().replace(/\/+$/, '');
   try {
-    const parsed = new URL(url);
-    return parsed.protocol === 'https:' && VIDEO_EXT.test(parsed.pathname);
+    if (raw && new URL(raw).protocol === 'https:') return raw;
   } catch {
-    return false;
+    // not a URL: use the fixed base
   }
+  return PREVIEW_VIDEO_FALLBACK_BASE;
 }
 
-function withCut(url: string, cut: PreviewVideoCut): string {
-  if (cut === '4x5') return url;
-  return url.replace(/-4x5(\.(?:mp4|mov|m3u8|webm))(\?|#|$)/i, '-16x9$1$2');
-}
-
-function posterFor(url: string): string | null {
-  const replaced = url.replace(/\.(mp4|mov|webm)(\?|#|$)/i, '.jpg$2');
-  return replaced === url ? null : replaced;
-}
-
-export function resolvePreviewVideo(
-  config: PreviewVideoConfig,
+/** The fixed preview-video file for the app language and cut. */
+export function previewVideoSource(
   language: string | null | undefined,
   cut: PreviewVideoCut,
-): PreviewVideoSource | null {
-  if (!config) return null;
+  base: string | null | undefined = env.VITE_SUPABASE_URL
+): PreviewVideoSource {
   const lang = normalizeLocale(language);
-  const base = baseLocale(lang);
-  const candidates: [string, PreviewVideoLanguage][] = [[`preview_video_url_${lang}`, lang]];
-  if (base !== lang) candidates.push([`preview_video_url_${base}`, base]);
-  candidates.push(['preview_video_url', 'default']);
-  for (const [key, which] of candidates) {
-    const raw = (config as Record<string, unknown>)[key];
-    if (typeof raw !== 'string') continue;
-    const url = raw.trim();
-    if (!url || !isDirectVideoUrl(url)) continue;
-    const src = withCut(url, cut);
-    return { src, poster: posterFor(src), language: which };
-  }
-  return null;
+  const name = `${previewVideoStorageBase(base)}${BUCKET_PATH}preview-demo-${lang}-${cut}`;
+  return { src: `${name}.mp4`, poster: `${name}.jpg`, language: lang };
 }

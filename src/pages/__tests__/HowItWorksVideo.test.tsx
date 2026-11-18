@@ -5,23 +5,23 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '@/i18n';
 import HowItWorksPage from '@/pages/HowItWorksPage';
 import { Analytics } from '@/lib/analytics';
-import { queryKeys } from '@/lib/queryKeys';
 import { apiClient } from '@/lib/api';
+import { env } from '@/lib/env';
+import { previewVideoStorageBase } from '@/lib/previewVideo';
 
 // 1.4.3 "See how it works" video on /how-it-works (mobile parity with
-// PreviewScreenVideo.test.tsx; mock docs/mocks-143/preview-video): the 16:9 cut
-// of the app-language key, muted/looping/inline/poster, pause/play, no autoplay
-// under prefers-reduced-motion, carousel on a load error or with no key.
+// PreviewScreenVideo.test.tsx; mock docs/mocks-143/preview-video): the FIXED
+// 16:9 file of the app language (no app config), muted/looping/inline/poster,
+// pause/play, no autoplay under prefers-reduced-motion, carousel on a load error.
 
-const BASE = 'https://x.supabase.co/storage/v1/object/public/help-videos';
+const BASE = `${previewVideoStorageBase(env.VITE_SUPABASE_URL)}/storage/v1/object/public/help-videos`;
 
 let reduceMotion = false;
 const play = vi.fn(() => Promise.resolve());
 const pause = vi.fn();
 
-function renderWith(config: Record<string, string> | undefined) {
+function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  if (config) queryClient.setQueryData(queryKeys.appConfig, config);
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/how-it-works']}>
@@ -63,14 +63,9 @@ beforeEach(async () => {
   vi.spyOn(Analytics, 'previewGetStartedTapped');
 });
 
-const CONFIG = {
-  preview_video_url: `${BASE}/preview-demo-en-4x5.mp4`,
-  preview_video_url_es: `${BASE}/preview-demo-es-4x5.mp4`,
-};
-
 describe('HowItWorksPage video', () => {
-  it('P: the app-language 16:9 cut, muted / looping / inline with its poster, autoplayed', () => {
-    renderWith(CONFIG);
+  it('P: the fixed app-language 16:9 file, muted / looping / inline with its poster, autoplayed', () => {
+    renderPage();
     const v = video();
     expect(v.getAttribute('src')).toBe(`${BASE}/preview-demo-es-16x9.mp4`);
     expect(v.getAttribute('poster')).toBe(`${BASE}/preview-demo-es-16x9.jpg`);
@@ -83,7 +78,7 @@ describe('HowItWorksPage video', () => {
   });
 
   it('P: started / completed fire once with language + platform; Get started -> step 1', async () => {
-    renderWith(CONFIG);
+    renderPage();
     const v = video();
     Object.defineProperty(v, 'duration', { configurable: true, value: 55 });
     fireEvent.play(v);
@@ -102,7 +97,7 @@ describe('HowItWorksPage video', () => {
   });
 
   it('P: the pause / play control (WCAG 2.2.2)', async () => {
-    renderWith(CONFIG);
+    renderPage();
     fireEvent.play(video());
     await userEvent.click(screen.getByRole('button', { name: 'Pausar video' }));
     expect(pause).toHaveBeenCalled();
@@ -114,7 +109,7 @@ describe('HowItWorksPage video', () => {
 
   it('N: prefers-reduced-motion never autoplays: poster + Play, nothing preloaded', async () => {
     reduceMotion = true;
-    renderWith(CONFIG);
+    renderPage();
     expect(play).not.toHaveBeenCalled();
     expect(video().getAttribute('poster')).toBe(`${BASE}/preview-demo-es-16x9.jpg`);
     expect(video().getAttribute('preload')).toBe('none');
@@ -123,7 +118,7 @@ describe('HowItWorksPage video', () => {
   });
 
   it('N: a source that fails to load falls back to the carousel and records it', () => {
-    renderWith(CONFIG);
+    renderPage();
     act(() => {
       fireEvent.error(video());
     });
@@ -133,25 +128,45 @@ describe('HowItWorksPage video', () => {
     expect(Analytics.previewVideoStarted).not.toHaveBeenCalled();
   });
 
-  it('P: no key for the language -> the legacy key ("default")', () => {
-    renderWith({ preview_video_url: `${BASE}/preview-demo-en-4x5.mp4` });
-    expect(video().getAttribute('src')).toBe(`${BASE}/preview-demo-en-16x9.mp4`);
+  it.each([
+    ['fr-CA', 'fr-CA'],
+    ['pt-PT', 'pt-PT'],
+    ['de', 'de'],
+    ['ja', 'en'],
+  ])('P: app language %s -> preview-demo-%s-16x9 (unknown -> en), language enum on events', async (lang, file) => {
+    await i18n.changeLanguage(lang);
+    renderPage();
+    expect(video().getAttribute('src')).toBe(`${BASE}/preview-demo-${file}-16x9.mp4`);
+    expect(video().getAttribute('poster')).toBe(`${BASE}/preview-demo-${file}-16x9.jpg`);
     fireEvent.play(video());
-    expect(Analytics.previewVideoStarted).toHaveBeenCalledWith('default', 'web');
+    expect(Analytics.previewVideoStarted).toHaveBeenCalledWith(file, 'web');
   });
 
-  it('N: no usable key -> the carousel (an English-only key never reaches a Spanish reader)', () => {
-    renderWith({ preview_video_url_en: `${BASE}/preview-demo-en-4x5.mp4` });
-    expect(screen.queryByTestId('preview-video')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeInTheDocument();
+  it('N: never an http: URL, and no app-config request for the video', () => {
+    renderPage();
+    expect(video().getAttribute('src')).toMatch(/^https:\/\//);
+    expect(video().getAttribute('poster')).toMatch(/^https:\/\//);
+    expect(apiClient.get).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('preview-loading')).toBeNull();
   });
 
-  it('N: while the config loads, neither the carousel nor a video flashes; an API failure -> carousel', async () => {
-    vi.mocked(apiClient.get).mockRejectedValueOnce(new Error('offline')).mockRejectedValueOnce(new Error('offline'));
-    renderWith(undefined);
-    expect(screen.getByTestId('preview-loading')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Siguiente' })).toBeNull();
-    expect(await screen.findByRole('button', { name: 'Siguiente' }, { timeout: 4000 })).toBeInTheDocument();
-    expect(screen.queryByTestId('preview-video')).toBeNull();
+  it('N: analytics carry the language enum and platform only, never the URL', () => {
+    renderPage();
+    const v = video();
+    Object.defineProperty(v, 'duration', { configurable: true, value: 55 });
+    fireEvent.play(v);
+    Object.defineProperty(v, 'currentTime', { configurable: true, writable: true, value: 54.8 });
+    fireEvent.timeUpdate(v);
+    fireEvent.error(v);
+    const calls = [
+      ...vi.mocked(Analytics.previewVideoStarted).mock.calls,
+      ...vi.mocked(Analytics.previewVideoCompleted).mock.calls,
+      ...vi.mocked(Analytics.previewVideoFailed).mock.calls,
+    ];
+    expect(calls).toHaveLength(3);
+    for (const args of calls) {
+      expect(args).toEqual(['es', 'web']);
+      expect(JSON.stringify(args)).not.toMatch(/https?:|supabase|help-videos|\.mp4/);
+    }
   });
 });

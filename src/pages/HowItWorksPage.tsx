@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { useAppConfig } from '@/hooks/useAppConfig';
-import { resolvePreviewVideo, type PreviewVideoSource } from '@/lib/previewVideo';
+import { previewVideoSource, type PreviewVideoSource } from '@/lib/previewVideo';
 import { prefersReducedMotion } from '@/components/ui/motion';
 import { Icon } from '@/components/ui';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -20,12 +19,11 @@ import { PreviewActivityStep } from '@/components/preview/PreviewActivityStep';
  * Back (the top bar's back button steps back, then leaves), a "Screen N of M" indicator, a trial note on the last step and a final
  * "Get started" that goes to Sign up. Public: no session, no circle, no API.
  *
- * 1.4.3 video branch (mobile parity): app config `preview_video_url_<language>`
- * -> its base language -> the legacy `preview_video_url` -> this carousel
- * (lib/previewVideo.ts), as the 16:9 cut. Muted, looping, inline, with a
+ * 1.4.3 video (mobile parity): the FIXED 16:9 file for the app language
+ * (lib/previewVideo.ts; no app config). Muted, looping, inline, with a
  * poster and a pause / play control; never autoplays under
  * prefers-reduced-motion (poster + Play). A source that fails to load hands
- * over to the carousel. Mock: docs/mocks-143/preview-video.
+ * over to the carousel (the network safety net). Mock: docs/mocks-143/preview-video.
  *
  * Opened from Sign up / Log in with `state.previewSource`; anything else
  * (typed URL, bookmark) is reported as 'direct'.
@@ -93,7 +91,7 @@ function PreviewVideo({
           ref={ref}
           className="block h-full w-full object-contain"
           src={video.src}
-          poster={video.poster ?? undefined}
+          poster={video.poster}
           muted
           loop
           playsInline
@@ -140,9 +138,8 @@ function PreviewVideo({
 
 export default function HowItWorksPage(): ReactElement {
   const { t, i18n } = useTranslation('auth');
-  const { data: appConfig, isPending: configPending } = useAppConfig();
   const [videoFailed, setVideoFailed] = useState(false);
-  const video = videoFailed ? null : resolvePreviewVideo(appConfig, i18n.language, '16x9');
+  const video = videoFailed ? null : previewVideoSource(i18n.language, '16x9');
   const navigate = useNavigate();
   const location = useLocation();
   const { goBack } = useAuthBack('/signup');
@@ -183,16 +180,6 @@ export default function HowItWorksPage(): ReactElement {
     Analytics.previewGetStartedTapped(step + 1);
     navigate('/signup');
   };
-
-  // Wait for the config (mobile parity): no carousel flash before the video.
-  if (configPending) {
-    return (
-      <AuthShell>
-        <AuthTopBar onBack={goBack} />
-        <div aria-busy="true" className="min-h-64" data-testid="preview-loading" />
-      </AuthShell>
-    );
-  }
 
   if (video) {
     return (

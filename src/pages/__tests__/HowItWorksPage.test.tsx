@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -9,17 +9,13 @@ import LoginPage from '@/pages/LoginPage';
 import { apiClient } from '@/lib/api';
 import { Analytics } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
-import { queryKeys } from '@/lib/queryKeys';
 
 // /how-it-works — the web twin of mobile's pre-auth Preview walkthrough.
 // `@/lib/api` is mocked by the global setup; the page must never call it.
 
 function renderAt(entry: string | { pathname: string; state?: unknown }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  // 1.4.3: the page reads public app config for the video branch. Seeded as
-  // "no video configured" so this suite pins the carousel (video: HowItWorksVideo.test.tsx).
-  queryClient.setQueryData(queryKeys.appConfig, {});
-  return render(
+  const result = render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[entry]}>
         <Routes>
@@ -30,6 +26,12 @@ function renderAt(entry: string | { pathname: string; state?: unknown }) {
       </MemoryRouter>
     </QueryClientProvider>
   );
+  // 1.4.3: the page opens on the fixed preview video. This suite pins the
+  // carousel, reached the way a reader reaches it: the video fails to load
+  // (the network safety net). The video itself: HowItWorksVideo.test.tsx.
+  const v = screen.queryByTestId('preview-video')?.querySelector('video');
+  if (v) act(() => void fireEvent.error(v));
+  return result;
 }
 
 describe('HowItWorksPage', () => {
@@ -137,7 +139,7 @@ describe('HowItWorksPage', () => {
     const link = screen.getByRole('link', { name: 'See how it works' });
     expect(link).toHaveAttribute('href', '/how-it-works');
     await user.click(link);
-    expect(await screen.findByRole('heading', { level: 1, name: 'Medication schedule' })).toBeInTheDocument();
+    expect(await screen.findByTestId('preview-video')).toBeInTheDocument();
     expect(opened).toHaveBeenCalledWith('signup');
   });
 
@@ -145,7 +147,7 @@ describe('HowItWorksPage', () => {
     const user = userEvent.setup();
     renderAt('/login');
     await user.click(screen.getByRole('link', { name: 'See how it works' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Medication schedule' })).toBeInTheDocument();
+    expect(await screen.findByTestId('preview-video')).toBeInTheDocument();
     expect(opened).toHaveBeenCalledWith('login');
   });
 });

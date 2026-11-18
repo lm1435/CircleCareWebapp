@@ -4,8 +4,9 @@ import { checkA11y } from '../helpers';
 // The pre-auth "See how it works" walkthrough (/how-it-works), the web twin of
 // mobile Welcome's Preview: Sign up -> step 1 -> step 2 -> Get started -> Sign up,
 // keyboard-driven, with an axe scan of each step. Signed out on purpose: no
-// session, and the page's ONLY API call is the public app config (1.4.3 video
-// branch), stubbed here to "no video" so this spec pins the carousel (the
+// session and no API call at all. 1.4.3: the page opens on the fixed preview
+// video (lib/previewVideo.ts); its file is answered 404 here (never fetched
+// from production) so the load-error safety net shows this carousel (the
 // video: how-it-works-video.spec.ts).
 
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -21,11 +22,12 @@ test('Sign up -> See how it works -> step 2 -> Get started -> Sign up', async ({
     }
   });
 
-  await page.route('**/api/app-config', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true,"data":{}}' })
+  await page.route('**/storage/v1/object/public/help-videos/**', (route) =>
+    route.fulfill({ status: 404, body: 'gone' })
   );
   await page.goto('/signup', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { level: 1, name: 'Create account' })).toBeVisible();
+  // First run v2: /signup opens on "Who are you caring for?", with the walkthrough link kept.
+  await expect(page.getByRole('heading', { level: 1, name: 'Who are you caring for?' })).toBeVisible();
 
   await page.getByRole('link', { name: 'See how it works' }).click();
   await expect(page).toHaveURL(/\/how-it-works$/);
@@ -62,5 +64,5 @@ test('Sign up -> See how it works -> step 2 -> Get started -> Sign up', async ({
   await expect(page).toHaveURL(/\/signup$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Create account' })).toBeVisible();
 
-  expect(apiCalls.filter((p) => p !== '/api/app-config')).toEqual([]);
+  expect(apiCalls).toEqual([]);
 });

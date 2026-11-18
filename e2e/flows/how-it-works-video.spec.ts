@@ -8,39 +8,34 @@ import { checkA11y } from '../helpers';
 // 1.4.3 "See how it works" video on /how-it-works (lib/previewVideo.ts; mock
 // docs/mocks-143/preview-video). Maestro twin: mobile/.maestro/parity/auth/preview-video.yaml.
 //
-// The app config is answered by a route stub (the local app_settings rows are
-// normally empty, and the production URLs are never touched); the "video" is a
-// 2 s VP9 sample (e2e/media) served for the derived 16:9 URL, because
-// Playwright's Chromium has no H.264.
-//   P1 the app-language key -> the 16:9 cut plays muted + looping with its
-//      poster; the pause / play control works; Get started -> Sign up; axe-clean.
+// The address is FIXED (no app config): {https Supabase base}/storage/v1/object/
+// public/help-videos/preview-demo-{lang}-16x9.{mp4,jpg}. Every request to the
+// bucket is answered by a route stub (production is never touched); the "video"
+// is a 2 s VP9 sample (e2e/media), because Playwright's Chromium has no H.264.
+//   P1 en -> preview-demo-en-16x9 plays muted + looping with its poster; the
+//      pause / play control works; Get started -> Sign up; axe-clean.
+//   P2 an es-MX browser -> preview-demo-es-16x9 (regional tag -> es).
 //   N1 prefers-reduced-motion: no autoplay (paused on the poster) until Play.
-//   N2 the source fails to load -> today's carousel, no dead frame.
-//   N3 no key configured -> the carousel.
-// FALSIFY (PW_FALSIFY=how-it-works-video): the config stub serves no key, so
-// P1's video assertions go red.
+//   N2 the file fails to load -> today's carousel, no dead frame.
+//   N3 no app-config request, never an http: video URL, no URL in analytics.
+// FALSIFY (PW_FALSIFY=how-it-works-video): the bucket stub answers 404, so P1's
+// video assertions go red.
 
 const FALSIFY = new Set((process.env.PW_FALSIFY ?? '').split(',').filter(Boolean));
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SAMPLE = readFileSync(resolve(HERE, '../media/preview-sample.webm'));
 const POSTER = readFileSync(resolve(HERE, '../media/preview-sample.jpg'));
-const ORIGIN = 'https://video.e2e.invalid';
-const EN_URL = `${ORIGIN}/help-videos/preview-demo-en-4x5.mp4`;
+const BUCKET = '/storage/v1/object/public/help-videos/';
+const FILE_RE = /^https:\/\/[^/]+\/storage\/v1\/object\/public\/help-videos\/preview-demo-/;
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
-async function stubConfig(page: Page, data: Record<string, string>): Promise<void> {
-  await page.route('**/api/app-config', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data }) })
-  );
-}
-
 async function serveVideo(page: Page, opts: { broken?: boolean } = {}): Promise<string[]> {
   const requested: string[] = [];
-  await page.route(`${ORIGIN}/**`, (route) => {
-    const path = new URL(route.request().url()).pathname;
-    requested.push(path);
-    if (path.endsWith('.jpg')) return route.fulfill({ status: 200, contentType: 'image/jpeg', body: POSTER });
+  await page.route(`**${BUCKET}**`, (route) => {
+    const url = new URL(route.request().url());
+    requested.push(url.href);
+    if (url.pathname.endsWith('.jpg')) return route.fulfill({ status: 200, contentType: 'image/jpeg', body: POSTER });
     if (opts.broken) return route.fulfill({ status: 404, body: 'gone' });
     return route.fulfill({ status: 200, contentType: 'video/webm', body: SAMPLE });
   });
@@ -49,22 +44,21 @@ async function serveVideo(page: Page, opts: { broken?: boolean } = {}): Promise<
 
 const videoEl = (page: Page) => page.getByTestId('preview-video').locator('video');
 
-test('P1: the language cut plays muted and looping, pauses, and Get started opens Sign up', async ({
+test('P1: the fixed en 16:9 file plays muted and looping, pauses, and Get started opens Sign up', async ({
   page,
 }, testInfo) => {
-  await stubConfig(page, FALSIFY.has('how-it-works-video') ? {} : { preview_video_url_en: EN_URL });
-  const requested = await serveVideo(page);
+  const requested = await serveVideo(page, { broken: FALSIFY.has('how-it-works-video') });
   await page.goto('/how-it-works', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { level: 1, name: 'See CircleCare in action' })).toBeVisible({
     timeout: 20_000,
   });
   const video = videoEl(page);
-  await expect(video).toHaveAttribute('src', `${ORIGIN}/help-videos/preview-demo-en-16x9.mp4`);
-  await expect(video).toHaveAttribute('poster', `${ORIGIN}/help-videos/preview-demo-en-16x9.jpg`);
+  await expect(video).toHaveAttribute('src', new RegExp(`${FILE_RE.source}en-16x9\\.mp4$`));
+  await expect(video).toHaveAttribute('poster', new RegExp(`${FILE_RE.source}en-16x9\\.jpg$`));
   expect(await video.evaluate((v: HTMLVideoElement) => [v.muted, v.loop, v.playsInline])).toEqual([true, true, true]);
   await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.paused), { timeout: 15_000 }).toBe(true);
-  expect(requested).toContain('/help-videos/preview-demo-en-16x9.mp4');
+  expect(requested.some((u) => u.endsWith(`${BUCKET}preview-demo-en-16x9.mp4`))).toBe(true);
   await expect(page.getByRole('button', { name: 'Next' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Pause video' }).click();
@@ -80,7 +74,6 @@ test('P1: the language cut plays muted and looping, pauses, and Get started open
 
 test('N1: prefers-reduced-motion never autoplays; Play starts it', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await stubConfig(page, { preview_video_url_en: EN_URL });
   await serveVideo(page);
   await page.goto('/how-it-works', { waitUntil: 'domcontentloaded' });
 
@@ -93,8 +86,7 @@ test('N1: prefers-reduced-motion never autoplays; Play starts it', async ({ page
   await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.paused), { timeout: 15_000 }).toBe(true);
 });
 
-test('N2: a source that fails to load hands over to the carousel', async ({ page }) => {
-  await stubConfig(page, { preview_video_url_en: EN_URL });
+test('N2: a file that fails to load hands over to the carousel', async ({ page }) => {
   await serveVideo(page, { broken: true });
   await page.goto('/how-it-works', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { level: 1, name: 'Medication schedule' })).toBeVisible({
@@ -104,13 +96,35 @@ test('N2: a source that fails to load hands over to the carousel', async ({ page
   await expect(page.getByRole('button', { name: 'Next' })).toBeVisible();
 });
 
-test('N3: no key configured -> the carousel', async ({ page }) => {
-  await stubConfig(page, {});
-  const requested = await serveVideo(page);
-  await page.goto('/how-it-works', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { level: 1, name: 'Medication schedule' })).toBeVisible({
-    timeout: 20_000,
+test.describe('P2: a Spanish browser (es-MX)', () => {
+  test.use({ locale: 'es-MX' });
+  test('gets preview-demo-es-16x9', async ({ page }) => {
+    await serveVideo(page);
+    await page.goto('/how-it-works', { waitUntil: 'domcontentloaded' });
+    await expect(videoEl(page)).toHaveAttribute('src', new RegExp(`${FILE_RE.source}es-16x9\\.mp4$`), {
+      timeout: 20_000,
+    });
+    await expect(page.getByRole('heading', { level: 1, name: 'Mira CircleCare en acción' })).toBeVisible();
   });
-  await expect(page.getByTestId('preview-video')).toHaveCount(0);
-  expect(requested).toEqual([]);
+});
+
+test('N3: no app-config request, never an http: URL, no URL in analytics', async ({ page }) => {
+  const apiCalls: string[] = [];
+  const posthogBodies: string[] = [];
+  page.on('request', (req) => {
+    const url = new URL(req.url());
+    if (url.pathname.startsWith('/api/')) apiCalls.push(url.pathname);
+    if (/posthog|\/(e|i\/v0\/e|batch)\/?$/.test(url.href)) posthogBodies.push(req.postData() ?? '');
+  });
+  await serveVideo(page);
+  await page.goto('/how-it-works', { waitUntil: 'domcontentloaded' });
+  const video = videoEl(page);
+  await expect(video).toBeVisible({ timeout: 20_000 });
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.paused), { timeout: 15_000 }).toBe(true);
+  const src = await video.getAttribute('src');
+  const poster = await video.getAttribute('poster');
+  expect(src).toMatch(/^https:\/\//);
+  expect(poster).toMatch(/^https:\/\//);
+  expect(apiCalls.filter((p) => p.startsWith('/api/app-config'))).toEqual([]);
+  for (const body of posthogBodies) expect(body).not.toContain('help-videos');
 });
