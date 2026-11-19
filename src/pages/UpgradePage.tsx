@@ -20,7 +20,7 @@ import {
   useToast,
 } from '@/components/ui';
 import { StoreBadges } from '@/components/layout/StoreBadges';
-import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
+import { useEffectivePremium } from '@/hooks/useEffectivePremium';
 import { useWebPlans, usePurchasePlan, useManageSubscription } from '@/hooks/useWebBilling';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { useAccountTimezone } from '@/hooks/useAccountTimezone';
@@ -29,6 +29,7 @@ import { readBrowserTimezone, webCheckoutVerdict } from '@/lib/checkoutCountry';
 import { isUserCancelledError, type WebPlan } from '@/lib/purchases';
 import { notePaywallShown } from '@/lib/reviewMoments';
 import { trialChargeFrom, trialStartedMessage } from '@/lib/trialCharge';
+import { entitlementPeriodType } from '@/lib/effectivePremium';
 import { isWebBillingConfigured } from '@/lib/webBillingConfig';
 import { legalUrl } from '@/lib/legalLinks';
 import { Analytics, type PaywallDismissMethod } from '@/lib/analytics';
@@ -71,7 +72,10 @@ export default function UpgradePage(): ReactElement {
   );
   const isOnboarding = paywallContext === 'onboarding';
 
-  const { data: status } = useSubscriptionStatus();
+  // PREMIUM = backend tier OR an active entitlement (1.4.3 item 2, hooks/useEffectivePremium.ts).
+  // Plans render at once and swap when the entitlement read returns; the Subscribe button is
+  // held only while that read is in flight (capped), then fails open toward selling.
+  const premium = useEffectivePremium({ surface: 'paywall' });
   const { data: plans, isLoading, isError } = useWebPlans();
   const purchase = usePurchasePlan();
   // Same-tick double click: `isPending` only flips after React commits.
@@ -304,7 +308,11 @@ export default function UpgradePage(): ReactElement {
   const countryUnresolved = !countryPending && verdict === 'unresolved';
   const storeOnly = !countryPending && verdict === 'store-only';
 
-  const isPremium = status?.tier === 'premium';
+  // "You're already Premium" ONLY once the BACKEND says so (S6). An entitled user whose backend
+  // tier has not caught up sees "Activating your Premium" + Retry, never the packages (a second
+  // purchase would double-charge) and never a 402 loop.
+  const isPremium = premium.backendPremium;
+  const activating = premium.activating;
   // Web billing IS configured but the offering came back empty or errored (bad
   // key, CSP block, RC outage). Degrade to the in-app upgrade path instead of
   // rendering a dead, permanently-disabled Subscribe button.
@@ -315,6 +323,7 @@ export default function UpgradePage(): ReactElement {
   const showsPlans =
     billingConfigured &&
     !isPremium &&
+    !activating &&
     !countryPending &&
     !countryUnresolved &&
     !storeOnly &&
@@ -324,6 +333,7 @@ export default function UpgradePage(): ReactElement {
   const settled =
     !billingConfigured ||
     isPremium ||
+    activating ||
     (!countryPending && (countryUnresolved || storeOnly || !isLoading));
   // The plan PlansView pre-selects (annual; monthly only when there is no annual).
   const defaultPlan = plans?.annual ?? plans?.monthly ?? null;
@@ -373,6 +383,14 @@ export default function UpgradePage(): ReactElement {
         // annual plan that advertises a trial is counted as a trial start on
         // web and would not be on mobile. `subscribed` is unaffected.
         if (plan.hasFreeTrial) Analytics.planSelectionTrialStarted(planKey, paywallContext);
+        // 1.4.3 item 4: the funnel events, from the ENTITLEMENT RevenueCat returned (never from
+        // what the page advertised). The count of record is the server's webhook event; these are
+        // context. A web purchase resolves its own promise, so source is always 'promise'.
+        // No purchase-recovery code on web, by design: see lib/purchases.ts "PLATFORM EXCEPTION".
+        Analytics.purchaseCompleted({ plan: planKey, store: 'web', source: 'promise', paywallContext });
+        if (entitlementPeriodType(customerInfo) === 'TRIAL') {
+          Analytics.trialStarted({ plan: planKey, store: 'web', source: 'promise', paywallContext });
+        }
         // A TRIAL started: the exact end date and first charge, from the
         // entitlement RevenueCat returned, never from what the page advertised.
         const charge = trialChargeFrom(customerInfo);
@@ -471,6 +489,28 @@ export default function UpgradePage(): ReactElement {
             </>
           }
         />
+      ) : activating ? (
+        <EmptyState
+          icon="checkmark-circle"
+          tone="coral"
+          title={t('activating.title')}
+          // Terminal, whole-page state, same reasoning as the others: the page's <h1>.
+          titleAs="h1"
+          description={t('activating.body')}
+          actions={
+            <>
+              <Button
+                variant="secondary"
+                loading={premium.syncing}
+                disabled={premium.syncing}
+                onClick={premium.retrySync}
+              >
+                {t('activating.retry')}
+              </Button>
+              <BackLink onClick={handleClose}>{declineLabel}</BackLink>
+            </>
+          }
+        />
       ) : countryPending ? (
         // Resolving the gate, not the offering — see `countryPending`.
         <div className="flex justify-center py-20">
@@ -496,6 +536,7 @@ export default function UpgradePage(): ReactElement {
         <PlansView
           plans={plans}
           pending={purchase.isPending}
+          ctaHeld={premium.entitlementChecking}
           isOnboarding={isOnboarding}
           paywallContext={paywallContext}
           onSubscribe={handleSubscribe}
@@ -706,6 +747,8 @@ const FOOTER_CLASS = [
 interface PlansViewProps {
   plans: { monthly: WebPlan | null; annual: WebPlan | null } | undefined;
   pending: boolean;
+  /** The entitlement read is still in flight: Subscribe waits briefly (capped), then re-enables. */
+  ctaHeld?: boolean;
   /** The once-ever post-first-circle ask: its own headline and the free-plan button. */
   isOnboarding: boolean;
   paywallContext: PaywallContext;
@@ -736,6 +779,7 @@ interface PlansViewProps {
 function PlansView({
   plans,
   pending,
+  ctaHeld = false,
   isOnboarding,
   paywallContext,
   onSubscribe,
@@ -1015,8 +1059,8 @@ function PlansView({
           size="lg"
           fullWidth
           loading={pending}
-          disabled={!canBuy}
-          onClick={() => selectedPlan && canBuy && onSubscribe(selectedPlan, selectedKey)}
+          disabled={!canBuy || ctaHeld}
+          onClick={() => selectedPlan && canBuy && !ctaHeld && onSubscribe(selectedPlan, selectedKey)}
         >
           {ctaLabel}
         </Button>

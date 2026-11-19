@@ -16,6 +16,8 @@ import { clearPendingInviteCode } from '@/lib/pendingInviteCode';
 import { clearDailyUpdateStorage } from '@/lib/dailyUpdateStorage';
 import { Analytics } from '@/lib/analytics';
 import i18n from '@/i18n';
+import { clearWriteRetryQueue } from '@/lib/writeRetryQueue';
+import { resetEffectivePremiumSession } from '@/lib/effectivePremium';
 import { normalizeLocale } from '@/i18n/locales';
 
 // Web auth store (Task 9) — mirrors mobile/src/store/authStore.ts adapted to
@@ -157,6 +159,10 @@ function clearLocalSession(): void {
   resetRefreshState();
   tokenAccessor.clear();
   queryClient.clear();
+  // 1.4.3: a save queued for a quiet retry belongs to the ending session; never send it under the next.
+  clearWriteRetryQueue();
+  // 1.4.3: the once-per-session entitlement re-sync flags belong to the ending session.
+  resetEffectivePremiumSession();
   // Before anything else that could throw: a surviving hint cookie is what
   // silently restores the session on the next load (see clearSessionHintCookie).
   clearSessionHintCookie();

@@ -28,6 +28,7 @@ vi.mock('@/hooks/useWebBilling', () => ({
   useManageSubscription: vi.fn(),
 }));
 vi.mock('@/hooks/useSubscriptionStatus', () => ({ useSubscriptionStatus: vi.fn() }));
+vi.mock('@/hooks/useEffectivePremium', async () => import('@/test/backendOnlyEffectivePremium'));
 vi.mock('@/lib/purchases', () => ({
   isUserCancelledError: vi.fn(() => false),
 }));
@@ -52,6 +53,8 @@ vi.mock('@/lib/analytics', () => ({
     planSelectionFreeSelected: vi.fn(),
     planSelectionSubscribed: vi.fn(),
     planSelectionTrialStarted: vi.fn(),
+    purchaseCompleted: vi.fn(),
+    trialStarted: vi.fn(),
     planSelectionPurchaseCancelled: vi.fn(),
     planSelectionPlanChanged: vi.fn(),
     planSelectionDetailsToggled: vi.fn(),

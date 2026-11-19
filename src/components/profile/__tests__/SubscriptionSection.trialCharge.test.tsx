@@ -2,7 +2,7 @@
 // card says when the trial ends and what the first charge is, from RevenueCat's
 // CustomerInfo (any store). Not in a trial: nothing new on the card.
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Mock } from 'vitest';
@@ -24,7 +24,11 @@ vi.mock('@/lib/purchases', () => ({
   }),
 }));
 vi.mock('@/lib/webBillingConfig', () => ({ isWebBillingConfigured: vi.fn(() => true) }));
-const analytics = vi.hoisted(() => ({ trialChargeNoticeShown: vi.fn() }));
+const analytics = vi.hoisted(() => ({
+  trialChargeNoticeShown: vi.fn(),
+  paywallSuppressedEntitled: vi.fn(),
+  entitlementTierMismatch: vi.fn(),
+}));
 vi.mock('@/lib/analytics', () => ({ Analytics: analytics }));
 
 import { SubscriptionSection } from '@/components/profile/SubscriptionSection';
@@ -99,9 +103,14 @@ it('not in a trial: no trial line', async () => {
   expect(analytics.trialChargeNoticeShown).not.toHaveBeenCalled();
 });
 
-it('free tier: RevenueCat is not read at all', async () => {
+it('free tier: RevenueCat is read for the entitlement only; no trial line, Upgrade stays', async () => {
+  // 1.4.3 item 2: the entitlement is read whatever the backend tier says (it can only HIDE
+  // the Upgrade button). Nothing in the entitlement means no trial line and the button stays.
   mockedGet.mockResolvedValue({ tier: 'free', needsCircleSelection: false });
+  mockCustomerInfo.mockResolvedValue({ entitlements: { active: {} } });
   renderSection();
   expect(await screen.findByText('Free plan')).toBeInTheDocument();
-  expect(mockCustomerInfo).not.toHaveBeenCalled();
+  await waitFor(() => expect(mockCustomerInfo).toHaveBeenCalled());
+  expect(screen.queryByTestId('subscription-trial-charge')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /upgrade/i })).toBeInTheDocument();
 });

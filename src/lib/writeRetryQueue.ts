@@ -1,0 +1,394 @@
+import { Analytics } from '@/lib/analytics';
+import { classifyFailureCode } from '@/lib/apiErrors';
+import { isOfflineNow } from '@/hooks/useIsOffline';
+
+/**
+ * ONE QUIET RETRY for a quick save that dies on a network drop (1.4.3, plan
+ * docs/plans/purchase-trial-gaps-1-4-3.md item 7). Web twin of mobile's
+ * `services/writeRetryQueue.ts`.
+ *
+ * Production, 2026-11-18: ~30 quick completions, the link stalled for 25 s, then
+ * 11 failed at once with 11 stacked error dialogs and the user redid them by
+ * hand. Now a TRANSPORT failure (timeout / network_error, nothing definite from
+ * the server) is retried quietly and the user sees ONE aggregated notice
+ * ("Couldn't save N updates" with Retry) only if it never lands.
+ *
+ * RULES
+ *  - Only `isRetryableTransportFailure` is retried. A 4xx / backend code (403
+ *    VIEW_ONLY, 404, 409, 402 ...) is a real refusal: it goes to `onRefused`
+ *    (today's per-surface copy), never back into the queue.
+ *  - One entry per key (`${kind}:${itemKey}`). A later intent for the same item
+ *    SUPERSEDES: `cancel(key)` / a new `enqueue` bump the key's `seq`, and the
+ *    runner re-checks `seq === latestSeq[key]` before EVERY send, so the latest
+ *    intent wins and a stale retry never fires.
+ *  - One in-flight send per key: a re-tap or a resume can never double-send.
+ *  - A MAX AGE from the tap (`MAX_AGE_MS`): a write is never resent hours later.
+ *  - `landed()` is asked before every resend (task completion is not idempotent
+ *    on old backends): when the lost-response attempt DID land, nothing is sent
+ *    again. A server `replayed: true` is success like any other.
+ *  - Backoff 2, 5, 10, 20, 40 s. Resume (tab visible again, browser online)
+ *    runs every waiting entry at once, 3 at a time.
+ *  - Offline browser: nothing is sent while `isOfflineNow()` (owner decision
+ *    2026-10-14: no writes while offline, lib/offlineWrite.ts). The tap itself is
+ *    refused offline by the UI, so an entry only exists for a connection that
+ *    dropped AFTER the tap; its retries simply wait for the `online` event.
+ *  - In memory only, by design: a reload refetches the truth and nothing is
+ *    replayed under another session. `clear()` runs on every sign-out.
+ */
+
+export type WriteRetryKind = 'task_complete' | 'as_needed_dose' | 'event_note' | 'care_note';
+
+export type WriteRetryVia = 'backoff' | 'resume' | 'online' | 'manual';
+
+export interface WriteRetryEntry {
+  /** `${kind}:${itemKey}`, unique per item. */
+  key: string;
+  kind: WriteRetryKind;
+  /** The circle the TAP was made in (never the one on screen at resend time). */
+  circleId: string;
+  /** One attempt. Resolves on success (a `replayed: true` answer is success). */
+  send: () => Promise<unknown>;
+  /** Re-read before a resend: true when the earlier attempt already landed. */
+  landed?: () => Promise<boolean>;
+  /** The write is on the server (sent, replayed, or found landed). */
+  onSettled?: (via: WriteRetryVia | 'landed', result?: unknown) => void;
+  /** A definite refusal came back (not retryable): report it as today. */
+  onRefused?: (error: unknown) => void;
+  /** Gave up: refetch so rows show the truth. The aggregated notice follows. */
+  onGaveUp?: () => void;
+}
+
+interface Queued {
+  entry: WriteRetryEntry;
+  seq: number;
+  tapAt: number;
+  attempts: number;
+  nextAt: number;
+  via: WriteRetryVia;
+}
+
+/** Backoff steps; beyond the ladder the last step repeats until the max age. */
+export const WRITE_RETRY_DELAYS_MS = [2_000, 5_000, 10_000, 20_000, 40_000] as const;
+/** From the tap. After this the entry is given up on, never resent. */
+export const WRITE_RETRY_MAX_AGE_MS = 3 * 60_000;
+const CONCURRENCY = 3;
+
+/** Only a transport failure is retried: nothing reached (or came back from) the server. */
+export function isRetryableTransportFailure(error: unknown): boolean {
+  const code = classifyFailureCode(error);
+  return code === 'timeout' || code === 'network_error';
+}
+
+const queued = new Map<string, Queued>();
+const failed = new Map<string, WriteRetryEntry>();
+const latestSeq = new Map<string, number>();
+const inFlight = new Set<string>();
+const listeners = new Set<() => void>();
+let seqCounter = 0;
+let timer: ReturnType<typeof setTimeout> | null = null;
+let draining = false;
+let listening = false;
+let failedSnapshot = 0;
+
+function safe(fn: () => void): void {
+  try {
+    fn();
+  } catch {
+    // Analytics / a caller callback must never break a save.
+  }
+}
+
+function notify(): void {
+  failedSnapshot = failed.size;
+  listeners.forEach((l) => safe(l));
+}
+
+/** useSyncExternalStore plumbing for the notice host. */
+export function subscribeWriteRetry(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function getFailedCount(): number {
+  return failedSnapshot;
+}
+
+/** Entries waiting for a retry (not counting ones that gave up). */
+export function pendingCount(): number {
+  return queued.size;
+}
+
+/** True while an entry for this key is waiting or in flight. */
+export function hasWriteRetry(key: string): boolean {
+  return queued.has(key) || inFlight.has(key);
+}
+
+function ensureListeners(): void {
+  if (listening || typeof window === 'undefined') return;
+  listening = true;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') void drain(true, 'resume');
+  });
+  window.addEventListener('online', () => void drain(true, 'online'));
+}
+
+function schedule(): void {
+  if (timer) {
+    clearTimeout(timer);
+    timer = null;
+  }
+  if (queued.size === 0) return;
+  let next = Infinity;
+  queued.forEach((q) => {
+    if (!inFlight.has(q.entry.key)) next = Math.min(next, q.nextAt);
+  });
+  if (next === Infinity) return;
+  timer = setTimeout(
+    () => {
+      timer = null;
+      void drain(false, 'backoff');
+    },
+    Math.max(0, next - Date.now())
+  );
+}
+
+/**
+ * Queue a write whose FIRST attempt just failed with a transport failure. The
+ * first retry is due after the first backoff step. A previous entry for the same
+ * key is superseded.
+ */
+export function enqueueWriteRetry(entry: WriteRetryEntry, opts: { tapAt?: number } = {}): void {
+  ensureListeners();
+  const seq = ++seqCounter;
+  latestSeq.set(entry.key, seq);
+  failed.delete(entry.key);
+  const now = Date.now();
+  queued.set(entry.key, {
+    entry,
+    seq,
+    tapAt: opts.tapAt ?? now,
+    attempts: 0,
+    nextAt: now + WRITE_RETRY_DELAYS_MS[0],
+    via: 'backoff',
+  });
+  notify();
+  safe(() => Analytics.writeRetryScheduled(entry.kind, queued.size));
+  schedule();
+}
+
+/**
+ * A later intent for the same item wins (the user took it back): nothing queued
+ * is sent. Returns true when there was an entry. An attempt already in flight
+ * cannot be recalled: if it lands, the write stands (the server has no
+ * un-complete), which the caller's refetch then shows.
+ */
+export function cancelWriteRetry(key: string): boolean {
+  const had = queued.has(key);
+  latestSeq.set(key, ++seqCounter);
+  queued.delete(key);
+  const hadFailed = failed.delete(key);
+  if (had || hadFailed) notify();
+  schedule();
+  return had;
+}
+
+function giveUp(q: Queued): void {
+  queued.delete(q.entry.key);
+  failed.set(q.entry.key, q.entry);
+  safe(() => Analytics.writeRetryGaveUp(q.entry.kind, failed.size));
+  safe(() => q.entry.onGaveUp?.());
+  notify();
+}
+
+function isCurrent(q: Queued): boolean {
+  return latestSeq.get(q.entry.key) === q.seq && queued.get(q.entry.key) === q;
+}
+
+async function attempt(q: Queued): Promise<void> {
+  const { entry } = q;
+  if (!isCurrent(q)) return;
+  if (Date.now() - q.tapAt > WRITE_RETRY_MAX_AGE_MS) {
+    giveUp(q);
+    return;
+  }
+  inFlight.add(entry.key);
+  try {
+    let landedAlready = false;
+    let result: unknown;
+    if (entry.landed) {
+      try {
+        landedAlready = await entry.landed();
+      } catch {
+        landedAlready = false;
+      }
+    }
+    // The re-read took time: the user may have taken the write back meanwhile.
+    if (!isCurrent(q)) return;
+    if (!landedAlready) result = await entry.send();
+    inFlight.delete(entry.key);
+    if (queued.get(entry.key) === q) queued.delete(entry.key);
+    safe(() => Analytics.writeRetrySucceeded(entry.kind, 1, q.via));
+    safe(() => entry.onSettled?.(landedAlready ? 'landed' : q.via, result));
+    notify();
+  } catch (error) {
+    inFlight.delete(entry.key);
+    if (!isCurrent(q)) return;
+    if (!isRetryableTransportFailure(error)) {
+      // A real refusal (403 / 404 / 409 / 402 ...): never retried, today's copy.
+      queued.delete(entry.key);
+      safe(() => entry.onRefused?.(error));
+      notify();
+      return;
+    }
+    q.attempts += 1;
+    if (Date.now() - q.tapAt > WRITE_RETRY_MAX_AGE_MS) {
+      giveUp(q);
+      return;
+    }
+    const step = WRITE_RETRY_DELAYS_MS[Math.min(q.attempts, WRITE_RETRY_DELAYS_MS.length - 1)];
+    q.nextAt = Date.now() + step;
+    q.via = 'backoff';
+  } finally {
+    inFlight.delete(entry.key);
+  }
+}
+
+/** Run what is due (or everything waiting, on a resume), 3 at a time. */
+async function drain(force: boolean, via: WriteRetryVia): Promise<void> {
+  if (draining) return;
+  draining = true;
+  try {
+    for (;;) {
+      const now = Date.now();
+      const due = [...queued.values()].filter(
+        (q) => !inFlight.has(q.entry.key) && (force || q.nextAt <= now)
+      );
+      if (due.length === 0) return;
+      for (let i = 0; i < due.length; i += CONCURRENCY) {
+        // Nothing is sent while the browser is offline: wait for `online`.
+        if (isOfflineNow()) return;
+        const batch = due.slice(i, i + CONCURRENCY);
+        batch.forEach((q) => {
+          q.via = force ? via : 'backoff';
+        });
+        await Promise.all(batch.map((q) => attempt(q)));
+      }
+      // A forced pass tries each waiting entry once; the timer owns the rest.
+      if (force) return;
+    }
+  } finally {
+    draining = false;
+    schedule();
+  }
+}
+
+/**
+ * FOREGROUND QUIET RETRY, for a write whose caller is still waiting on it (the
+ * note composers). Same rules as the queue (transport failures only, a max age,
+ * one in-flight run per key, a 4xx / backend code is rethrown at once), but the
+ * caller's promise stays pending across the backoff, so a draft is NEVER cleared
+ * for a save that has not landed: the composer keeps its text and its own inline
+ * error if every attempt fails, which is why no aggregated notice is needed.
+ *
+ * `send` MUST carry an idempotency key (`client_request_id`): a first attempt
+ * whose response was lost may have landed, and the server then answers the
+ * resend 200 `replayed: true`, which resolves here like any success.
+ */
+const foregroundInFlight = new Set<string>();
+export const FOREGROUND_RETRY_DELAYS_MS = [2_000, 5_000, 10_000] as const;
+
+export async function sendWithQuietRetry<T>(
+  key: string,
+  kind: WriteRetryKind,
+  send: () => Promise<T>,
+  opts: { delaysMs?: readonly number[]; maxAgeMs?: number } = {}
+): Promise<T> {
+  // One in-flight run per key: a re-submit of the same request joins nothing, it is refused.
+  if (foregroundInFlight.has(key)) throw new Error('Write already in flight');
+  foregroundInFlight.add(key);
+  const delays = opts.delaysMs ?? FOREGROUND_RETRY_DELAYS_MS;
+  const maxAge = opts.maxAgeMs ?? WRITE_RETRY_MAX_AGE_MS;
+  const startedAt = Date.now();
+  let retries = 0;
+  try {
+    for (;;) {
+      try {
+        const result = await send();
+        if (retries > 0) safe(() => Analytics.writeRetrySucceeded(kind, 1, 'backoff'));
+        return result;
+      } catch (error) {
+        const delay = delays[retries];
+        if (
+          !isRetryableTransportFailure(error) ||
+          delay === undefined ||
+          Date.now() - startedAt + delay > maxAge
+        ) {
+          if (retries > 0 && isRetryableTransportFailure(error)) {
+            safe(() => Analytics.writeRetryGaveUp(kind, 1));
+          }
+          throw error;
+        }
+        if (retries === 0) safe(() => Analytics.writeRetryScheduled(kind, 1));
+        retries += 1;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  } finally {
+    foregroundInFlight.delete(key);
+  }
+}
+
+/** The notice's Retry: every given-up entry goes again with a fresh budget. */
+export function retryFailedWrites(): void {
+  const entries = [...failed.values()];
+  if (entries.length === 0) return;
+  failed.clear();
+  const now = Date.now();
+  entries.forEach((entry) => {
+    const seq = ++seqCounter;
+    latestSeq.set(entry.key, seq);
+    queued.set(entry.key, {
+      entry,
+      seq,
+      tapAt: now,
+      attempts: 0,
+      nextAt: now,
+      via: 'manual',
+    });
+  });
+  notify();
+  void drain(true, 'manual');
+}
+
+/** The notice was dismissed: forget what gave up (rows were already refetched). */
+export function dismissFailedWrites(): void {
+  if (failed.size === 0) return;
+  failed.clear();
+  notify();
+}
+
+/** Sign-out / account switch: nothing queued under the old session is ever sent. */
+export function clearWriteRetryQueue(): void {
+  queued.forEach((_q, key) => latestSeq.set(key, ++seqCounter));
+  queued.clear();
+  failed.clear();
+  if (timer) {
+    clearTimeout(timer);
+    timer = null;
+  }
+  notify();
+}
+
+/** Test hook: full reset including in-flight bookkeeping. */
+export function __resetWriteRetryForTests(): void {
+  clearWriteRetryQueue();
+  inFlight.clear();
+  foregroundInFlight.clear();
+  latestSeq.clear();
+  listeners.clear();
+  draining = false;
+  seqCounter = 0;
+  failedSnapshot = 0;
+}

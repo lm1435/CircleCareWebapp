@@ -486,6 +486,10 @@ function pickEnum<T extends string>(value: unknown, allowed: readonly T[], fallb
 
 const PLAN_KEYS = ['annual', 'monthly'] as const satisfies readonly PlanKey[];
 
+/** Closed set for the write-retry events (lib/writeRetryQueue.ts `WriteRetryKind`). */
+const WRITE_RETRY_KINDS = ['task_complete', 'as_needed_dose', 'event_note', 'care_note'] as const;
+type WriteRetryKindName = (typeof WRITE_RETRY_KINDS)[number];
+
 /** How the paywall was left (`paywall_dismissed.method`, identical on mobile; web never sends 'swipe'). */
 export const PAYWALL_DISMISS_METHODS = ['close', 'continue_free', 'swipe', 'back'] as const;
 export type PaywallDismissMethod = (typeof PAYWALL_DISMISS_METHODS)[number];
@@ -763,6 +767,93 @@ export const Analytics = {
     capture('trial_charge_notice_shown', {
       surface: pickEnum(surface, ['paywall', 'profile'], 'paywall'),
       store: pickEnum(store, ['apple', 'google', 'web'], 'web'),
+    }),
+
+  /**
+   * 1.4.3 item 4. A TRIAL started: fired once on purchase success when the
+   * CustomerInfo RevenueCat returned carries an entitlement whose period type is
+   * TRIAL (never from what the page advertised: a returning subscriber's
+   * "trial" product comes back NORMAL and fires nothing). Funnel context only;
+   * the count of record is the server's RevenueCat webhook event. Enums only.
+   */
+  trialStarted: (args: {
+    plan: PlanKey;
+    store: 'apple' | 'google' | 'web';
+    source: 'promise' | 'recovered';
+    paywallContext?: PaywallContext;
+  }) =>
+    capture('trial_started', {
+      plan: pickEnum(args.plan, PLAN_KEYS, 'annual'),
+      store: pickEnum(args.store, ['apple', 'google', 'web'], 'web'),
+      source: pickEnum(args.source, ['promise', 'recovered'], 'promise'),
+      paywall_context: args.paywallContext ?? DEFAULT_PAYWALL_CONTEXT,
+    }),
+
+  /** 1.4.3 item 4. Any completed purchase (trial or not); same properties as `trial_started`. */
+  purchaseCompleted: (args: {
+    plan: PlanKey;
+    store: 'apple' | 'google' | 'web';
+    source: 'promise' | 'recovered';
+    paywallContext?: PaywallContext;
+  }) =>
+    capture('purchase_completed', {
+      plan: pickEnum(args.plan, PLAN_KEYS, 'annual'),
+      store: pickEnum(args.store, ['apple', 'google', 'web'], 'web'),
+      source: pickEnum(args.source, ['promise', 'recovered'], 'promise'),
+      paywall_context: args.paywallContext ?? DEFAULT_PAYWALL_CONTEXT,
+    }),
+
+  /**
+   * 1.4.3 item 2. The sell button was NOT offered because RevenueCat says the
+   * user already holds Premium (a second purchase would double-charge).
+   */
+  paywallSuppressedEntitled: (surface: 'paywall' | 'profile' | 'digest_row') =>
+    capture('paywall_suppressed_entitled', {
+      surface: pickEnum(surface, ['paywall', 'profile', 'digest_row'], 'paywall'),
+      platform: 'web',
+    }),
+
+  /**
+   * 1.4.3 item 2. The backend tier and RevenueCat disagreed. `resolved` says
+   * whether the re-sync brought the backend in line.
+   */
+  entitlementTierMismatch: (
+    direction: 'rc_active_backend_free' | 'backend_premium_rc_inactive',
+    resolved: boolean
+  ) =>
+    capture('entitlement_tier_mismatch', {
+      direction: pickEnum(
+        direction,
+        ['rc_active_backend_free', 'backend_premium_rc_inactive'],
+        'rc_active_backend_free'
+      ),
+      resolved: resolved === true,
+    }),
+
+  /** 1.4.3 item 7. A quick save failed on the network and was queued for a quiet retry. */
+  writeRetryScheduled: (kind: WriteRetryKindName, count: number) =>
+    capture('write_retry_scheduled', {
+      key: pickEnum(kind, WRITE_RETRY_KINDS, 'task_complete'),
+      count: wholeSeconds(count),
+    }),
+
+  /** 1.4.3 item 7. A queued save landed (`via`: how the retry was triggered). */
+  writeRetrySucceeded: (
+    kind: WriteRetryKindName,
+    count: number,
+    via: 'backoff' | 'resume' | 'online' | 'manual'
+  ) =>
+    capture('write_retry_succeeded', {
+      key: pickEnum(kind, WRITE_RETRY_KINDS, 'task_complete'),
+      count: wholeSeconds(count),
+      via: pickEnum(via, ['backoff', 'resume', 'online', 'manual'], 'backoff'),
+    }),
+
+  /** 1.4.3 item 7. A queued save never landed (the aggregated notice follows). */
+  writeRetryGaveUp: (kind: WriteRetryKindName, count: number) =>
+    capture('write_retry_gave_up', {
+      key: pickEnum(kind, WRITE_RETRY_KINDS, 'task_complete'),
+      count: wholeSeconds(count),
     }),
 
   /** The user opened checkout and backed out of it. Distinct from

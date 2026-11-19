@@ -87,6 +87,8 @@ export function usePurchasePlan(): UseMutationResult<CustomerInfo | null, Error,
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.subscriptionStatus }),
         queryClient.invalidateQueries({ queryKey: queryKeys.circles }),
+        // The entitlement just changed: the next read must be fresh, not the cached "free".
+        queryClient.invalidateQueries({ queryKey: ['webCustomerInfo'] }),
       ]);
     },
   });
@@ -96,7 +98,9 @@ export function usePurchasePlan(): UseMutationResult<CustomerInfo | null, Error,
  * RevenueCat's CustomerInfo for the signed-in user, for the trial line on the
  * profile's subscription card. RevenueCat holds every store's entitlement, so
  * an App Store / Play trial shows here too. Only with Web Billing configured
- * (the SDK needs its key) and only while the cached tier is premium.
+ * (the SDK needs its key). 1.4.3 item 2: also the entitlement half of "who is
+ * Premium" on the surfaces that sell it (hooks/useEffectivePremium.ts), so it is
+ * read whatever the cached tier says; `null` means unreadable (fail open).
  */
 export function useWebCustomerInfo(enabled: boolean): UseQueryResult<CustomerInfo | null> {
   const userId = useAuthStore((s) => s.user?.id);
@@ -107,11 +111,31 @@ export function useWebCustomerInfo(enabled: boolean): UseQueryResult<CustomerInf
     retry: false,
     queryFn: async () => {
       try {
-        return await getWebCustomerInfo(userId as string);
+        // Capped: an unreadable RevenueCat is "unknown" (null), never a spinner that
+        // outlives the page (1.4.3 item 2). The backend tier then decides, as before.
+        return await withTimeout(getWebCustomerInfo(userId as string), CUSTOMER_INFO_TIMEOUT_MS);
       } catch {
         return null;
       }
     },
+  });
+}
+
+const CUSTOMER_INFO_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error('timeout')), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(id);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(id);
+        reject(error);
+      }
+    );
   });
 }
 

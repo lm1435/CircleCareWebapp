@@ -196,7 +196,21 @@ export function toWebPlan(pkg: Package): WebPlan {
   };
 }
 
-/** Open RevenueCat's hosted checkout for a package. Resolves once the purchase
+/**
+ * PLATFORM EXCEPTION (1.4.3 item 1, docs/plans/purchase-trial-gaps-1-4-3-fable-review.md):
+ * NO purchase-recovery code on web, deliberately.
+ *
+ * Mobile recovers a purchase whose native promise never returned (Android's
+ * singleTask launch mode can lose the Play sheet's callback). That hang cannot
+ * happen here: checkout is an IN-PAGE modal, `purchase()` resolves or rejects in
+ * the same JS context, and nothing leaves the page. A recovery that re-read the
+ * entitlement on `visibilitychange` would only add a way to report ONE purchase
+ * twice (the promise AND the re-read), so there is none. What web does have is
+ * item 2's entitlement-aware paywall (hooks/useEffectivePremium.ts): if a
+ * purchase's backend sync lags, the page says "Activating your Premium" with
+ * Retry instead of selling again.
+ *
+ * Open RevenueCat's hosted checkout for a package. Resolves once the purchase
  *  completes; rejects with a {@link PurchasesError} (user-cancel included). */
 export async function purchasePackage(
   userId: string,

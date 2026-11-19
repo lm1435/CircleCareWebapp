@@ -138,5 +138,10 @@
     "year_one": "{{count}} anno",
     "year_other": "{{count}} anni"
   },
-  "startTrialWithDuration": "Inizia la prova gratuita di {{period}}"
+  "startTrialWithDuration": "Inizia la prova gratuita di {{period}}",
+  "activating": {
+    "title": "Attivazione del tuo Premium",
+    "body": "Il tuo abbonamento è attivo. Stiamo finendo di configurare il tuo account.",
+    "retry": "Riprova"
+  }
 }

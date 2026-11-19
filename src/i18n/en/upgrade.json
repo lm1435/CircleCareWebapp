@@ -138,5 +138,10 @@
     "year_one": "{{count}} year",
     "year_other": "{{count}} years"
   },
-  "startTrialWithDuration": "Start {{period}} free trial"
+  "startTrialWithDuration": "Start {{period}} free trial",
+  "activating": {
+    "title": "Activating your Premium",
+    "body": "Your subscription is active. We're finishing setting up your account.",
+    "retry": "Retry"
+  }
 }

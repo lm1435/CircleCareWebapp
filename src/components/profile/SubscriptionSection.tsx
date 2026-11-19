@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Skeleton, Text, useToast } from '@/components/ui';
 import { StoreBadges } from '@/components/layout/StoreBadges';
-import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
+import { useEffectivePremium } from '@/hooks/useEffectivePremium';
 import { useManageSubscription, useWebCustomerInfo, useWebPlans } from '@/hooks/useWebBilling';
 import { isWebBillingConfigured } from '@/lib/webBillingConfig';
 import { trialChargeFrom, trialChargeNote, trialEndsLine } from '@/lib/trialCharge';
@@ -30,15 +30,18 @@ export function SubscriptionSection({
   const { t, i18n } = useTranslation(['profile', 'common']);
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { data, isLoading } = useSubscriptionStatus();
+  // PREMIUM = backend tier OR an active entitlement (1.4.3 item 2). A user RevenueCat says is
+  // paying never sees the Upgrade button, and a mismatch re-syncs the backend once per session.
+  const premium = useEffectivePremium({ surface: 'profile' });
+  const isLoading = premium.statusLoading;
   const manage = useManageSubscription();
-  const isPremium = data?.tier === 'premium';
+  const isPremium = premium.isPremium;
   const webBilling = isWebBillingConfigured();
 
   // IN A FREE TRIAL: when it ends and what the first charge is, from
   // RevenueCat's entitlement (any store; lib/trialCharge.ts). The price is
   // stated only for a web plan, whose localized Stripe price this page knows.
-  const { data: customerInfo } = useWebCustomerInfo(isPremium);
+  const { data: customerInfo } = useWebCustomerInfo(true);
   const trialCharge = isPremium ? trialChargeFrom(customerInfo) : null;
   const { data: webPlans } = useWebPlans(trialCharge?.store === 'web');
   const trialPrice =

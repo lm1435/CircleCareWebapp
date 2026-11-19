@@ -53,6 +53,7 @@ import { SettingsList, type SettingsListGroup } from '@/components/profile/Setti
 import { isSettingsPage, settingsPath, type SettingsPage } from '@/lib/settingsSections';
 import { isDarkModeEnabled, useThemeStore } from '@/lib/theme';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
+import { useEffectivePremium } from '@/hooks/useEffectivePremium';
 import { useCircles } from '@/hooks/useCircles';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
@@ -188,8 +189,11 @@ export default function ProfilePage(): ReactElement {
   });
   const user = userQuery.data;
   // Same cached query SubscriptionSection reads — no extra request.
+  // PREMIUM = backend tier OR an active entitlement (1.4.3 item 2): the digest row below sells
+  // Premium, so it is hidden for a user RevenueCat says is paying. The toggle itself is still
+  // gated by the backend (402) until the re-sync (run by SubscriptionSection) catches up.
   const { data: subscription } = useSubscriptionStatus();
-  const isPremium = subscription?.tier === 'premium';
+  const { isPremium } = useEffectivePremium({ surface: 'digest_row' });
   // Weekly summary: same visibility rules as mobile (ProfileScreen). It is a Premium
   // feature of circles you own or belong to, so a free member with no circle of their
   // own never sees it (they cannot buy it), and a free owner sees an upgrade row
