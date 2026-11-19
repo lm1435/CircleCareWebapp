@@ -184,6 +184,8 @@ const KEYED_POST_ROUTES: readonly RegExp[] = [
   /^\/circles\/[^/]+\/vitals$/,
   /^\/circles\/[^/]+\/providers$/,
   /^\/circles\/[^/]+\/invites$/,
+  /^\/feedback$/,
+  /^\/circles\/[^/]+\/dose-alerts\/answer$/,
   /^\/invites\/code\/[^/]+\/preview$/, // a read in POST clothing
 ];
 

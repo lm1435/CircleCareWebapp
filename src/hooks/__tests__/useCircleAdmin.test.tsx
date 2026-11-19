@@ -133,6 +133,20 @@ describe('useCreateCircle', () => {
     expect(keyOf(2)).not.toBe(keyOf(0));
   });
 
+  it('NEGATIVE item 15: after a 4xx refusal the next attempt gets a NEW key (the backend caches a 4xx per key)', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValueOnce(CIRCLE_LIMIT_ENVELOPE).mockResolvedValue(NEW_CIRCLE);
+    const { result } = renderHook(() => useCreateCircle(), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({ recipient_name: 'Rose' }).catch(() => undefined);
+    });
+    await act(async () => {
+      await result.current.mutateAsync({ recipient_name: 'Rose' });
+    });
+    const keyOf = (n: number) => (mockCreate.mock.calls[n][1] as { idempotencyKey: string }).idempotencyKey;
+    expect(keyOf(1)).not.toBe(keyOf(0));
+  });
+
   it('NEGATIVE item 15: a changed form after a failure gets a NEW key (never replays the old payload)', async () => {
     const { wrapper } = setup();
     mockCreate.mockRejectedValueOnce({ code: 'ERR_NETWORK', isAxiosError: true }).mockResolvedValue(NEW_CIRCLE);

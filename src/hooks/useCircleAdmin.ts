@@ -26,6 +26,7 @@ import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { Analytics } from '@/lib/analytics';
 import { newIdempotencyKey } from '@/lib/idempotentWrite';
+import { isNoResponseFailure } from '@/lib/apiErrors';
 
 // Plan Stage 8, Task 8.2 — owner-only circle edit/delete mutations.
 //
@@ -144,6 +145,8 @@ export function useCreateCircle(): UseMutationResult<Circle, unknown, CreateCirc
       void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
     },
     onError: (error: unknown) => {
+      // The backend caches a 4xx answer per key: only a failure with NO answer may reuse the key.
+      if (!isNoResponseFailure(error)) attempt.current = null;
       if (isSubscriptionRequiredError(error)) {
         promptUpgrade();
       } else if (isCircleLimitReachedError(error)) {
