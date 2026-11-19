@@ -328,7 +328,7 @@
       "owner": "Quem estiver neste plantão",
       "ownerNow": "Agora: {{name}}",
       "ownerOpen": "Ainda não há ninguém neste plantão",
-      "sameSideOfMidnight": "Esta tarefa precisa ficar do mesmo lado da meia-noite. Exclua e adicione de novo para mudá-la.",
+      "sameSideOfMidnight": "Esta tarefa precisa ficar do mesmo lado da meia-noite. Exclua e adicione de novo para movê-la.",
       "deleteTask": "Excluir tarefa",
       "deleted": "Tarefa excluída",
       "updated": "Tarefa atualizada"
