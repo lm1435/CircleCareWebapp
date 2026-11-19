@@ -23,7 +23,13 @@ import { isOfflineNow } from '@/hooks/useIsOffline';
 
 const MAX_RETRIES = 3;
 const IS_TEST = typeof process !== 'undefined' && !!process.env?.VITEST;
-const RETRY_DELAYS_MS = IS_TEST ? [0, 0, 0] : [1000, 2000, 4000];
+/**
+ * ONE ladder for every write (1.4.3 owner rule: "everything that posts to the server tries again
+ * before telling the person it can't save"): 3 retries after the first attempt, 1 / 3 / 7 s.
+ * Mobile uses the same numbers (mobile/src/api/idempotentWrite.ts).
+ */
+export const WRITE_RETRY_LADDER_MS: readonly number[] = IS_TEST ? [0, 0, 0] : [1000, 3000, 7000];
+const RETRY_DELAYS_MS = WRITE_RETRY_LADDER_MS;
 
 const RETRYABLE_SERVER_CODES: ReadonlySet<string> = new Set([
   'SERVER_ERROR',
@@ -81,13 +87,13 @@ export function isRetryableWriteFailure(err: unknown): boolean {
   }
 }
 
-function isAway(): boolean {
+export function isAway(): boolean {
   const hidden = typeof document !== 'undefined' && document.visibilityState === 'hidden';
   return hidden || isOfflineNow();
 }
 
 /** Resolve once the tab is visible and the browser is online. */
-function waitUntilPresent(): Promise<void> {
+export function waitUntilPresent(): Promise<void> {
   if (!isAway()) return Promise.resolve();
   return new Promise((resolve) => {
     const check = () => {
@@ -101,7 +107,7 @@ function waitUntilPresent(): Promise<void> {
   });
 }
 
-function newIdempotencyKey(): string {
+export function newIdempotencyKey(): string {
   const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (c && typeof c.randomUUID === 'function') return c.randomUUID();
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
@@ -161,4 +167,73 @@ export async function sendIdempotentWrite<T>(
       retries += 1;
     }
   }
+}
+
+
+// ── Automatic retry for EVERY write (axios layer; lib/api.ts calls these) ─────────────────────────
+
+/**
+ * POST routes that create something and so need an Idempotency-Key to be repeated safely. The
+ * backend replays the first answer for the same key (middleware/idempotency.ts, and the create-route
+ * additions of 1.4.3). Every other POST is an action (accept, leave, resend, complete ...) whose
+ * repeat could answer a false 409 / 404, so it is NOT auto-retried here: one-tap actions go through
+ * the persistent queue (lib/writeRetryQueue.ts), the rest show their error once.
+ */
+const KEYED_POST_ROUTES: readonly RegExp[] = [
+  /^\/circles$/,
+  /^\/circles\/[^/]+\/vitals$/,
+  /^\/circles\/[^/]+\/providers$/,
+  /^\/circles\/[^/]+\/invites$/,
+  /^\/invites\/code\/[^/]+\/preview$/, // a read in POST clothing
+];
+
+/** Never repeated: account deletion (a repeat after success answers 401, and it is irreversible). */
+const NEVER_RETRY: readonly RegExp[] = [/^\/users\/me$/];
+
+export interface AutoRetryState {
+  /** Retries already made for this request (0 = first attempt). */
+  _writeRetries?: number;
+  /** The interceptor generated the Idempotency-Key (so it owns the retries). */
+  _autoKeyed?: boolean;
+  /** A caller that retries itself (queue, in-call helpers) opts out. */
+  _noAutoRetry?: boolean;
+}
+
+function pathOf(url: string | undefined): string {
+  return (url ?? '').split('?')[0].split('#')[0];
+}
+
+/** Which kind of automatic retry (if any) this request gets. */
+export function autoRetryKind(
+  method: string | undefined,
+  url: string | undefined,
+  hasCallerKey: boolean,
+  state: AutoRetryState
+): 'keyed_post' | 'idempotent' | null {
+  const m = (method ?? 'get').toLowerCase();
+  const path = pathOf(url);
+  if (state._noAutoRetry || path.startsWith('/auth/')) return null;
+  if (NEVER_RETRY.some((r) => r.test(path)) && m === 'delete') return null;
+  if (m === 'put' || m === 'patch' || m === 'delete') {
+    // A caller-provided key means the caller (sendIdempotentWrite) retries itself.
+    return hasCallerKey && !state._autoKeyed ? null : 'idempotent';
+  }
+  if (m === 'post' && KEYED_POST_ROUTES.some((r) => r.test(path))) {
+    return hasCallerKey && !state._autoKeyed ? null : 'keyed_post';
+  }
+  return null;
+}
+
+/** True when the request got no answer (offline, dropped connection, timeout). */
+export function isNoAnswer(err: unknown): boolean {
+  const e = err as { isAxiosError?: unknown; response?: unknown; code?: unknown } | null;
+  if (!e || typeof e !== 'object') return false;
+  if (e.response) return false;
+  return e.isAxiosError === true || e.code === 'ECONNABORTED' || e.code === 'ETIMEDOUT' || e.code === 'ERR_NETWORK';
+}
+
+/** Wait until present, but never longer than `maxMs` (a retry must not hang a form for good). */
+export async function waitPresentBounded(maxMs = 30_000): Promise<void> {
+  if (!isAway()) return;
+  await Promise.race([waitUntilPresent(), new Promise<void>((r) => setTimeout(r, maxMs))]);
 }

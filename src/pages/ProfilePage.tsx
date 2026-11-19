@@ -468,7 +468,15 @@ export default function ProfilePage(): ReactElement {
     setQuietEnd(end);
     updateQuiet.mutate(
       { quiet_hours_start: start, quiet_hours_end: end },
-      { onSuccess: () => showToast(t('quietHours.success'), 'success') }
+      {
+        onSuccess: () => showToast(t('quietHours.success'), 'success'),
+        // A failed save must not leave the pickers showing a time that was never stored (the
+        // seed effect will not re-run: the server value did not change). Back to what is saved.
+        onError: () => {
+          setQuietStart(user?.quiet_hours_start ? normalizeTimeOfDay(user.quiet_hours_start) : '22:00');
+          setQuietEnd(user?.quiet_hours_end ? normalizeTimeOfDay(user.quiet_hours_end) : '07:00');
+        },
+      }
     );
   };
 

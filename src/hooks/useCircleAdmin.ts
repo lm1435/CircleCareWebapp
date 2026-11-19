@@ -3,6 +3,7 @@ import {
   useQueryClient,
   type UseMutationResult,
 } from '@tanstack/react-query';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   createCircle,
@@ -24,6 +25,7 @@ import {
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { Analytics } from '@/lib/analytics';
+import { newIdempotencyKey } from '@/lib/idempotentWrite';
 
 // Plan Stage 8, Task 8.2 — owner-only circle edit/delete mutations.
 //
@@ -123,9 +125,22 @@ export function useCreateCircle(): UseMutationResult<Circle, unknown, CreateCirc
   const { promptUpgrade } = usePremiumGate('capacity');
   const { t } = useTranslation(['common', 'circles']);
 
+  // ONE Idempotency-Key per form attempt (1.4.3 audit item 15): the in-call retries share it (the
+  // API client reuses the request), and so does a manual re-tap of Create after a failure whose
+  // response was lost, so a circle that DID land is returned, never doubled. A changed form (other
+  // payload) is a new attempt; a success ends the attempt.
+  const attempt = useRef<{ sig: string; key: string } | null>(null);
+
   return useMutation({
-    mutationFn: (data: CreateCircleRequest) => createCircle(data),
+    mutationFn: (data: CreateCircleRequest) => {
+      const sig = JSON.stringify(data);
+      if (!attempt.current || attempt.current.sig !== sig) {
+        attempt.current = { sig, key: newIdempotencyKey() };
+      }
+      return createCircle(data, { idempotencyKey: attempt.current.key });
+    },
     onSuccess: () => {
+      attempt.current = null;
       void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
     },
     onError: (error: unknown) => {

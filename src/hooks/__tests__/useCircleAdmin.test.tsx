@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
@@ -109,9 +109,42 @@ describe('useCreateCircle', () => {
     result.current.mutate(body);
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockCreate).toHaveBeenCalledWith(body);
+    expect(mockCreate).toHaveBeenCalledWith(body, { idempotencyKey: expect.stringMatching(/^[A-Za-z0-9_-]{16,128}$/) });
     expect(result.current.data).toEqual(NEW_CIRCLE);
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
+  });
+
+  it('item 15: a re-tap after a failed Create reuses the SAME Idempotency-Key; a changed form or a success starts a new one', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValueOnce({ code: 'ERR_NETWORK', isAxiosError: true }).mockResolvedValue(NEW_CIRCLE);
+    const { result } = renderHook(() => useCreateCircle(), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({ recipient_name: 'Rose' }).catch(() => undefined);
+    });
+    await act(async () => {
+      await result.current.mutateAsync({ recipient_name: 'Rose' });
+    });
+    const keyOf = (n: number) => (mockCreate.mock.calls[n][1] as { idempotencyKey: string }).idempotencyKey;
+    expect(keyOf(1)).toBe(keyOf(0));
+    // Success ended the attempt: the next Create is a new circle, a new key.
+    await act(async () => {
+      await result.current.mutateAsync({ recipient_name: 'Rose' });
+    });
+    expect(keyOf(2)).not.toBe(keyOf(0));
+  });
+
+  it('NEGATIVE item 15: a changed form after a failure gets a NEW key (never replays the old payload)', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValueOnce({ code: 'ERR_NETWORK', isAxiosError: true }).mockResolvedValue(NEW_CIRCLE);
+    const { result } = renderHook(() => useCreateCircle(), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({ recipient_name: 'Rose' }).catch(() => undefined);
+    });
+    await act(async () => {
+      await result.current.mutateAsync({ recipient_name: 'Rosa' });
+    });
+    const keyOf = (n: number) => (mockCreate.mock.calls[n][1] as { idempotencyKey: string }).idempotencyKey;
+    expect(keyOf(1)).not.toBe(keyOf(0));
   });
 
   it('surfaces a 402 as the subscription (open app to upgrade) toast', async () => {

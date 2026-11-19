@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -305,6 +305,32 @@ describe('ProfilePage saves in flight keep keyboard focus', () => {
       expect(field).toHaveAttribute('readonly');
     }
     expect(updateQuiet).not.toHaveBeenCalled();
+  });
+
+  it('item 16: a failed quiet-hours save puts the pickers back to the stored time; a success keeps the new one', async () => {
+    currentUser = { ...USER, quiet_hours_start: '22:00', quiet_hours_end: '07:00' };
+    pending = {};
+    updateQuiet.mockClear();
+    renderPage('/profile/quietHours');
+    const start = (await screen.findByLabelText(/^Start time/)) as HTMLInputElement;
+    fireEvent.change(start, { target: { value: '21:15' } });
+    expect(start.value).toBe('21:15');
+    const options = updateQuiet.mock.calls[0][1] as { onError: () => void; onSuccess: () => void };
+    act(() => options.onError());
+    expect((screen.getByLabelText(/^Start time/) as HTMLInputElement).value).toBe('22:00');
+    expect((screen.getByLabelText(/^End time/) as HTMLInputElement).value).toBe('07:00');
+  });
+
+  it('NEGATIVE item 16: a SUCCESSFUL quiet-hours save keeps the newly picked time', async () => {
+    currentUser = { ...USER, quiet_hours_start: '22:00', quiet_hours_end: '07:00' };
+    pending = {};
+    updateQuiet.mockClear();
+    renderPage('/profile/quietHours');
+    const start = (await screen.findByLabelText(/^Start time/)) as HTMLInputElement;
+    fireEvent.change(start, { target: { value: '21:15' } });
+    const options = updateQuiet.mock.calls[0][1] as { onError: () => void; onSuccess: () => void };
+    act(() => options.onSuccess());
+    expect((screen.getByLabelText(/^Start time/) as HTMLInputElement).value).toBe('21:15');
   });
 
   it('avatar colour swatches', async () => {

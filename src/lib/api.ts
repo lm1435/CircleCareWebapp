@@ -5,7 +5,16 @@ import { hasTraversalSegment } from './routeIds';
 import { API_TIMEOUT } from '@/constants/config';
 import { isOfflineNow } from '@/hooks/useIsOffline';
 import { offlineWriteRejection } from './offlineWrite';
-import { noteIdempotencyHeaders } from './idempotentWrite';
+import {
+  WRITE_RETRY_LADDER_MS,
+  autoRetryKind,
+  isIdempotencySupported,
+  isNoAnswer,
+  newIdempotencyKey,
+  noteIdempotencyHeaders,
+  waitPresentBounded,
+  type AutoRetryState,
+} from './idempotentWrite';
 import { noteReviewBlockingError } from './reviewMoments';
 import { markPaywallRefusal } from './apiErrors';
 
@@ -192,6 +201,21 @@ apiClient.interceptors.request.use(
     if (method !== 'get' && method !== 'head' && !isAuthEndpoint(config.url) && isOfflineNow()) {
       return Promise.reject(offlineWriteRejection());
     }
+    // AUTOMATIC WRITE RETRY (1.4.3 owner rule): a create POST carries ONE Idempotency-Key for all
+    // its attempts (the retry reuses this config, so the header is the same). Old backends
+    // (no `Idempotency-Supported` seen yet) get no key and no retry.
+    const retryState = config as InternalAxiosRequestConfig & AutoRetryState;
+    if (method === 'post' && !retryState._writeRetries) {
+      const hasKey = !!config.headers.get('Idempotency-Key');
+      if (
+        autoRetryKind(method, config.url, hasKey, retryState) === 'keyed_post' &&
+        !hasKey &&
+        isIdempotencySupported()
+      ) {
+        config.headers.set('Idempotency-Key', newIdempotencyKey());
+        retryState._autoKeyed = true;
+      }
+    }
     if (isCookieAuthEndpoint(config.url)) {
       // Cookie-mode auth endpoints ONLY: send the httpOnly session cookie +
       // CSRF custom header (forces a CORS preflight cross-origin attackers fail).
@@ -237,6 +261,36 @@ apiClient.interceptors.response.use(
     // No store-review banner right after something failed (lib/reviewMoments.ts):
     // no answer, a server error, or a refused write. Not a 401 (refreshed), not
     // a 402 (the paywall reports itself), not a failed read (often a stale row).
+    // AUTOMATIC WRITE RETRY: a write that got NO answer is repeated (1 / 3 / 7 s) before the caller
+    // ever sees a failure. Only the final failure reaches the caller's onError (so `error_occurred`
+    // fires once). A 4xx / 5xx answer is never retried here.
+    if (originalRequest && !axios.isCancel(error) && isNoAnswer(error)) {
+      const state = originalRequest as InternalAxiosRequestConfig & AutoRetryState;
+      const hasKey = !!originalRequest.headers?.get?.('Idempotency-Key');
+      const kind = autoRetryKind(originalRequest.method, originalRequest.url, hasKey, state);
+      const done = state._writeRetries ?? 0;
+      if (kind && (kind === 'idempotent' || hasKey) && done < WRITE_RETRY_LADDER_MS.length) {
+        state._writeRetries = done + 1;
+        const delay = WRITE_RETRY_LADDER_MS[done] ?? 0;
+        if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+        await waitPresentBounded();
+        return apiClient(originalRequest);
+      }
+    }
+    // A DELETE whose earlier attempt landed (the response was lost) answers 404 on the repeat:
+    // that is success, the thing is gone.
+    {
+      const state = originalRequest as (InternalAxiosRequestConfig & AutoRetryState) | undefined;
+      if (
+        state &&
+        (state._writeRetries ?? 0) > 0 &&
+        (state.method ?? '').toLowerCase() === 'delete' &&
+        error.response?.status === 404
+      ) {
+        return { success: true, data: undefined, retriedDeleteWasAlreadyGone: true };
+      }
+    }
+
     const failedStatus = error.response?.status;
     const isWrite = (originalRequest?.method ?? 'get').toLowerCase() !== 'get';
     if (
