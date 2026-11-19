@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import { Analytics } from '@/lib/analytics';
@@ -709,7 +709,45 @@ describe('new medication: more than one time (mobile AddEventScreen / first-run 
     await user.click(chip(/Midday/));
     await user.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(failed).toHaveBeenCalledWith('circle-1', 'medication', 'additional_dose_create_failed'));
-    expect(showToast).toHaveBeenCalledWith(expect.stringContaining('12:00'), 'error');
+    expect(showToast).toHaveBeenCalledWith(expect.stringContaining('12:00'), 'error', expect.objectContaining({ label: 'Retry' }));
+  });
+
+  it('item 4: Retry re-sends ONLY the failed dose time (the saved one is never created twice)', async () => {
+    mutateCreate
+      .mockResolvedValueOnce({ id: 'p' })
+      .mockRejectedValueOnce(new Error('boom')) // Midday fails
+      .mockResolvedValueOnce({ id: 's2' }) // Evening saves
+      .mockResolvedValue({ id: 'retried' });
+    const user = userEvent.setup();
+    renderMed();
+    await fillName(user);
+    await user.click(chip(/Morning/));
+    await user.click(chip(/Midday/));
+    await user.click(chip(/Evening/));
+    await user.click(screen.getByTestId('add-event-save'));
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.stringContaining('12:00'), 'error', expect.anything()));
+    expect(mutateCreate).toHaveBeenCalledTimes(3);
+    const failedTime = mutateCreate.mock.calls[1][0].scheduled_time;
+    const action = showToast.mock.calls.find((c) => c[1] === 'error')![2];
+    await act(async () => action.onClick());
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(4));
+    expect(mutateCreate.mock.calls[3][0].scheduled_time).toBe(failedTime);
+    expect(showToast).toHaveBeenCalledWith('Medication added', 'success');
+  });
+
+  it('NEGATIVE item 4: Retry that fails again warns again, naming only the still-missing time', async () => {
+    mutateCreate.mockResolvedValueOnce({ id: 'p' }).mockRejectedValue(new Error('boom'));
+    const user = userEvent.setup();
+    renderMed();
+    await fillName(user);
+    await user.click(chip(/Morning/));
+    await user.click(chip(/Midday/));
+    await user.click(screen.getByTestId('add-event-save'));
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.stringContaining('12:00'), 'error', expect.anything()));
+    const errors = () => showToast.mock.calls.filter((c) => c[1] === 'error');
+    await act(async () => errors()[0][2].onClick());
+    await waitFor(() => expect(errors()).toHaveLength(2));
+    expect(showToast).not.toHaveBeenCalledWith('Medication added', 'success');
   });
 });
 

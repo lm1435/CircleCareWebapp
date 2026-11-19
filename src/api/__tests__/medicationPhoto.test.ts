@@ -63,6 +63,33 @@ describe('uploadMedicationPhoto', () => {
   });
 });
 
+describe('uploadMedicationPhoto in-call retry (1.4.3 item 4)', () => {
+  const signed = () =>
+    mockPost.mockResolvedValue({ success: true, data: { uploadUrl: 'https://u', token: 't', path: 'p' } } as never);
+
+  it('first PUT drops, the in-call retry succeeds: resolves, two PUTs', async () => {
+    signed();
+    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValueOnce({ ok: true });
+    await expect(uploadMedicationPhoto('c', 'e', file('a.png', 'image/png'))).resolves.toEqual({ storagePath: 'p' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(mockPost).toHaveBeenCalledTimes(1);
+  });
+
+  it('a 503 is retried once; two failures reject (exactly 2 PUTs)', async () => {
+    signed();
+    fetchMock.mockResolvedValue({ ok: false, status: 503 });
+    await expect(uploadMedicationPhoto('c', 'e', file('a.png', 'image/png'))).rejects.toThrow();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('NEGATIVE: a 4xx refusal is NOT retried', async () => {
+    signed();
+    fetchMock.mockResolvedValue({ ok: false, status: 400 });
+    await expect(uploadMedicationPhoto('c', 'e', file('a.png', 'image/png'))).rejects.toThrow();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('medicationPhotoProblem', () => {
   it('matches the bucket: jpeg/png/webp up to 2 MB', () => {
     expect(medicationPhotoProblem(file('a.png', 'image/png'))).toBeNull();

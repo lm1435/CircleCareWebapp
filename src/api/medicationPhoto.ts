@@ -113,13 +113,24 @@ export async function uploadMedicationPhoto(
 
   if (envelope.data.uploadUrl) {
     const bytes = new Uint8Array(await file.arrayBuffer());
-    const response = await fetch(envelope.data.uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': mime },
-      body: bytes,
-      signal: AbortSignal.timeout(30000),
-    });
-    if (!response.ok) throw new Error('Failed to upload medication image');
+    // ONE in-call retry (1.4.3 audit item 4): the signed PUT is safe to repeat (it overwrites the same
+    // object). Only a no-answer failure or a 5xx is repeated; a 4xx (bad type, expired URL) is final.
+    for (let attempt = 0; ; attempt += 1) {
+      let response: Response | null = null;
+      try {
+        response = await fetch(envelope.data.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': mime },
+          body: bytes,
+          signal: AbortSignal.timeout(30000),
+        });
+      } catch (error) {
+        if (attempt >= 1) throw error;
+        continue;
+      }
+      if (response.ok) break;
+      if (attempt >= 1 || response.status < 500) throw new Error('Failed to upload medication image');
+    }
   }
   return { storagePath: envelope.data.path };
 }

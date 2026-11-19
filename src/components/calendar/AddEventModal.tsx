@@ -2075,9 +2075,20 @@ function AddEventForm({
    * it returns what failed, and the caller says so instead of the success toast.
    */
   async function savePhoto(eventId: string): Promise<'upload' | 'remove' | null> {
-    if (photoFile) {
+    if (photoFile) return runPhoto(eventId, photoFile, false);
+    if (photoRemoved && isEditing) return runPhoto(eventId, null, true);
+    return null;
+  }
+
+  /** One photo step (upload + PATCH the path, or delete). Closure-safe: Retry reuses it after the form closed. */
+  async function runPhoto(
+    eventId: string,
+    file: File | null,
+    remove: boolean
+  ): Promise<'upload' | 'remove' | null> {
+    if (file) {
       try {
-        const { storagePath } = await uploadMedicationPhoto(circleId, eventId, photoFile);
+        const { storagePath } = await uploadMedicationPhoto(circleId, eventId, file);
         await updateEventRequest(circleId, eventId, { medication_photo_url: storagePath });
         void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
         return null;
@@ -2085,7 +2096,7 @@ function AddEventForm({
         return 'upload';
       }
     }
-    if (photoRemoved && isEditing) {
+    if (remove) {
       try {
         await deleteMedicationPhoto(circleId, eventId);
         void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
@@ -2095,6 +2106,50 @@ function AddEventForm({
       }
     }
     return null;
+  }
+
+  /**
+   * The medication saved but something after it did not (extra dose times and/or the photo): say so with
+   * a Retry action (1.4.3 audit item 4). Retry re-sends ONLY what failed (the dose rows that already
+   * saved are never created twice), from data held in this closure, so it works after the form closed.
+   * Still failing: the warning comes back, with Retry again. Success: the normal success toast.
+   */
+  function showSaveWarning(
+    eventType: CreateEventRequest['event_type'],
+    failed: { siblings: CreateEventRequest[]; photo: 'upload' | 'remove' | null },
+    photoArgs: { eventId: string | undefined; file: File | null; remove: boolean }
+  ): void {
+    const message =
+      failed.siblings.length > 0
+        ? t('addEvent.alerts.someDoseTimesFailed', {
+            count: failed.siblings.length,
+            times: failed.siblings.map((x) => x.scheduled_time as string).join(', '),
+          })
+        : photoFailureMessage(failed.photo as 'upload' | 'remove');
+    showToast(message, 'error', {
+      label: t('common:writeRetry.retry'),
+      onClick: () => {
+        void (async () => {
+          const stillFailed: CreateEventRequest[] = [];
+          for (const sibling of failed.siblings) {
+            try {
+              await createEvent.mutateAsync(sibling);
+            } catch {
+              stillFailed.push(sibling);
+            }
+          }
+          const photo =
+            failed.photo && photoArgs.eventId
+              ? await runPhoto(photoArgs.eventId, photoArgs.file, photoArgs.remove)
+              : failed.photo;
+          if (stillFailed.length > 0 || photo) {
+            showSaveWarning(eventType, { siblings: stillFailed, photo }, photoArgs);
+          } else {
+            showToast(t(createdToastKey(eventType)), 'success');
+          }
+        })();
+      },
+    });
   }
 
   function photoFailureMessage(failure: 'upload' | 'remove'): string {
@@ -2162,6 +2217,7 @@ function AddEventForm({
         // The extra dose rows, after the primary (the wizard's and mobile's sequence). A miss is
         // NOT a success: the caregiver is told which times are missing.
         const failedDoseTimes: string[] = [];
+        const failedSiblings: CreateEventRequest[] = [];
         const savedDoses: SavedMedicationInfo['doses'] = [];
         if (data.event_type === 'medication' && data.scheduled_date && data.scheduled_time) {
           savedDoses.push({
@@ -2179,6 +2235,7 @@ function AddEventForm({
               });
             } catch {
               failedDoseTimes.push(sibling.scheduled_time as string);
+              failedSiblings.push(sibling);
             }
           }
         }
@@ -2257,17 +2314,15 @@ function AddEventForm({
             });
           }
         }
-        if (failedDoseTimes.length > 0) {
-          Analytics.entrySaveFailed(circleId, eventType, 'additional_dose_create_failed');
-          showToast(
-            t('addEvent.alerts.someDoseTimesFailed', {
-              count: failedDoseTimes.length,
-              times: failedDoseTimes.join(', '),
-            }),
-            'error'
+        if (failedDoseTimes.length > 0 || photoFailure) {
+          if (failedDoseTimes.length > 0) {
+            Analytics.entrySaveFailed(circleId, eventType, 'additional_dose_create_failed');
+          }
+          showSaveWarning(
+            eventType,
+            { siblings: failedSiblings, photo: photoFailure },
+            { eventId: created?.id, file: photoFile, remove: !photoFile && photoRemoved && isEditing }
           );
-        } else if (photoFailure) {
-          showToast(photoFailureMessage(photoFailure), 'error');
         } else {
           showToast(t(createdToastKey(eventType)), 'success');
         }

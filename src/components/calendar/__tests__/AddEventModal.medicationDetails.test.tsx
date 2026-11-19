@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
@@ -291,11 +291,54 @@ describe('new medication: photo', () => {
     await waitFor(() =>
       expect(showToast).toHaveBeenCalledWith(
         'Event saved but photo upload failed. You can try adding the photo later.',
-        'error'
+        'error',
+        expect.objectContaining({ label: 'Retry' })
       )
     );
     expect(patchEvent).not.toHaveBeenCalled();
     expect(showToast).not.toHaveBeenCalledWith('Medication added', 'success');
+  });
+
+  const retryAction = (): { onClick: () => void } =>
+    showToast.mock.calls.filter((c) => c[1] === 'error').at(-1)![2];
+
+  it('item 4: Retry on the photo warning re-sends ONLY the photo (no second medication) and shows the success toast', async () => {
+    uploadPhoto.mockRejectedValueOnce(new Error('400'));
+    const user = userEvent.setup();
+    renderNew();
+    await nameAndTime(user);
+    await openMore(user);
+    const file = png();
+    await user.upload(photoInput(), file);
+    await save(user);
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.any(String), 'error', expect.anything()));
+    const createsBefore = mutateCreate.mock.calls.length;
+    await act(async () => retryAction().onClick());
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('Medication added', 'success'));
+    expect(uploadPhoto).toHaveBeenCalledTimes(2);
+    expect(uploadPhoto).toHaveBeenLastCalledWith(CIRCLE_ID, 'new-med', file);
+    expect(patchEvent).toHaveBeenCalledWith(CIRCLE_ID, 'new-med', {
+      medication_photo_url: 'medication-photos/circle-1/new-med/1.png',
+    });
+    expect(mutateCreate.mock.calls.length).toBe(createsBefore);
+  });
+
+  it('NEGATIVE item 4: Retry that fails again shows the warning again with a fresh Retry, never the success toast', async () => {
+    uploadPhoto.mockRejectedValue(new Error('400'));
+    const user = userEvent.setup();
+    renderNew();
+    await nameAndTime(user);
+    await openMore(user);
+    await user.upload(photoInput(), png());
+    await save(user);
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.any(String), 'error', expect.anything()));
+    const before = showToast.mock.calls.filter((c) => c[1] === 'error').length;
+    await act(async () => retryAction().onClick());
+    await waitFor(() =>
+      expect(showToast.mock.calls.filter((c) => c[1] === 'error').length).toBe(before + 1)
+    );
+    expect(showToast).not.toHaveBeenCalledWith('Medication added', 'success');
+    expect(retryAction().onClick).toBeTypeOf('function');
   });
 
   it('refuses a type the bucket does not take, inline', async () => {
