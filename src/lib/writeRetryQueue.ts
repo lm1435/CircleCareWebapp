@@ -150,9 +150,11 @@ function newUid(): string {
   return `${Date.now().toString(36)}-${uidCounter}`;
 }
 
-function tabId(): string {
+/** `create` false: only read (a sign-out / empty queue must leave NO key behind in sessionStorage). */
+function tabId(create = true): string | null {
   try {
     let id = sessionStorage.getItem(WRITE_RETRY_TAB_KEY);
+    if (!id && !create) return null;
     if (!id) {
       id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
       sessionStorage.setItem(WRITE_RETRY_TAB_KEY, id);
@@ -179,11 +181,22 @@ function readStore(): Record<string, PersistedRow[]> {
 function persist(): void {
   try {
     const rows: PersistedRow[] = [];
+    if (queued.size === 0 && failed.size === 0 && orphanCount === 0) {
+      // Nothing outstanding: clear this tab's rows without creating any storage.
+      const me = tabId(false);
+      const existing = readStore();
+      if (me && existing[me]) {
+        delete existing[me];
+        if (Object.keys(existing).length === 0) localStorage.removeItem(WRITE_RETRY_STORAGE_KEY);
+        else localStorage.setItem(WRITE_RETRY_STORAGE_KEY, JSON.stringify(existing));
+      }
+      return;
+    }
     queued.forEach((q) => rows.push({ k: q.entry.kind, t: q.tapAt, u: q.uid }));
     failed.forEach((f) => rows.push({ k: f.entry.kind, t: f.tapAt, u: f.uid }));
     for (let i = 0; i < orphanCount; i += 1) rows.push({ k: 'orphan', t: 0, u: `orphan-${i}` });
     const store = readStore();
-    const me = tabId();
+    const me = tabId() ?? 'tab';
     // Other tabs' rows past the failed max age can never be shown again: drop them.
     const now = Date.now();
     Object.keys(store).forEach((tab) => {
@@ -207,7 +220,8 @@ function persist(): void {
  */
 export function hydrateWriteRetryQueue(): void {
   try {
-    const mine = readStore()[tabId()];
+    const me = tabId(false);
+    const mine = me ? readStore()[me] : undefined;
     if (!Array.isArray(mine)) return;
     const live = new Set<string>();
     queued.forEach((q) => live.add(q.uid));

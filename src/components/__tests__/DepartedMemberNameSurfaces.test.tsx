@@ -32,8 +32,10 @@ vi.mock('@/hooks/useCircle', () => ({
   useCircle: () => ({ circle: { owner_id: 'owner-1' }, canEdit: true }),
 }));
 vi.mock('@/store/authStore', () => ({
-  useAuthStore: (selector: (s: { user: { id: string } | null }) => unknown) =>
+  useAuthStore: Object.assign((selector: (s: { user: { id: string } | null }) => unknown) =>
     selector({ user: { id: 'user-1' } }),
+    { getState: () => ({ user: { id: 'user-1' } }) }
+  ),
 }));
 vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => '12h' }));
 
