@@ -310,7 +310,8 @@
       "skipped": "Skipped",
       "doneLabel": "Done, {{name}}",
       "takenLabel": "Taken, {{name}}",
-      "missed": "Not marked"
+      "missed": "Not marked",
+      "late": "Late"
     },
     "card": {
       "progress": "{{done}} of {{total}} done"

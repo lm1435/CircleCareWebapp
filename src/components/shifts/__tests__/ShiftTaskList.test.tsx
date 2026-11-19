@@ -258,14 +258,17 @@ describe('shift detail list: a dose nobody answered', () => {
 });
 
 describe('shift detail list: states', () => {
-  it('empty: ONE card with "Nothing on this shift\'s list yet." and an outlined "Add a task" inside it', async () => {
+  it('empty: ONE card with "Nothing on this shift\'s list yet." and a borderless "Add a task" inside it', async () => {
     const onAdd = vi.fn();
     eventsHook.value = { ...eventsHook.value, events: [] };
     renderList({ onAdd });
     const card = screen.getByTestId('shift-task-list-empty-card');
     expect(within(card).getByTestId('shift-task-list-empty')).toHaveTextContent("Nothing on this shift's list yet.");
     const add = within(card).getByRole('button', { name: 'Add a task' });
-    expect(add).toHaveAttribute('data-variant', 'outline');
+    expect(add).toHaveAttribute('data-variant', 'ghost');
+    expect(add.className).toMatch(/text-moss/);
+    expect(add.className).not.toMatch(/border-\[1\.5px\]/);
+    expect(add.className).toMatch(/min-h-\[44px\]/);
     await userEvent.setup().click(add);
     expect(onAdd).toHaveBeenCalledTimes(1);
     // ONE Add control, inside the card
@@ -288,7 +291,7 @@ describe('shift detail list: states', () => {
     renderList();
     expect(screen.getByTestId('shift-task-list-title')).toHaveTextContent(/ · \d of \d done$/);
     expect(screen.queryByTestId('shift-task-list-empty-card')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add a task' })).toHaveAttribute('data-variant', 'outline');
+    expect(screen.getByRole('button', { name: 'Add a task' })).toHaveAttribute('data-variant', 'ghost');
   });
 
   it('N: an empty list never says "0 of 0 done"', () => {
@@ -336,5 +339,59 @@ describe('shift detail list: analytics', () => {
       </ToastProvider>
     );
     expect(Analytics.shiftTaskListViewed).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+describe('shift detail list: late items (1.4.3)', () => {
+  // PINNED_NOW is 3:00 PM Chicago. 2:00 PM is 60 min past due; 2:46 PM is 14 min; 2:45 PM is exactly 15.
+  const LATE = 'shift-task-row-late';
+
+  it('P-LATE-1 an open task 15+ min past due reads "2:00 PM · Late" in the danger token', () => {
+    eventsHook.value = { ...eventsHook.value, events: [ev('t1', { scheduled_time: '14:00:00', shift: link() })] };
+    renderList();
+    const late = screen.getByTestId(LATE);
+    expect(late.textContent).toMatch(/^2:00 PM.* · Late$/); // the zone suffix may sit between
+    expect(late.className).toMatch(/text-terracotta-deep/);
+  });
+
+  it('P-LATE-2 exactly 15 minutes counts, and an open dose is late the same way', () => {
+    eventsHook.value = {
+      ...eventsHook.value,
+      events: [ev('t1', { scheduled_time: '14:45:00', shift: link() }), dose('d1', '14:00:00')],
+    };
+    renderList();
+    expect(screen.getAllByTestId(LATE)).toHaveLength(2);
+  });
+
+  it('N-LATE-1 14 minutes past due and future items are not late', () => {
+    eventsHook.value = {
+      ...eventsHook.value,
+      events: [ev('t1', { scheduled_time: '14:46:00', shift: link() }), ev('t2', { scheduled_time: '16:00:00', shift: link() })],
+    };
+    renderList();
+    expect(screen.queryByTestId(LATE)).not.toBeInTheDocument();
+    expect(screen.getByTestId('shift-task-section').textContent).not.toMatch(/Late/);
+  });
+
+  it('N-LATE-2 done, taken, skipped and missed items keep the plain time', () => {
+    eventsHook.value = {
+      ...eventsHook.value,
+      events: [
+        ev('done', { scheduled_time: '12:30:00', shift: link(), completed_at: '2026-11-09T19:00:00Z' }),
+        dose('taken', '12:00:00', 'taken'),
+        dose('skip', '12:15:00', 'skipped'),
+        dose('miss', '12:45:00', 'missed'),
+      ],
+    };
+    renderList();
+    expect(screen.queryByTestId(LATE)).not.toBeInTheDocument();
+  });
+
+  it('N-LATE-3 an item answered right now (pending undo) is no longer late', () => {
+    completion.pendingIds = new Set(['t1']);
+    eventsHook.value = { ...eventsHook.value, events: [ev('t1', { scheduled_time: '14:00:00', shift: link() })] };
+    renderList();
+    expect(screen.queryByTestId(LATE)).not.toBeInTheDocument();
   });
 });

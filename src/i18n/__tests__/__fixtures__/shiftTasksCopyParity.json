@@ -44,6 +44,7 @@
     "editWarning_one": "{{count}} task falls outside the new hours. It'll stay on the calendar as a task for Anyone.",
     "editWarning_other": "{{count}} tasks fall outside the new hours. They'll stay on the calendar as tasks for Anyone.",
     "deleteImpact_one": "This also removes its {{count}} upcoming task. Completed tasks stay in history.",
-    "deleteImpact_other": "This also removes its {{count}} upcoming tasks. Completed tasks stay in history."
+    "deleteImpact_other": "This also removes its {{count}} upcoming tasks. Completed tasks stay in history.",
+    "list.late": "Late"
   }
 }

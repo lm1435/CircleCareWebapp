@@ -154,7 +154,8 @@
       "titleYou": "A sua lista · {{done}} de {{total}} concluídas",
       "titleOpen": "Lista deste turno · {{done}} de {{total}} concluídas",
       "titleYouEmpty": "A sua lista",
-      "titleOpenEmpty": "Lista deste turno"
+      "titleOpenEmpty": "Lista deste turno",
+      "late": "Em atraso"
     }
   }
 }

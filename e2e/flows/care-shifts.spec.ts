@@ -248,7 +248,7 @@ test.describe('premium owner', () => {
     await expect(detail.getByTestId('shift-task-section')).not.toContainText('0 of 0');
     const emptyCard = detail.getByTestId('shift-task-list-empty-card');
     await expect(emptyCard).toContainText("Nothing on this shift's list yet.");
-    await expect(emptyCard.getByRole('button', { name: 'Add a task', exact: true })).toHaveAttribute('data-variant', 'outline');
+    await expect(emptyCard.getByRole('button', { name: 'Add a task', exact: true })).toHaveAttribute('data-variant', 'ghost');
     const footer = detail.locator('[data-modal-footer]');
     await expect(footer.getByRole('button', { name: 'Take shift', exact: true })).toHaveClass(/bg-primary-fill/);
     await expect(footer.getByRole('button', { name: 'Close', exact: true })).toBeVisible();

@@ -261,12 +261,12 @@ test.describe('shift tasks', () => {
     const footer = detail.locator('[data-modal-footer]');
     await expect(footer.getByRole('button', { name: 'Take shift', exact: true })).toHaveClass(/bg-primary-fill/);
     await expect(footer.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0);
-    // with rows the counter stays and the outlined Add sits under the list (no empty card)
+    // with rows the counter stays and the borderless (ghost) Add sits under the list (no empty card)
     await expect(detail.getByTestId('shift-task-list-empty-card')).toHaveCount(0);
     await expect(detail.getByTestId('shift-task-done')).toHaveAttribute('data-variant', 'outline');
 
     // Add from the detail: a one-off ("Only <date>").
-    await expect(detail.getByTestId('shift-detail-add-task')).toHaveAttribute('data-variant', 'outline');
+    await expect(detail.getByTestId('shift-detail-add-task')).toHaveAttribute('data-variant', 'ghost');
     await detail.getByRole('button', { name: 'Add a task', exact: true }).click();
     const second = page.getByRole('dialog', { name: 'Add a task' });
     await second.getByLabel(/Task name/).fill('Walk');

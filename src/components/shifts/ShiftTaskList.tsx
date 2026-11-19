@@ -14,7 +14,7 @@ import { blockOfflineWrite, offlineDisabledProps } from '@/lib/offlineWrite';
 import { Analytics } from '@/lib/analytics';
 import { formatEventTimeCompact, isDoseConfirmable, zoneReferenceInstant } from '@/utils/timezone';
 import { shiftAssignee } from './shiftPeople';
-import { buildShiftList, doneBucket, tasksBucket, type ShiftListRow } from './shiftTasks';
+import { buildShiftList, doneBucket, isShiftItemLate, tasksBucket, type ShiftListRow } from './shiftTasks';
 
 export interface ShiftTaskListProps {
   circleId: string;
@@ -37,7 +37,7 @@ export interface ShiftTaskListProps {
 /**
  * The shift detail's list (docs/plans/shift-tasks.md section 1): "<Name>'s list · n of N done"
  * (just "<Name>'s list" while it is empty: never "0 of 0 done"). An empty list is ONE card: the empty
- * line and an outlined "Add a task" (1.4.3, mobile parity).
+ * line and a borderless moss "Add a task" (1.4.3, mobile parity; outlines are for Edit / Assign / Delete).
  * It holds the shift's own tasks, the doses due in the window and the on-shift person's regular
  * tasks in the window. Only the FIRST actionable row is moss-filled; the rest are outlines (the
  * one-accent rule). Other people's and Anyone's items sit in a folded "Also happening" group.
@@ -76,6 +76,12 @@ export function ShiftTaskList({
   });
 
   const [alsoOpen, setAlsoOpen] = useState(false);
+  // "Late" needs a clock: re-evaluated once a minute (an item crosses 15 minutes while the page is open).
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
   const alsoId = useId();
   const model = useMemo(() => buildShiftList(shift, events), [shift, events]);
   const assignee = shiftAssignee(shift, members, viewerId);
@@ -122,6 +128,19 @@ export function ShiftTaskList({
   };
   // ONE filled action: the first row that has a button (none when the screen's primary is Take).
   const primaryKey = primaryAllowed ? (model.rows.find(canAct)?.key ?? null) : null;
+
+  // 15 min or more past due and still open (not done, skipped, missed or just answered): danger-coloured time + "Late".
+  const isLate = (row: ShiftListRow): boolean =>
+    !row.done && !row.missed && !isPending(row) && isShiftItemLate(row.event, timezone, nowMs);
+  const timeCaption = (row: ShiftListRow): ReactElement | string => {
+    const clock = time(row.event);
+    if (!clock || !isLate(row)) return clock;
+    return (
+      <span className="text-terracotta-deep" data-testid="shift-task-row-late">
+        {`${clock} · ${t('shifts:tasks.list.late')}`}
+      </span>
+    );
+  };
 
   const renderAction = (row: ShiftListRow): ReactElement | null => {
     const name = row.event.title;
@@ -193,11 +212,11 @@ export function ShiftTaskList({
   const addButton = canAdd ? (
     <div>
       <Button
-        variant="outline"
+        variant="ghost"
         size="sm"
         offlineKind="change"
         data-testid="shift-detail-add-task"
-        data-variant="outline"
+        data-variant="ghost"
         leftIcon={<Icon name="add-outline" size="row" />}
         onClick={onAdd}
       >
@@ -256,9 +275,10 @@ export function ShiftTaskList({
                 {row.kind === 'med' ? row.event.medication_name || row.event.title : row.event.title}
               </p>
               <p className="m-0 text-xs text-ink-2">
-                {[time(row.event), row.kind === 'med' ? row.event.medication_dosage : null]
-                  .filter(Boolean)
-                  .join(' · ')}
+                {timeCaption(row)}
+                {row.kind === 'med' && row.event.medication_dosage
+                  ? `${time(row.event) ? ' · ' : ''}${row.event.medication_dosage}`
+                  : null}
               </p>
             </div>
             {renderAction(row)}

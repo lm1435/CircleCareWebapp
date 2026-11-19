@@ -135,7 +135,8 @@
   "tasks": {
     "list": {
       "titleOpen": "Liste de ce quart · {{done}} sur {{total}} faites",
-      "titleOpenEmpty": "Liste de ce quart"
+      "titleOpenEmpty": "Liste de ce quart",
+      "late": "En retard"
     }
   }
 }

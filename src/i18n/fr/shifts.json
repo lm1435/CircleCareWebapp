@@ -310,7 +310,8 @@
       "skipped": "Sautée",
       "doneLabel": "Terminé, {{name}}",
       "takenLabel": "Prise, {{name}}",
-      "missed": "Non renseignée"
+      "missed": "Non renseignée",
+      "late": "En retard"
     },
     "card": {
       "progress": "{{done}} sur {{total}} faites"

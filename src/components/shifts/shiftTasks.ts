@@ -1,5 +1,6 @@
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { daysBetween } from '@/components/calendar/dateMath';
+import { wallTimeToInstant } from '@/utils/wallTimeToInstant';
 import { shiftEnd, shiftRootId } from './shiftUtils';
 
 // Shift tasks (docs/plans/shift-tasks.md). PURE helpers: the list a shift detail shows, the card
@@ -240,4 +241,22 @@ export function countTasksAffectedByEdit(
     affected.add(task.parent_event_id ?? task.id);
   }
   return affected.size;
+}
+
+/** An open item is "Late" on the shift detail from this long after its due time (mobile parity, same rule as the Live Activity). */
+export const SHIFT_ITEM_LATE_AFTER_MS = 15 * 60_000;
+
+/**
+ * Is this OPEN list item 15 minutes or more past its due time? `scheduled_date` + `scheduled_time` are naive in the
+ * recipient's zone and resolved the one way the reminder cron does (wallTimeToInstant). No time = never late.
+ * The caller decides "open": done, skipped, missed and optimistically-answered rows are not late.
+ */
+export function isShiftItemLate(
+  event: Pick<CalendarEvent, 'scheduled_date' | 'scheduled_time'>,
+  timezone: string,
+  nowMs: number
+): boolean {
+  if (!event.scheduled_time) return false;
+  const due = wallTimeToInstant(event.scheduled_date, event.scheduled_time, timezone).getTime();
+  return Number.isFinite(due) && nowMs - due >= SHIFT_ITEM_LATE_AFTER_MS;
 }
