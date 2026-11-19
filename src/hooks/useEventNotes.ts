@@ -20,6 +20,8 @@ import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { failureContext, isPermissionDeniedError, type FailureAction } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
+import { newClientRequestId } from '@/lib/asNeeded';
+import { sendWithQuietRetry } from '@/lib/writeRetryQueue';
 
 // PORT of mobile/src/hooks/useEventNotes.ts. Notes are INSTANCE-scoped: every
 // hook splits the (possibly composite `parentUUID_YYYY-MM-DD`) eventId so the
@@ -139,8 +141,20 @@ export function useCreateNote(): UseMutationResult<EventNote, unknown, CreateNot
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ circleId, eventId, body, scheduledDate }: CreateNoteVariables) =>
-      createNote(circleId, eventId, { body, scheduled_date: scheduledDate }),
+    mutationFn: ({ circleId, eventId, body, scheduledDate }: CreateNoteVariables) => {
+      // ONE request id per submit (1.4.3 item 7): a network drop is retried quietly with the SAME
+      // id, so a first attempt whose response was lost can never write a second note (the server
+      // answers the resend 200 `replayed: true`: the same note, success). The composer keeps its
+      // text while this waits and shows its own error if every attempt fails.
+      const clientRequestId = newClientRequestId();
+      return sendWithQuietRetry(`event_note:${clientRequestId}`, 'event_note', () =>
+        createNote(circleId, eventId, {
+          body,
+          scheduled_date: scheduledDate,
+          client_request_id: clientRequestId,
+        })
+      );
+    },
     onSuccess: (_note, variables) => {
       invalidateNotes(queryClient, variables.circleId, variables.eventId, variables.scheduledDate);
       Analytics.eventNoteAdded(variables.circleId);

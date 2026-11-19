@@ -33,12 +33,16 @@ vi.mock('@/lib/analytics', () => ({
     errorOccurred: vi.fn(),
     taskCompleteRecovered: vi.fn(),
     shiftTaskCompleted: vi.fn(),
+    writeRetryScheduled: vi.fn(),
+    writeRetrySucceeded: vi.fn(),
+    writeRetryGaveUp: vi.fn(),
   },
 }));
 
 import { apiClient } from '@/lib/api';
 import { Analytics } from '@/lib/analytics';
 import { useTaskCompletion, UNDO_DELAY_MS } from '@/hooks/useTaskCompletion';
+import { WRITE_RETRY_MAX_AGE_MS, __resetWriteRetryForTests } from '@/lib/writeRetryQueue';
 import type { CalendarEvent } from '@/api/calendarEvents';
 
 const get = apiClient.get as unknown as Mock;
@@ -108,9 +112,35 @@ async function completeAndCommit(task: CalendarEvent) {
   return result;
 }
 
+/**
+ * 1.4.3 item 7: a TRANSPORT failure (timeout / network) that the re-read could not prove landed is
+ * no longer reported at once: it is retried quietly (lib/writeRetryQueue.ts) and counted only if it
+ * never lands. This runs the whole ladder so the give-up is reached, then restores real timers.
+ */
+async function commitAndGiveUp(task: CalendarEvent) {
+  const { result } = renderHook(() => useTaskCompletion(CIRCLE_ID), { wrapper: makeWrapper() });
+  vi.useFakeTimers();
+  try {
+    act(() => result.current.handleComplete(task));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(UNDO_DELAY_MS);
+    });
+    // Quiet while it waits: nothing is reported yet.
+    expect(showToast).not.toHaveBeenCalled();
+    expect(Analytics.errorOccurred).not.toHaveBeenCalled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(WRITE_RETRY_MAX_AGE_MS + 60_000);
+    });
+  } finally {
+    vi.useRealTimers();
+  }
+  return result;
+}
+
 const eventReads = () => get.mock.calls.filter(([url]) => url === EVENTS_URL);
 
 beforeEach(() => {
+  __resetWriteRetryForTests();
   get.mockReset();
   post.mockReset();
   showToast.mockReset();
@@ -143,19 +173,23 @@ describe('task completion — verify before alert', () => {
     await waitFor(() => expect(result.current.pendingIds.has(TASK.id)).toBe(false));
   });
 
-  it('timeout, and the completion did NOT land: the existing failure toast, with outcome not_recorded', async () => {
+  it('timeout, and the completion did NOT land: retried quietly, counted (outcome not_recorded) only when it never lands', async () => {
     post.mockRejectedValue(axiosTimeout());
     get.mockResolvedValue(eventsEnvelope([TASK]));
 
-    await completeAndCommit(TASK);
+    await commitAndGiveUp(TASK);
 
-    await waitFor(() => expect(showToast).toHaveBeenCalledWith('errors.saveFailed', 'error'));
+    // No per-item failure toast any more: the aggregated notice owns the give-up.
+    expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
+    expect(Analytics.errorOccurred).toHaveBeenCalledTimes(1);
     expect(Analytics.errorOccurred).toHaveBeenCalledWith(
       'tasks',
       'tasks_update_failed',
       expect.objectContaining({ outcome: 'not_recorded', code: 'timeout' })
     );
     expect(Analytics.taskCompleteRecovered).not.toHaveBeenCalled();
+    // More than the first send: the ladder really retried.
+    expect(post.mock.calls.length).toBeGreaterThan(1);
   });
 
   it('a definite 4xx refusal (VIEW_ONLY) is reported at once, with NO re-read', async () => {
@@ -169,22 +203,28 @@ describe('task completion — verify before alert', () => {
     expect(context.outcome).toBeUndefined();
   });
 
-  it('the re-read fails too (twice): the "couldn\'t check" copy, never a claimed failure', async () => {
+  it('the re-read fails too (twice): never a claimed failure; counted as unverified only if it never lands', async () => {
     post.mockRejectedValue(axiosTimeout());
     get.mockImplementation((url: string) =>
       url === EVENTS_URL ? Promise.reject(axiosTimeout()) : Promise.resolve(eventsEnvelope([]))
     );
 
-    await completeAndCommit(TASK);
-
-    await waitFor(() =>
-      expect(showToast).toHaveBeenCalledWith(
-        `meds:dialog.errorUnverified|${JSON.stringify({ medication: 'Water plants' })}`,
-        'error'
-      )
-    );
-    // One read, one retry.
-    expect(eventReads()).toHaveLength(2);
+    const { result } = renderHook(() => useTaskCompletion(CIRCLE_ID), { wrapper: makeWrapper() });
+    vi.useFakeTimers();
+    try {
+      act(() => result.current.handleComplete(TASK));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(UNDO_DELAY_MS);
+      });
+      // The first attempt: one read, one retry of the read.
+      expect(eventReads()).toHaveLength(2);
+      expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(WRITE_RETRY_MAX_AGE_MS + 60_000);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
     expect(Analytics.errorOccurred).toHaveBeenCalledWith(
       'tasks',
       'tasks_update_failed',
@@ -209,15 +249,20 @@ describe('task completion — verify before alert', () => {
       ])
     );
 
-    await completeAndCommit(VIRTUAL);
+    await commitAndGiveUp(VIRTUAL);
 
-    // Posted to the root + date…
+    // Posted to the root + date (and every retry to the same address)…
     expect(post).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}/events/${ROOT_ID}/complete`, {
       scheduled_date: DAY,
     });
-    // …but verified against the occurrence: not completed -> the failure toast.
-    await waitFor(() => expect(showToast).toHaveBeenCalledWith('errors.saveFailed', 'error'));
+    // …but verified against the occurrence: never completed, so never recovered; it is counted
+    // as a failure once the retries are spent.
     expect(Analytics.taskCompleteRecovered).not.toHaveBeenCalled();
+    expect(Analytics.errorOccurred).toHaveBeenCalledWith(
+      'tasks',
+      'tasks_update_failed',
+      expect.objectContaining({ outcome: 'not_recorded' })
+    );
   });
 
   it('a recurring occurrence materialized by the completion counts as landed', async () => {

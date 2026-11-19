@@ -277,5 +277,10 @@
     "chargeNoteWebNoPrice": "Le prix de votre formule vous sera facturé le {{date}}, sauf si vous résiliez avant.",
     "storeApple": "Apple",
     "storeGoogle": "Google Play"
+  },
+  "writeRetry": {
+    "notice_one": "Impossible d’enregistrer {{count}} modification",
+    "notice_other": "Impossible d’enregistrer {{count}} modifications",
+    "retry": "Réessayer"
   }
 }

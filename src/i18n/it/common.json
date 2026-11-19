@@ -277,5 +277,10 @@
     "chargeNoteWebNoPrice": "Ti verrà addebitato il prezzo del tuo piano il {{date}}, a meno che tu non annulli prima.",
     "storeApple": "Apple",
     "storeGoogle": "Google Play"
+  },
+  "writeRetry": {
+    "notice_one": "Impossibile salvare {{count}} modifica",
+    "notice_other": "Impossibile salvare {{count}} modifiche",
+    "retry": "Riprova"
   }
 }

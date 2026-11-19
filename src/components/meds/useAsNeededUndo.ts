@@ -10,6 +10,7 @@ import {
   type RecentlyLoggedConflict,
 } from '@/api/medicationAsNeeded';
 import { isAmbiguousConfirmFailure } from '@/lib/confirmVerify';
+import { enqueueWriteRetry, isRetryableTransportFailure } from '@/lib/writeRetryQueue';
 import { queryClient } from '@/lib/queryClient';
 import { queryKeys } from '@/lib/queryKeys';
 import { MEDICATION_UNDO_DELAY_MS } from './useMedicationUndo';
@@ -46,6 +47,8 @@ export interface AsNeededLogEntry {
 }
 
 interface PendingEntry extends AsNeededLogEntry {
+  /** When the caregiver pressed "Gave a dose" (epoch ms): a queued retry stamps THIS time. */
+  tapAt: number;
   /** Holdable: paused while the badge is hovered / focused (`lib/undoTimer`). */
   timer: UndoTimer | null;
   fired: boolean;
@@ -115,6 +118,50 @@ export function useAsNeededUndo({
     });
   }, []);
 
+  /**
+   * Hand a transport-failed dose to the quiet-retry queue. Every resend carries the SAME
+   * `client_request_id` (the server replays a dose it already wrote: 200 `replayed: true`,
+   * which is success), and `given_at` is FROZEN to the tap time when the caregiver chose none,
+   * so a retry minutes later never records "now". Nothing here is idempotent by hope: the
+   * server rejects a given_at more than 2 minutes in the future, and the tap is in the past.
+   */
+  const queueRetry = useCallback(
+    (entry: PendingEntry): void => {
+      const body: LogAsNeededDoseRequest = entry.body.given_at
+        ? entry.body
+        : { ...entry.body, given_at: new Date(entry.tapAt).toISOString() };
+      enqueueWriteRetry(
+        {
+          key: `as_needed_dose:${entry.body.client_request_id}`,
+          kind: 'as_needed_dose',
+          circleId: entry.circleId,
+          send: () =>
+            mutateAsyncRef.current({ eventId: entry.eventId, body, circleId: entry.circleId }),
+          onSettled: (_via, result) => {
+            clearEntry(entry.eventId);
+            onLoggedRef.current?.(entry, result as LogAsNeededDoseResult);
+          },
+          onRefused: (error) => {
+            clearEntry(entry.eventId);
+            const conflict = asNeededRecentlyLogged(error);
+            if (conflict) {
+              onRecentRef.current?.(entry, conflict);
+              return;
+            }
+            onErrorRef.current?.(error, entry);
+          },
+          onGaveUp: () => {
+            // Nothing landed: the card must offer the dose again, and the summary refetches.
+            clearEntry(entry.eventId);
+            void queryClient.invalidateQueries({ queryKey: queryKeys.asNeededSummary(entry.circleId) });
+          },
+        },
+        { tapAt: entry.tapAt }
+      );
+    },
+    [clearEntry]
+  );
+
   const sendViaMutation = useCallback(
     (entry: PendingEntry, retried = false): void => {
       // `mutateAsync` (per-call promise), never `mutate(vars, {onSuccess})` on a
@@ -129,6 +176,14 @@ export function useAsNeededUndo({
           },
           (error: unknown) => {
             const conflict = asNeededRecentlyLogged(error);
+            if (!conflict && isRetryableTransportFailure(error)) {
+              // TRANSPORT failure (timeout / network_error): quiet retry with backoff
+              // (lib/writeRetryQueue.ts), one aggregated notice if it never lands. The
+              // entry stays pending (the card keeps its "logging" look) and no error is
+              // reported yet. A 409 / 403 / 404 is NOT retried and keeps today's copy.
+              queueRetry(entry);
+              return;
+            }
             if (!conflict && !retried && isAmbiguousConfirmFailure(error)) {
               // AMBIGUOUS (timeout / network / 5xx): the dose may or may not have
               // landed. Retry ONCE with the SAME client_request_id — the server
@@ -146,7 +201,7 @@ export function useAsNeededUndo({
         )
         .catch(devError);
     },
-    [clearEntry]
+    [clearEntry, queueRetry]
   );
 
   const send = useCallback(
@@ -191,6 +246,7 @@ export function useAsNeededUndo({
       const entry: PendingEntry = {
         ...input,
         circleId,
+        tapAt: Date.now(),
         fired: false,
         timer: startUndoTimer(() => {
           const live = entriesRef.current.get(input.eventId);
@@ -206,7 +262,7 @@ export function useAsNeededUndo({
   const logNow = useCallback(
     (input: AsNeededLogEntry): void => {
       if (entriesRef.current.has(input.eventId)) return;
-      const entry: PendingEntry = { ...input, fired: false, timer: null };
+      const entry: PendingEntry = { ...input, tapAt: Date.now(), fired: false, timer: null };
       entriesRef.current.set(input.eventId, entry);
       setPending((cur) => ({ ...cur, [input.eventId]: true }));
       send(entry);

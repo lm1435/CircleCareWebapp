@@ -277,5 +277,10 @@
     "chargeNoteWebNoPrice": "Se te cobrará el precio de tu plan el {{date}}, a menos que canceles antes.",
     "storeApple": "Apple",
     "storeGoogle": "Google Play"
+  },
+  "writeRetry": {
+    "notice_one": "No se pudo guardar {{count}} cambio",
+    "notice_other": "No se pudieron guardar {{count}} cambios",
+    "retry": "Reintentar"
   }
 }

@@ -69,6 +69,7 @@ describe('useTaskCompletion: shift tasks', () => {
         scheduledDate: '2026-11-10',
         circleId: 'c',
         source: 'tasks',
+        quietRetry: true,
         // Verified against the tapped occurrence (its day, its series).
         occurrence: expect.objectContaining({
           parent_event_id: 'task-root',
@@ -85,6 +86,7 @@ describe('useTaskCompletion: shift tasks', () => {
         eventId: 'physical-1',
         circleId: 'c',
         source: 'tasks',
+        quietRetry: true,
         occurrence: expect.objectContaining({ id: 'physical-1' }),
       }
     );

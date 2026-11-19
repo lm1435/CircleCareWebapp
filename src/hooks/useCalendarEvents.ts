@@ -47,6 +47,7 @@ import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { addDays, daysBetween } from '@/components/calendar/dateMath';
 import { Analytics } from '@/lib/analytics';
+import { isRetryableTransportFailure } from '@/lib/writeRetryQueue';
 import { todaysMedsKey } from '@/hooks/useMedConfirmation';
 import { isAsNeededImmutableError, isAsNeededUnscheduledError } from '@/api/medicationAsNeeded';
 import {
@@ -695,6 +696,14 @@ export interface CompleteEventVariables {
    * `title` names the task in the "couldn't check" toast only.
    */
   occurrence?: OccurrenceRef & { title?: string };
+  /**
+   * THE CALLER QUEUES A TRANSPORT FAILURE (lib/writeRetryQueue.ts, 1.4.3 item 7).
+   * When set, a timeout / network_error rejection is NOT reported here (no toast,
+   * no `error_occurred`): the caller retries it quietly and shows one aggregated
+   * "Couldn't save N updates" notice only if it never lands. A definite refusal
+   * (403 VIEW_ONLY, 404, 409, 402 ...) is still reported exactly as before.
+   */
+  quietRetry?: boolean;
 }
 
 /** POST /circles/:circleId/events/:eventId/complete — complete a task/appt. */
@@ -745,7 +754,9 @@ export function useCompleteEvent(
       }
       void invalidateEventQueries(queryClient, sentCircleId, variables.eventId);
     },
-    onError: (error, variables) =>
-      onError(error, variables.circleId ?? circleId, variables.source, variables.occurrence?.title),
+    onError: (error, variables) => {
+      if (variables.quietRetry && isRetryableTransportFailure(error)) return;
+      onError(error, variables.circleId ?? circleId, variables.source, variables.occurrence?.title);
+    },
   });
 }

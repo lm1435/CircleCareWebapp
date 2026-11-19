@@ -277,5 +277,10 @@
     "chargeNoteWebNoPrice": "Am {{date}} wird Ihnen der Preis Ihres Tarifs berechnet, wenn Sie nicht vorher kündigen.",
     "storeApple": "Apple",
     "storeGoogle": "Google Play"
+  },
+  "writeRetry": {
+    "notice_one": "{{count}} Änderung konnte nicht gespeichert werden",
+    "notice_other": "{{count}} Änderungen konnten nicht gespeichert werden",
+    "retry": "Erneut versuchen"
   }
 }

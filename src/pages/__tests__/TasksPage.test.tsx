@@ -382,6 +382,7 @@ describe('TasksPage', () => {
         eventId: 'task-1',
         circleId: 'circle-1',
         source: 'tasks',
+        quietRetry: true,
         occurrence: expect.objectContaining({ id: 'task-1' }),
       });
 
@@ -452,6 +453,7 @@ describe('TasksPage', () => {
         eventId: 'task-1',
         circleId: 'circle-1',
         source: 'tasks',
+        quietRetry: true,
         occurrence: expect.objectContaining({ id: 'task-1' }),
       });
     } finally {
@@ -525,6 +527,7 @@ describe('TasksPage', () => {
         eventId: 'task-1',
         circleId: 'circle-1',
         source: 'tasks',
+        quietRetry: true,
         occurrence: expect.objectContaining({ id: 'task-1' }),
       });
 
@@ -537,6 +540,7 @@ describe('TasksPage', () => {
         eventId: 'task-2',
         circleId: 'circle-1',
         source: 'tasks',
+        quietRetry: true,
         occurrence: expect.objectContaining({ id: 'task-2' }),
       });
     } finally {

@@ -13,6 +13,7 @@ import { router } from '@/router';
 import i18n from '@/i18n';
 import { DeviceTimezoneSync } from '@/components/DeviceTimezoneSync';
 import { RegionUnitsAutoSet } from '@/components/RegionUnitsAutoSet';
+import { WriteRetryNoticeHost } from '@/components/WriteRetryNoticeHost';
 
 /**
  * Applies the signed-in user's saved language preference to i18n. The detector
@@ -106,6 +107,7 @@ export default function App(): ReactElement {
                 next page's chunk arrives.
               */}
               <RouterProvider router={router} future={{ v7_startTransition: true }} />
+              <WriteRetryNoticeHost />
             </ToastProvider>
           </QueryClientProvider>
         </Suspense>

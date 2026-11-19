@@ -86,6 +86,12 @@ export interface CareNoteInput {
   categories?: CareNoteCategory[];
   /** YYYY-MM-DD, today or earlier (recipient TZ). Omit for today / unchanged. */
   note_date?: string;
+  /**
+   * CREATE only (1.4.3). The server recognises a re-send of a create whose
+   * response was lost and answers 200 `{ replayed: true }` with the SAME note,
+   * which is success. An old backend ignores it.
+   */
+  client_request_id?: string;
 }
 
 interface NotesEnvelope {

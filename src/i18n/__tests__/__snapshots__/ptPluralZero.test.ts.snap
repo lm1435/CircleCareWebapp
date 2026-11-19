@@ -142,6 +142,11 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "1 tomado",
     "2 tomados",
   ],
+  "pt common:writeRetry.notice": [
+    "Nada a salvar",
+    "Não foi possível salvar 1 alteração",
+    "Não foi possível salvar 2 alterações",
+  ],
   "pt dailyUpdate:asNeeded.given": [
     "0 dose se necessário dada",
     "1 dose se necessário dada",
@@ -611,6 +616,11 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "0 tomado",
     "1 tomado",
     "2 tomados",
+  ],
+  "pt-PT common:writeRetry.notice": [
+    "Nada a salvar",
+    "Não foi possível salvar 1 alteração",
+    "Não foi possível salvar 2 alterações",
   ],
   "pt-PT dailyUpdate:asNeeded.given": [
     "0 dose se necessário dada",

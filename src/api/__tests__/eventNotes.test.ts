@@ -199,6 +199,8 @@ describe('useEventNotes mutations — endpoints + invalidation', () => {
     expect(mockPost).toHaveBeenCalledWith(`/circles/${CIRCLE}/events/${PARENT_UUID}/notes`, {
       body: 'new note',
       scheduled_date: '2026-05-28',
+      // 1.4.3: one request id per submit, so a quiet retry can never write a second note.
+      client_request_id: expect.any(String),
     });
 
     // Invalidation targets the SAME split key the read query registers.

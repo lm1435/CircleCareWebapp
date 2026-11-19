@@ -277,5 +277,11 @@
     "chargeNoteWebNoPrice": "A cobrança do preço do seu plano será feita em {{date}}, a menos que você cancele antes.",
     "storeApple": "Apple",
     "storeGoogle": "Google Play"
+  },
+  "writeRetry": {
+    "notice_zero": "Nada a salvar",
+    "notice_one": "Não foi possível salvar {{count}} alteração",
+    "notice_other": "Não foi possível salvar {{count}} alterações",
+    "retry": "Tentar novamente"
   }
 }

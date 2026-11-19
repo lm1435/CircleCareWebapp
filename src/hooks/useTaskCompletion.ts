@@ -7,7 +7,28 @@ import { withRefetchCap } from '@/lib/refetchCap';
 import { Analytics } from '@/lib/analytics';
 import { keepalivePost } from '@/lib/keepalivePost';
 import { startUndoTimer, type UndoTimer } from '@/lib/undoTimer';
-import type { OccurrenceRef } from '@/lib/confirmVerify';
+import {
+  confirmFailureOutcome,
+  verifyCompletionLanded,
+  type OccurrenceRef,
+} from '@/lib/confirmVerify';
+import {
+  cancelWriteRetry,
+  enqueueWriteRetry,
+  isRetryableTransportFailure,
+} from '@/lib/writeRetryQueue';
+import { failureContext } from '@/lib/apiErrors';
+
+/** Refetch every list that draws a task row. */
+function invalidateTaskQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  circleId: string
+): Promise<unknown> {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.tasks(circleId) }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) }),
+  ]);
+}
 
 /** The occurrence a completion verifies against: the row that was tapped. */
 function occurrenceOf(task: CalendarEvent): OccurrenceRef & { title?: string } {
@@ -57,6 +78,20 @@ interface PendingCompletion {
    * circle being rendered when the commit happens. */
   circleId: string;
 }
+
+/** What a commit needs, whichever path sends it (timer, flush, queued retry). */
+interface CommitJob {
+  /** The tapped row's id: the key of `pendingIds`. */
+  rowId: string;
+  target: PendingCompletion['target'];
+  occurrence: PendingCompletion['occurrence'];
+  shiftLinked: boolean;
+  circleId: string;
+}
+
+/** `task_complete:${circle}:${root}:${date}`: one queue entry per occurrence. */
+const retryKeyOf = (job: Pick<CommitJob, 'circleId' | 'target'>): string =>
+  `task_complete:${job.circleId}:${job.target.eventId}:${job.target.scheduledDate ?? ''}`;
 
 export interface UseTaskCompletionResult {
   /** Ids inside the 5s undo window — checked in the UI, not yet committed. */
@@ -114,6 +149,104 @@ export function useTaskCompletion(
   const circleIdRef = useRef(circleId);
   circleIdRef.current = circleId;
 
+  /** Row ids whose completion is waiting in the quiet-retry queue (id -> queue key). */
+  const queuedRef = useRef<Map<string, { key: string; circleId: string }>>(new Map());
+
+  /** Drop one id from `pendingIds`, if it is still there. */
+  const clearPendingId = useCallback((eventId: string) => {
+    setPendingIds((prev) => {
+      if (!prev.has(eventId)) return prev;
+      const next = new Set(prev);
+      next.delete(eventId);
+      return next;
+    });
+  }, []);
+
+  /**
+   * Send one completion. `holdForRefetch`: success keeps the pending id until the task rows
+   * themselves have refetched (the timer path). A TRANSPORT failure (timeout / network_error)
+   * is not reported: it is queued for the quiet retry (lib/writeRetryQueue.ts) with the row
+   * still showing done, and one aggregated notice follows only if it never lands. Anything
+   * else is a real refusal, reported by `useCompleteEvent` exactly as before.
+   */
+  const commitJob = useCallback(
+    (job: CommitJob, holdForRefetch: boolean): void => {
+      const { rowId, target, occurrence, shiftLinked, circleId: sentCircleId } = job;
+      const onCompleted = (): void => {
+        if (shiftLinked) Analytics.shiftTaskCompleted({ surface: surfaceRef.current });
+        queuedRef.current.delete(rowId);
+        if (!holdForRefetch) {
+          clearPendingId(rowId);
+          return;
+        }
+        const rowsRefetched = queryClient.refetchQueries(
+          { queryKey: queryKeys.tasks(sentCircleId), type: 'active' },
+          { cancelRefetch: false }
+        );
+        // Capped (withRefetchCap): an offline-paused refetch must not strand the row.
+        void withRefetchCap(rowsRefetched).then(() => clearPendingId(rowId));
+      };
+      // mutateAsync, never mutate(vars, {callbacks}): the observer is shared, so a second
+      // mutate() replaces the first call's per-call callbacks (BH-009).
+      const vars = {
+        ...target,
+        circleId: sentCircleId,
+        source: 'tasks' as const,
+        occurrence,
+        quietRetry: true,
+      };
+      completeMutationRef.current.mutateAsync(vars).then(onCompleted, (error: unknown) => {
+        if (!isRetryableTransportFailure(error)) {
+          // Refused for real: useCompleteEvent's onError already reported it.
+          clearPendingId(rowId);
+          return;
+        }
+        const key = retryKeyOf(job);
+        queuedRef.current.set(rowId, { key, circleId: sentCircleId });
+        // The row keeps its done look ("Completing... Undo") while it waits.
+        setPendingIds((prev) => (prev.has(rowId) ? prev : new Set(prev).add(rowId)));
+        enqueueWriteRetry({
+          key,
+          kind: 'task_complete',
+          circleId: sentCircleId,
+          // Through the mutation, so a refusal on a retry is reported as today and a
+          // success runs the same analytics + invalidations as the first attempt.
+          send: () => completeMutationRef.current.mutateAsync(vars),
+          // The first attempt's response may have been lost AFTER it landed: ask before resending.
+          landed: async () => (await verifyCompletionLanded(sentCircleId, occurrence)).verdict === 'recorded',
+          onSettled: (via) => {
+            if (via === 'landed') {
+              Analytics.taskCompleted(sentCircleId);
+              void invalidateTaskQueries(queryClient, sentCircleId);
+            }
+            onCompleted();
+          },
+          onRefused: () => {
+            queuedRef.current.delete(rowId);
+            clearPendingId(rowId);
+          },
+          onGaveUp: () => {
+            queuedRef.current.delete(rowId);
+            clearPendingId(rowId);
+            // Counted under the same event name the immediate path always used, with the
+            // verdict of the FIRST attempt's re-read (not_recorded / unverified).
+            const outcome = confirmFailureOutcome(error);
+            Analytics.errorOccurred('tasks', 'tasks_update_failed', {
+              circle_id: sentCircleId,
+              ...failureContext('tasks', 'update', error),
+              ...(outcome ? { outcome } : {}),
+            });
+            // Show the truth: the row is not completed.
+            void invalidateTaskQueries(queryClient, sentCircleId);
+          },
+        });
+      });
+    },
+    [clearPendingId, queryClient]
+  );
+  const commitJobRef = useRef(commitJob);
+  commitJobRef.current = commitJob;
+
   /**
    * Commit every still-pending completion now and drop its timer.
    *
@@ -132,35 +265,18 @@ export function useTaskCompletion(
     // pendingIds, without disturbing any id whose timer already fired
     // naturally and is mid-flight toward its own onSettled cleanup.
     const flushedIds = Array.from(timers.keys());
-    timers.forEach(({ timer, circleId: sentCircleId, target, occurrence, shiftLinked }) => {
+    timers.forEach(({ timer, circleId: sentCircleId, target, occurrence, shiftLinked }, rowId) => {
       timer.clear();
       const { eventId, scheduledDate } = target;
-      const vars = {
-        eventId,
-        scheduledDate,
-        circleId: sentCircleId,
-        source: 'tasks' as const,
-        occurrence,
-      };
+      const job: CommitJob = { rowId, target, occurrence, shiftLinked, circleId: sentCircleId };
       const request = keepalive
         ? keepalivePost(
             `/circles/${sentCircleId}/events/${eventId}/complete`,
             scheduledDate ? { scheduled_date: scheduledDate } : undefined
           )
         : null;
-      // mutateAsync, never mutate(vars, {callbacks}): the observer is shared, so a second
-      // mutate() replaces the first call's per-call callbacks (BH-009). Failure is already
-      // reported by useCompleteEvent's hook-level onError; the catch only swallows the rethrow.
-      const sendOrdinary = (): void => {
-        completeMutationRef.current.mutateAsync(vars).then(
-          () => {
-            if (shiftLinked) Analytics.shiftTaskCompleted({ surface: surfaceRef.current });
-          },
-          () => {}
-        );
-      };
       if (!request) {
-        sendOrdinary();
+        commitJobRef.current(job, false);
         return;
       }
       request.then(
@@ -172,10 +288,12 @@ export function useTaskCompletion(
             void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(sentCircleId) });
           } else {
             // Refused while the page is alive: the ordinary path reports it.
-            sendOrdinary();
+            commitJobRef.current(job, false);
           }
         },
-        () => sendOrdinary()
+        // The keepalive request itself failed (network): the ordinary path sends it,
+        // and queues it for the quiet retry if that fails on the network too.
+        () => commitJobRef.current(job, false)
       );
     });
     timers.clear();
@@ -222,16 +340,6 @@ export function useTaskCompletion(
     };
   }, []);
 
-  /** Drop one id from `pendingIds`, if it is still there. */
-  const clearPendingId = useCallback((eventId: string) => {
-    setPendingIds((prev) => {
-      if (!prev.has(eventId)) return prev;
-      const next = new Set(prev);
-      next.delete(eventId);
-      return next;
-    });
-  }, []);
-
   // Start the undo window: flip the row to checked and schedule the real
   // commit for UNDO_DELAY_MS later. The commit clears its own pending entry so
   // a fresh fetch (post-invalidation) can take over.
@@ -246,6 +354,8 @@ export function useTaskCompletion(
     // (EventDetailActions) resolves root + date itself. Mobile's Tasks tab draws
     // the same distinction.
     const eventId = task.id;
+    // Already waiting in the quiet-retry queue: a second tap is a mis-click, never a second send.
+    if (queuedRef.current.has(eventId)) return;
     // EXCEPT a virtual occurrence (shift detail): root + day, see `PendingCompletion.target`.
     const virtual = task.is_virtual === true;
     const target = virtual
@@ -264,23 +374,11 @@ export function useTaskCompletion(
       // the POST settles (useCompleteEvent's onSuccess invalidates fire-and-forget, so clearing
       // on POST would flash the Done button over stale rows). `cancelRefetch: false` joins the
       // in-flight refetch instead of restarting it; `type: 'active'` = only mounted lists.
-      // mutateAsync + per-call settle (BH-009): see flushPending. Per-call mutate callbacks are
-      // dropped when a second completion starts on the shared observer.
-      completeMutationRef.current
-        .mutateAsync({ ...target, circleId: sentCircleId, source: 'tasks', occurrence })
-        .then(
-          () => {
-            if (shiftLinked) Analytics.shiftTaskCompleted({ surface: surfaceRef.current });
-            const rowsRefetched = queryClient.refetchQueries(
-              { queryKey: queryKeys.tasks(sentCircleId), type: 'active' },
-              { cancelRefetch: false }
-            );
-            // Capped (withRefetchCap): an offline-paused refetch must not strand the row.
-            void withRefetchCap(rowsRefetched).then(() => clearPendingId(eventId));
-          },
-          // ERROR: clear at once; useCompleteEvent's onError already reported it.
-          () => clearPendingId(eventId)
-        );
+      // See `commitJob` for the failure paths.
+      commitJob(
+        { rowId: eventId, target, circleId: sentCircleId, occurrence, shiftLinked },
+        true
+      );
     }, UNDO_DELAY_MS);
 
     timersRef.current.set(eventId, { timer, circleId: sentCircleId, target, occurrence, shiftLinked });
@@ -289,10 +387,22 @@ export function useTaskCompletion(
       next.add(eventId);
       return next;
     });
-  }, []);
+  }, [commitJob]);
 
   // Cancel the pending completion — nothing is committed.
   const handleUndo = useCallback((eventId: string): void => {
+    // Taken back while it waits for a quiet retry: the latest intent wins, nothing is sent.
+    // (An attempt already in flight cannot be recalled; if it lands, the refetch shows it.)
+    const waiting = queuedRef.current.get(eventId);
+    if (waiting) {
+      queuedRef.current.delete(eventId);
+      if (cancelWriteRetry(waiting.key)) {
+        Analytics.taskUndone(waiting.circleId);
+        clearPendingId(eventId);
+        void invalidateTaskQueries(queryClient, waiting.circleId);
+        return;
+      }
+    }
     const entry = timersRef.current.get(eventId);
     if (entry) {
       entry.timer.clear();
@@ -307,7 +417,7 @@ export function useTaskCompletion(
       next.delete(eventId);
       return next;
     });
-  }, []);
+  }, [clearPendingId, queryClient]);
 
   const handleHoldUndo = useCallback((eventId: string, held: boolean): void => {
     timersRef.current.get(eventId)?.timer.hold(held);

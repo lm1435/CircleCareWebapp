@@ -100,12 +100,17 @@ export async function getEventNotes(
 export async function createNote(
   circleId: string,
   eventId: string,
-  data: { body: string; scheduled_date?: string }
+  data: { body: string; scheduled_date?: string; client_request_id?: string }
 ): Promise<EventNote> {
   const { eventId: realEventId, scheduledDate: date } = splitEventId(eventId, data.scheduled_date);
+  // `client_request_id` (1.4.3): the server recognises a re-send of a create whose
+  // response was lost and answers 200 `{ replayed: true }` with the SAME note
+  // instead of writing a second one. A replay is SUCCESS here (same `note`).
+  // An old backend ignores the field and behaves as before.
   const response = (await apiClient.post(`/circles/${circleId}/events/${realEventId}/notes`, {
     body: data.body,
     ...(date ? { scheduled_date: date } : {}),
+    ...(data.client_request_id ? { client_request_id: data.client_request_id } : {}),
   })) as unknown as NoteEnvelope;
   return response.data.note;
 }

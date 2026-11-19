@@ -782,7 +782,11 @@ export async function completeEvent(
   const response = (await (scheduledDate
     ? apiClient.post(path, { scheduled_date: scheduledDate })
     : apiClient.post(path))) as unknown as SingleEventEnvelope;
-  return response.data.event;
+  // 1.4.3: a re-send of a completion that already landed answers 200 with
+  // `replayed: true` (no second feed row, no second push). That is SUCCESS, so
+  // nothing here branches on it; `event` may be absent on a replay, and every
+  // caller reads it optionally.
+  return response.data?.event;
 }
 
 // ---------------------------------------------------------------------------
