@@ -3,11 +3,18 @@ import type { CalendarEvent, ShiftTaskLink } from '@/api/calendarEvents';
 import {
   buildShiftList,
   countTasksAffectedByEdit,
+  crossesMidnightSide,
+  defaultShiftTaskTime,
   doneBucket,
   isShiftItemLate,
+  nowInZone,
+  rowMatchesHighlight,
+  shiftContextFromLink,
+  shiftContextFromShift,
   shiftTaskMeta,
   shiftWindow,
   tasksBucket,
+  timeInsideShiftWindow,
 } from '../shiftTasks';
 
 // docs/plans/shift-tasks.md: the list rules, mirrored client-side from the owner's edge-case fixture:
@@ -350,5 +357,147 @@ describe('isShiftItemLate (1.4.3): 15 min past due in the RECIPIENT zone', () =>
 
   it('N-LATE-U6 an invalid zone-resolved instant (NaN) is never late', () => {
     expect(isShiftItemLate(it0('not-a-date', '12:00:00'), 'America/New_York', Date.parse('2026-11-09T17:00:00Z'))).toBe(false);
+  });
+});
+
+
+// ── 1.4.3: the shift mode of the full task editor ────────────────────────────────────────────────────
+describe('timeInsideShiftWindow (moved here from the retired ShiftTaskFormModal)', () => {
+  it('P the window is inclusive at both ends', () => {
+    expect(timeInsideShiftWindow('14:00', '14:00', 360)).toBe(true);
+    expect(timeInsideShiftWindow('20:00', '14:00', 360)).toBe(true);
+    expect(timeInsideShiftWindow('17:30', '14:00', 360)).toBe(true);
+  });
+  it('N before the start and after the end are outside', () => {
+    expect(timeInsideShiftWindow('13:59', '14:00', 360)).toBe(false);
+    expect(timeInsideShiftWindow('20:01', '14:00', 360)).toBe(false);
+    expect(timeInsideShiftWindow('', '14:00', 360)).toBe(false);
+  });
+  it('P overnight: earlier than the start is the NEXT day and is inside until the end', () => {
+    expect(timeInsideShiftWindow('02:00', '20:00', 600)).toBe(true);
+    expect(timeInsideShiftWindow('06:00', '20:00', 600)).toBe(true);
+    expect(timeInsideShiftWindow('06:01', '20:00', 600)).toBe(false);
+    expect(timeInsideShiftWindow('19:59', '20:00', 600)).toBe(false);
+  });
+});
+
+describe('crossesMidnightSide (the overnight edit rule)', () => {
+  it('N moving from before to after midnight, or back, is refused', () => {
+    expect(crossesMidnightSide('22:00', '02:00', '20:00', 600)).toBe(true);
+    expect(crossesMidnightSide('02:00', '22:00', '20:00', 600)).toBe(true);
+  });
+  it('P staying on the same side is fine, and a same-day window never crosses', () => {
+    expect(crossesMidnightSide('22:00', '23:30', '20:00', 600)).toBe(false);
+    expect(crossesMidnightSide('01:00', '05:00', '20:00', 600)).toBe(false);
+    expect(crossesMidnightSide('15:00', '18:00', '14:00', 360)).toBe(false);
+  });
+});
+
+describe('defaultShiftTaskTime', () => {
+  const afternoon = { scheduledDate: '2026-11-10', startTime: '14:00', durationMinutes: 360 };
+  const chicago = 'America/Chicago';
+  const at = (iso: string) => new Date(iso);
+  it('P shift today, now inside: the next half hour', () => {
+    expect(defaultShiftTaskTime(afternoon, chicago, at('2026-11-10T21:10:00Z'))).toEqual({ time: '15:30', source: 'next_half_hour' });
+    // Exactly on the half hour moves to the NEXT one (never "now").
+    expect(defaultShiftTaskTime(afternoon, chicago, at('2026-11-10T21:30:00Z'))).toEqual({ time: '16:00', source: 'next_half_hour' });
+  });
+  it('P clamped at the window end', () => {
+    expect(defaultShiftTaskTime(afternoon, chicago, at('2026-11-11T01:50:00Z'))).toEqual({ time: '20:00', source: 'next_half_hour' });
+    expect(defaultShiftTaskTime(afternoon, chicago, at('2026-11-11T01:59:00Z'))).toEqual({ time: '20:00', source: 'next_half_hour' });
+  });
+  it('N before the start, after the end and another day: the shift start', () => {
+    for (const iso of ['2026-11-10T19:00:00Z', '2026-11-11T02:01:00Z', '2026-11-09T21:00:00Z', '2026-11-12T21:00:00Z']) {
+      expect(defaultShiftTaskTime(afternoon, chicago, at(iso))).toEqual({ time: '14:00', source: 'shift_start' });
+    }
+  });
+  it('the recipient zone decides, not the runner: 3:10 PM Chicago is 9:10 PM in Berlin', () => {
+    expect(defaultShiftTaskTime(afternoon, 'Europe/Berlin', at('2026-11-10T21:10:00Z')).source).toBe('shift_start');
+    expect(defaultShiftTaskTime(afternoon, chicago, at('2026-11-10T21:10:00Z')).source).toBe('next_half_hour');
+  });
+  it('P overnight shift: after midnight, on the next day, is still inside', () => {
+    const night = { scheduledDate: '2026-11-10', startTime: '20:00', durationMinutes: 600 };
+    expect(defaultShiftTaskTime(night, chicago, at('2026-11-11T07:10:00Z'))).toEqual({ time: '01:30', source: 'next_half_hour' });
+    expect(defaultShiftTaskTime(night, chicago, at('2026-11-11T11:45:00Z'))).toEqual({ time: '06:00', source: 'next_half_hour' });
+    expect(defaultShiftTaskTime(night, chicago, at('2026-11-11T13:00:00Z')).source).toBe('shift_start');
+  });
+  it('nowInZone reads the date and clock in the zone', () => {
+    expect(nowInZone('America/Chicago', at('2026-11-11T05:59:00Z'))).toEqual({ date: '2026-11-10', time: '23:59' });
+    expect(nowInZone('America/Chicago', at('2026-11-11T06:00:00Z'))).toEqual({ date: '2026-11-11', time: '00:00' });
+  });
+});
+
+describe('shift task editor context', () => {
+  const link = (over: Record<string, unknown> = {}) =>
+    ({
+      root_id: 'root',
+      date: '2026-11-10',
+      title: 'Afternoons',
+      assignee: { id: 'u-lucia', first_name: 'Lucia' },
+      status: 'covered',
+      window_start: '2026-11-10T14:00:00',
+      window_end: '2026-11-10T20:00:00',
+      ...over,
+    }) as ShiftTaskLink;
+  const task = (over: Partial<CalendarEvent> = {}) =>
+    ({ event_type: 'task', recurrence_rule: 'weekly', parent_event_id: null, shift: link(), ...over }) as CalendarEvent;
+
+  it('P a covered link reads the window, the coverer and the repeat', () => {
+    expect(shiftContextFromLink(task(), 'u-me', 'tasks')).toEqual({
+      shiftEventId: 'root',
+      scheduledDate: '2026-11-10',
+      title: 'Afternoons',
+      startTime: '14:00',
+      durationMinutes: 360,
+      repeating: true,
+      coverer: 'other',
+      covererName: 'Lucia',
+      source: 'tasks',
+    });
+    expect(shiftContextFromLink(task(), 'u-lucia', 'calendar')?.coverer).toBe('me');
+    expect(shiftContextFromLink(task({ recurrence_rule: null }), 'u-me', 'tasks')?.repeating).toBe(false);
+  });
+  it('P an overnight window gets its duration across midnight', () => {
+    const night = task({ shift: link({ window_start: '2026-11-10T20:00:00', window_end: '2026-11-11T06:00:00' }) });
+    expect(shiftContextFromLink(night, 'u-me', 'tasks')?.durationMinutes).toBe(600);
+  });
+  it('P an open link is "open" with no name', () => {
+    const open = task({ shift: link({ status: 'open', assignee: null }) });
+    expect(shiftContextFromLink(open, 'u-me', 'tasks')).toMatchObject({ coverer: 'open', covererName: null });
+  });
+  it('N14 no link, "outside", a missing window, or an old backend (no field): nothing locked', () => {
+    expect(shiftContextFromLink(task({ shift: null }), 'u-me', 'tasks')).toBeNull();
+    expect(shiftContextFromLink({ ...task(), shift: undefined }, 'u-me', 'tasks')).toBeNull();
+    expect(shiftContextFromLink(task({ shift: link({ status: 'outside' }) }), 'u-me', 'tasks')).toBeNull();
+    expect(shiftContextFromLink(task({ shift: link({ window_start: null }) }), 'u-me', 'tasks')).toBeNull();
+    expect(shiftContextFromLink(task({ event_type: 'appointment' }), 'u-me', 'tasks')).toBeNull();
+  });
+  it('N a non-task is never a shift task', () => {
+    expect(shiftContextFromLink(task({ event_type: 'medication' }), 'u-me', 'tasks')).toBeNull();
+  });
+  it('shiftContextFromShift: the shift row it was opened from', () => {
+    const ctx = shiftContextFromShift(
+      { id: 'root_2026-11-10', title: 'Afternoons', scheduled_date: '2026-11-10', scheduled_time: '14:00:00', duration_minutes: 360, assigned_to: 'u-me' } as CalendarEvent,
+      [{ id: 'u-me', first_name: 'Me' }],
+      'u-me',
+      'saved_sheet',
+      true
+    );
+    expect(ctx).toMatchObject({ shiftEventId: 'root_2026-11-10', startTime: '14:00', coverer: 'me', covererName: 'Me', source: 'saved_sheet', repeating: true });
+    expect(shiftContextFromShift({ id: 'x', title: 't', scheduled_date: '2026-11-10', assigned_to: null } as CalendarEvent, [], 'u-me', 'shift_detail', false).coverer).toBe('open');
+  });
+});
+
+describe('rowMatchesHighlight', () => {
+  const row = (key: string, parent?: string) => ({ key, event: { parent_event_id: parent } as CalendarEvent });
+  it('P the physical id, a virtual <root>_<date> occurrence and a child of the root match', () => {
+    expect(rowMatchesHighlight(row('t1'), 't1')).toBe(true);
+    expect(rowMatchesHighlight(row('t1_2026-11-10'), 't1')).toBe(true);
+    expect(rowMatchesHighlight(row('child', 't1'), 't1')).toBe(true);
+  });
+  it('N another task, and an id that merely starts the same, do not', () => {
+    expect(rowMatchesHighlight(row('t2'), 't1')).toBe(false);
+    expect(rowMatchesHighlight(row('t10'), 't1')).toBe(false);
+    expect(rowMatchesHighlight(row('t10_2026-11-10', 't10'), 't1')).toBe(false);
   });
 });

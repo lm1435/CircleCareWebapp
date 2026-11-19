@@ -54,8 +54,13 @@ export interface DeleteEventDialogProps {
    */
   doseScoped?: boolean;
   onClose: () => void;
-  /** Called after a successful delete (parent typically closes the detail modal). */
-  onDeleted?: () => void;
+  /**
+   * Called after a successful delete (parent typically closes the detail modal), with the scope that ran
+   * (`all` when no picker was shown: the whole record went).
+   */
+  onDeleted?: (scope: DeleteScopeChoice | 'all') => void;
+  /** Replaces the per-type "deleted" toast (the shift task editor says its own). */
+  deletedMessage?: string;
 }
 
 type DeleteScopeChoice = 'single' | 'future';
@@ -75,6 +80,7 @@ export function DeleteEventDialog({
   doseScoped = true,
   onClose,
   onDeleted,
+  deletedMessage,
 }: DeleteEventDialogProps): ReactElement {
   const { t } = useTranslation(['calendar', 'common']);
   const { showToast } = useToast();
@@ -143,8 +149,8 @@ export function DeleteEventDialog({
           historyKept: result?.historyKept,
         });
       }
-      showToast(copy.deleted, 'success');
-      onDeleted?.();
+      showToast(deletedMessage ?? copy.deleted, 'success');
+      onDeleted?.(options.deleteScope ?? 'all');
       onClose();
     } catch {
       // useDeleteEvent surfaces its own permission/subscription/save toasts.

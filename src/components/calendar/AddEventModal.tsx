@@ -38,6 +38,27 @@ import {
   type SeriesRoot,
 } from '@/api/calendarEvents';
 import { useCachedCircleEvents, useCreateEvent, useUpdateEvent } from '@/hooks/useCalendarEvents';
+import { useAddShiftTask } from '@/hooks/useShiftTasks';
+import { useHandleShiftFailure } from '@/hooks/useShifts';
+import type { CreateShiftTaskBody } from '@/api/shiftTasks';
+import {
+  isShiftEndedError,
+  isShiftInvalidDateError,
+  isShiftNotFoundError,
+} from '@/api/shifts';
+import { isShiftTaskOutsideError, isShiftTaskTimeUnsupportedError } from '@/api/shiftTasks';
+import { classifyShiftFailure } from '@/lib/shiftErrors';
+import { ShiftInlineError } from '@/components/shifts/ShiftInlineError';
+import {
+  crossesMidnightSide,
+  defaultShiftTaskTime,
+  shiftContextFromLink,
+  timeInsideShiftWindow,
+  type ShiftTaskContext,
+  type ShiftTimeDefault,
+} from '@/components/shifts/shiftTasks';
+import { shiftEnd } from '@/components/shifts/shiftUtils';
+import { DeleteEventDialog } from './DeleteEventDialog';
 import { writeFirstMedNote } from '@/lib/firstMedNote';
 import { markItEligible, toWireTime, type SavedMedicationInfo } from '@/utils/firstMedSaved';
 import { useProviders } from '@/hooks/useProviders';
@@ -226,6 +247,23 @@ export interface AddEventModalProps {
   firstRunTypeSwitch?: boolean;
   /** First run v2: what was saved, for the All set screen. Any of the three types. */
   onFirstRunItemSaved?: (item: FirstRunSavedItem) => void;
+  /**
+   * SHIFT MODE (1.4.3): the TASK form for a task that rides a care shift. Add: the task is created on this shift
+   * in ONE write (POST .../shift/tasks carrying every field). Edit: opened from the shift list. The date is locked to
+   * the shift day, the time is required and inside the window, the repeat is the shift's, and "Who does it" is
+   * the shift's coverer (never an assignee). An edit of a linked task from the Tasks / Calendar pages derives the
+   * same context from the task's own `shift` link when this is omitted.
+   */
+  shiftContext?: ShiftTaskContext | null;
+  /** Where a linked task edited outside the shift came from (analytics `shift_task_edit_opened.source`). */
+  shiftEditSource?: 'tasks' | 'calendar';
+  /**
+   * Shift mode: called after a save INSTEAD of `onClose`, with the task's id (the new task for an add), so
+   * the shift detail can ring the row. Omitted = `onClose`.
+   */
+  onShiftTaskSaved?: (result: { mode: 'add' | 'edit'; taskId: string }) => void;
+  /** The Delete button's confirmed delete went through (the editor then closes). */
+  onDeleted?: () => void;
 }
 
 /** What a first-run save made (first run v2, All set). Never sent to analytics. */
@@ -561,6 +599,17 @@ export function AddEventModal(props: AddEventModalProps): ReactElement | null {
   const { canEdit } = useCircle(circleId);
   const cachedEvents = useCachedCircleEvents(circleId);
   const { root } = useSeriesRoot(circleId, event, cachedEvents);
+  const outerViewerId = useAuthStore((s) => s.user?.id ?? null);
+  // Shift mode: given by the shift list, or read off a LINKED task's own fetched `shift` link (so a shift task
+  // edited from Tasks / Calendar shows "Whoever is on this shift" instead of a picker that would unlink it).
+  const shiftContext = useMemo(
+    () =>
+      props.shiftContext ??
+      (event && event.event_type === 'task'
+        ? shiftContextFromLink(event, outerViewerId, props.shiftEditSource ?? 'tasks')
+        : null),
+    [props.shiftContext, props.shiftEditSource, event, outerViewerId]
+  );
   const formEvent = useMemo(
     () => (event && root ? withSeriesContent(event, root) : event),
     [event, root]
@@ -591,6 +640,7 @@ export function AddEventModal(props: AddEventModalProps): ReactElement | null {
       {...props}
       event={formEvent}
       kind={kind}
+      shiftContext={shiftContext}
       typeSwitch={
         showTypeSwitch
           ? {
@@ -619,6 +669,9 @@ function AddEventForm({
   entry: entryOrigin = 'other',
   onFirstRunItemSaved,
   typeSwitch,
+  shiftContext,
+  onShiftTaskSaved,
+  onDeleted,
 }: AddEventModalProps & {
   kind: FormKind;
   typeSwitch?: { focusOnMount: boolean; onChange: (next: FormKind) => void };
@@ -631,8 +684,16 @@ function AddEventForm({
 
   const createEvent = useCreateEvent(circleId);
   const updateEvent = useUpdateEvent(circleId);
+  // The shift-task create mutation lives in a bridge child that mounts ONLY in shift add mode (see
+  // `ShiftAddBridge`): the other forms take no extra query hook, so their suites stay as they were.
+  const shiftAddRef = useRef<ShiftAddMutation | null>(null);
+  const [shiftBusy, setShiftBusy] = useState(false);
+  const handleShiftFailure = useHandleShiftFailure();
 
   const isEditing = !!event;
+  // SHIFT MODE (1.4.3): one object, derived once. Every shift branch below reads this and nothing else, so a task
+  // without a shift context takes none of them (the payload suites pin that).
+  const shiftMode: ShiftTaskContext | null = simpleKind === 'task' ? (shiftContext ?? null) : null;
   // Edits ALWAYS target the parent series (mobile has no "this event only" edit).
   const targetEventId = isEditing ? event.parent_event_id || event.id : undefined;
   // Editing any instance of a recurring event rewrites the whole series — warn.
@@ -725,11 +786,12 @@ function AddEventForm({
       // The CARE RECIPIENT's today; '' while the zone is still loading (the same
       // gate as an edit), so no wrong day is shown and then replaced. The resync
       // effect below fills it the moment the zone lands.
-      dateStr: defaultNewEventDate(timezone),
+      // Shift mode: the shift's own day (the date is locked to it).
+      dateStr: shiftMode ? (timezone ? shiftMode.scheduledDate : '') : defaultNewEventDate(timezone),
       timeStr: '',
       recurrenceEndDateStr: '',
     };
-  }, [event, timezone, scheduleSource]);
+  }, [event, timezone, scheduleSource, shiftMode]);
 
   const [dateStr, setDateStr] = useState(hydrated.dateStr);
   const [timeStr, setTimeStr] = useState(hydrated.timeStr);
@@ -1165,7 +1227,7 @@ function AddEventForm({
   const extraTimes = useMemo(() => extraDoses.map((d) => d.time), [extraDoses]);
   /** The medication has NO schedule: no date, time, repeat, end date or reminders. */
   const isAsNeeded = isMedication && recurrence === 'as_needed';
-  const isPending = createEvent.isPending || updateEvent.isPending;
+  const isPending = createEvent.isPending || updateEvent.isPending || shiftBusy;
   /** The primary plus each filled extra dose time (create only: an edit cannot see its siblings). */
   const doseTimeCount = 1 + extraTimes.filter((time) => time !== '').length;
   const pillsCountable = isCountableForm(selectedDrug?.dosageForm);
@@ -1446,6 +1508,51 @@ function AddEventForm({
     if (!isMedication) setEndTimeStr(presetEndFor(viewer.timeStr, DEFAULT_DURATION_MINUTES));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the zone is known
   }, [firstRunMode, timezone, isMedication]);
+  /**
+   * SHIFT ADD (1.4.3): the time opens on the next half hour inside the shift's window when the shift is today
+   * (recipient zone) and now is inside it, else on the shift start. Applied once, when the zone is known, on an
+   * untouched form; it then owns the fields like a pick would (`datesTouched`). No end time is preset: the To
+   * tile starts on "No end", and an end is sent only when the user sets one.
+   */
+  const shiftDefaultRef = useRef<{ time: string; source: ShiftTimeDefault } | null>(null);
+  useEffect(() => {
+    if (!shiftMode || isEditing || !timezone || shiftDefaultRef.current || datesTouched.current) return;
+    const slot = defaultShiftTaskTime(shiftMode, timezone);
+    const viewer = eventDatesFromApi({ scheduledDate: shiftMode.scheduledDate, scheduledTime: slot.time, timezone });
+    if (!viewer.timeStr) return;
+    shiftDefaultRef.current = slot;
+    datesTouched.current = true;
+    setDateStr(viewer.dateStr);
+    setTimeStr(viewer.timeStr);
+    setChipInstant(viewer.instant ?? null);
+    Analytics.shiftTaskAddOpened({
+      source: shiftMode.source,
+      shiftRepeats: shiftMode.repeating,
+      coverer: shiftMode.coverer,
+      timeDefault: slot.source,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the zone is known
+  }, [shiftMode, timezone, isEditing]);
+  // A linked task opened from the Tasks / Calendar pages (its context came off its own `shift` link). The shift
+  // list reports its own taps (it knows linked vs regular and the completed rows).
+  const editOpenedRef = useRef(false);
+  useEffect(() => {
+    if (!shiftMode || !isEditing || editOpenedRef.current) return;
+    if (shiftMode.source !== 'tasks' && shiftMode.source !== 'calendar') return;
+    editOpenedRef.current = true;
+    Analytics.shiftTaskEditOpened({
+      source: shiftMode.source,
+      linked: true,
+      state: 'open',
+      recurring: isRecurringEdit,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per opened editor
+  }, [shiftMode, isEditing]);
+  /** Shift mode, a repeating shift: "Only <date>" instead of "Every time this shift happens". */
+  const [shiftOnlyDay, setShiftOnlyDay] = useState(false);
+  /** Shift mode: the retryable failure line (network / server) and the delete confirm. */
+  const [shiftSaveError, setShiftSaveError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
   /**
    * CREATE only: this medication's start rolls to the next dose (the backend does it,
    * `medicationStartRoll.ts`) because its time already passed today in the recipient's zone.
@@ -2217,6 +2324,157 @@ function AddEventForm({
     return revealed;
   }
 
+  /**
+   * SHIFT MODE save (add: ONE POST carrying every field; edit: one PATCH). Never sends `assigned_to`, the task's
+   * own date or `recurrence_*`: the shift owns who, when and how often. The window check below is the only guard
+   * on an EDIT (PATCH accepts any time); the server's 400 still has the last word on a create.
+   */
+  async function handleShiftSubmit(mode: ShiftTaskContext): Promise<void> {
+    const kindOfSave = isEditing ? 'edit' : 'add';
+    setShiftSaveError('');
+    const trimmed = title.trim();
+    const clock = recipientClock;
+    const storedClock = scheduleSource?.scheduled_time ? scheduleSource.scheduled_time.slice(0, 5) : '';
+    const found: FieldErrors = {};
+    let reason: 'name_missing' | 'outside_window' | null = null;
+    if (!trimmed) {
+      found.title = t('addEvent.validation.titleRequired');
+      reason = 'name_missing';
+    }
+    if (!clock) {
+      found.scheduled_time = t('addEvent.validation.timeRequired');
+    } else if (!timeInsideShiftWindow(clock, mode.startTime, mode.durationMinutes)) {
+      found.scheduled_time = t('shifts:tasks.form.errorOutside');
+      reason = reason ?? 'outside_window';
+    } else if (isEditing && crossesMidnightSide(storedClock, clock, mode.startTime, mode.durationMinutes)) {
+      found.scheduled_time = t('shifts:tasks.editor.sameSideOfMidnight');
+      reason = reason ?? 'outside_window';
+    }
+    const span = timeStr && endTimeStr ? spanMinutes(timeStr, endTimeStr) : null;
+    if (timeStr && endTimeStr && span === null) found.endTime = t('addEvent.validation.endTimeAfterStart');
+    if (Object.keys(found).length > 0) {
+      setErrors(found);
+      Analytics.shiftTaskSaveFailed({ mode: kindOfSave, reason: reason ?? 'other' });
+      const hidden = ['endTime'];
+      const revealed = hidden.some((k) => found[k]) && !moreOpen;
+      if (revealed) setMoreOpen(true);
+      const focusErrors = (): void => focusFirstError(simpleFocusErrors(found, 'task'), SIMPLE_FOCUS_ORDER);
+      if (revealed) setTimeout(focusErrors, 0);
+      else focusErrors();
+      return;
+    }
+    setErrors({});
+    const remindersDefault =
+      notificationsEnabled && reminderAtDue && !reminder24h && !reminder1h && !reminder30m && !reminder15m;
+    const nameChanged = isEditing ? trimmed !== (event?.title ?? '') : true;
+    const timeChanged = isEditing ? clock !== storedClock : false;
+    const nextDay = timeStr !== '' && clock < mode.startTime;
+    setShiftBusy(true);
+    try {
+      let taskId: string;
+      if (isEditing && targetEventId) {
+        const data: Partial<CreateEventRequest> = {
+          title: trimmed,
+          description: editPatch(event?.description, description, { isEditing: true }),
+          scheduled_time: clock,
+          duration_minutes: clearOnEdit(scheduleSource?.duration_minutes, span ?? undefined, { isEditing: true }),
+          notifications_enabled: notificationsEnabled,
+          reminder_at_due: reminderAtDue,
+          reminder_24h: reminder24h,
+          reminder_1h: reminder1h,
+          reminder_30m: reminder30m,
+          reminder_15m: reminder15m,
+        };
+        await updateEvent.mutateAsync({ eventId: targetEventId, data });
+        taskId = targetEventId;
+        showToast(t('shifts:tasks.editor.updated'), 'success');
+      } else {
+        const body: CreateShiftTaskBody = {
+          scheduledDate: mode.scheduledDate,
+          title: trimmed,
+          scheduled_time: clock,
+          ...(shiftOnlyDay && mode.repeating ? { only_this_day: true } : {}),
+          ...(description.trim() ? { description: description.trim() } : {}),
+          ...(span !== null ? { duration_minutes: span } : {}),
+          ...(remindersDefault
+            ? {}
+            : {
+                notifications_enabled: notificationsEnabled,
+                reminder_at_due: reminderAtDue,
+                reminder_24h: reminder24h,
+                reminder_1h: reminder1h,
+                reminder_30m: reminder30m,
+                reminder_15m: reminder15m,
+              }),
+        };
+        if (!shiftAddRef.current) throw new Error('shift add bridge not mounted');
+        const created = await shiftAddRef.current.mutateAsync({ shift: { id: mode.shiftEventId }, body });
+        taskId = created.id;
+        Analytics.shiftTaskAdded({
+          source: mode.source,
+          oneOff: !!body.only_this_day,
+          shiftRepeats: mode.repeating,
+        });
+        showToast(t('shifts:tasks.added'), 'success');
+      }
+      Analytics.shiftTaskSaved({
+        mode: kindOfSave,
+        source: mode.source,
+        fieldsUsed:
+          (span !== null ? 1 : 0) +
+          (description.trim() ? 1 : 0) +
+          (!remindersDefault ? 1 : 0) +
+          (shiftOnlyDay && mode.repeating ? 1 : 0),
+        oneOff: shiftOnlyDay && mode.repeating,
+        nextDay,
+        timeChanged,
+        nameChanged,
+        detailsSaved: true,
+      });
+      savedRef.current = true;
+      if (onShiftTaskSaved) onShiftTaskSaved({ mode: kindOfSave, taskId });
+      else onClose();
+    } catch (err) {
+      if (isShiftTaskOutsideError(err)) {
+        setErrors({ scheduled_time: t('shifts:tasks.form.errorOutside') });
+        Analytics.shiftTaskSaveFailed({ mode: kindOfSave, reason: 'outside_window' });
+      } else if (isShiftTaskTimeUnsupportedError(err)) {
+        setErrors({
+          scheduled_time: t('shifts:tasks.form.errorUnsupported', {
+            date: formatDateForDisplay(mode.scheduledDate, { weekday: 'short', month: 'short', day: 'numeric' }, language),
+          }),
+        });
+        Analytics.shiftTaskSaveFailed({ mode: kindOfSave, reason: 'unsupported' });
+      } else if (isShiftEndedError(err)) {
+        setShiftSaveError(t('shifts:tasks.form.errorEnded'));
+        Analytics.shiftTaskSaveFailed({ mode: kindOfSave, reason: 'shift_ended' });
+      } else if (isShiftInvalidDateError(err)) {
+        setShiftSaveError(t('shifts:tasks.form.errorInvalidDate'));
+        Analytics.shiftTaskSaveFailed({ mode: kindOfSave, reason: 'invalid_date' });
+      } else if (isShiftNotFoundError(err)) {
+        setShiftSaveError(t('shifts:tasks.form.errorGone'));
+        Analytics.shiftTaskSaveFailed({ mode: kindOfSave, reason: 'shift_gone' });
+      } else {
+        const kind = classifyShiftFailure(err);
+        Analytics.shiftTaskSaveFailed({
+          mode: kindOfSave,
+          reason: kind === 'subscription' ? 'subscription' : kind === 'permission' ? 'permission' : 'other',
+        });
+        if (isEditing) {
+          // The update hook raised its own toast; the form stays open with the input kept.
+        } else {
+          // View-only, lapsed Premium or a permission change: the shared handling (toast / paywall, and the
+          // form closes). Anything else (network, server) stays open with the input kept.
+          const outcome = handleShiftFailure(err, 'save');
+          if (outcome.close) onClose();
+          else setShiftSaveError(t('shifts:tasks.form.errorGeneric'));
+        }
+      }
+    } finally {
+      setShiftBusy(false);
+    }
+  }
+
   async function handleSubmit(formEvent: FormEvent): Promise<void> {
     formEvent.preventDefault();
     // GATE, not a fallback: every date below is derived in the CARE
@@ -2230,6 +2488,12 @@ function AddEventForm({
 
     // Before validation, so it counts EVERY attempt (mobile parity).
     Analytics.entrySaveTapped(circleId, eventType, 'form', isEditing, 'simple');
+
+    // Shift mode has its own small payload (see `handleShiftSubmit`); everything else below is untouched.
+    if (shiftMode) {
+      await handleShiftSubmit(shiftMode);
+      return;
+    }
 
     const built = buildPayload(timezone);
     if (!built.ok) {
@@ -2351,7 +2615,9 @@ function AddEventForm({
   const requiredFilled =
     title.trim().length > 0 &&
     (isAsNeeded || dateStr !== '') &&
-    (!isMedication || isAsNeeded || timeStr !== '');
+    (!isMedication || isAsNeeded || timeStr !== '') &&
+    // Shift mode: the time is required (no "Any time").
+    (!shiftMode || timeStr !== '');
   // The first required field still empty, in the order the form lists them.
   const missingField: 'title' | 'date' | 'time' | null = requiredFilled
     ? null
@@ -2787,7 +3053,7 @@ function AddEventForm({
       const shifted = shiftEndTimeStr(prevStart, nextStart, endTimeStr);
       if (shifted) setEndTimeStr(shifted);
       clearError('endTime');
-    } else if (!isMedication && !endTimeStr && !isEditingWithoutDuration) {
+    } else if (!isMedication && !endTimeStr && !isEditingWithoutDuration && !shiftMode) {
       // A first start gets the default length, as the form always did (the task too: its To tile shows it, and
       // "No end" clears it, owner 2026-11-10).
       setEndTimeStr(presetEndFor(nextStart, DEFAULT_DURATION_MINUTES));
@@ -4052,11 +4318,145 @@ function AddEventForm({
     </div>
   );
 
+  // ── SHIFT MODE of the task form (1.4.3) ────────────────────────────────────────────────────────────────
+  // The same form, narrowed: a shift chip, the date locked to the shift day, the shift's repeat, a REQUIRED
+  // time inside the window (no "Any time"), the shift's coverer instead of an assignee picker, then reminders
+  // and More details as on any task. Same state, same tiles; the save is `handleShiftSubmit`.
+  let shiftTaskFields: ReactElement | null = null;
+  if (shiftMode) {
+    const windowEnd = shiftEnd(shiftMode.scheduledDate, shiftMode.startTime, shiftMode.durationMinutes);
+    const windowText = clockRangeText(shiftMode.startTime, windowEnd.time);
+    const shiftDayText = dayText(shiftMode.scheduledDate);
+    const owner =
+      shiftMode.coverer === 'open'
+        ? t('shifts:tasks.editor.ownerOpen')
+        : t('shifts:tasks.editor.ownerNow', { name: shiftMode.covererName || t('shifts:someone') });
+    shiftTaskFields = (
+      <div className="flex flex-col gap-6" data-testid="simple-task-form" data-shift-mode="true">
+        <p
+          className="m-0 break-words rounded-xl bg-bg-2 px-3 py-2 text-base font-medium text-ink"
+          data-testid="shift-task-chip"
+        >
+          {t('shifts:tasks.editor.onShift', { shift: shiftMode.title, window: windowText })}
+        </p>
+        <section
+          aria-labelledby="sf-what"
+          className="flex flex-col gap-3"
+          onBlur={() => {
+            if (title.trim()) completeStep('what');
+          }}
+        >
+          {sectionHeading('sf-what', t('addEvent.simple.whatNeedsDoing'))}
+          <TextField
+            id={titleFieldId}
+            label={t('addEvent.fields.title')}
+            required
+            value={title}
+            maxLength={150}
+            error={errors[titleFieldId] ?? errors.title ?? missingErrorFor('title')}
+            placeholder={t('addEvent.placeholders.taskTitle')}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              clearError(titleFieldId, 'title');
+            }}
+          />
+          {!isEditing && title.trim() === '' && titleSuggestions.length > 0 && (
+            <ChipSelect
+              id="title-suggestions"
+              label={t('addEvent.titleSuggestions.label')}
+              options={titleSuggestions.slice(0, 3)}
+              value={title}
+              onChange={(next) => {
+                setTitle(next ?? '');
+                if (next) {
+                  clearError(titleFieldId, 'title');
+                  completeStep('what');
+                }
+              }}
+            />
+          )}
+        </section>
+
+        <section aria-labelledby="sf-when" className="flex flex-col gap-3">
+          {sectionHeading('sf-when', t('addEvent.simple.when'))}
+          <div
+            className="flex min-w-0 flex-col gap-1 rounded-xl border border-line bg-bg-2 px-3 py-2"
+            data-testid="shift-task-locked-day"
+          >
+            <span className={VALUE_TILE_LABEL}>{t('addEvent.simple.starts')}</span>
+            <span className="text-base font-medium text-ink">
+              {t('shifts:tasks.editor.lockedDay', { date: shiftDayText, shift: shiftMode.title })}
+            </span>
+          </div>
+          {isEditing ? (
+            <Text variant="caption" data-testid="shift-task-repeat-locked">
+              {shiftMode.repeating
+                ? t('shifts:tasks.editor.repeatLocked', { shift: shiftMode.title })
+                : t('shifts:tasks.form.onlyDate', { date: shiftDayText })}
+            </Text>
+          ) : shiftMode.repeating ? (
+            <ChipSelect
+              id="shift-task-repeat"
+              label={t('addEvent.simple.howOften')}
+              variant="tile"
+              allowDeselect={false}
+              options={[
+                { value: 'every', label: t('shifts:tasks.editor.repeatEvery') },
+                { value: 'only', label: t('shifts:tasks.form.onlyDate', { date: shiftDayText }) },
+              ]}
+              value={shiftOnlyDay ? 'only' : 'every'}
+              onChange={(next) => setShiftOnlyDay(next === 'only')}
+            />
+          ) : (
+            <Text variant="caption" data-testid="shift-task-form-explain">
+              {t('shifts:tasks.form.explainOnce')}
+            </Text>
+          )}
+        </section>
+
+        <section aria-labelledby="sf-what-time" className="flex flex-col gap-3">
+          {sectionHeading('sf-what-time', t('addEvent.simple.whatTime'), true)}
+          {fromToTiles('task')}
+          <Text variant="caption" data-testid="shift-task-time-hint">
+            {t('shifts:tasks.form.timeHint', {
+              start: clockText(shiftMode.startTime),
+              end: clockText(windowEnd.time),
+            })}
+          </Text>
+          {zoneCaptionLine}
+        </section>
+
+        <section aria-labelledby="sf-who" className="flex flex-col gap-1">
+          {sectionHeading('sf-who', t('addEvent.simple.whoDoingIt'))}
+          <p className="m-0 text-base font-medium text-ink" data-testid="shift-task-owner">
+            {t('shifts:tasks.editor.owner')}
+          </p>
+          <Text variant="caption" data-testid="shift-task-owner-now">
+            {owner}
+          </Text>
+        </section>
+
+        {remindersSummaryRow}
+        <DisclosureRow
+          id="more-details"
+          title={t('addEvent.simple.moreDetails')}
+          summary={t('addEvent.simple.taskMoreHint')}
+          wrapSummary
+          open={moreOpen}
+          onToggle={setMoreOpen}
+        >
+          {detailsBlock}
+        </DisclosureRow>
+        <ShiftInlineError message={shiftSaveError} />
+      </div>
+    );
+  }
+
   const simpleFields =
     simpleKind === 'medication'
       ? simpleMedicationFields
       : simpleKind === 'task'
-        ? simpleTaskFields
+        ? (shiftTaskFields ?? simpleTaskFields)
         : simpleAppointmentFields;
 
 
@@ -4088,6 +4488,18 @@ function AddEventForm({
       initialFocusRef={firstRunMode ? nameFocus : undefined}
       footer={
         <>
+          {isEditing && simpleKind === 'task' && (
+            <Button
+              variant="dangerOutline"
+              onClick={() => setConfirmDelete(true)}
+              disabled={isPending}
+              offlineKind="change"
+              data-testid="add-event-delete"
+              className="mr-auto"
+            >
+              {shiftMode ? t('shifts:tasks.editor.deleteTask') : t('deleteTask.title')}
+            </Button>
+          )}
           {showSeriesEditNote && (
             <Text
               variant="caption"
@@ -4186,6 +4598,29 @@ function AddEventForm({
       </form>
     </Modal>
 
+    {shiftMode && !isEditing && <ShiftAddBridge circleId={circleId} mutationRef={shiftAddRef} />}
+
+    {confirmDelete && event && (
+      <DeleteEventDialog
+        circleId={circleId}
+        event={event}
+        surface={null}
+        deletedMessage={shiftMode ? t('shifts:tasks.editor.deleted') : undefined}
+        onClose={() => setConfirmDelete(false)}
+        onDeleted={(scope) => {
+          if (shiftMode) {
+            Analytics.shiftTaskDeleted({
+              scope: scope === 'single' ? 'occurrence' : scope,
+              surface: 'editor',
+            });
+          }
+          savedRef.current = true;
+          if (onDeleted) onDeleted();
+          else onClose();
+        }}
+      />
+    )}
+
     {confirmDiscard && (
       <ConfirmDialog
         title={t('addEvent.firstRun.discard.title')}
@@ -4246,6 +4681,24 @@ function AddEventForm({
     )}
     </>
   );
+}
+
+type ShiftAddMutation = ReturnType<typeof useAddShiftTask>;
+
+/**
+ * Hosts `useAddShiftTask` for the form, which would otherwise call a query hook on every task / medication /
+ * appointment form. Renders nothing; the form reads the mutation off the ref at save time.
+ */
+function ShiftAddBridge({
+  circleId,
+  mutationRef,
+}: {
+  circleId: string;
+  mutationRef: { current: ShiftAddMutation | null };
+}): null {
+  const mutation = useAddShiftTask(circleId);
+  mutationRef.current = mutation;
+  return null;
 }
 
 type AbandonField = 'name' | 'dosage' | 'time' | 'repeat' | 'more_details' | 'none';

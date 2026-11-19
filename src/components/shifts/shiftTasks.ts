@@ -1,5 +1,5 @@
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { daysBetween } from '@/components/calendar/dateMath';
+import { addDays, daysBetween } from '@/components/calendar/dateMath';
 import { wallTimeToInstant } from '@/utils/wallTimeToInstant';
 import { shiftEnd, shiftRootId } from './shiftUtils';
 
@@ -259,4 +259,178 @@ export function isShiftItemLate(
   if (!event.scheduled_time) return false;
   const due = wallTimeToInstant(event.scheduled_date, event.scheduled_time, timezone).getTime();
   return Number.isFinite(due) && nowMs - due >= SHIFT_ITEM_LATE_AFTER_MS;
+}
+
+// ---------------------------------------------------------------------------
+// Shift mode of the full task editor (1.4.3): window checks, the default time, the editor context
+// ---------------------------------------------------------------------------
+
+const toMinutes = (time: string): number => {
+  const [h, m] = time.split(':');
+  return parseInt(h, 10) * 60 + parseInt(m, 10);
+};
+const fromMinutes = (total: number): string =>
+  `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+
+/**
+ * Is `time` inside the shift's window? Earlier than the shift start means the NEXT day (day offset 1,
+ * the server's rule); the window ends inclusive. Mirrors the server so the editor answers before a
+ * round trip; the server's 400 SHIFT_TASK_OUTSIDE_SHIFT still has the last word on create. On an edit
+ * this client check is the ONLY guard (PATCH does not enforce the window).
+ */
+export function timeInsideShiftWindow(time: string, start: string, durationMinutes: number): boolean {
+  if (!time || !start) return false;
+  const t = toMinutes(time);
+  const s = toMinutes(start);
+  const at = (t < s ? 1440 : 0) + t;
+  return at >= s && at <= s + durationMinutes;
+}
+
+/**
+ * Overnight edit rule: the window crosses midnight and `next` lands on the other side of it than
+ * `stored` (before the shift start = after midnight). Changing sides would need a date move the PATCH
+ * does not do. False for a window inside one day.
+ */
+export function crossesMidnightSide(
+  stored: string,
+  next: string,
+  start: string,
+  durationMinutes: number
+): boolean {
+  if (!stored || !next || !start || toMinutes(start) + durationMinutes < 1440) return false;
+  const s = toMinutes(start);
+  return toMinutes(stored) < s !== toMinutes(next) < s;
+}
+
+/** `now` as `{date, time}` on the recipient's naive clock. */
+export function nowInZone(timezone: string, now: Date = new Date()): { date: string; time: string } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? '00';
+  const hour = get('hour') === '24' ? '00' : get('hour');
+  return { date: `${get('year')}-${get('month')}-${get('day')}`, time: `${hour}:${get('minute')}` };
+}
+
+export type ShiftTimeDefault = 'next_half_hour' | 'shift_start';
+
+/**
+ * The time a new shift task opens on. The shift is today in the recipient zone and now is inside the
+ * window: the next half hour, clamped to the window end. Otherwise the shift start. Naive recipient-local
+ * minutes (the frame of `timeInsideShiftWindow`), never the viewer's clock.
+ */
+export function defaultShiftTaskTime(
+  shift: { scheduledDate: string; startTime: string; durationMinutes: number },
+  timezone: string,
+  now: Date = new Date()
+): { time: string; source: ShiftTimeDefault } {
+  const start = shift.startTime.slice(0, 5) || '00:00';
+  const startMin = toMinutes(start);
+  const endMin = startMin + shift.durationMinutes;
+  const local = nowInZone(timezone, now);
+  // Minutes since the shift's own midnight: an overnight shift's after-midnight half is `local.date` = the day after.
+  const nowMin = toMinutes(local.time) + (local.date === shift.scheduledDate ? 0 : 1440);
+  const sameWindowDay =
+    local.date === shift.scheduledDate || (endMin >= 1440 && local.date === addDays(shift.scheduledDate, 1));
+  if (!sameWindowDay || nowMin < startMin || nowMin > endMin) return { time: start, source: 'shift_start' };
+  const next = Math.ceil((nowMin + 1) / 30) * 30;
+  const clamped = Math.min(next, endMin);
+  return { time: fromMinutes(clamped % 1440), source: 'next_half_hour' };
+}
+
+export type ShiftTaskSource = 'shift_detail' | 'saved_sheet' | 'tasks' | 'calendar';
+
+/**
+ * What the editor needs to run in shift mode: plain strings and numbers (no row, no component). Built from
+ * the shift row it was opened from (`shiftContextFromShift`) or, for a linked task edited from the Tasks /
+ * Calendar page, from the fetched task's own `shift` link (`shiftContextFromLink`).
+ */
+export interface ShiftTaskContext {
+  /** The shift event id to POST to (the occurrence id as the shift list holds it). */
+  shiftEventId: string;
+  /** The occurrence date, `YYYY-MM-DD`, recipient frame. */
+  scheduledDate: string;
+  title: string;
+  /** `HH:MM`, the window start. */
+  startTime: string;
+  durationMinutes: number;
+  repeating: boolean;
+  coverer: 'me' | 'other' | 'open';
+  /** First name of whoever is on the shift now (null when open or unknown). */
+  covererName: string | null;
+  source: ShiftTaskSource;
+}
+
+export function shiftContextFromShift(
+  shift: CalendarEvent,
+  members: readonly { id: string; first_name?: string | null; email?: string | null }[],
+  viewerId: string | null | undefined,
+  source: ShiftTaskSource,
+  repeating: boolean
+): ShiftTaskContext {
+  const holder = shift.assigned_to ?? null;
+  const member = holder ? members.find((m) => m.id === holder) : undefined;
+  const name =
+    member?.first_name?.trim() || shift.assigned_to_user?.first_name?.trim() || null;
+  return {
+    shiftEventId: shift.id,
+    scheduledDate: shift.scheduled_date,
+    title: shift.title,
+    startTime: hm(shift.scheduled_time) || '00:00',
+    durationMinutes: shift.duration_minutes ?? 0,
+    repeating,
+    coverer: !holder ? 'open' : holder === viewerId ? 'me' : 'other',
+    covererName: name,
+    source,
+  };
+}
+
+/**
+ * The context of a LINKED task opened from outside the shift (Tasks, Calendar), read off its fetched `shift`
+ * link. Null for a plain task, an `outside` link, an old backend that sends no link, or a link without a
+ * window (nothing to validate against): the normal editor, nothing locked.
+ */
+export function shiftContextFromLink(
+  task: Pick<CalendarEvent, 'event_type' | 'shift' | 'recurrence_rule' | 'parent_event_id'>,
+  viewerId: string | null | undefined,
+  source: ShiftTaskSource
+): ShiftTaskContext | null {
+  const link = task.shift;
+  if (task.event_type !== 'task' || !link || link.status === 'outside' || !link.window_start || !link.window_end) return null;
+  const startDate = link.window_start.slice(0, 10);
+  const startTime = link.window_start.slice(11, 16);
+  const endDate = link.window_end.slice(0, 10);
+  const endTime = link.window_end.slice(11, 16);
+  if (!startTime || !endTime) return null;
+  const durationMinutes = daysBetween(startDate, endDate) * 1440 + toMinutes(endTime) - toMinutes(startTime);
+  if (!(durationMinutes >= 0)) return null;
+  const holder = link.assignee?.id ?? null;
+  return {
+    shiftEventId: link.root_id,
+    scheduledDate: link.date,
+    title: link.title,
+    startTime,
+    durationMinutes,
+    repeating: !!task.recurrence_rule || !!task.parent_event_id,
+    coverer: link.status === 'open' || !holder ? 'open' : holder === viewerId ? 'me' : 'other',
+    covererName: link.assignee?.first_name?.trim() || null,
+    source,
+  };
+}
+
+/**
+ * Does `row` belong to the task `id` the editor just saved? A repeating task's row for the day is usually a
+ * virtual `<root>_<date>` occurrence (or a physical child pointing at the root), so the root id matches too.
+ */
+export function rowMatchesHighlight(
+  row: Pick<ShiftListRow, 'key' | 'event'>,
+  id: string
+): boolean {
+  return row.key === id || row.key.startsWith(`${id}_`) || row.event.parent_event_id === id;
 }

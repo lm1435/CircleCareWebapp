@@ -1012,6 +1012,7 @@ export default function CalendarPage(): ReactElement {
         <AddEventModal
           circleId={circleId}
           event={editingEvent}
+          shiftEditSource="calendar"
           onClose={() => setEditingEvent(null)}
         />
       )}
