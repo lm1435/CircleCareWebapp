@@ -4,6 +4,7 @@
 // Same fixtures as the originals. The dead list showed an answered dose as a "Taken" row; the live list drops an
 // answered dose from Next up (doseNeedsAnswer), so "the row shows the real answer" reads "the row is gone".
 
+import { __resetWriteRetryForTests, pendingCount } from '@/lib/writeRetryQueue';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Mock } from 'vitest';
@@ -41,6 +42,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  __resetWriteRetryForTests();
   vi.useRealTimers();
   vi.restoreAllMocks();
   await i18n.changeLanguage('en');
@@ -276,7 +278,7 @@ describe('NextUp (undo flow): ambiguous confirm failure after the write landed (
     expect(screen.queryByText(SUCCESS_TAKEN)).not.toBeInTheDocument();
   });
 
-  it('NEGATIVE the re-read ITSELF fails: "couldn\'t check", never "Couldn\'t save" and never success', async () => {
+  it('NEGATIVE the re-read ITSELF fails after a timeout: queued for the quiet retry (1.4.3), no dialog, never success', async () => {
     installBackend({ writeLands: true, failWith: axiosTimeout() });
     // After the (lost) POST, every read of the day fails too.
     const baseGet = (mockedGet as Mock).getMockImplementation()!;
@@ -291,11 +293,8 @@ describe('NextUp (undo flow): ambiguous confirm failure after the write landed (
     });
     await takeViaNextUp();
 
-    expect(
-      await screen.findByText(
-        "We couldn't check whether Atorvastatin was recorded. Check the calendar once you're back online."
-      )
-    ).toBeInTheDocument();
+    await waitFor(() => expect(pendingCount()).toBe(1));
+    expect(screen.queryByText(/We couldn't check whether/)).not.toBeInTheDocument();
     expect(screen.queryByText(GENERIC_ERROR)).not.toBeInTheDocument();
     expect(screen.queryByText(SUCCESS_TAKEN)).not.toBeInTheDocument();
   });
