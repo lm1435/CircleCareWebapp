@@ -3,6 +3,10 @@ import { devError } from '@/constants/config';
 import { queryClient } from '@/lib/queryClient';
 import { todaysMedsKey, useConfirmMedication } from '@/hooks/useMedConfirmation';
 import { keepalivePost } from '@/lib/keepalivePost';
+import { Analytics } from '@/lib/analytics';
+import { failureContext } from '@/lib/apiErrors';
+import { confirmFailureOutcome, verifyConfirmLanded } from '@/lib/confirmVerify';
+import { enqueueWriteRetry, isQueueableFailure } from '@/lib/writeRetryQueue';
 import { startUndoTimer, type UndoTimer } from '@/lib/undoTimer';
 import { queryKeys } from '@/lib/queryKeys';
 import type {
@@ -151,6 +155,85 @@ export function useMedicationUndo({
     });
   }, []);
 
+  /** The mutation variables for one dose (identical for the first send and every queued resend). */
+  const confirmVariables = (entry: PendingEntry) => ({
+    event_id: entry.med.id,
+    status: entry.status,
+    scheduled_time: entry.scheduledTime,
+    circleId: entry.circleId,
+    ...(entry.entry ? { entry: entry.entry } : {}),
+    // The dose's day, so an AMBIGUOUS rejection is verified against the
+    // server before anyone is told it failed (lib/confirmVerify.ts).
+    dose: {
+      scheduled_date: entry.med.scheduled_date,
+      parent_event_id: entry.med.parent_event_id ?? null,
+    },
+    quietRetry: true,
+  });
+
+  /**
+   * Quiet retry of a dose whose answer never reached the server (1.4.3, owner OK 2026-11-19; it
+   * changes the 2026-10-14 "dose answers are never queued" rule). The queue re-reads the dose's day
+   * BEFORE EVERY resend (`landed`): a write that did land is never sent again (a blind resend
+   * would re-stamp `confirmed_at` and write a second feed row). Another caregiver's answer meanwhile
+   * is a 409 DOSE_ALREADY_RECORDED: that is a refusal, not a transport failure, so it goes to the
+   * existing "someone else answered" path and is NEVER overwritten.
+   */
+  const queueRetry = useCallback(
+    (entry: PendingEntry, firstError: unknown): void => {
+      const dose = {
+        id: entry.med.id,
+        scheduled_date: entry.med.scheduled_date,
+        scheduled_time: entry.scheduledTime,
+        parent_event_id: entry.med.parent_event_id ?? null,
+      };
+      const settle = (): void => {
+        clearEntry(entry.med.id);
+        onConfirmedRef.current?.(entry.status, entry.med, entry.circleId);
+      };
+      enqueueWriteRetry({
+        key: `medication_confirm:${entry.circleId}:${entry.med.id}:${entry.med.scheduled_date}:${entry.scheduledTime}`,
+        kind: 'medication_confirm',
+        circleId: entry.circleId,
+        send: () => mutateAsyncRef.current(confirmVariables(entry)),
+        landed: async () =>
+          (await verifyConfirmLanded(entry.circleId, dose, entry.status)).verdict === 'recorded',
+        onSettled: (via) => {
+          if (via === 'landed') {
+            // Nothing was sent: refresh what the rows read, as the keepalive path does.
+            const sent = entry.circleId;
+            void queryClient.invalidateQueries({ queryKey: todaysMedsKey(sent) });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(sent) });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.medicationConfirmations(sent) });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.medicationTodaySummary(sent) });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.activityFeed(sent) });
+          }
+          settle();
+        },
+        onRefused: (error) => {
+          // 409 DOSE_ALREADY_RECORDED (someone else answered), 403, ...: today's copy.
+          clearEntry(entry.med.id);
+          onErrorRef.current?.(error, entry.status, entry.med, entry.circleId);
+        },
+        onGaveUp: () => {
+          clearEntry(entry.med.id);
+          const outcome = confirmFailureOutcome(firstError);
+          // Reported ONCE, here (the mutation stayed silent while it was queued).
+          Analytics.errorOccurred('medication_confirm', 'medication_confirm_update_failed', {
+            circle_id: entry.circleId,
+            status: entry.status,
+            ...failureContext('medication_confirm', 'update', firstError),
+            source,
+            ...(outcome ? { outcome } : {}),
+          });
+          void queryClient.invalidateQueries({ queryKey: todaysMedsKey(entry.circleId) });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.medicationConfirmations(entry.circleId) });
+        },
+      });
+    },
+    [clearEntry, source]
+  );
+
   // The ordinary send: axios through `useConfirmMedication` (refresh, verify,
   // success toast, invalidation). `send` below decides whether to try the
   // keepalive request first.
@@ -185,19 +268,7 @@ export function useMedicationUndo({
       // promise `mutateAsync` returns is per-CALL (`execute(variables)`), so
       // handlers bound to it are unaffected by the observer moving on.
       mutateAsyncRef
-        .current({
-          event_id: entry.med.id,
-          status: entry.status,
-          scheduled_time: entry.scheduledTime,
-          circleId: entry.circleId,
-          ...(entry.entry ? { entry: entry.entry } : {}),
-          // The dose's day, so an AMBIGUOUS rejection is verified against the
-          // server before anyone is told it failed (lib/confirmVerify.ts).
-          dose: {
-            scheduled_date: entry.med.scheduled_date,
-            parent_event_id: entry.med.parent_event_id ?? null,
-          },
-        })
+        .current(confirmVariables(entry))
         // `.then(onSuccess, onError)` — TWO ARGUMENTS, never `.then().catch()`.
         // A trailing `.catch()` also catches whatever the SUCCESS handler
         // throws, and `onConfirmed` is caller-supplied UI work (a toast); a
@@ -209,6 +280,13 @@ export function useMedicationUndo({
             onConfirmedRef.current?.(entry.status, entry.med, entry.circleId);
           },
           (error: unknown) => {
+            // TRANSPORT failure (timeout / network / an OFFLINE refusal after the tap): never
+            // reported yet. Queued for the quiet retry; the row keeps its "Saving" badge.
+            // Verify-before-alert already ran inside the mutation (a landed write resolved).
+            if (isQueueableFailure(error)) {
+              queueRetry(entry, error);
+              return;
+            }
             clearEntry(entry.med.id);
             onErrorRef.current?.(error, entry.status, entry.med, entry.circleId);
           }
@@ -218,7 +296,7 @@ export function useMedicationUndo({
         // so it cannot swallow a mutation rejection into the success path.
         .catch(devError);
     },
-    [clearEntry]
+    [clearEntry, queueRetry]
   );
 
   const send = useCallback(

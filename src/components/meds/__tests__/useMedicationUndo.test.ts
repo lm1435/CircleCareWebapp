@@ -199,6 +199,8 @@ describe('useMedicationUndo', () => {
       circleId: 'circle-1',
       // The dose's day, for verify-before-alert (lib/confirmVerify.ts).
       dose: { scheduled_date: '2026-09-05', parent_event_id: null },
+      // 1.4.3: the undo hook queues a transport failure; the mutation stays silent for it.
+      quietRetry: true,
     });
 
     // The badge stays put until the request SETTLES — clearing it mid-flight

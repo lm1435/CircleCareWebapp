@@ -43,6 +43,7 @@ import { ConfirmMedDialog } from '@/components/meds/ConfirmMedDialog';
 import { MEDICATION_UNDO_DELAY_MS } from '@/components/meds/useMedicationUndo';
 import type { Circle } from '@/api/circles';
 import type { TodaysMedication } from '@/api/medicationConfirmations';
+import { __resetWriteRetryForTests, pendingCount } from '@/lib/writeRetryQueue';
 
 const mockUseHourCycle = vi.fn();
 vi.mock('@/hooks/useHourCycle', () => ({
@@ -201,6 +202,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  __resetWriteRetryForTests();
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
@@ -238,7 +240,7 @@ describe('TodaysMeds (undo flow) — ambiguous confirm failure after the write l
     expect(screen.queryByText(SUCCESS_TAKEN)).not.toBeInTheDocument();
   });
 
-  it('the re-read ITSELF fails: "couldn\'t check" (mobile\'s copy), never "Couldn\'t save" and never success', async () => {
+  it('the re-read ITSELF fails after a timeout: the dose is QUEUED for the quiet retry (1.4.3), no dialog, never success', async () => {
     installBackend({ writeLands: true, failWith: axiosTimeout() });
     // After the (lost) POST, every read of the day fails too.
     const baseGet = mockedGet.getMockImplementation()!;
@@ -253,11 +255,10 @@ describe('TodaysMeds (undo flow) — ambiguous confirm failure after the write l
     });
     await takeViaTodaysMeds();
 
-    expect(
-      await screen.findByText(
-        "We couldn't check whether Atorvastatin was recorded. Check the calendar once you're back online."
-      )
-    ).toBeInTheDocument();
+    // Nothing is claimed either way: no "couldn't save", no "couldn't check" dialog (the retry decides),
+    // and no success. The dose waits in the queue, which re-reads before every resend.
+    await waitFor(() => expect(pendingCount()).toBe(1));
+    expect(screen.queryByText(/We couldn't check whether/)).not.toBeInTheDocument();
     expect(screen.queryByText(GENERIC_ERROR)).not.toBeInTheDocument();
     expect(screen.queryByText(SUCCESS_TAKEN)).not.toBeInTheDocument();
   });

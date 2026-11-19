@@ -30,6 +30,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { classifyFailureCode, failureContext, isUnreportedFailure } from '@/lib/apiErrors';
 import { withRefetchCap } from '@/lib/refetchCap';
+import { isQueueableFailure } from '@/lib/writeRetryQueue';
 import { useToast } from '@/components/ui';
 import { getDateInTimezone } from '@/utils/timezone';
 import {
@@ -149,6 +150,12 @@ export type ConfirmMedicationVariables = ConfirmMedicationRequest & {
    * rides on `medication_confirmed` and is stripped before the POST).
    */
   entry?: MedicationConfirmEntry;
+  /**
+   * The caller queues a transport failure for the quiet retry (components/meds/useMedicationUndo,
+   * 1.4.3): `onError` then stays silent for it (no `error_occurred`, no refetch); the queue reports
+   * once, on give-up. Stripped before the POST.
+   */
+  quietRetry?: boolean;
 };
 
 /**
@@ -172,6 +179,7 @@ export function useConfirmMedication(
       circleId: sentCircleId,
       dose,
       entry: _entry,
+      quietRetry: _quietRetry,
       ...data
     }: ConfirmMedicationVariables): Promise<MedicationConfirmation> => {
       const circleId = sentCircleId ?? hookCircleId;
@@ -272,6 +280,8 @@ export function useConfirmMedication(
     },
     onError: (error, variables) => {
       const circleId = variables.circleId ?? hookCircleId;
+      // Queued for the quiet retry by the caller: not reported, not refetched (it is still pending).
+      if (variables.quietRetry && isQueueableFailure(error)) return;
 
       // PK1 (2026-09-29): ANOTHER CAREGIVER ALREADY ANSWERED this dose (409
       // DOSE_ALREADY_RECORDED). Nothing failed and nothing was overwritten, so
