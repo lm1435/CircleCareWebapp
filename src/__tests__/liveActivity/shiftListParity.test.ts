@@ -25,7 +25,7 @@ const load = (file: string): Fixture => JSON.parse(fs.readFileSync(path.join(FIX
 function webResult(fx: Fixture) {
   const shift = { event_type: 'shift', ...fx.shift, assigned_to: fx.covererId } as CalendarEvent;
   const list = buildShiftList(shift, fx.events as CalendarEvent[]);
-  const open = list.rows.find((r) => !r.done && !r.missed);
+  const open = list.rows.find((r) => r.key === list.primaryKey);
   return { list, got: { total: list.total, done: list.done, nextKey: open?.key ?? null } };
 }
 

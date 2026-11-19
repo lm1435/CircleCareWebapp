@@ -69,7 +69,7 @@ export interface ShiftListModel {
   taskDone: number;
   /** The shift has nobody on it. */
   open: boolean;
-  /** Key of the first row that is not done: the only filled (primary) action. */
+  /** Key of the first OPEN row (not done, not missed): the only filled (primary) action. Same rule as mobile's nextKey and the server's Live Activity "next". */
   primaryKey: string | null;
 }
 
@@ -144,7 +144,7 @@ export function buildShiftList(shift: CalendarEvent, events: readonly CalendarEv
     taskTotal: tasks.length,
     taskDone: tasks.filter((r) => r.done).length,
     open: !holder,
-    primaryKey: rows.find((r) => !r.done)?.key ?? null,
+    primaryKey: rows.find((r) => !r.done && !r.missed)?.key ?? null,
   };
 }
 
