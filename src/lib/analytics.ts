@@ -650,6 +650,9 @@ export const Analytics = {
   loginFailed: (method: AuthMethod, error: string) =>
     capture('login_failed', { method, error: sanitizeErrorText(error) }),
 
+  /** A 429 on login: the limiter working, not a failure. Own event so the admin digest's ERRORS skip it. */
+  loginRateLimited: (method: AuthMethod) => capture('login_rate_limited', { method }),
+
   logout: () => capture('logout'),
 
   /** Fires at the TOP of the delete-account success handler, before

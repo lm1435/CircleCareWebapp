@@ -126,7 +126,9 @@ export default function LoginPage(): ReactElement {
     } catch (err) {
       const apiError = getApiError(err);
       // PHI-safe: only the backend error CODE, never the email or full error.
-      Analytics.loginFailed('email', apiError?.code ?? 'LOGIN_FAILED');
+      // A throttled attempt is the limiter working, not a failure: own event (the digest counts login_failed).
+      if (isAuthRateLimitedError(err) || isRateLimitError(err)) Analytics.loginRateLimited('email');
+      else Analytics.loginFailed('email', apiError?.code ?? 'LOGIN_FAILED');
       if (apiError?.code === 'EMAIL_NOT_VERIFIED') {
         const verifyEmail = apiError.email || trimmedEmail;
         // Best-effort fresh code before the verify screen (mirrors mobile).

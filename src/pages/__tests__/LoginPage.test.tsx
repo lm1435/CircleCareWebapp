@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import '@/i18n';
 import LoginPage from '@/pages/LoginPage';
 import { apiClient } from '@/lib/api';
+import { Analytics } from '@/lib/analytics';
 import { setPendingInviteCode } from '@/lib/pendingInviteCode';
 import { supabase } from '@/lib/supabase';
 import { tokenAccessor } from '@/lib/tokenAccessor';
@@ -276,6 +277,31 @@ describe('LoginPage', () => {
     expect(alert).not.toHaveTextContent("We couldn't sign you in. Please try again.");
     expect(alert).not.toHaveTextContent('Invalid email or password.');
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('a 429 fires login_rate_limited, NOT login_failed (digest ERRORS)', async () => {
+    const failed = vi.spyOn(Analytics, 'loginFailed').mockImplementation(() => {});
+    const limited = vi.spyOn(Analytics, 'loginRateLimited').mockImplementation(() => {});
+    mockedPost.mockRejectedValueOnce({ success: false, error: { code: 'RATE_LIMIT', message: 'x' } });
+    await fillAndSubmit();
+    await screen.findByRole('alert');
+    expect(limited).toHaveBeenCalledTimes(1);
+    expect(limited).toHaveBeenCalledWith('email');
+    expect(failed).not.toHaveBeenCalled();
+    failed.mockRestore();
+    limited.mockRestore();
+  });
+
+  it('bad credentials still fire login_failed and not login_rate_limited', async () => {
+    const failed = vi.spyOn(Analytics, 'loginFailed').mockImplementation(() => {});
+    const limited = vi.spyOn(Analytics, 'loginRateLimited').mockImplementation(() => {});
+    mockedPost.mockRejectedValueOnce({ success: false, error: { code: 'LOGIN_FAILED', message: 'x' } });
+    await fillAndSubmit();
+    await screen.findByRole('alert');
+    expect(failed).toHaveBeenCalledWith('email', 'LOGIN_FAILED');
+    expect(limited).not.toHaveBeenCalled();
+    failed.mockRestore();
+    limited.mockRestore();
   });
 
   it('AUTH_RATE_LIMITED (generic auth limiter) shows its own "try again in a moment" copy', async () => {
