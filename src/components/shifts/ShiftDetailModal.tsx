@@ -11,6 +11,7 @@ import { formatDateForDisplay } from '@/components/calendar/dateMath';
 import { formatWeekdayList } from '@/components/calendar/recurrenceLabel';
 import { shiftAssignee } from './shiftPeople';
 import { ShiftTaskList } from './ShiftTaskList';
+import type { ShiftListRow } from './shiftTasks';
 import { rotationPosition } from './shiftRotation';
 import { holdsOnlyThisDay,
   formatShiftRange,
@@ -28,7 +29,16 @@ import { holdsOnlyThisDay,
 
 /** Titles longer than this step down from the large title size (the approved mock's rule, mobile's too). */
 
-export type ShiftDetailAction = 'take' | 'drop' | 'assign' | 'edit' | 'delete' | 'addTask';
+export type ShiftDetailAction =
+  | 'take'
+  | 'drop'
+  | 'assign'
+  | 'edit'
+  | 'delete'
+  | 'addTask'
+  // A task row's text was tapped (1.4.3): an open task opens the editor, a completed one the read-only detail.
+  | 'editTask'
+  | 'viewTask';
 
 export interface ShiftDetailModalProps {
   circleId: string;
@@ -36,7 +46,10 @@ export interface ShiftDetailModalProps {
   timezone: string;
   onClose: () => void;
   /** The page owns the dialogs (never a modal inside a modal); the detail only asks. */
-  onAction: (action: ShiftDetailAction, shift: CalendarEvent) => void;
+  onAction: (action: ShiftDetailAction, shift: CalendarEvent, task?: ShiftListRow) => void;
+  /** The task to ring on the list (a save just returned here): its id; the ring clears itself. */
+  highlightTaskId?: string | null;
+  onHighlightDone?: () => void;
 }
 
 /**
@@ -54,6 +67,8 @@ export function ShiftDetailModal({
   timezone,
   onClose,
   onAction,
+  highlightTaskId,
+  onHighlightDone,
 }: ShiftDetailModalProps): ReactElement {
   const { t, i18n } = useTranslation(['shifts', 'common', 'calendar']);
   const cycle = useHourCycle();
@@ -270,6 +285,9 @@ export function ShiftDetailModal({
           canWrite={canWrite}
           ended={ended}
           onAdd={() => onAction('addTask', shift)}
+          onOpenTask={(row) => onAction(row.done ? 'viewTask' : 'editTask', shift, row)}
+          highlightTaskId={highlightTaskId}
+          onHighlightDone={onHighlightDone}
           primaryAllowed={!showTake}
         />
 

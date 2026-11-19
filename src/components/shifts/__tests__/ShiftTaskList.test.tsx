@@ -141,7 +141,7 @@ describe('shift detail list: what is in it', () => {
   it('"Lucia\'s list · 2 of 5 done": linked tasks, doses, and Lucia\'s own overlapping regular task', () => {
     renderList();
     expect(screen.getByTestId('shift-task-list-title')).toHaveTextContent("Lucia's list · 2 of 5 done");
-    const rows = screen.getAllByTestId('shift-task-row').map((r) => r.querySelector('p')?.textContent);
+    const rows = screen.getAllByTestId('shift-task-row').map((r) => within(r).getByTestId('shift-task-row-name').textContent);
     expect(rows).toEqual(['Metformin', 'Linked repeating', 'Regular for Lucia', 'Linked one-off', 'Lisinopril']);
   });
 
@@ -444,5 +444,110 @@ describe('shift detail list: late items (1.4.3)', () => {
     } finally {
       vi.useFakeTimers({ toFake: ['Date'], now: PINNED_NOW });
     }
+  });
+});
+
+// 1.4.3: a task row's text block opens the editor / the read-only detail. Only the text block is a button, a
+// SIBLING of Done / Taken (project_pressable_row_a11y_swallow); medication rows stay static.
+describe('shift detail list: opening a task (1.4.3)', () => {
+  const rowOf = (name: string) =>
+    screen.getAllByTestId('shift-task-row').find((r) => within(r).getByTestId('shift-task-row-name').textContent === name)!;
+
+  it('P-open an open task row is a button named "Edit <title> <time>"; tapping it reports the row', async () => {
+    const onOpenTask = vi.fn();
+    const user = userEvent.setup();
+    renderList({ onOpenTask });
+    const button = within(rowOf('Linked repeating')).getByRole('button', { name: /^Edit Linked repeating\s+2:00 PM/ });
+    expect(button).toHaveAttribute('data-testid', 'shift-task-open');
+    expect(button.className).toContain('min-h-[44px]');
+    await user.click(button);
+    expect(onOpenTask).toHaveBeenCalledTimes(1);
+    expect(onOpenTask.mock.calls[0][0]).toMatchObject({ kind: 'task', key: 'Linked repeating', done: false, linked: true });
+  });
+
+  it('P-open the button carries the hint "Opens the task" and a decorative chevron', () => {
+    renderList({ onOpenTask: vi.fn() });
+    const button = within(rowOf('Linked repeating')).getByTestId('shift-task-open');
+    const hint = document.getElementById(button.getAttribute('aria-describedby')!);
+    expect(hint).toHaveTextContent('Opens the task');
+    expect(button.querySelector('svg')?.closest('[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  it('P-open a completed task row is "View ..." (the read-only detail)', async () => {
+    eventsHook.value = {
+      ...eventsHook.value,
+      events: [ev('Gave pills', { scheduled_time: '14:00:00', shift: link(), completed_at: '2026-11-09T20:00:00Z' })],
+    };
+    const onOpenTask = vi.fn();
+    const user = userEvent.setup();
+    renderList({ onOpenTask });
+    await user.click(screen.getByRole('button', { name: /^View Gave pills/ }));
+    expect(onOpenTask.mock.calls[0][0]).toMatchObject({ done: true });
+  });
+
+  it('N9 Done is a SIBLING of the row button, never inside it, and keeps its own label', () => {
+    renderList({ onOpenTask: vi.fn() });
+    const row = rowOf('Linked repeating');
+    const open = within(row).getByTestId('shift-task-open');
+    const done = within(row).getByRole('button', { name: 'Done, Linked repeating' });
+    expect(open.contains(done)).toBe(false);
+    expect(done.contains(open)).toBe(false);
+    expect(within(row).getAllByRole('button')).toHaveLength(2);
+  });
+
+  it('N8 a medication row has no button around its text; Taken keeps its own label', () => {
+    eventsHook.value = { ...eventsHook.value, events: [dose('Lisinopril', '15:00:00')] };
+    renderList({ onOpenTask: vi.fn() });
+    const row = screen.getByTestId('shift-task-row');
+    expect(within(row).queryByTestId('shift-task-open')).toBeNull();
+    expect(within(row).getAllByRole('button')).toHaveLength(1);
+    expect(within(row).getByRole('button', { name: 'Taken, Lisinopril' })).toBeInTheDocument();
+  });
+
+  it('N10 a view-only viewer: an open task is static text; a completed one still opens', () => {
+    eventsHook.value = {
+      ...eventsHook.value,
+      events: [
+        ev('Open one', { scheduled_time: '14:00:00', shift: link() }),
+        ev('Done one', { scheduled_time: '15:00:00', shift: link(), completed_at: '2026-11-09T20:00:00Z' }),
+      ],
+    };
+    renderList({ onOpenTask: vi.fn(), canWrite: false });
+    expect(within(rowOf('Open one')).queryByTestId('shift-task-open')).toBeNull();
+    expect(within(rowOf('Done one')).getByRole('button', { name: /^View Done one/ })).toBeInTheDocument();
+  });
+
+  it('N-pending a task whose Done is pending undo is not openable', () => {
+    completion.pendingIds = new Set(['Linked repeating']);
+    renderList({ onOpenTask: vi.fn() });
+    expect(within(rowOf('Linked repeating')).queryByTestId('shift-task-open')).toBeNull();
+  });
+
+  it('without onOpenTask the rows are static (as before): no buttons around the text, no hint', () => {
+    renderList();
+    expect(screen.queryByTestId('shift-task-open')).toBeNull();
+    expect(screen.queryByText('Opens the task')).toBeNull();
+  });
+
+  it('P5 highlight: the row of the saved task is ringed, and a virtual <root>_<date> row matches the root id', () => {
+    eventsHook.value = {
+      ...eventsHook.value,
+      events: [
+        ev('task-root_2026-11-09', { title: 'Repeating', scheduled_time: '14:00:00', shift: link(), parent_event_id: 'task-root' }),
+        ev('other', { title: 'Other', scheduled_time: '15:00:00', shift: link() }),
+      ],
+    };
+    renderList({ onOpenTask: vi.fn(), highlightTaskId: 'task-root' });
+    expect(within(rowOf('Repeating')).getByTestId('highlight-ring')).toBeInTheDocument();
+    expect(within(rowOf('Other')).queryByTestId('highlight-ring')).toBeNull();
+    expect(screen.getAllByTestId('highlight-ring')).toHaveLength(1);
+  });
+
+  it('N-highlight no highlight id, or an id nothing matches, rings nothing', () => {
+    renderList({ onOpenTask: vi.fn() });
+    expect(screen.queryByTestId('highlight-ring')).toBeNull();
+    cleanup();
+    renderList({ onOpenTask: vi.fn(), highlightTaskId: 'nope' });
+    expect(screen.queryByTestId('highlight-ring')).toBeNull();
   });
 });

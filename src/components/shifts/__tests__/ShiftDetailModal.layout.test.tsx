@@ -69,12 +69,12 @@ function circle(over: Record<string, unknown> = {}) {
   } as unknown as ReturnType<typeof useCircle>);
 }
 
-function renderDetail(s: CalendarEvent, timezone = RECIPIENT_TZ) {
+function renderDetail(s: CalendarEvent, timezone = RECIPIENT_TZ, onAction = vi.fn()) {
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <ToastProvider>
         <MemoryRouter>
-          <ShiftDetailModal circleId="c" shift={s} timezone={timezone} onClose={vi.fn()} onAction={vi.fn()} />
+          <ShiftDetailModal circleId="c" shift={s} timezone={timezone} onClose={vi.fn()} onAction={onAction} />
         </MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>
@@ -377,5 +377,54 @@ describe('add task on an ended shift occurrence (1.4.3)', () => {
     vi.setSystemTime(new Date('2026-11-01T12:00:00Z'));
     renderDetail(sunday({ id: 'root_2026-11-02', scheduled_date: '2026-11-02' }), 'Asia/Tokyo');
     expect(canAdd()).toBe(true);
+  });
+});
+
+
+// 1.4.3: the detail hands the list the row-open and highlight wiring; an open row asks the page for the editor,
+// a completed one for the read-only detail (the page swaps the dialog, so the detail never stacks a modal).
+describe('task rows (1.4.3)', () => {
+  const row = (done: boolean) => ({ key: 't1', kind: 'task', event: { id: 't1' }, done, linked: true });
+
+  it('P an open row asks for editTask, a completed one for viewTask, each with the row', () => {
+    const onAction = vi.fn();
+    const s = shift();
+    renderDetail(s, RECIPIENT_TZ, onAction);
+    const open = listProps.value?.onOpenTask as (r: unknown) => void;
+    open(row(false));
+    expect(onAction).toHaveBeenLastCalledWith('editTask', s, expect.objectContaining({ key: 't1' }));
+    open(row(true));
+    expect(onAction).toHaveBeenLastCalledWith('viewTask', s, expect.objectContaining({ done: true }));
+  });
+
+  it('P the highlight id and its done callback pass through to the list', () => {
+    const onHighlightDone = vi.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <MemoryRouter>
+            <ShiftDetailModal
+              circleId="c"
+              shift={shift()}
+              timezone={RECIPIENT_TZ}
+              onClose={vi.fn()}
+              onAction={vi.fn()}
+              highlightTaskId="t9"
+              onHighlightDone={onHighlightDone}
+            />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+    expect(listProps.value?.highlightTaskId).toBe('t9');
+    (listProps.value?.onHighlightDone as () => void)();
+    expect(onHighlightDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('N Add still asks for addTask only (a row open never reuses it)', () => {
+    const onAction = vi.fn();
+    renderDetail(shift(), RECIPIENT_TZ, onAction);
+    (listProps.value?.onAdd as () => void)();
+    expect(onAction).toHaveBeenLastCalledWith('addTask', expect.anything());
   });
 });

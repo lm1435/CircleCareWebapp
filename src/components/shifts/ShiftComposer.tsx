@@ -3,9 +3,11 @@ import type { CalendarEvent } from '@/api/calendarEvents';
 import { Analytics } from '@/lib/analytics';
 import { ShiftFormModal, type ShiftFormPrefill, type ShiftFormSource } from './ShiftFormModal';
 import { ShiftSavedDialog } from './ShiftSavedDialog';
-import { ShiftTaskFormModal } from './ShiftTaskFormModal';
-import { useToast } from '@/components/ui';
-import { useTranslation } from 'react-i18next';
+import { AddEventModal } from '@/components/calendar/AddEventModal';
+import { useCircle } from '@/hooks/useCircle';
+import { useAuthStore } from '@/store/authStore';
+import { shiftContextFromShift } from './shiftTasks';
+import { isShiftRepeating } from './shiftUtils';
 
 export interface ShiftComposerProps {
   circleId: string;
@@ -33,20 +35,26 @@ export function ShiftComposer({
   onClose,
 }: ShiftComposerProps): ReactElement {
   const [stage, setStage] = useState<Stage>({ kind: 'form', source });
-  const { showToast } = useToast();
-  const { t } = useTranslation('shifts');
+  const { members } = useCircle(circleId);
+  const viewerId = useAuthStore((st) => st.user?.id ?? null);
 
   if (stage.kind === 'task') {
     return (
-      <ShiftTaskFormModal
+      // The full task editor in shift mode (it toasts its own "Task added"); every close path, a save included,
+      // returns to the saved dialog: the destination after the saved dialog is unchanged.
+      <AddEventModal
         circleId={circleId}
-        shift={stage.shift}
-        source="saved_sheet"
+        initialType="task"
+        entry="shift_saved_sheet"
+        shiftContext={shiftContextFromShift(
+          stage.shift,
+          members,
+          viewerId,
+          'saved_sheet',
+          isShiftRepeating(stage.shift)
+        )}
         onClose={() => setStage({ kind: 'saved', shift: stage.shift, next: stage.next })}
-        onAdded={() => {
-          showToast(t('tasks.added'), 'success');
-          setStage({ kind: 'saved', shift: stage.shift, next: stage.next });
-        }}
+        onShiftTaskSaved={() => setStage({ kind: 'saved', shift: stage.shift, next: stage.next })}
       />
     );
   }

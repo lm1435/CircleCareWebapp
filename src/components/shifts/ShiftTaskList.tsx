@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import type { CircleMember } from '@/api/circleMembers';
 import { isPermissionDeniedError } from '@/api/medicationConfirmations';
-import { Button, Card, Icon, Skeleton, UndoBadge, useToast } from '@/components/ui';
+import { Button, Card, HighlightRing, Icon, Skeleton, UndoBadge, useToast } from '@/components/ui';
 import { useMedicationUndo } from '@/components/meds/useMedicationUndo';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { useIsOffline } from '@/hooks/useIsOffline';
@@ -15,7 +15,14 @@ import { Analytics } from '@/lib/analytics';
 import { formatEventTimeCompact, isDoseConfirmable, zoneReferenceInstant } from '@/utils/timezone';
 import { shiftAssignee } from './shiftPeople';
 import { hasShiftEnded } from './shiftUtils';
-import { buildShiftList, doneBucket, isShiftItemLate, tasksBucket, type ShiftListRow } from './shiftTasks';
+import {
+  buildShiftList,
+  doneBucket,
+  isShiftItemLate,
+  rowMatchesHighlight,
+  tasksBucket,
+  type ShiftListRow,
+} from './shiftTasks';
 
 export interface ShiftTaskListProps {
   circleId: string;
@@ -28,6 +35,19 @@ export interface ShiftTaskListProps {
   /** The shift has ended: nothing can be added (the server answers 409 SHIFT_ENDED). */
   ended: boolean;
   onAdd: () => void;
+  /**
+   * A TASK row's text block was tapped (1.4.3): the caller opens the editor (an open task) or the read-only
+   * detail (a completed one). Medication rows are never tappable, and the Done / Taken button stays its own
+   * sibling target. Omitted = the rows are static, as before.
+   */
+  onOpenTask?: (row: ShiftListRow) => void;
+  /**
+   * The task to ring after a save: the id of the new / edited task. A repeating task's row for the day is
+   * usually the virtual `<root>_<date>` occurrence, so it matches the root id too. `onHighlightDone` fires
+   * once the ring has run (the caller clears it so a re-render never replays it).
+   */
+  highlightTaskId?: string | null;
+  onHighlightDone?: () => void;
   /**
    * May the list fill its first actionable Done / Taken (moss primary)? False when the detail already
    * shows a primary (an open shift's Take): ONE filled button per screen, every row is then an outline.
@@ -52,6 +72,9 @@ export function ShiftTaskList({
   canWrite,
   ended,
   onAdd,
+  onOpenTask,
+  highlightTaskId = null,
+  onHighlightDone,
   primaryAllowed = true,
 }: ShiftTaskListProps): ReactElement {
   const { t } = useTranslation(['shifts', 'meds', 'tasks', 'common']);
@@ -86,6 +109,7 @@ export function ShiftTaskList({
   // Once the shift is over nothing on it is "late" any more (the list is a record by then).
   const shiftOver = hasShiftEnded(shift, timezone, new Date(nowMs));
   const alsoId = useId();
+  const hintId = `${alsoId}-open-hint`;
   const model = useMemo(() => buildShiftList(shift, events), [shift, events]);
   const assignee = shiftAssignee(shift, members, viewerId);
 
@@ -264,29 +288,68 @@ export function ShiftTaskList({
   } else {
     body = (
       <ul className="m-0 flex list-none flex-col p-0" data-testid="shift-task-list">
-        {model.rows.map((row) => (
-          <li
-            key={row.key}
-            data-testid="shift-task-row"
-            data-kind={row.kind}
-            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-line-2 py-3 first:border-t-0"
-          >
-            <div className="min-w-0 flex-1">
-              <p
-                className={`m-0 break-words text-base font-medium ${row.done ? 'text-ink-3 line-through' : 'text-ink'}`}
-              >
-                {row.kind === 'med' ? row.event.medication_name || row.event.title : row.event.title}
-              </p>
-              <p className="m-0 text-xs text-ink-2">
-                {timeCaption(row)}
-                {row.kind === 'med' && row.event.medication_dosage
-                  ? `${time(row.event) ? ' · ' : ''}${row.event.medication_dosage}`
-                  : null}
-              </p>
-            </div>
-            {renderAction(row)}
-          </li>
-        ))}
+        {model.rows.map((row) => {
+          // A task row's text block is a BUTTON, a sibling of Done (never its parent). Its name is the visible
+          // text with an sr-only "Edit" / "View" in front, so the time and "Late" are read too. Medication
+          // rows, a task with a pending Done and an open task for a view-only member stay static.
+          const openable = row.kind === 'task' && !!onOpenTask && !isPending(row) && (row.done || canWrite);
+          const highlighted = highlightTaskId !== null && rowMatchesHighlight(row, highlightTaskId);
+          const text = (
+            <>
+              <span className="min-w-0 flex-1">
+                <span
+                  className={`block break-words text-base font-medium ${row.done ? 'text-ink-3 line-through' : 'text-ink'}`}
+                >
+                  {openable ? (
+                    <>
+                      <span className="sr-only">
+                        {t(row.done ? 'shifts:tasks.list.viewLabel' : 'shifts:tasks.list.editLabel', { name: '' }).trim()}
+                      </span>{' '}
+                    </>
+                  ) : null}
+                  <span data-testid="shift-task-row-name">
+                    {row.kind === 'med' ? row.event.medication_name || row.event.title : row.event.title}
+                  </span>
+                </span>{' '}
+                <span className="block text-xs text-ink-2">
+                  {timeCaption(row)}
+                  {row.kind === 'med' && row.event.medication_dosage
+                    ? `${time(row.event) ? ' · ' : ''}${row.event.medication_dosage}`
+                    : null}
+                </span>
+              </span>
+              {openable ? (
+                <span aria-hidden="true" className="flex-none text-ink-3">
+                  <Icon name="chevron-forward" size="row" />
+                </span>
+              ) : null}
+            </>
+          );
+          return (
+            <li
+              key={row.key}
+              data-testid="shift-task-row"
+              data-kind={row.kind}
+              className="relative flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-line-2 py-3 first:border-t-0"
+            >
+              {openable ? (
+                <button
+                  type="button"
+                  data-testid="shift-task-open"
+                  aria-describedby={hintId}
+                  className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2 rounded-lg bg-transparent p-0 text-left"
+                  onClick={() => onOpenTask?.(row)}
+                >
+                  {text}
+                </button>
+              ) : (
+                <div className="flex min-w-0 flex-1 items-center gap-2">{text}</div>
+              )}
+              {renderAction(row)}
+              {highlighted ? <HighlightRing onDone={onHighlightDone} /> : null}
+            </li>
+          );
+        })}
       </ul>
     );
   }
@@ -296,6 +359,11 @@ export function ShiftTaskList({
       <h3 id={`${alsoId}-title`} className="m-0 text-lg font-semibold text-ink" data-testid="shift-task-list-title">
         {title}
       </h3>
+      {onOpenTask ? (
+        <span id={hintId} className="sr-only">
+          {t('shifts:tasks.list.openHint')}
+        </span>
+      ) : null}
       {body}
       {loaded && model.rows.length === 0 ? null : addButton}
       {loaded && model.also.length > 0 ? (

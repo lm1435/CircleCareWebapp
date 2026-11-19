@@ -1,7 +1,11 @@
-import { useCallback, useState, type ReactElement } from 'react';
+import { useCallback, useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { RadioGroup, useToast } from '@/components/ui';
+import { AddEventModal } from '@/components/calendar/AddEventModal';
+import { DeleteEventDialog } from '@/components/calendar/DeleteEventDialog';
+import { EventDetailModal } from '@/components/calendar/EventDetailModal';
+import { EventDetailActions } from '@/components/calendar/EventDetailActions';
 import { useCircle } from '@/hooks/useCircle';
 import { useAuthStore } from '@/store/authStore';
 import {
@@ -17,13 +21,17 @@ import { ShiftComposer } from './ShiftComposer';
 import { ShiftDetailModal, type ShiftDetailAction } from './ShiftDetailModal';
 import { ShiftFormModal, type ShiftFormSource } from './ShiftFormModal';
 import { ShiftScopeDialog } from './ShiftScopeDialog';
-import { ShiftTaskFormModal } from './ShiftTaskFormModal';
+import { shiftContextFromShift, type ShiftListRow } from './shiftTasks';
 import { TakeShiftDialog } from './TakeShiftDialog';
 import { holdsOnlyThisDay, isShiftRepeating, memberShortName } from './shiftUtils';
 
 type Active =
-  | { kind: 'detail'; shift: CalendarEvent }
+  // `highlightTaskId`: a task save just came back here; its row gets the moss ring once.
+  | { kind: 'detail'; shift: CalendarEvent; highlightTaskId?: string | null }
   | { kind: 'take' | 'drop' | 'assign' | 'edit' | 'delete' | 'addTask'; shift: CalendarEvent }
+  // A task row tapped on the detail (1.4.3): the editor, the read-only detail of a completed one, and
+  // that detail's Delete. ONE dialog at a time: the detail is replaced, and every close path returns to it.
+  | { kind: 'editTask' | 'viewTask' | 'deleteTask'; shift: CalendarEvent; task: ShiftListRow }
   | { kind: 'create'; source: ShiftFormSource; date?: string };
 
 export interface ShiftsDialogsApi {
@@ -94,7 +102,9 @@ function ActiveDialog({
 }): ReactElement | null {
   const { t } = useTranslation(['shifts', 'common']);
   const { showToast } = useToast();
-  const { timezone, members } = useCircle(circleId);
+  const { timezone, members, canEdit } = useCircle(circleId);
+  // The editor reported a save (the normal editor's `onSaved` runs just before its `onClose`): ring the row.
+  const savedTask = useRef(false);
   const viewerId = useAuthStore((st) => st.user?.id ?? null);
   const drop = useDropShift(circleId);
   const assign = useAssignShift(circleId);
@@ -140,21 +150,99 @@ function ActiveDialog({
           shift={shift}
           timezone={timezone}
           onClose={onClose}
-          onAction={(action: ShiftDetailAction, s: CalendarEvent) =>
-            setActive({ kind: action, shift: s })
-          }
+          highlightTaskId={active.highlightTaskId}
+          onHighlightDone={() => setActive({ kind: 'detail', shift, highlightTaskId: null })}
+          onAction={(action: ShiftDetailAction, s: CalendarEvent, task?: ShiftListRow) => {
+            if ((action === 'editTask' || action === 'viewTask') && task) {
+              Analytics.shiftTaskEditOpened({
+                source: 'shift_detail',
+                linked: task.linked,
+                state: task.done ? 'completed' : 'open',
+                recurring: !!task.event.recurrence_rule || !!task.event.parent_event_id,
+              });
+              setActive({ kind: action, shift: s, task });
+              return;
+            }
+            if (action === 'editTask' || action === 'viewTask') return;
+            setActive({ kind: action, shift: s });
+          }}
         />
       ) : null;
     case 'addTask':
+      // The full task editor in shift mode: ONE write creates the task; closing it (any way) returns to the
+      // detail, and a save returns with the new row ringed.
       return (
-        <ShiftTaskFormModal
+        <AddEventModal
           circleId={circleId}
-          shift={shift}
-          source="shift_detail"
-          onClose={onClose}
-          onAdded={() => {
-            showToast(t('shifts:tasks.added'), 'success');
-            // Back to the detail, where the new task is now on the list.
+          initialType="task"
+          entry="shift_detail"
+          shiftContext={shiftContextFromShift(shift, members, viewerId, 'shift_detail', repeating)}
+          onClose={() => setActive({ kind: 'detail', shift })}
+          onShiftTaskSaved={({ taskId }) => setActive({ kind: 'detail', shift, highlightTaskId: taskId })}
+        />
+      );
+    case 'editTask': {
+      const task = active.task;
+      const root = task.event.parent_event_id || task.event.id;
+      return (
+        <AddEventModal
+          circleId={circleId}
+          event={task.event}
+          // A linked task edits in shift mode; a regular task (the coverer's own, in the window) is the normal editor.
+          shiftContext={
+            task.linked ? shiftContextFromShift(shift, members, viewerId, 'shift_detail', repeating) : null
+          }
+          onClose={() =>
+            setActive({ kind: 'detail', shift, highlightTaskId: savedTask.current ? root : null })
+          }
+          onSaved={() => {
+            savedTask.current = true;
+          }}
+          onShiftTaskSaved={({ taskId }) => setActive({ kind: 'detail', shift, highlightTaskId: taskId })}
+          onDeleted={() => setActive({ kind: 'detail', shift })}
+        />
+      );
+    }
+    case 'viewTask': {
+      const task = active.task;
+      return (
+        <EventDetailModal
+          event={task.event}
+          careRecipientTimezone={timezone ?? ''}
+          circleId={circleId}
+          canEdit={canEdit}
+          members={members}
+          editActions={
+            <EventDetailActions
+              circleId={circleId}
+              event={task.event}
+              careRecipientTimezone={timezone ?? ''}
+              // A completed ONE-OFF task is locked (no Edit); a completed occurrence of a repeating one edits the series.
+              onEdit={() => setActive({ kind: 'editTask', shift, task })}
+              onDelete={() => setActive({ kind: 'deleteTask', shift, task })}
+              onDiscontinue={() => {}}
+              onConfirmDose={() => {}}
+            />
+          }
+          onClose={() => setActive({ kind: 'detail', shift })}
+        />
+      );
+    }
+    case 'deleteTask':
+      return (
+        <DeleteEventDialog
+          circleId={circleId}
+          event={active.task.event}
+          surface={null}
+          deletedMessage={t('shifts:tasks.editor.deleted')}
+          onClose={() => setActive({ kind: 'detail', shift })}
+          onDeleted={(scope) => {
+            if (active.task.linked) {
+              Analytics.shiftTaskDeleted({
+                scope: scope === 'single' ? 'occurrence' : scope,
+                surface: 'shift_detail',
+              });
+            }
             setActive({ kind: 'detail', shift });
           }}
         />

@@ -1,6 +1,6 @@
 import type { APIRequestContext, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
-import { checkA11y } from '../helpers';
+import { checkA11y, expandReminders, fillSimpleTime, unfoldSimpleEnd } from '../helpers';
 import { cookieLogin, createCircle, createScopedAccount, uniq } from '../unhappy/auth-invites/_helpers';
 import { apiSession, dbQuery, sqlStr, type ApiSession } from '../unhappy';
 import { circleTimezone, dateInTz, weekOffset } from '../notesFirstClassShared';
@@ -223,19 +223,25 @@ test.describe('shift tasks', () => {
     await expect(saved.getByRole('button', { name: 'Done' }).locator('svg')).toHaveCount(0);
     await checkA11y(page, 'shift-tasks-saved-light', testInfo);
 
+    // 1.4.3: "Add a task to this shift" opens the FULL task editor in shift mode (the two-field form is gone).
     await addTask.click();
-    const taskForm = page.getByRole('dialog', { name: 'Add a task' });
-    await expect(taskForm.getByLabel(/^Time/)).toHaveValue('00:00');
-    await expect(taskForm.getByText('Between 12:00 AM and 12:00 AM')).toBeVisible();
-    // An empty name is refused inline.
-    await taskForm.getByRole('button', { name: 'Add task' }).click();
-    await expect(taskForm.getByText('Enter a task name.')).toBeVisible();
-    await taskForm.getByLabel(/Task name/).fill('Lunch');
-    await taskForm.getByLabel(/^Time/).fill('12:00');
-    await expect(taskForm.getByRole('checkbox', { name: `Only ${shortDate(s.today)}` })).not.toBeChecked();
-    await taskForm.getByRole('button', { name: 'Add task' }).click();
+    const taskForm = page.getByRole('dialog', { name: 'New task' });
+    await expect(taskForm.getByTestId('shift-task-chip')).toHaveText(/^On Afternoons · /);
+    await expect(taskForm.getByTestId('shift-task-locked-day')).toContainText(`${shortDate(s.today)} · during Afternoons`);
+    await expect(taskForm.getByTestId('shift-task-owner')).toHaveText('Whoever is on this shift');
+    await expect(taskForm.getByRole('radio', { name: 'Every time this shift happens' })).toBeChecked();
+    await expect(taskForm.getByRole('radio', { name: 'Any time' })).toHaveCount(0);
+    await expect(taskForm.getByTestId('shift-task-time-hint')).toHaveText('Between 12:00 AM and 12:00 AM');
+    // An empty title is refused inline (Save points at the field).
+    await taskForm.getByTestId('add-event-save').click();
+    await expect(taskForm.getByText('Please enter a title.')).toBeVisible();
+    await taskForm.getByRole('textbox', { name: /^Title/ }).fill('Lunch');
+    await fillSimpleTime(taskForm, '12:00');
+    await expect(taskForm.getByRole('radio', { name: `Only ${shortDate(s.today)}` })).not.toBeChecked();
+    await checkA11y(page, 'shift-task-editor-add-light', testInfo);
+    await taskForm.getByTestId('add-event-save').click();
 
-    // Back on the saved dialog, with the toast.
+    // Back on the saved dialog (destination unchanged), with the toast.
     await expect(saved).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('Task added')).toBeVisible();
     await saved.getByRole('button', { name: 'Done' }).click();
@@ -268,21 +274,18 @@ test.describe('shift tasks', () => {
     // Add from the detail: a one-off ("Only <date>").
     await expect(detail.getByTestId('shift-detail-add-task')).toHaveAttribute('data-variant', 'ghost');
     await detail.getByRole('button', { name: 'Add a task', exact: true }).click();
-    const second = page.getByRole('dialog', { name: 'Add a task' });
-    await second.getByLabel(/Task name/).fill('Walk');
-    await second.getByLabel(/^Time/).fill('15:00');
-    await second.getByRole('checkbox', { name: `Only ${shortDate(s.today)}` }).click();
-    await second.getByRole('button', { name: 'Add task' }).click();
+    const second = page.getByRole('dialog', { name: 'New task' });
+    await second.getByRole('textbox', { name: /^Title/ }).fill('Walk');
+    await fillSimpleTime(second, '15:00');
+    await second.getByRole('radio', { name: `Only ${shortDate(s.today)}` }).click();
+    await second.getByTestId('add-event-save').click();
 
     // Back on the detail, where the new task is on the list in time order.
     const back = page.getByRole('dialog', { name: 'Afternoons' });
     await expect(back.getByTestId('shift-task-list-title')).toHaveText("This shift's list · 0 of 2 done", {
       timeout: 20_000,
     });
-    await expect(back.getByTestId('shift-task-row').locator('p').filter({ hasText: /^(Lunch|Walk)$/ })).toHaveText([
-      'Lunch',
-      'Walk',
-    ]);
+    await expect(back.getByTestId('shift-task-row-name')).toHaveText(['Lunch', 'Walk']);
     await checkA11y(page, 'shift-tasks-detail-light', testInfo);
     expect(linked().map((r) => [r.title, r.rule])).toEqual([
       ['Lunch', 'daily'],
@@ -486,5 +489,219 @@ test.describe('shift tasks', () => {
        where c.circle_id = ${sqlStr(s.circleId)}::uuid and c.shift_event_id is not null
          and not exists (select 1 from calendar_events x where x.id = c.shift_event_id and x.deleted_at is null)`);
     expect(orphans[0].n).toBe(0);
+  });
+
+  // ── 1.4.3: add / edit / delete a task from the shift with the FULL task editor in shift mode ───────────
+  // (docs/plans/shift-task-add-edit-1-4-3.md section 6). WRITTEN, NOT RUN in the session that wrote it
+  // (the owner's rule while an Android gate runs): run `npx playwright test e2e/flows/shift-tasks.spec.ts
+  // --project=chromium` before release.
+
+  /** The write requests the page sends to the events API, with ids masked: what "ONE write" is counted on. */
+  function watchWrites(page: Page): string[] {
+    const writes: string[] = [];
+    page.on('request', (r) => {
+      if (!['POST', 'PATCH', 'DELETE'].includes(r.method())) return;
+      const path = new URL(r.url()).pathname;
+      if (!/\/events(\/|$)/.test(path)) return;
+      writes.push(`${r.method()} ${path.replace(/[0-9a-f]{8}-[0-9a-f-]{27}(_\d{4}-\d{2}-\d{2})?/g, ':id')}`);
+    });
+    return writes;
+  }
+
+  async function openDay(page: Page): Promise<ReturnType<Page['getByRole']>> {
+    await openShifts(page, s.circleId, 'Day');
+    await page.getByTestId('shifts-day-list').getByRole('button', { name: /^Afternoons, / }).click();
+    const detail = page.getByRole('dialog', { name: 'Afternoons' });
+    await expect(detail).toBeVisible({ timeout: 20_000 });
+    return detail;
+  }
+
+  test('add with details, an end time and a reminder: ONE write, then the new row is ringed', async ({ page }, testInfo) => {
+    await seedShift(s);
+    const writes = watchWrites(page);
+    const detail = await openDay(page);
+    await detail.getByRole('button', { name: 'Add a task', exact: true }).click();
+    const form = page.getByRole('dialog', { name: 'New task' });
+    await form.getByRole('textbox', { name: /^Title/ }).fill('Walk with Rosa');
+    await fillSimpleTime(form, '10:00');
+    await (await unfoldSimpleEnd(form)).fill('10:45');
+    await form.getByLabel(/^Details/).fill('Slow pace, the garden loop');
+    await expandReminders(form);
+    await form.getByRole('checkbox', { name: /15 minutes before/i }).click();
+    await form.getByTestId('add-event-save').click();
+
+    const back = page.getByRole('dialog', { name: 'Afternoons' });
+    await expect(back.getByTestId('shift-task-row-name')).toHaveText(['Walk with Rosa'], { timeout: 20_000 });
+    // The moss ring on the new row (200 / 1100 / 450 ms), then it clears itself.
+    await expect(back.getByTestId('highlight-ring')).toHaveCount(1, { timeout: 5_000 });
+    await expect(back.getByTestId('highlight-ring')).toHaveCount(0, { timeout: 8_000 });
+    // ONE write (atomic create): no follow-up PATCH.
+    expect(writes).toEqual(['POST /api/circles/:id/events/:id/shift/tasks']);
+    const [row] = dbQuery<{
+      description: string | null;
+      duration_minutes: number | null;
+      reminder_15m: boolean;
+      reminder_at_due: boolean;
+      unassigned: boolean;
+      linked: boolean;
+    }>(`
+      select description, duration_minutes, reminder_15m, reminder_at_due,
+             assigned_to is null as unassigned, shift_event_id is not null as linked
+        from calendar_events
+       where circle_id = ${sqlStr(s.circleId)}::uuid and title = 'Walk with Rosa' and parent_event_id is null`);
+    expect(row).toEqual({
+      description: 'Slow pace, the garden loop',
+      duration_minutes: 45,
+      reminder_15m: true,
+      reminder_at_due: true,
+      unassigned: true,
+      linked: true,
+    });
+    await checkA11y(page, 'shift-task-editor-saved-light', testInfo);
+  });
+
+  test('edit from the detail: tap the row text; the editor is locked to the shift; a save rings the row and keeps the task linked', async ({
+    page,
+  }, testInfo) => {
+    const shift = await seedShift(s);
+    await addShiftTask(s, shift.id, 'Lunch', '12:00');
+    const detail = await openDay(page);
+    // Row text is a button named "Edit <title> <time>", a sibling of Done.
+    await expect(detail.getByRole('button', { name: /^Edit Lunch/ })).toBeVisible({ timeout: 20_000 });
+    await expect(detail.getByRole('button', { name: 'Done, Lunch' })).toBeVisible();
+    await detail.getByRole('button', { name: /^Edit Lunch/ }).click();
+
+    const form = page.getByRole('dialog', { name: 'Edit task' });
+    await expect(page.getByRole('dialog', { name: 'Afternoons' })).toHaveCount(0); // replaced, not stacked
+    await expect(form.getByTestId('shift-task-owner')).toHaveText('Whoever is on this shift');
+    await expect(form.getByRole('radio', { name: 'Anyone' })).toHaveCount(0);
+    await expect(form.getByTestId('shift-task-repeat-locked')).toHaveText('Repeats with Afternoons');
+    await checkA11y(page, 'shift-task-editor-edit-light', testInfo);
+    await form.getByRole('textbox', { name: /^Title/ }).fill('Lunch in the garden');
+    await fillSimpleTime(form, '13:00');
+    await form.getByTestId('add-event-save').click();
+
+    const back = page.getByRole('dialog', { name: 'Afternoons' });
+    await expect(back.getByTestId('shift-task-row-name')).toHaveText(['Lunch in the garden'], { timeout: 20_000 });
+    await expect(back.getByTestId('highlight-ring')).toHaveCount(1, { timeout: 5_000 });
+    const [row] = dbQuery<{ title: string; time: string; unassigned: boolean; linked: boolean; rule: string | null }>(`
+      select title, scheduled_time::text as time, assigned_to is null as unassigned,
+             shift_event_id is not null as linked, recurrence_rule as rule
+        from calendar_events
+       where circle_id = ${sqlStr(s.circleId)}::uuid and event_type = 'task' and parent_event_id is null`);
+    expect(row.title).toBe('Lunch in the garden');
+    expect(row.time).toMatch(/^13:00/);
+    expect(row.unassigned).toBe(true);
+    expect(row.linked).toBe(true);
+    expect(row.rule).toBe('daily');
+  });
+
+  test('a linked task edited from the Tasks tab shows "Whoever is on this shift", not a picker', async ({ page }) => {
+    const shift = await seedShift(s);
+    await addShiftTask(s, shift.id, 'Tasks edit', '12:00');
+    await page.goto(`/circles/${s.circleId}/tasks`, { waitUntil: 'domcontentloaded' });
+    const row = page.getByRole('listitem').filter({ hasText: 'Tasks edit' });
+    await expect(row).toBeVisible({ timeout: 20_000 });
+    await row.getByRole('button', { name: /Tasks edit/ }).first().click();
+    const form = page.getByRole('dialog', { name: 'Edit task' });
+    await expect(form.getByTestId('shift-task-owner')).toHaveText('Whoever is on this shift');
+    await expect(form.getByRole('radio', { name: 'Anyone' })).toHaveCount(0);
+  });
+
+  test('a time outside the window is refused inline, on add and on edit, and nothing is sent', async ({ page }) => {
+    // A window that is not the whole day, on TOMORROW (so the time of day cannot end it mid-run): 10:00-14:00.
+    const tomorrow = dateInTz(s.tz, 1);
+    const shift = await seedShift(s, {
+      scheduled_date: tomorrow,
+      scheduled_time: '10:00',
+      duration_minutes: 240,
+      recurrence_rule: null,
+    });
+    await addShiftTask(s, shift.id, 'Inside', '11:00', { date: tomorrow });
+    await openShifts(page, s.circleId);
+    const detail = await openShiftDetail(page, s, tomorrow, 'Afternoons');
+    const writes = watchWrites(page);
+
+    // add
+    await detail.getByRole('button', { name: 'Add a task', exact: true }).click();
+    const add = page.getByRole('dialog', { name: 'New task' });
+    await expect(add.getByTestId('shift-task-time-hint')).toHaveText('Between 10:00 AM and 2:00 PM');
+    await add.getByRole('textbox', { name: /^Title/ }).fill('Too early');
+    await fillSimpleTime(add, '08:00');
+    await add.getByTestId('add-event-save').click();
+    await expect(add.getByText('Pick a time inside this shift.')).toBeVisible();
+    await add.getByRole('button', { name: 'Cancel' }).click();
+
+    // edit
+    const back = page.getByRole('dialog', { name: 'Afternoons' });
+    await back.getByRole('button', { name: /^Edit Inside/ }).click();
+    const edit = page.getByRole('dialog', { name: 'Edit task' });
+    await fillSimpleTime(edit, '15:00');
+    await edit.getByTestId('add-event-save').click();
+    await expect(edit.getByText('Pick a time inside this shift.')).toBeVisible();
+    expect(writes).toEqual([]);
+  });
+
+  test('delete from the editor: a one-off asks to confirm; a repeating task asks the scope and sends it', async ({ page }) => {
+    const shift = await seedShift(s);
+    await addShiftTask(s, shift.id, 'Repeats daily', '12:00');
+    await addShiftTask(s, shift.id, 'One only', '13:00', { onlyThisDay: true });
+    const detail = await openDay(page);
+
+    // one-off: confirm, delete, back on the detail
+    await detail.getByRole('button', { name: /^Edit One only/ }).click();
+    await page.getByRole('dialog', { name: 'Edit task' }).getByTestId('add-event-delete').click();
+    const confirm = page.getByRole('dialog', { name: 'Delete task' });
+    await confirm.getByRole('button', { name: 'Delete' }).click();
+    const back = page.getByRole('dialog', { name: 'Afternoons' });
+    await expect(back.getByTestId('shift-task-row-name')).toHaveText(['Repeats daily'], { timeout: 20_000 });
+    await expect(page.getByText('Task deleted')).toBeVisible();
+
+    // repeating: the scope picker, "This and all future tasks"
+    await back.getByRole('button', { name: /^Edit Repeats daily/ }).click();
+    await page.getByRole('dialog', { name: 'Edit task' }).getByTestId('add-event-delete').click();
+    const scope = page.getByRole('dialog', { name: 'Delete task' });
+    await expect(scope.getByRole('radio', { name: 'This task only' })).toBeChecked();
+    await scope.getByRole('radio', { name: 'This and all future tasks' }).click();
+    await scope.getByRole('button', { name: 'Delete' }).click();
+    await expect(page.getByRole('dialog', { name: 'Afternoons' }).getByTestId('shift-task-row')).toHaveCount(0, {
+      timeout: 20_000,
+    });
+    expect(datesOf(await occurrences(s, 'Repeats daily', s.today, dateInTz(s.tz, 5)))).toEqual([]);
+  });
+
+  test('a completed row opens the read-only detail (notes, Delete, no Edit); a medication row is not tappable', async ({ page }) => {
+    const shift = await seedShift(s);
+    await addShiftTask(s, shift.id, 'Finished job', '09:00', { onlyThisDay: true });
+    const detail = await openDay(page);
+    await detail.getByRole('button', { name: 'Done, Finished job' }).click();
+    await expect(detail.getByTestId('shift-task-list-title')).toHaveText('Your list · 1 of 1 done', { timeout: 30_000 });
+
+    await detail.getByRole('button', { name: /^View Finished job/ }).click();
+    const view = page.getByRole('dialog', { name: /Finished job/ });
+    await expect(view).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('dialog', { name: 'Afternoons' })).toHaveCount(0);
+    await expect(view.getByRole('button', { name: /Delete/ })).toBeVisible();
+    await expect(view.getByRole('button', { name: /^Edit/ })).toHaveCount(0);
+    // Closing returns to the shift detail.
+    await view.getByRole('button', { name: 'Close event details' }).click();
+    await expect(page.getByRole('dialog', { name: 'Afternoons' })).toBeVisible();
+    // No Edit dialog ever opened for the completed one-off.
+    await expect(page.getByRole('dialog', { name: 'Edit task' })).toHaveCount(0);
+  });
+
+  test('every close path of the editor returns to the shift detail', async ({ page }) => {
+    const shift = await seedShift(s);
+    await addShiftTask(s, shift.id, 'Back and forth', '12:00');
+    const detail = await openDay(page);
+    await detail.getByRole('button', { name: /^Edit Back and forth/ }).click();
+    await page.getByRole('dialog', { name: 'Edit task' }).getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.getByRole('dialog', { name: 'Afternoons' })).toBeVisible();
+    await page.getByRole('dialog', { name: 'Afternoons' }).getByRole('button', { name: /^Edit Back and forth/ }).click();
+    await page.getByRole('dialog', { name: 'Edit task' }).getByRole('button', { name: 'Close event form' }).click();
+    await expect(page.getByRole('dialog', { name: 'Afternoons' })).toBeVisible();
+    await page.getByRole('dialog', { name: 'Afternoons' }).getByRole('button', { name: /^Edit Back and forth/ }).click();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Afternoons' })).toBeVisible();
   });
 });
