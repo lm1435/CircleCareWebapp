@@ -2034,11 +2034,12 @@ export const Analytics = {
   shiftDeleted: (opts: { scope: string }) =>
     capture('shift_deleted', { scope: pickEnum(opts.scope, SHIFT_SCOPES, 'occurrence') }),
   // --- Shift tasks. Enums / booleans / buckets only; NO circle_id, ids, titles or times.
-  shiftTaskAdded: (opts: { source: string; oneOff: boolean; shiftRepeats: boolean }) =>
+  shiftTaskAdded: (opts: { source: string; oneOff: boolean; shiftRepeats: boolean; nextDay?: boolean }) =>
     capture('shift_task_added', {
       source: pickEnum(opts.source, SHIFT_TASK_SOURCES, 'shift_detail'),
       one_off: opts.oneOff === true,
       shift_repeats: opts.shiftRepeats === true,
+      next_day: opts.nextDay === true,
     }),
   shiftTaskCompleted: (opts: { surface: string }) =>
     capture('shift_task_completed', {

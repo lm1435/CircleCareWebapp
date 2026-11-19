@@ -62,9 +62,11 @@ describe('shift tasks analytics', () => {
   it('shift_task_added: source enum + two booleans', async () => {
     const A = await load();
     A.shiftTaskAdded({ source: 'saved_sheet', oneOff: true, shiftRepeats: false });
-    expect(last()).toEqual(['shift_task_added', { source: 'saved_sheet', one_off: true, shift_repeats: false }]);
+    expect(last()).toEqual(['shift_task_added', { source: 'saved_sheet', one_off: true, shift_repeats: false, next_day: false }]);
     A.shiftTaskAdded({ source: 'bogus', oneOff: false, shiftRepeats: true });
-    expect(last()[1]).toEqual({ source: 'shift_detail', one_off: false, shift_repeats: true });
+    expect(last()[1]).toEqual({ source: 'shift_detail', one_off: false, shift_repeats: true, next_day: false });
+    A.shiftTaskAdded({ source: 'shift_detail', oneOff: false, shiftRepeats: true, nextDay: true });
+    expect(last()[1]).toMatchObject({ next_day: true });
   });
 
   it('shift_task_completed: surface enum', async () => {

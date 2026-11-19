@@ -100,8 +100,8 @@ describe('saved dialog -> full task editor (shift mode)', () => {
     expect(within(editor).getByTestId('shift-task-chip')).toHaveTextContent('On Afternoons');
     expect(Analytics.entryFormOpened).toHaveBeenCalledWith({ type: 'task', entry: 'shift_saved_sheet' });
     expect(Analytics.shiftTaskAddOpened).toHaveBeenCalledWith(expect.objectContaining({ source: 'saved_sheet', coverer: 'me' }));
-    // The shift is "mine": the coverer line says so by name.
-    expect(within(editor).getByTestId('shift-task-owner-now')).toHaveTextContent('Right now: Me');
+    // The shift is "mine": the coverer line says "You", not my own first name (M-2).
+    expect(within(editor).getByTestId('shift-task-owner-now')).toHaveTextContent('Right now: You');
   });
 
   it('P a save returns to the saved dialog (destination unchanged), ONE POST, with the added toast', async () => {
@@ -119,7 +119,12 @@ describe('saved dialog -> full task editor (shift mode)', () => {
     });
     expect(screen.queryByTestId('highlight-ring')).toBeNull();
     expect(await screen.findByText('Task added')).toBeInTheDocument();
-    expect(Analytics.shiftTaskAdded).toHaveBeenCalledWith({ source: 'saved_sheet', oneOff: false, shiftRepeats: true });
+    expect(Analytics.shiftTaskAdded).toHaveBeenCalledWith({
+      source: 'saved_sheet',
+      oneOff: false,
+      shiftRepeats: true,
+      nextDay: false,
+    });
   });
 
   it('N Cancel and the close x return to the saved dialog and send nothing', async () => {

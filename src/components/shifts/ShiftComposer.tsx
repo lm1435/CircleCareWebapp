@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from 'react';
+import { useMemo, useState, type ReactElement } from 'react';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { Analytics } from '@/lib/analytics';
 import { ShiftFormModal, type ShiftFormPrefill, type ShiftFormSource } from './ShiftFormModal';
@@ -37,6 +37,15 @@ export function ShiftComposer({
   const [stage, setStage] = useState<Stage>({ kind: 'form', source });
   const { members } = useCircle(circleId);
   const viewerId = useAuthStore((st) => st.user?.id ?? null);
+  // Stable across re-renders (a fresh object each render would reset the editor's hydrated end time).
+  const taskShift = stage.kind === 'task' ? stage.shift : null;
+  const taskContext = useMemo(
+    () =>
+      taskShift
+        ? shiftContextFromShift(taskShift, members, viewerId, 'saved_sheet', isShiftRepeating(taskShift))
+        : null,
+    [taskShift, members, viewerId]
+  );
 
   if (stage.kind === 'task') {
     return (
@@ -46,13 +55,7 @@ export function ShiftComposer({
         circleId={circleId}
         initialType="task"
         entry="shift_saved_sheet"
-        shiftContext={shiftContextFromShift(
-          stage.shift,
-          members,
-          viewerId,
-          'saved_sheet',
-          isShiftRepeating(stage.shift)
-        )}
+        shiftContext={taskContext}
         onClose={() => setStage({ kind: 'saved', shift: stage.shift, next: stage.next })}
         onShiftTaskSaved={() => setStage({ kind: 'saved', shift: stage.shift, next: stage.next })}
       />

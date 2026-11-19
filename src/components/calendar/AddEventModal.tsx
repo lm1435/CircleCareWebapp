@@ -694,6 +694,7 @@ function AddEventForm({
   // SHIFT MODE (1.4.3): one object, derived once. Every shift branch below reads this and nothing else, so a task
   // without a shift context takes none of them (the payload suites pin that).
   const shiftMode: ShiftTaskContext | null = simpleKind === 'task' ? (shiftContext ?? null) : null;
+  const shiftDay = shiftMode?.scheduledDate ?? '';
   // Edits ALWAYS target the parent series (mobile has no "this event only" edit).
   const targetEventId = isEditing ? event.parent_event_id || event.id : undefined;
   // Editing any instance of a recurring event rewrites the whole series — warn.
@@ -787,11 +788,12 @@ function AddEventForm({
       // gate as an edit), so no wrong day is shown and then replaced. The resync
       // effect below fills it the moment the zone lands.
       // Shift mode: the shift's own day (the date is locked to it).
-      dateStr: shiftMode ? (timezone ? shiftMode.scheduledDate : '') : defaultNewEventDate(timezone),
+      dateStr: shiftDay ? (timezone ? shiftDay : '') : defaultNewEventDate(timezone),
       timeStr: '',
       recurrenceEndDateStr: '',
     };
-  }, [event, timezone, scheduleSource, shiftMode]);
+  // The shift's day is a primitive: the whole context object may be a fresh reference on a parent re-render.
+  }, [event, timezone, scheduleSource, shiftDay]);
 
   const [dateStr, setDateStr] = useState(hydrated.dateStr);
   const [timeStr, setTimeStr] = useState(hydrated.timeStr);
@@ -2366,7 +2368,8 @@ function AddEventForm({
     setErrors({});
     const remindersDefault =
       notificationsEnabled && reminderAtDue && !reminder24h && !reminder1h && !reminder30m && !reminder15m;
-    const nameChanged = isEditing ? trimmed !== (event?.title ?? '') : true;
+    // An add never counts as a rename (mobile parity).
+    const nameChanged = isEditing ? trimmed !== (event?.title ?? '') : false;
     const timeChanged = isEditing ? clock !== storedClock : false;
     const nextDay = timeStr !== '' && clock < mode.startTime;
     setShiftBusy(true);
@@ -2414,6 +2417,7 @@ function AddEventForm({
           source: mode.source,
           oneOff: !!body.only_this_day,
           shiftRepeats: mode.repeating,
+          nextDay,
         });
         showToast(t('shifts:tasks.added'), 'success');
       }
@@ -2425,7 +2429,8 @@ function AddEventForm({
           (description.trim() ? 1 : 0) +
           (!remindersDefault ? 1 : 0) +
           (shiftOnlyDay && mode.repeating ? 1 : 0),
-        oneOff: shiftOnlyDay && mode.repeating,
+        // An edit's one-off is a fact about the task (not recurring); an add's is the only-this-day choice.
+        oneOff: isEditing ? !isRecurringEdit : shiftOnlyDay && mode.repeating,
         nextDay,
         timeChanged,
         nameChanged,
@@ -2656,6 +2661,10 @@ function AddEventForm({
   // `scheduled_date`, `scheduled_time`).
   function focusMissingField(): void {
     if (missingField === null) return;
+    // Shift mode: Save with the name empty is a failed save like the other shift reasons (mobile parity).
+    if (shiftMode && missingField === 'title') {
+      Analytics.shiftTaskSaveFailed({ mode: isEditing ? 'edit' : 'add', reason: 'name_missing' });
+    }
     setPressedMissing(missingField);
     const id =
       missingField === 'title'
@@ -3349,6 +3358,8 @@ function AddEventForm({
     return span === null ? '' : endTimeForDuration(recipientClock, span);
   })();
   function chooseRecipientEndTime(next: string): void {
+    // A picked end owns the form like a picked start: the hydration resync must not reset it.
+    datesTouched.current = true;
     clearError('endTime');
     if (!next || !recipientClock || !timeStr) {
       setEndTimeStr(next);
@@ -4330,7 +4341,11 @@ function AddEventForm({
     const owner =
       shiftMode.coverer === 'open'
         ? t('shifts:tasks.editor.ownerOpen')
-        : t('shifts:tasks.editor.ownerNow', { name: shiftMode.covererName || t('shifts:someone') });
+        : t('shifts:tasks.editor.ownerNow', {
+            // The viewer is "You"; someone else is their first name, or "Someone" when none is known.
+            name:
+              shiftMode.coverer === 'me' ? t('shifts:you') : shiftMode.covererName || t('shifts:someone'),
+          });
     shiftTaskFields = (
       <div className="flex flex-col gap-6" data-testid="simple-task-form" data-shift-mode="true">
         <p

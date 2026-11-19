@@ -585,19 +585,8 @@ describe('W5: no unreferenced en keys', () => {
     // The old key stays: mobile's copy and shiftsCopy.test.ts still pin it for parity.
     'shifts:summary_one',
     'shifts:summary_other',
-    // Shift tasks: mobile-canonical leaf keys kept for parity (docs/plans/shift-tasks.md). Mobile edits
-    // and deletes a task from the shift screen; web edits it through the regular task form.
-    'shifts:tasks.form.delete',
-    'shifts:tasks.form.editTitle',
+    // Shift tasks: mobile-canonical leaf key kept for parity (docs/plans/shift-tasks.md).
     'shifts:tasks.form.explainOnce',
-    // 1.4.3: the two-field shift task form is retired on web (the full task editor in shift mode replaced it).
-    // These leaves stay because shiftTasksCopyParity pins them against mobile's copy.
-    'shifts:tasks.form.errorName',
-    'shifts:tasks.form.name',
-    'shifts:tasks.form.namePlaceholder',
-    'shifts:tasks.form.onlyDateHint',
-    'shifts:tasks.form.save',
-    'shifts:tasks.form.time',
     // Mobile-parity Wave 2, Task 9. Added ahead of the UI that consumes them so
     // both locales land in one reviewable change:
     //   `addMenu.*` -> Task 10 `AddMenu`

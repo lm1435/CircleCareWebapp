@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { RadioGroup, useToast } from '@/components/ui';
@@ -120,6 +120,17 @@ function ActiveDialog({
     active.kind === 'delete' ? active.shift : null
   );
 
+  // The shift-mode context is a STABLE object across parent re-renders (a fresh one each render made the editor
+  // re-derive its hydrated dates and reset an end time the user had just picked).
+  const shiftForContext = active.kind === 'create' ? null : active.shift;
+  const shiftContext = useMemo(
+    () =>
+      shiftForContext
+        ? shiftContextFromShift(shiftForContext, members, viewerId, 'shift_detail', isShiftRepeating(shiftForContext))
+        : null,
+    [shiftForContext, members, viewerId]
+  );
+
   // Classified failures close the dialog with a toast; a network / server failure
   // stays open with the message inline so the action can be retried.
   const fail = (err: unknown, verb: 'drop' | 'assign' | 'delete'): void => {
@@ -176,7 +187,7 @@ function ActiveDialog({
           circleId={circleId}
           initialType="task"
           entry="shift_detail"
-          shiftContext={shiftContextFromShift(shift, members, viewerId, 'shift_detail', repeating)}
+          shiftContext={shiftContext}
           onClose={() => setActive({ kind: 'detail', shift })}
           onShiftTaskSaved={({ taskId }) => setActive({ kind: 'detail', shift, highlightTaskId: taskId })}
         />
@@ -189,9 +200,7 @@ function ActiveDialog({
           circleId={circleId}
           event={task.event}
           // A linked task edits in shift mode; a regular task (the coverer's own, in the window) is the normal editor.
-          shiftContext={
-            task.linked ? shiftContextFromShift(shift, members, viewerId, 'shift_detail', repeating) : null
-          }
+          shiftContext={task.linked ? shiftContext : null}
           onClose={() =>
             setActive({ kind: 'detail', shift, highlightTaskId: savedTask.current ? root : null })
           }

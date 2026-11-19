@@ -121,8 +121,9 @@ function setup(props: Partial<React.ComponentProps<typeof AddEventModal>> = {}) 
   const onShiftTaskSaved = vi.fn();
   const onDeleted = vi.fn();
   const user = userEvent.setup();
-  const utils = render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}>
+  const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  const tree = (extra: Partial<React.ComponentProps<typeof AddEventModal>> = {}) => (
+    <QueryClientProvider client={qc}>
       <ToastProvider>
         <MemoryRouter>
           <AddEventModal
@@ -133,12 +134,17 @@ function setup(props: Partial<React.ComponentProps<typeof AddEventModal>> = {}) 
             onShiftTaskSaved={onShiftTaskSaved}
             onDeleted={onDeleted}
             {...props}
+            {...extra}
           />
         </MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>
   );
-  return { user, onClose, onShiftTaskSaved, onDeleted, ...utils };
+  const utils = render(tree());
+  /** A parent re-render: same props, but a FRESH shiftContext object (what an inline builder does). */
+  const rerenderFreshContext = () =>
+    utils.rerender(tree({ shiftContext: props.shiftContext === undefined ? undefined : contextFor() }));
+  return { user, onClose, onShiftTaskSaved, onDeleted, rerenderFreshContext, ...utils };
 }
 
 const fromInput = () => screen.getByLabelText('From', { selector: 'input' }) as HTMLInputElement;
@@ -310,10 +316,15 @@ describe('shift mode: add', () => {
       oneOff: false,
       nextDay: false,
       timeChanged: false,
-      nameChanged: true,
+      nameChanged: false,
       detailsSaved: true,
     });
-    expect(Analytics.shiftTaskAdded).toHaveBeenCalledWith({ source: 'shift_detail', oneOff: false, shiftRepeats: true });
+    expect(Analytics.shiftTaskAdded).toHaveBeenCalledWith({
+      source: 'shift_detail',
+      oneOff: false,
+      shiftRepeats: true,
+      nextDay: false,
+    });
   });
 
   it('N12 no shift analytics payload carries a circle id, a title or details text', async () => {
@@ -601,5 +612,85 @@ describe('delete from the editor', () => {
     expect(mutateDelete).not.toHaveBeenCalled();
     expect(onDeleted).not.toHaveBeenCalled();
     expect(screen.getByTestId('add-event-save')).toBeInTheDocument();
+  });
+});
+
+describe('1.4.3 review fixes (web)', () => {
+  it('W-1 positive: an end time picked, then a parent re-render with a fresh shiftContext object, keeps the picked end', async () => {
+    const { rerenderFreshContext } = setup({ event: linkedTask(), initialType: undefined });
+    fireEvent.change(toInput(), { target: { value: '15:45' } });
+    expect(toInput().value).toBe('15:45');
+    rerenderFreshContext();
+    expect(toInput().value).toBe('15:45');
+    expect(fromInput().value).toBe('15:00');
+  });
+
+  it('W-1 negative: an untouched edit re-rendered with a fresh context keeps its hydrated start and end (no reset to blank)', () => {
+    const { rerenderFreshContext } = setup({ event: linkedTask(), initialType: undefined });
+    expect(toInput().value).toBe('15:30');
+    rerenderFreshContext();
+    expect(fromInput().value).toBe('15:00');
+    expect(toInput().value).toBe('15:30');
+  });
+
+  it('M-2 positive: the viewer on the shift reads "Right now: You"; someone else reads their first name', () => {
+    setup({ shiftContext: contextFor(shift({ assigned_to: ME })) });
+    expect(screen.getByTestId('shift-task-owner-now')).toHaveTextContent('Right now: You');
+    cleanup();
+    setup({ shiftContext: contextFor() });
+    expect(screen.getByTestId('shift-task-owner-now')).toHaveTextContent('Right now: Lucia');
+  });
+
+  it('M-2 negative: another person with no known name reads "Someone", never "You"', () => {
+    const stranger = 'dddddddd-4444-4444-8444-444444444444';
+    setup({ shiftContext: contextFor(shift({ assigned_to: stranger })) });
+    const line = screen.getByTestId('shift-task-owner-now');
+    expect(line).toHaveTextContent('Right now: Someone');
+    expect(line).not.toHaveTextContent('You');
+  });
+
+  it('A-1 positive: Save with an empty title fires name_missing once (add), and an edit reports mode edit', async () => {
+    const { user } = setup();
+    await user.click(save());
+    expect(Analytics.shiftTaskSaveFailed).toHaveBeenCalledTimes(1);
+    expect(Analytics.shiftTaskSaveFailed).toHaveBeenCalledWith({ mode: 'add', reason: 'name_missing' });
+    cleanup();
+    vi.mocked(Analytics.shiftTaskSaveFailed).mockClear();
+    const { user: u2 } = setup({ event: linkedTask({ title: '' }), initialType: undefined });
+    await u2.click(save());
+    expect(Analytics.shiftTaskSaveFailed).toHaveBeenCalledWith({ mode: 'edit', reason: 'name_missing' });
+  });
+
+  it('A-1 negative: Save with a title does not fire name_missing', async () => {
+    const { user } = setup();
+    await user.type(titleBox(), 'Lunch');
+    await user.click(save());
+    await waitFor(() => expect(createShiftTask).toHaveBeenCalled());
+    expect(Analytics.shiftTaskSaveFailed).not.toHaveBeenCalledWith(expect.objectContaining({ reason: 'name_missing' }));
+  });
+
+  it('A-1 positive: an edit sends the real oneOff (recurring task = false, one-off task = true), and no rename on an add', async () => {
+    const { user } = setup({ event: linkedTask(), initialType: undefined });
+    await user.click(save());
+    await waitFor(() => expect(Analytics.shiftTaskSaved).toHaveBeenCalledTimes(1));
+    expect(Analytics.shiftTaskSaved).toHaveBeenCalledWith(expect.objectContaining({ mode: 'edit', oneOff: false }));
+    cleanup();
+    vi.mocked(Analytics.shiftTaskSaved).mockClear();
+    const one = linkedTask({ recurrence_rule: null, parent_event_id: null });
+    one.shift = { ...one.shift! };
+    const { user: u2 } = setup({ event: one, initialType: undefined, shiftContext: contextFor(shift({ recurrence_rule: null, parent_event_id: null })) });
+    await u2.click(save());
+    await waitFor(() => expect(Analytics.shiftTaskSaved).toHaveBeenCalledTimes(1));
+    expect(Analytics.shiftTaskSaved).toHaveBeenCalledWith(expect.objectContaining({ mode: 'edit', oneOff: true }));
+  });
+
+  it('A-1 positive: an add whose time lands after midnight carries nextDay on shift_task_added', async () => {
+    const night = shift({ scheduled_time: '20:00:00', duration_minutes: 600 });
+    const { user } = setup({ shiftContext: contextFor(night) });
+    await user.type(titleBox(), 'Night check');
+    fireEvent.change(fromInput(), { target: { value: '02:00' } });
+    await user.click(save());
+    await waitFor(() => expect(Analytics.shiftTaskAdded).toHaveBeenCalledTimes(1));
+    expect(Analytics.shiftTaskAdded).toHaveBeenCalledWith(expect.objectContaining({ nextDay: true }));
   });
 });
