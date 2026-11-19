@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import type { CalendarEvent, ShiftTaskLink } from '@/api/calendarEvents';
@@ -393,5 +393,56 @@ describe('shift detail list: late items (1.4.3)', () => {
     eventsHook.value = { ...eventsHook.value, events: [ev('t1', { scheduled_time: '14:00:00', shift: link() })] };
     renderList();
     expect(screen.queryByTestId(LATE)).not.toBeInTheDocument();
+  });
+
+  // The shift is 12:00-18:00 Chicago (CST) = 18:00Z-00:00Z.
+  const setNow = (iso: string) => vi.setSystemTime(new Date(iso));
+  afterEach(() => vi.setSystemTime(PINNED_NOW));
+
+  it('P-LATE-4 N5 control: one minute before the shift ends an old open item is still Late', () => {
+    setNow('2026-11-09T23:59:00Z');
+    eventsHook.value = { ...eventsHook.value, events: [ev('t1', { scheduled_time: '14:00:00', shift: link() })] };
+    renderList();
+    expect(screen.getByTestId(LATE).textContent).toMatch(/· Late$/);
+  });
+
+  it('N-LATE-4 N5: once the shift has ended (now >= end) nothing is Late, though hours past due', () => {
+    setNow('2026-11-10T00:00:00Z');
+    eventsHook.value = {
+      ...eventsHook.value,
+      events: [ev('t1', { scheduled_time: '14:00:00', shift: link() }), dose('d1', '13:00:00')],
+    };
+    renderList({ ended: true });
+    expect(screen.queryByTestId(LATE)).not.toBeInTheDocument();
+    expect(screen.getByTestId('shift-task-section').textContent).not.toMatch(/Late/);
+  });
+
+  it('N-LATE-5 the recipient zone decides, not the browser: the same instant is not Late in Denver', () => {
+    // 14:00 Denver (MST) = 21:00Z; PINNED_NOW is 21:00Z, so 0 minutes past due there. In Chicago it is 60.
+    eventsHook.value = { ...eventsHook.value, events: [ev('t1', { scheduled_time: '14:00:00', shift: link() })] };
+    renderList({ timezone: 'America/Denver', shift: { ...shift, scheduled_time: '12:00:00' } as CalendarEvent });
+    expect(screen.queryByTestId(LATE)).not.toBeInTheDocument();
+  });
+
+  it('P-LATE-5 it becomes Late while the page is open (the minute tick), and stops when the shift ends', () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'], now: new Date('2026-11-09T20:59:00Z') });
+    try {
+      // Due 14:45 Chicago = 20:45Z: 14 minutes past at 20:59Z.
+      eventsHook.value = { ...eventsHook.value, events: [ev('t1', { scheduled_time: '14:45:00', shift: link() })] };
+      renderList();
+      expect(screen.queryByTestId(LATE)).not.toBeInTheDocument();
+      act(() => {
+        vi.setSystemTime(new Date('2026-11-09T21:01:00Z'));
+        vi.advanceTimersByTime(60_000);
+      });
+      expect(screen.getByTestId(LATE).textContent).toMatch(/· Late$/);
+      act(() => {
+        vi.setSystemTime(new Date('2026-11-10T00:00:30Z')); // the shift (ends 00:00Z) is over
+        vi.advanceTimersByTime(60_000);
+      });
+      expect(screen.queryByTestId(LATE)).not.toBeInTheDocument();
+    } finally {
+      vi.useFakeTimers({ toFake: ['Date'], now: PINNED_NOW });
+    }
   });
 });

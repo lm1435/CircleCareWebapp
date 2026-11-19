@@ -298,6 +298,28 @@ test.describe('shift tasks', () => {
     });
   });
 
+  test('an open item past due reads "· Late" on the detail; one due at 23:59 does not', async ({ page }) => {
+    // The whole-day shift (00:00 for 24 h) makes a 00:00 item 15+ minutes past due at any recipient time
+    // except the first 15 minutes of the day, which would make the assertion time-dependent.
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: s.tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(new Date());
+    const minutesNow = Number(parts.find((p) => p.type === 'hour')?.value) * 60 + Number(parts.find((p) => p.type === 'minute')?.value);
+    test.skip(minutesNow < 20, 'first minutes of the recipient day: "00:00" is not 15 minutes past due yet');
+
+    const shift = await seedShift(s);
+    await addShiftTask(s, shift.id, 'Early task', '00:00');
+    await addShiftTask(s, shift.id, 'Late night task', '23:59');
+
+    await openShifts(page, s.circleId, 'Day');
+    await page.getByTestId('shifts-day-list').getByRole('button', { name: /^Afternoons, / }).click();
+    const detail = page.getByRole('dialog', { name: 'Afternoons' });
+    const early = detail.getByTestId('shift-task-row').filter({ hasText: 'Early task' });
+    await expect(early.getByTestId('shift-task-row-late')).toContainText('· Late', { timeout: 20_000 });
+    const lateNight = detail.getByTestId('shift-task-row').filter({ hasText: 'Late night task' });
+    await expect(lateNight).toBeVisible();
+    await expect(lateNight.getByTestId('shift-task-row-late')).toHaveCount(0);
+  });
+
   test('complete a shift task on the detail, on Today and on the Tasks tab', async ({ page }) => {
     const shift = await seedShift(s);
     await addShiftTask(s, shift.id, 'Detail task', '09:00');

@@ -14,6 +14,7 @@ import { blockOfflineWrite, offlineDisabledProps } from '@/lib/offlineWrite';
 import { Analytics } from '@/lib/analytics';
 import { formatEventTimeCompact, isDoseConfirmable, zoneReferenceInstant } from '@/utils/timezone';
 import { shiftAssignee } from './shiftPeople';
+import { hasShiftEnded } from './shiftUtils';
 import { buildShiftList, doneBucket, isShiftItemLate, tasksBucket, type ShiftListRow } from './shiftTasks';
 
 export interface ShiftTaskListProps {
@@ -82,6 +83,8 @@ export function ShiftTaskList({
     const id = setInterval(() => setNowMs(Date.now()), 60_000);
     return () => clearInterval(id);
   }, []);
+  // Once the shift is over nothing on it is "late" any more (the list is a record by then).
+  const shiftOver = hasShiftEnded(shift, timezone, new Date(nowMs));
   const alsoId = useId();
   const model = useMemo(() => buildShiftList(shift, events), [shift, events]);
   const assignee = shiftAssignee(shift, members, viewerId);
@@ -131,7 +134,7 @@ export function ShiftTaskList({
 
   // 15 min or more past due and still open (not done, skipped, missed or just answered): danger-coloured time + "Late".
   const isLate = (row: ShiftListRow): boolean =>
-    !row.done && !row.missed && !isPending(row) && isShiftItemLate(row.event, timezone, nowMs);
+    !row.done && !row.missed && !isPending(row) && !shiftOver && isShiftItemLate(row.event, timezone, nowMs);
   const timeCaption = (row: ShiftListRow): ReactElement | string => {
     const clock = time(row.event);
     if (!clock || !isLate(row)) return clock;

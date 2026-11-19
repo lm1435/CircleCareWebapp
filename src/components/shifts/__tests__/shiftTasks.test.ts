@@ -4,6 +4,7 @@ import {
   buildShiftList,
   countTasksAffectedByEdit,
   doneBucket,
+  isShiftItemLate,
   shiftTaskMeta,
   shiftWindow,
   tasksBucket,
@@ -298,5 +299,56 @@ describe('countTasksAffectedByEdit', () => {
   it('tasks of another shift never count', () => {
     const foreign = linked('foreign', '14:00:00', 0, { root_id: 'other' });
     expect(countTasksAffectedByEdit({ kind: 'repeat', shift, scope: 'future' }, [foreign])).toBe(0);
+  });
+});
+
+
+describe('isShiftItemLate (1.4.3): 15 min past due in the RECIPIENT zone', () => {
+  const M = 60_000;
+  const it0 = (date: string, time: string | null) => ({ scheduled_date: date, scheduled_time: time }) as never;
+
+  it('P-LATE-U1 exactly 15 minutes is late; 14 minutes is not (N-LATE-U1)', () => {
+    const due = Date.parse('2026-11-09T17:00:00Z'); // 12:00 in New York (EST)
+    expect(isShiftItemLate(it0('2026-11-09', '12:00:00'), 'America/New_York', due + 15 * M)).toBe(true);
+    expect(isShiftItemLate(it0('2026-11-09', '12:00:00'), 'America/New_York', due + 14 * M + 59_000)).toBe(false);
+    expect(isShiftItemLate(it0('2026-11-09', '12:00:00'), 'America/New_York', due)).toBe(false);
+  });
+
+  it('P-LATE-U2 uses the recipient zone, not the machine zone (machine is Denver): Tokyo and New York', () => {
+    // 12:00 Tokyo (JST, +9) = 03:00Z; 15 min later = 03:15Z, which is still the evening before in Denver.
+    expect(isShiftItemLate(it0('2026-11-09', '12:00:00'), 'Asia/Tokyo', Date.parse('2026-11-09T03:15:00Z'))).toBe(true);
+    // Read as Denver wall time (19:00Z) the same instant would not be late yet, and 12:00 in Tokyo is not 12:00 Denver.
+    expect(isShiftItemLate(it0('2026-11-09', '12:00:00'), 'America/Denver', Date.parse('2026-11-09T03:15:00Z'))).toBe(false);
+    expect(isShiftItemLate(it0('2026-11-09', '12:00:00'), 'America/New_York', Date.parse('2026-11-09T17:15:00Z'))).toBe(true);
+  });
+
+  it('N-LATE-U2 a Tokyo due time is NOT late 14 minutes after it, whatever the machine zone says', () => {
+    expect(isShiftItemLate(it0('2026-11-09', '12:00:00'), 'Asia/Tokyo', Date.parse('2026-11-09T03:14:00Z'))).toBe(false);
+  });
+
+  it('N-LATE-U3 an overnight item (00:30 tomorrow) is not late at 23:00 today, and is late at 00:45', () => {
+    // Shift 22:00 -> 06:00 in New York; the task is due 00:30 on the NEXT calendar date (05:30Z).
+    const task = it0('2026-11-10', '00:30:00');
+    expect(isShiftItemLate(task, 'America/New_York', Date.parse('2026-11-10T04:00:00Z'))).toBe(false); // 23:00 on the 9th
+    expect(isShiftItemLate(task, 'America/New_York', Date.parse('2026-11-10T05:44:00Z'))).toBe(false);
+    expect(isShiftItemLate(task, 'America/New_York', Date.parse('2026-11-10T05:45:00Z'))).toBe(true); // 00:45
+  });
+
+  it('P-LATE-U4 DST fall-back (New York 2026-11-01): the repeated 01:30 is the SECOND one (06:30Z), like the cron', () => {
+    const t = it0('2026-11-01', '01:30:00');
+    expect(isShiftItemLate(t, 'America/New_York', Date.parse('2026-11-01T06:45:00Z'))).toBe(true);
+    expect(isShiftItemLate(t, 'America/New_York', Date.parse('2026-11-01T06:44:00Z'))).toBe(false);
+  });
+
+  it('N-LATE-U4 DST fall-back: the first 01:30 pass (05:45Z, 15 min after 05:30Z) does not make it late', () => {
+    expect(isShiftItemLate(it0('2026-11-01', '01:30:00'), 'America/New_York', Date.parse('2026-11-01T05:45:00Z'))).toBe(false);
+  });
+
+  it('N-LATE-U5 no scheduled_time is never late, however old', () => {
+    expect(isShiftItemLate(it0('2020-01-01', null), 'America/New_York', Date.parse('2026-11-09T17:00:00Z'))).toBe(false);
+  });
+
+  it('N-LATE-U6 an invalid zone-resolved instant (NaN) is never late', () => {
+    expect(isShiftItemLate(it0('not-a-date', '12:00:00'), 'America/New_York', Date.parse('2026-11-09T17:00:00Z'))).toBe(false);
   });
 });
