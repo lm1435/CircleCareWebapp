@@ -25,7 +25,7 @@ import {
   isPermissionDeniedError,
   isSubscriptionRequiredError,
   type FailureAction,
-  isPaywallRefusal,
+  isUnreportedFailure,
 } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
@@ -121,7 +121,7 @@ function useVitalsMutationOnError(
   return (error: unknown) => {
     // `error_occurred` for the admin digest: enums only, no circle_id.
     // A 402 SUBSCRIPTION_REQUIRED is a paywall moment (the upgrade prompt below), not an error.
-    if (!isPaywallRefusal(error)) Analytics.errorOccurred('vitals', `vitals_${action}_failed`, failureContext('vitals', action, error));
+    if (!isUnreportedFailure(error)) Analytics.errorOccurred('vitals', `vitals_${action}_failed`, failureContext('vitals', action, error));
     if (isSubscriptionRequiredError(error)) {
       // PK18: lapsed-plan wording (owner: Upgrade action; members: never sold).
       promptLapsed();

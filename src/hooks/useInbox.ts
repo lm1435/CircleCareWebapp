@@ -16,6 +16,7 @@ import {
 } from '@/api/inbox';
 import { queryKeys } from '@/lib/queryKeys';
 import { useAuthStore } from '@/store/authStore';
+import { sendWithQuietRetry } from '@/lib/writeRetryQueue';
 
 // Notifications inbox hooks. Always on (no flag); every hook is gated on a signed-in
 // session only.
@@ -67,6 +68,8 @@ export function useInboxUnreadSummary(): UseQueryResult<InboxUnread> {
   return useUnreadQuery(selectSummary);
 }
 
+let markCallCounter = 0;
+
 interface MarkContext {
   previousLists: Array<[QueryKey, InboxList | undefined]>;
   previousUnread: InboxUnread | undefined;
@@ -81,7 +84,11 @@ interface MarkContext {
 export function useMarkInboxRead(): UseMutationResult<number, Error, MarkInboxReadInput, MarkContext> {
   const queryClient = useQueryClient();
   return useMutation<number, Error, MarkInboxReadInput, MarkContext>({
-    mutationFn: (input) => markInboxRead(input),
+    // In-call quiet retry (2 / 5 / 10 s) on a transport failure: the call is idempotent, so no
+    // re-read is needed. The optimistic rows stay marked while it waits; `onError` (the rollback)
+    // only runs after the last attempt. A unique key per call: two marks never refuse each other.
+    mutationFn: (input) =>
+      sendWithQuietRetry(`inbox_read:${++markCallCounter}`, 'inbox_read', () => markInboxRead(input)),
     onMutate: async (input) => {
       await Promise.all([
         queryClient.cancelQueries({ queryKey: queryKeys.inbox }),

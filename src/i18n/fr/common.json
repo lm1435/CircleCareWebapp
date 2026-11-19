@@ -266,7 +266,8 @@
       "taken_other": "{{count}} pris",
       "skipped_one": "{{count}} sauté",
       "skipped_other": "{{count}} sautés"
-    }
+    },
+    "markAllFailed": "Impossible de tout marquer comme lu. Vérifiez votre connexion et réessayez."
   },
   "trialCharge": {
     "endsSentence": "Votre essai gratuit prend fin le {{date}}.",
@@ -281,6 +282,7 @@
   "writeRetry": {
     "notice_one": "Impossible d’enregistrer {{count}} modification",
     "notice_other": "Impossible d’enregistrer {{count}} modifications",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "lost": "Ces modifications n’ont pas été enregistrées avant la fermeture de l’app. Vérifiez-les et refaites-les."
   }
 }

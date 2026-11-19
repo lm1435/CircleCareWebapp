@@ -475,7 +475,7 @@ describe('AuthCallbackPage', () => {
     expect(localStorage.length).toBe(0);
   });
 
-  it('a thrown exchange (network) is the same stable failure', async () => {
+  it('a thrown exchange (network) reports network_error, a stable failure', async () => {
     const loginFailed = vi.spyOn(Analytics, 'loginFailed');
     sessionStorage.setItem(PKCE_VERIFIER_KEY, 'parked-verifier');
     window.history.replaceState(null, '', '/auth/callback?code=c');
@@ -484,9 +484,19 @@ describe('AuthCallbackPage', () => {
     renderCallback();
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(loginFailed).toHaveBeenCalledWith('oauth', 'OAUTH_CODE_EXCHANGE_FAILED');
+    expect(loginFailed).toHaveBeenCalledWith('oauth', 'network_error');
     expect(mockedPost).not.toHaveBeenCalled();
     expect(sessionStorage.getItem(PKCE_VERIFIER_KEY)).toBeNull();
+  });
+
+  it('NEGATIVE R1: a refused exchange (provider answered, not a network drop) keeps OAUTH_CODE_EXCHANGE_FAILED', async () => {
+    const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+    sessionStorage.setItem(PKCE_VERIFIER_KEY, 'parked-verifier');
+    window.history.replaceState(null, '', '/auth/callback?code=c');
+    mockedExchange.mockRejectedValueOnce(new Error('invalid grant'));
+    renderCallback();
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(loginFailed).toHaveBeenCalledWith('oauth', 'OAUTH_CODE_EXCHANGE_FAILED');
   });
 
   it('never forwards implicit-flow fragment tokens to the backend (the implicit path is gone)', async () => {
@@ -537,7 +547,7 @@ describe('AuthCallbackPage', () => {
     expect(loginFailed).toHaveBeenCalledWith('apple', 'INVALID_TOKEN');
   });
 
-  it('falls back to OAUTH_SESSION_FAILED when the exchange never reached the backend', async () => {
+  it('reports network_error when the token exchange never reached the backend', async () => {
     const loginFailed = vi.spyOn(Analytics, 'loginFailed');
     arriveWithCode();
     // A raw network rejection: no envelope, so no `err.error.code` to report.
@@ -546,7 +556,7 @@ describe('AuthCallbackPage', () => {
     renderCallback();
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(loginFailed).toHaveBeenCalledWith('oauth', 'OAUTH_SESSION_FAILED');
+    expect(loginFailed).toHaveBeenCalledWith('oauth', 'network_error');
   });
 });
 

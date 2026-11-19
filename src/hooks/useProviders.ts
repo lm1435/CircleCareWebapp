@@ -32,7 +32,7 @@ import {
   isProviderConflictError,
   isProviderLimitReachedError,
   isSubscriptionRequiredError,
-  isPaywallRefusal,
+  isUnreportedFailure,
 } from '@/lib/apiErrors';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { queryKeys } from '@/lib/queryKeys';
@@ -125,7 +125,7 @@ function useProviderMutationOnError(
 
   return (error: unknown) => {
     // A 402 SUBSCRIPTION_REQUIRED is a paywall moment (the upgrade prompt below), not an error.
-    if (!isPaywallRefusal(error)) Analytics.errorOccurred('providers', `providers_${action}_failed`, {
+    if (!isUnreportedFailure(error)) Analytics.errorOccurred('providers', `providers_${action}_failed`, {
       circle_id: circleId,
       ...failureContext('providers', action, error),
     });

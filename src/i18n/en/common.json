@@ -266,7 +266,8 @@
       "taken_other": "{{count}} taken",
       "skipped_one": "{{count}} skipped",
       "skipped_other": "{{count}} skipped"
-    }
+    },
+    "markAllFailed": "Couldn't mark all as read. Check your connection and try again."
   },
   "trialCharge": {
     "endsSentence": "Your free trial ends {{date}}.",
@@ -281,6 +282,7 @@
   "writeRetry": {
     "notice_one": "Couldn't save {{count}} update",
     "notice_other": "Couldn't save {{count}} updates",
-    "retry": "Retry"
+    "retry": "Retry",
+    "lost": "These weren't saved before the app closed. Please check and redo them."
   }
 }

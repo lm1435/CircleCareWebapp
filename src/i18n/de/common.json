@@ -266,7 +266,8 @@
       "taken_other": "{{count}} eingenommen",
       "skipped_one": "{{count}} ausgelassen",
       "skipped_other": "{{count}} ausgelassen"
-    }
+    },
+    "markAllFailed": "Es konnten nicht alle als gelesen markiert werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
   },
   "trialCharge": {
     "endsSentence": "Ihr kostenloser Testzeitraum endet am {{date}}.",
@@ -281,6 +282,7 @@
   "writeRetry": {
     "notice_one": "{{count}} Änderung konnte nicht gespeichert werden",
     "notice_other": "{{count}} Änderungen konnten nicht gespeichert werden",
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "lost": "Diese wurden nicht gespeichert, bevor die App geschlossen wurde. Bitte prüfen Sie sie und wiederholen Sie sie."
   }
 }

@@ -18,6 +18,7 @@ import { setAnalyticsConsentOwner } from '@/lib/analyticsConsent';
 import { queueAnalyticsConsentForSignup } from '@/lib/analyticsConsentSync';
 import { Analytics } from '@/lib/analytics';
 import {
+  authFailureCode,
   isAuthRateLimitedError,
   isEmailQuotaExceededError,
   isEmailRateLimitError,
@@ -311,7 +312,7 @@ export default function SignUpPage(): ReactElement {
         message.includes('registered');
       // PHI-safe: only the backend error CODE (or a generic fallback), never the
       // email or the full error object.
-      Analytics.signupFailed('email', apiError?.code ?? 'SIGNUP_FAILED');
+      Analytics.signupFailed('email', authFailureCode(err, apiError?.code, 'SIGNUP_FAILED'));
       // Supabase's per-address send cooldown: this address was sent a code a
       // moment ago (a re-submitted signup, or one that is unverified). Dead-ending
       // on "wait a few minutes" strands them; the code they need is already in

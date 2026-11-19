@@ -10,6 +10,11 @@ vi.mock('@/api/inbox', () => ({
   getInboxUnread: vi.fn(),
   markInboxRead: vi.fn(),
 }));
+const showToast = vi.hoisted(() => vi.fn());
+vi.mock('@/components/ui', async (orig) => ({
+  ...(await orig<typeof import('@/components/ui')>()),
+  useToast: () => ({ showToast }),
+}));
 vi.mock('@/hooks/useCircles', () => ({ useCircles: vi.fn() }));
 vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => '12h' }));
 vi.mock('@/lib/analytics', () => ({
@@ -208,6 +213,32 @@ describe('NotificationsPage', () => {
       source: 'other',
       scoped: false,
     });
+  });
+
+  it('item 2: Mark all read that finally fails shows ONE toast; success and a row tap show none', async () => {
+    const items = [makeItem(), makeItem()];
+    serve(items);
+    mockMark.mockRejectedValue({ success: false, error: { code: 'FORBIDDEN', message: 'x' } });
+    renderPage();
+    await screen.findAllByTestId('inbox-row');
+    const user = userEvent.setup({ advanceTimers: () => {} });
+    await user.click(screen.getByRole('button', { name: 'Mark all read' }));
+    await waitFor(() => expect(showToast).toHaveBeenCalledTimes(1));
+    expect(showToast).toHaveBeenCalledWith(
+      "Couldn't mark all as read. Check your connection and try again.",
+      'error'
+    );
+  });
+
+  it('NEGATIVE item 2: a row tap that fails marking read raises no mark-all toast', async () => {
+    const items = [makeItem()];
+    serve(items);
+    mockMark.mockRejectedValue({ success: false, error: { code: 'FORBIDDEN', message: 'x' } });
+    renderPage();
+    const rows = await screen.findAllByTestId('inbox-row');
+    await userEvent.setup({ advanceTimers: () => {} }).click(rows[0]);
+    await waitFor(() => expect(mockMark).toHaveBeenCalled());
+    expect(showToast).not.toHaveBeenCalled();
   });
 
   it('Mark all read: calls the API with all, fires inbox_mark_all_read with the count', async () => {

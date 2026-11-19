@@ -23,7 +23,7 @@ import {
   getEmergencyInfoConflict,
   isPermissionDeniedError,
   isSubscriptionRequiredError,
-  isPaywallRefusal,
+  isUnreportedFailure,
 } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
@@ -366,7 +366,7 @@ export function useUpdateEmergencyInfo(
       // `error_occurred` for the admin digest (mobile parity). ids/enums only
       // — never the field values (PHI) and never the toast copy.
       // A 402 SUBSCRIPTION_REQUIRED is a paywall moment (the upgrade prompt below), not an error.
-      if (!isPaywallRefusal(error)) Analytics.errorOccurred('emergency_info', 'emergency_info_update_failed', {
+      if (!isUnreportedFailure(error)) Analytics.errorOccurred('emergency_info', 'emergency_info_update_failed', {
         circle_id: circleId,
         ...failureContext('emergency_info', 'update', error),
       });

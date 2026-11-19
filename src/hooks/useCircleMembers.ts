@@ -26,7 +26,7 @@ import {
   isPermissionDeniedError,
   isSubscriptionRequiredError,
   type FailureAction,
-  isPaywallRefusal,
+  isUnreportedFailure,
 } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
@@ -115,7 +115,7 @@ function useMemberMutationOnError(
   return (error: unknown) => {
     // `error_occurred` for the admin digest: enums only, no circle_id.
     // A 402 SUBSCRIPTION_REQUIRED is a paywall moment (the upgrade prompt below), not an error.
-    if (!isPaywallRefusal(error)) Analytics.errorOccurred('members', `members_${action}_failed`, failureContext('members', action, error));
+    if (!isUnreportedFailure(error)) Analytics.errorOccurred('members', `members_${action}_failed`, failureContext('members', action, error));
     const code = (error as { error?: { code?: string } } | null)?.error?.code;
     if (isSubscriptionRequiredError(error)) {
       promptUpgrade();
@@ -247,7 +247,7 @@ export function useSetMemberRole(
     },
     onError: (error: unknown) => {
       // A 402 SUBSCRIPTION_REQUIRED is a paywall moment (the upgrade prompt below), not an error.
-      if (!isPaywallRefusal(error)) Analytics.errorOccurred('members', 'members_update_failed', failureContext('members', 'update', error));
+      if (!isUnreportedFailure(error)) Analytics.errorOccurred('members', 'members_update_failed', failureContext('members', 'update', error));
       const code = (error as { error?: { code?: string } } | null)?.error?.code;
       if (isSubscriptionRequiredError(error)) {
         promptUpgrade();

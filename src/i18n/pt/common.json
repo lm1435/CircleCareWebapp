@@ -266,7 +266,8 @@
       "taken_other": "{{count}} tomados",
       "skipped_one": "{{count}} pulado",
       "skipped_other": "{{count}} pulados"
-    }
+    },
+    "markAllFailed": "Não foi possível marcar tudo como lido. Confira sua conexão e tente de novo."
   },
   "trialCharge": {
     "endsSentence": "Seu teste grátis termina em {{date}}.",
@@ -282,6 +283,7 @@
     "notice_zero": "Nada a salvar",
     "notice_one": "Não foi possível salvar {{count}} alteração",
     "notice_other": "Não foi possível salvar {{count}} alterações",
-    "retry": "Tentar novamente"
+    "retry": "Tentar novamente",
+    "lost": "Elas não foram salvas antes de o app fechar. Confira e refaça."
   }
 }

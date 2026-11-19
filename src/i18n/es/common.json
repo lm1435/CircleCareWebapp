@@ -266,7 +266,8 @@
       "taken_other": "{{count}} tomados",
       "skipped_one": "{{count}} omitido",
       "skipped_other": "{{count}} omitidos"
-    }
+    },
+    "markAllFailed": "No se pudieron marcar todas como leídas. Revisa tu conexión e inténtalo de nuevo."
   },
   "trialCharge": {
     "endsSentence": "Tu prueba gratis termina el {{date}}.",
@@ -281,6 +282,7 @@
   "writeRetry": {
     "notice_one": "No se pudo guardar {{count}} cambio",
     "notice_other": "No se pudieron guardar {{count}} cambios",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "lost": "No se guardaron antes de que se cerrara la app. Revísalos y vuelve a hacerlos."
   }
 }

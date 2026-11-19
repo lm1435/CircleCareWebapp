@@ -9,7 +9,7 @@ import { setPendingReturnPath, toReturnPath } from '@/lib/returnPath';
 import { markEmailLinkNeededLogin } from '@/lib/emailLinkLanding';
 import { supabase } from '@/lib/supabase';
 import { Analytics } from '@/lib/analytics';
-import { isAuthRateLimitedError, isRateLimitError } from '@/lib/apiErrors';
+import { authFailureCode, isAuthRateLimitedError, isRateLimitError } from '@/lib/apiErrors';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { Button, Card, Text, TextField } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
@@ -128,7 +128,7 @@ export default function LoginPage(): ReactElement {
       // PHI-safe: only the backend error CODE, never the email or full error.
       // A throttled attempt is the limiter working, not a failure: own event (the digest counts login_failed).
       if (isAuthRateLimitedError(err) || isRateLimitError(err)) Analytics.loginRateLimited('email');
-      else Analytics.loginFailed('email', apiError?.code ?? 'LOGIN_FAILED');
+      else Analytics.loginFailed('email', authFailureCode(err, apiError?.code, 'LOGIN_FAILED'));
       if (apiError?.code === 'EMAIL_NOT_VERIFIED') {
         const verifyEmail = apiError.email || trimmedEmail;
         // Best-effort fresh code before the verify screen (mirrors mobile).

@@ -41,13 +41,13 @@ import {
   isProviderNotFoundError,
   isPermissionDeniedError,
   isSubscriptionRequiredError,
-  isPaywallRefusal,
+  isUnreportedFailure,
 } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { addDays, daysBetween } from '@/components/calendar/dateMath';
 import { Analytics } from '@/lib/analytics';
-import { isRetryableTransportFailure } from '@/lib/writeRetryQueue';
+import { isQueueableFailure } from '@/lib/writeRetryQueue';
 import { todaysMedsKey } from '@/hooks/useMedConfirmation';
 import { isAsNeededImmutableError, isAsNeededUnscheduledError } from '@/api/medicationAsNeeded';
 import {
@@ -464,7 +464,7 @@ function useEventMutationOnError(
     // refusal reported as it came, or a write that never verifies.
     const outcome = confirmFailureOutcome(error);
     // A 402 SUBSCRIPTION_REQUIRED is a paywall moment (the upgrade prompt below), not an error.
-    if (!isPaywallRefusal(error)) Analytics.errorOccurred(failSource, `${failSource}_${action}_failed`, {
+    if (!isUnreportedFailure(error)) Analytics.errorOccurred(failSource, `${failSource}_${action}_failed`, {
       circle_id: circleId,
       ...failureContext(failSource, action, error),
       ...(outcome ? { outcome } : {}),
@@ -755,7 +755,7 @@ export function useCompleteEvent(
       void invalidateEventQueries(queryClient, sentCircleId, variables.eventId);
     },
     onError: (error, variables) => {
-      if (variables.quietRetry && isRetryableTransportFailure(error)) return;
+      if (variables.quietRetry && isQueueableFailure(error)) return;
       onError(error, variables.circleId ?? circleId, variables.source, variables.occurrence?.title);
     },
   });

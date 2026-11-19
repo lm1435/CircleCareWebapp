@@ -18,7 +18,7 @@ import {
 } from '@/api/eventNotes';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
-import { failureContext, isPermissionDeniedError, type FailureAction } from '@/lib/apiErrors';
+import { failureContext, isPermissionDeniedError, type FailureAction, isUnreportedFailure } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
 import { clearDraftRequestId, requestIdForDraft } from '@/lib/noteRequestId';
 import { SessionEndedError, sendWithQuietRetry } from '@/lib/writeRetryQueue';
@@ -128,7 +128,7 @@ function refreshFlagsOnPermissionError(
 ): void {
   // Counted first (`error_occurred`, mobile parity): ids/enums only — `code`
   // from the closed-set `classifyFailureCode`, never the note body.
-  Analytics.errorOccurred('event_notes', `event_notes_${action}_failed`, {
+  if (!isUnreportedFailure(error)) Analytics.errorOccurred('event_notes', `event_notes_${action}_failed`, {
     circle_id: circleId,
     ...failureContext('event_notes', action, error),
   });

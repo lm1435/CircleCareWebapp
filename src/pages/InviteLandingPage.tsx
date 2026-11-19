@@ -25,7 +25,7 @@ import { consumePendingInviteCode, setPendingInviteCode } from '@/lib/pendingInv
 import { setFirstRunPath } from '@/lib/firstRunFunnel';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
-import { failureContext } from '@/lib/apiErrors';
+import { failureContext, isUnreportedFailure } from '@/lib/apiErrors';
 import { isCompleteJoinCode } from '@/lib/joinCode';
 import { readDeclineError } from '@/lib/inviteDecline';
 
@@ -246,7 +246,7 @@ export default function InviteLandingPage(): ReactElement {
       }
       // `error_occurred` for the admin digest: enums only — never the invite
       // code, no circle_id. ALREADY_MEMBER (above) is a success, not a failure.
-      Analytics.errorOccurred('invite_accept', 'invite_accept_create_failed',
+      if (!isUnreportedFailure(err)) Analytics.errorOccurred('invite_accept', 'invite_accept_create_failed',
         failureContext('invite_accept', 'create', err)
       );
       setAcceptError(acceptErrorMessage(t, errorCode));

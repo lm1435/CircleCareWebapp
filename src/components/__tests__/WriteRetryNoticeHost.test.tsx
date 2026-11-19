@@ -120,17 +120,26 @@ describe('WriteRetryNoticeHost', () => {
 
   it('N-W2 a toast replaced by a newer notice does not dismiss the newer give-ups', async () => {
     render(<WriteRetryNoticeHost />);
-    const add = (k: string) =>
-      enqueueWriteRetry({
-        key: k,
-        kind: 'task_complete',
-        circleId: 'c1',
-        send: vi.fn().mockRejectedValue(network()),
-      });
+    const add = (k: string, tapAt?: number) =>
+      enqueueWriteRetry(
+        {
+          key: k,
+          kind: 'task_complete',
+          circleId: 'c1',
+          send: vi.fn().mockRejectedValue(network()),
+        },
+        { tapAt }
+      );
     add('a');
     await giveUp();
-    add('b');
-    await giveUp();
+    // 'b' was tapped long ago (so it gives up soon): 'a' must not age past the 10 min failed window.
+    add('b', Date.now() - (WRITE_RETRY_MAX_AGE_MS - 30_000));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(NOTICE_SETTLE_MS + 50);
+    });
     expect(showToast).toHaveBeenCalledTimes(2);
     act(() => showToast.mock.calls[0][2].onClose()); // the replaced one closing
     expect(getFailedCount()).toBe(2);

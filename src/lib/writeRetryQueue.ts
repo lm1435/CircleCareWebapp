@@ -2,6 +2,7 @@ import { Analytics } from '@/lib/analytics';
 import { classifyFailureCode } from '@/lib/apiErrors';
 import { isOfflineNow } from '@/hooks/useIsOffline';
 import { clearAllDraftRequestIds } from '@/lib/noteRequestId';
+import { isOfflineWriteRejection } from '@/lib/offlineWrite';
 
 /**
  * ONE QUIET RETRY for a quick save that dies on a network drop (1.4.3, plan
@@ -33,11 +34,20 @@ import { clearAllDraftRequestIds } from '@/lib/noteRequestId';
  *    2026-10-14: no writes while offline, lib/offlineWrite.ts). The tap itself is
  *    refused offline by the UI, so an entry only exists for a connection that
  *    dropped AFTER the tap; its retries simply wait for the `online` event.
- *  - In memory only, by design: a reload refetches the truth and nothing is
- *    replayed under another session. `clear()` runs on every sign-out.
+ *  - Payloads are in memory only, by design: a reload refetches the truth and nothing is
+ *    replayed under another session. `clear()` runs on every sign-out. What IS persisted
+ *    (localStorage, 1.4.3 audit item 13) is the kind and tap time of each outstanding entry,
+ *    never a payload or an id, so a reload that dropped a pending save still shows ONE
+ *    "Couldn't save N updates" notice (`hydrateWriteRetryQueue`), as mobile does.
  */
 
-export type WriteRetryKind = 'task_complete' | 'as_needed_dose' | 'event_note' | 'care_note';
+export type WriteRetryKind =
+  | 'task_complete'
+  | 'as_needed_dose'
+  | 'event_note'
+  | 'care_note'
+  | 'inbox_read'
+  | 'medication_confirm';
 
 export type WriteRetryVia = 'backoff' | 'resume' | 'online' | 'manual';
 
@@ -60,6 +70,8 @@ export interface WriteRetryEntry {
 }
 
 interface Queued {
+  /** Persistence row id (random, never a domain id). */
+  uid: string;
   entry: WriteRetryEntry;
   seq: number;
   tapAt: number;
@@ -71,7 +83,7 @@ interface Queued {
 /** Backoff steps; beyond the ladder the last step repeats until the max age. */
 export const WRITE_RETRY_DELAYS_MS = [2_000, 5_000, 10_000, 20_000, 40_000] as const;
 /** From the tap. After this the entry is given up on, never resent. */
-export const WRITE_RETRY_MAX_AGE_MS = 3 * 60_000;
+export const WRITE_RETRY_MAX_AGE_MS = 5 * 60_000;
 const CONCURRENCY = 3;
 
 /** Only a transport failure is retried: nothing reached (or came back from) the server. */
@@ -80,9 +92,18 @@ export function isRetryableTransportFailure(error: unknown): boolean {
   return code === 'timeout' || code === 'network_error';
 }
 
+/**
+ * Queue callers (task complete, as-needed dose) treat a write the client backstop refused
+ * because the browser went offline JUST AFTER the tap (code OFFLINE, nothing was sent) like a
+ * transport failure: the entry waits for the `online` event. Not used by `sendWithQuietRetry`.
+ */
+export function isQueueableFailure(error: unknown): boolean {
+  return isRetryableTransportFailure(error) || isOfflineWriteRejection(error);
+}
+
 const queued = new Map<string, Queued>();
 /** Given-up entries keep their ORIGINAL tap time, so Retry can refuse hours-old writes. */
-const failed = new Map<string, { entry: WriteRetryEntry; tapAt: number }>();
+const failed = new Map<string, { uid: string; entry: WriteRetryEntry; tapAt: number }>();
 /** A given-up write is offered for Retry only this long after the tap. */
 export const FAILED_WRITE_MAX_AGE_MS = 10 * 60_000;
 /** Bumped by sign-out: a foreground retry sleeping across it must not resend. */
@@ -110,8 +131,110 @@ function pruneStaleFailed(): void {
   });
 }
 
+// ── persistence (kind + tap time only: no ids, no content) ───────────────────────────────────────
+/** localStorage; one object keyed by tab, so two open tabs never overwrite each other. */
+export const WRITE_RETRY_STORAGE_KEY = 'circlecare:writeRetryOutstanding';
+/** sessionStorage: survives a reload of THIS tab (the case we surface), not a new tab. */
+const WRITE_RETRY_TAB_KEY = 'circlecare:writeRetryTab';
+interface PersistedRow {
+  k: string;
+  t: number;
+  u: string;
+}
+/** Saves lost to a reload, read back once: counted in the notice, never resendable. */
+let orphanCount = 0;
+let uidCounter = 0;
+
+function newUid(): string {
+  uidCounter += 1;
+  return `${Date.now().toString(36)}-${uidCounter}`;
+}
+
+function tabId(): string {
+  try {
+    let id = sessionStorage.getItem(WRITE_RETRY_TAB_KEY);
+    if (!id) {
+      id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      sessionStorage.setItem(WRITE_RETRY_TAB_KEY, id);
+    }
+    return id;
+  } catch {
+    return 'tab';
+  }
+}
+
+function readStore(): Record<string, PersistedRow[]> {
+  try {
+    const raw = localStorage.getItem(WRITE_RETRY_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, PersistedRow[]>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function persist(): void {
+  try {
+    const rows: PersistedRow[] = [];
+    queued.forEach((q) => rows.push({ k: q.entry.kind, t: q.tapAt, u: q.uid }));
+    failed.forEach((f) => rows.push({ k: f.entry.kind, t: f.tapAt, u: f.uid }));
+    for (let i = 0; i < orphanCount; i += 1) rows.push({ k: 'orphan', t: 0, u: `orphan-${i}` });
+    const store = readStore();
+    const me = tabId();
+    // Other tabs' rows past the failed max age can never be shown again: drop them.
+    const now = Date.now();
+    Object.keys(store).forEach((tab) => {
+      if (tab !== me && !(store[tab] ?? []).some((r) => now - r.t <= FAILED_WRITE_MAX_AGE_MS)) {
+        delete store[tab];
+      }
+    });
+    if (rows.length === 0) delete store[me];
+    else store[me] = rows;
+    if (Object.keys(store).length === 0) localStorage.removeItem(WRITE_RETRY_STORAGE_KEY);
+    else localStorage.setItem(WRITE_RETRY_STORAGE_KEY, JSON.stringify(store));
+  } catch {
+    // Storage blocked / full: the in-memory queue still works.
+  }
+}
+
+/**
+ * Call once at app start (the notice host does). Rows this tab left on disk before a RELOAD
+ * belong to saves whose payload is gone: the person is TOLD once instead of finding a missing
+ * task later. Rows older than the failed max age are dropped (the server stamps its own clock).
+ */
+export function hydrateWriteRetryQueue(): void {
+  try {
+    const mine = readStore()[tabId()];
+    if (!Array.isArray(mine)) return;
+    const live = new Set<string>();
+    queued.forEach((q) => live.add(q.uid));
+    failed.forEach((f) => live.add(f.uid));
+    const now = Date.now();
+    const lost = mine.filter(
+      (r) =>
+        r &&
+        typeof r.u === 'string' &&
+        !live.has(r.u) &&
+        (r.k === 'orphan' || (typeof r.t === 'number' && now - r.t <= FAILED_WRITE_MAX_AGE_MS))
+    ).length;
+    if (lost > 0) {
+      orphanCount = lost;
+      persist();
+      notify();
+    } else {
+      persist();
+    }
+  } catch {
+    // Never break boot.
+  }
+}
+
 function notify(): void {
   pruneStaleFailed();
+  persist();
   listeners.forEach((l) => safe(l));
 }
 
@@ -131,6 +254,11 @@ export function getFailedCount(): number {
     if (now - f.tapAt <= FAILED_WRITE_MAX_AGE_MS) count += 1;
   });
   return count;
+}
+
+/** What the ONE notice counts: given-up writes in this tab plus saves lost to a reload. */
+export function getNoticeCount(): number {
+  return getFailedCount() + orphanCount;
 }
 
 /** Entries waiting for a retry (not counting ones that gave up). */
@@ -201,6 +329,7 @@ export function enqueueWriteRetry(entry: WriteRetryEntry, opts: { tapAt?: number
   failed.delete(entry.key);
   const now = Date.now();
   queued.set(entry.key, {
+    uid: newUid(),
     entry,
     seq,
     tapAt: opts.tapAt ?? now,
@@ -231,7 +360,7 @@ export function cancelWriteRetry(key: string): boolean {
 
 function giveUp(q: Queued): void {
   queued.delete(q.entry.key);
-  failed.set(q.entry.key, { entry: q.entry, tapAt: q.tapAt });
+  failed.set(q.entry.key, { uid: q.uid, entry: q.entry, tapAt: q.tapAt });
   safe(() => Analytics.writeRetryGaveUp(q.entry.kind, failed.size));
   safe(() => q.entry.onGaveUp?.());
   notify();
@@ -270,7 +399,7 @@ async function attempt(q: Queued): Promise<void> {
   } catch (error) {
     inFlight.delete(entry.key);
     if (!isCurrent(q)) return;
-    if (!isRetryableTransportFailure(error)) {
+    if (!isQueueableFailure(error)) {
       // A real refusal (403 / 404 / 409 / 402 ...): never retried, today's copy.
       queued.delete(entry.key);
       safe(() => entry.onRefused?.(error));
@@ -419,6 +548,7 @@ export function retryFailedWrites(): void {
     const seq = ++seqCounter;
     latestSeq.set(entry.key, seq);
     queued.set(entry.key, {
+      uid: newUid(),
       entry,
       seq,
       tapAt: now,
@@ -433,8 +563,9 @@ export function retryFailedWrites(): void {
 
 /** The notice was dismissed: forget what gave up (rows were already refetched). */
 export function dismissFailedWrites(): void {
-  if (failed.size === 0) return;
+  if (failed.size === 0 && orphanCount === 0) return;
   failed.clear();
+  orphanCount = 0;
   notify();
 }
 
@@ -445,6 +576,13 @@ export function clearWriteRetryQueue(): void {
   queued.forEach((_q, key) => latestSeq.set(key, ++seqCounter));
   queued.clear();
   failed.clear();
+  orphanCount = 0;
+  // Sign-out wipes every tab's persisted rows: nothing outstanding survives the session.
+  try {
+    localStorage.removeItem(WRITE_RETRY_STORAGE_KEY);
+  } catch {
+    // Storage blocked: nothing was persisted either.
+  }
   if (timer) {
     clearTimeout(timer);
     timer = null;
@@ -455,6 +593,8 @@ export function clearWriteRetryQueue(): void {
 /** Test hook: full reset including in-flight bookkeeping. */
 export function __resetWriteRetryForTests(): void {
   clearWriteRetryQueue();
+  orphanCount = 0;
+  uidCounter = 0;
   inFlight.clear();
   foregroundInFlight.clear();
   latestSeq.clear();

@@ -32,7 +32,7 @@ import { useCircle } from '@/hooks/useCircle';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { classifyShiftFailure, describeShiftFailure } from '@/lib/shiftErrors';
-import { failureContext, type FailureAction, isPaywallRefusal } from '@/lib/apiErrors';
+import { failureContext, type FailureAction, isUnreportedFailure } from '@/lib/apiErrors';
 import { queryKeys } from '@/lib/queryKeys';
 import { Analytics } from '@/lib/analytics';
 import { raiseReviewMoment } from '@/lib/reviewMoments';
@@ -257,7 +257,7 @@ export function useShiftMutationOnError(
     (error: unknown) => {
       // `error_occurred` for the admin digest: enums only, no circle_id.
       // A 402 SUBSCRIPTION_REQUIRED is a paywall moment (the upgrade prompt below), not an error.
-      if (!isPaywallRefusal(error)) {
+      if (!isUnreportedFailure(error)) {
         const code = (error as { error?: { code?: unknown } } | null)?.error?.code;
         const extra = handledCodes
           ? { handled: typeof code === 'string' && handledCodes.has(code) }

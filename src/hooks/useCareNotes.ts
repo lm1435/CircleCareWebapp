@@ -19,7 +19,7 @@ import {
 } from '@/api/careNotes';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
-import { failureContext, isPermissionDeniedError, type FailureAction } from '@/lib/apiErrors';
+import { failureContext, isPermissionDeniedError, type FailureAction, isUnreportedFailure } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
 import { clearDraftRequestId, requestIdForDraft } from '@/lib/noteRequestId';
 import { SessionEndedError, sendWithQuietRetry } from '@/lib/writeRetryQueue';
@@ -129,7 +129,7 @@ function refreshFlagsOnPermissionError(
   error: unknown,
   action: FailureAction
 ): void {
-  Analytics.errorOccurred('care_notes', `care_notes_${action}_failed`, {
+  if (!isUnreportedFailure(error)) Analytics.errorOccurred('care_notes', `care_notes_${action}_failed`, {
     circle_id: circleId,
     ...failureContext('care_notes', action, error),
   });

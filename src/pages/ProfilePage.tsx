@@ -13,7 +13,7 @@ import {
 } from '@/api/users';
 import { queryKeys } from '@/lib/queryKeys';
 import { browserDefaultUnits, resolveTemperatureUnit } from '@/lib/vitals';
-import { failureContext } from '@/lib/apiErrors';
+import { failureContext, isUnreportedFailure } from '@/lib/apiErrors';
 import { getAnalyticsConsent } from '@/lib/analyticsConsent';
 import { recordAnalyticsConsentDecision } from '@/lib/analyticsConsentDecision';
 import { syncAnalyticsConsent } from '@/lib/analyticsConsentSync';
@@ -258,7 +258,7 @@ export default function ProfilePage(): ReactElement {
       void queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
     },
     onError: (error) => {
-      Analytics.errorOccurred('profile', 'profile_update_failed',
+      if (!isUnreportedFailure(error)) Analytics.errorOccurred('profile', 'profile_update_failed',
         failureContext('profile', 'update', error)
       );
     },

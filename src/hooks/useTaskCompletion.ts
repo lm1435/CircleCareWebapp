@@ -15,7 +15,7 @@ import {
 import {
   cancelWriteRetry,
   enqueueWriteRetry,
-  isRetryableTransportFailure,
+  isQueueableFailure,
 } from '@/lib/writeRetryQueue';
 import { failureContext } from '@/lib/apiErrors';
 
@@ -196,7 +196,7 @@ export function useTaskCompletion(
         quietRetry: true,
       };
       completeMutationRef.current.mutateAsync(vars).then(onCompleted, (error: unknown) => {
-        if (!isRetryableTransportFailure(error)) {
+        if (!isQueueableFailure(error)) {
           // Refused for real: useCompleteEvent's onError already reported it.
           clearPendingId(rowId);
           return;

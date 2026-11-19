@@ -28,7 +28,7 @@ import {
   isStorageFullError,
   isUnsupportedUploadError,
   isSubscriptionRequiredError,
-  isPaywallRefusal,
+  isUnreportedFailure,
 } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
@@ -109,7 +109,7 @@ function useDocumentMutationOnError(
     // `error_occurred` for the admin digest (mobile parity). ids/enums only:
     // `code` is the closed-set `classifyFailureCode` value, never toast copy.
     // A 402 SUBSCRIPTION_REQUIRED is a paywall moment (the upgrade prompt below), not an error.
-    if (!isPaywallRefusal(error)) Analytics.errorOccurred('documents', `documents_${action}_failed`, {
+    if (!isUnreportedFailure(error)) Analytics.errorOccurred('documents', `documents_${action}_failed`, {
       circle_id: circleId,
       ...failureContext('documents', action, error),
     });

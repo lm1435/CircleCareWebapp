@@ -4,6 +4,8 @@ import { useToast } from '@/components/ui';
 import {
   dismissFailedWrites,
   getFailedCount,
+  getNoticeCount,
+  hydrateWriteRetryQueue,
   retryFailedWrites,
   subscribeWriteRetry,
 } from '@/lib/writeRetryQueue';
@@ -24,9 +26,14 @@ export const NOTICE_SETTLE_MS = 500;
 export function WriteRetryNoticeHost(): ReactElement | null {
   const { t } = useTranslation('common');
   const { showToast } = useToast();
-  const count = useSyncExternalStore(subscribeWriteRetry, getFailedCount, () => 0);
+  // Given-up writes plus saves lost to a reload (persisted kind + tap time only).
+  const count = useSyncExternalStore(subscribeWriteRetry, getNoticeCount, () => 0);
   const shownFor = useRef(0);
   const generation = useRef(0);
+
+  useEffect(() => {
+    hydrateWriteRetryQueue();
+  }, []);
 
   useEffect(() => {
     if (count === 0) {
@@ -36,11 +43,22 @@ export function WriteRetryNoticeHost(): ReactElement | null {
     if (count === shownFor.current) return;
     // Wait for the burst to settle so the count is the whole count.
     const id = setTimeout(() => {
-      const current = getFailedCount();
+      const current = getNoticeCount();
       if (current === 0 || current === shownFor.current) return;
       shownFor.current = current;
       const mine = ++generation.current;
-      showToast(t('writeRetry.notice', { count: current }), 'error', {
+      // Only reload-lost saves left (nothing resendable): say so, no Retry.
+      const canRetry = getFailedCount() > 0;
+      const text = canRetry
+        ? t('writeRetry.notice', { count: current })
+        : `${t('writeRetry.notice', { count: current })}. ${t('writeRetry.lost')}`;
+      if (!canRetry) {
+        // Shown once, then forgotten (also from storage): there is nothing to resend.
+        showToast(text, 'error');
+        dismissFailedWrites();
+        return;
+      }
+      showToast(text, 'error', {
         label: t('writeRetry.retry'),
         onClick: retryFailedWrites,
         // Closed without Retry: forget what gave up. A toast REPLACED by a newer notice

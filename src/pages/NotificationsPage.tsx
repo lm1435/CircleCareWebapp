@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, Eyebrow, Icon, Skeleton, Text } from '@/components/ui';
+import { Button, Card, Eyebrow, Icon, Skeleton, Text, useToast } from '@/components/ui';
 import { RemovedState } from '@/components/RemovedState';
 import { useCircles } from '@/hooks/useCircles';
 import { useHourCycle } from '@/hooks/useHourCycle';
@@ -54,6 +54,7 @@ export function InboxPage({ circleId }: InboxPageProps = {}): ReactElement {
   const { data, isLoading, isError, isSuccess, refetch } = useInbox(circleId);
   const { data: circles } = useCircles();
   const markRead = useMarkInboxRead();
+  const { showToast } = useToast();
   const [gone, setGone] = useState<GoneRow | null>(null);
   /** Polite status text (WCAG 4.1.3): the region is always mounted, only its text changes. */
   const [announcement, setAnnouncement] = useState('');
@@ -158,10 +159,11 @@ export function InboxPage({ circleId }: InboxPageProps = {}): ReactElement {
   const handleMarkAll = (): void => {
     if (unreadVisible === 0 || markRead.isPending) return;
     Analytics.inboxMarkAllRead({ count: unreadVisible });
-    markRead.mutate(
-      circleId ? { all: true, circle_id: circleId } : { all: true },
-      { onSuccess: () => setAnnouncement(t('inbox.allMarkedRead')) }
-    );
+    markRead.mutate(circleId ? { all: true, circle_id: circleId } : { all: true }, {
+      onSuccess: () => setAnnouncement(t('inbox.allMarkedRead')),
+      // After the quiet retries: the badges came back, so say why (one toast).
+      onError: () => showToast(t('inbox.markAllFailed'), 'error'),
+    });
   };
 
   const now = new Date();

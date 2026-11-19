@@ -152,6 +152,53 @@ export function isPaywallRefusal(err: unknown): boolean {
 }
 
 /**
+ * A write the client backstop refused because the browser is offline (code OFFLINE, nothing was
+ * sent, the person already got the "You're offline" copy). Never throws.
+ */
+export function isOfflineRejection(err: unknown): boolean {
+  return errorCode(err) === 'OFFLINE';
+}
+
+/**
+ * True when the request got NO answer at all: an axios error without a response (offline, DNS, CORS
+ * preflight, a dropped connection, ERR_NETWORK, ERR_REQUEST_UNKNOWN-style codes), a timeout, or the
+ * fetch-level phrasings the browsers and supabase-js use. 1.4.3 audit R1.
+ */
+export function isNoResponseFailure(err: unknown): boolean {
+  try {
+    const code = classifyFailureCode(err);
+    if (code === 'network_error' || code === 'timeout') return true;
+    if (err === null || typeof err !== 'object') return false;
+    const e = err as { isAxiosError?: unknown; response?: unknown; name?: unknown; message?: unknown };
+    if (e.isAxiosError === true && !e.response) return true;
+    if (e.name === 'AuthRetryableFetchError') return true;
+    const message = typeof e.message === 'string' ? e.message.toLowerCase() : '';
+    return /failed to fetch|load failed|networkerror when attempting to fetch/.test(message);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The `error` property of `login_failed` / `signup_failed`: the backend's own code when there is one,
+ * `network_error` / `timeout` when nothing answered (so the digest does not count a dropped connection
+ * as a login bug), else the stable fallback. Never a message.
+ */
+export function authFailureCode(err: unknown, backendCode: string | undefined, fallback: string): string {
+  if (backendCode) return backendCode;
+  if (!isNoResponseFailure(err)) return fallback;
+  return classifyFailureCode(err) === 'timeout' ? 'timeout' : 'network_error';
+}
+
+/**
+ * True when a failed write must NOT fire `error_occurred` (1.4.3 audit item 10): a paywall moment
+ * (402) or an offline refusal. The shared web `onError` hooks gate on this.
+ */
+export function isUnreportedFailure(err: unknown): boolean {
+  return isPaywallRefusal(err) || isOfflineRejection(err);
+}
+
+/**
  * True for a 403 view-only / read-only rejection — the user lacks edit
  * permission on this circle. Web shows "no permission" and refetches flags.
  */

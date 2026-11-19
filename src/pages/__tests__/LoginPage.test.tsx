@@ -304,6 +304,28 @@ describe('LoginPage', () => {
     limited.mockRestore();
   });
 
+  it.each([
+    ['ERR_NETWORK', { isAxiosError: true, code: 'ERR_NETWORK', message: 'Network Error' }, 'network_error'],
+    ['ERR_REQUEST_UNKNOWN-style (axios, no response)', { isAxiosError: true, code: 'ERR_REQUEST_UNKNOWN', message: 'x' }, 'network_error'],
+    ['timeout', { isAxiosError: true, code: 'ECONNABORTED', message: 'timeout of 30000ms exceeded' }, 'timeout'],
+  ])('R1: %s fires login_failed with %s, never UNKNOWN / LOGIN_FAILED', async (_n, err, expected) => {
+    const failed = vi.spyOn(Analytics, 'loginFailed').mockImplementation(() => {});
+    mockedPost.mockRejectedValueOnce(err);
+    await fillAndSubmit();
+    await screen.findByRole('alert');
+    expect(failed).toHaveBeenCalledWith('email', expected);
+    failed.mockRestore();
+  });
+
+  it('NEGATIVE R1: a plain client Error (bug) keeps the LOGIN_FAILED fallback, not network_error', async () => {
+    const failed = vi.spyOn(Analytics, 'loginFailed').mockImplementation(() => {});
+    mockedPost.mockRejectedValueOnce(new Error('boom'));
+    await fillAndSubmit();
+    await screen.findByRole('alert');
+    expect(failed).toHaveBeenCalledWith('email', 'LOGIN_FAILED');
+    failed.mockRestore();
+  });
+
   it('AUTH_RATE_LIMITED (generic auth limiter) shows its own "try again in a moment" copy', async () => {
     mockedPost.mockRejectedValueOnce({
       success: false,

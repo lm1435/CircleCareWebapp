@@ -14,6 +14,7 @@ import { consumePendingAnalyticsConsent } from '@/lib/pendingAnalyticsConsent';
 import { recordAnalyticsConsentDecision } from '@/lib/analyticsConsentDecision';
 import { queueAnalyticsConsentForSignup } from '@/lib/analyticsConsentSync';
 import { Analytics } from '@/lib/analytics';
+import { authFailureCode } from '@/lib/apiErrors';
 import { Button, Spinner } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthTopBar } from '@/components/auth/AuthTopBar';
@@ -164,9 +165,12 @@ export default function AuthCallbackPage(): ReactElement {
         if (error || !data.session) throw error ?? new Error('no session');
         accessToken = data.session.access_token;
         refreshToken = data.session.refresh_token;
-      } catch {
+      } catch (exchangeErr) {
         // Never the error message: GoTrue prose. A stable code only.
-        Analytics.loginFailed(consumePendingAuthMethod() ?? 'oauth', 'OAUTH_CODE_EXCHANGE_FAILED');
+        Analytics.loginFailed(
+          consumePendingAuthMethod() ?? 'oauth',
+          authFailureCode(exchangeErr, undefined, 'OAUTH_CODE_EXCHANGE_FAILED')
+        );
         setFailure('error');
         return;
       } finally {
@@ -253,7 +257,7 @@ export default function AuthCallbackPage(): ReactElement {
         // SESSION_FAILED shape. Never the message: it is server prose.
         Analytics.loginFailed(
           consumePendingAuthMethod() ?? 'oauth',
-          getApiError(err)?.code ?? 'OAUTH_SESSION_FAILED'
+          authFailureCode(err, getApiError(err)?.code, 'OAUTH_SESSION_FAILED')
         );
         setFailure('error');
       }

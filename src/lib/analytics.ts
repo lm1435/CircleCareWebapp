@@ -487,7 +487,14 @@ function pickEnum<T extends string>(value: unknown, allowed: readonly T[], fallb
 const PLAN_KEYS = ['annual', 'monthly'] as const satisfies readonly PlanKey[];
 
 /** Closed set for the write-retry events (lib/writeRetryQueue.ts `WriteRetryKind`). */
-const WRITE_RETRY_KINDS = ['task_complete', 'as_needed_dose', 'event_note', 'care_note'] as const;
+const WRITE_RETRY_KINDS = [
+  'task_complete',
+  'as_needed_dose',
+  'event_note',
+  'care_note',
+  'inbox_read',
+  'medication_confirm',
+] as const;
 type WriteRetryKindName = (typeof WRITE_RETRY_KINDS)[number];
 
 /** How the paywall was left (`paywall_dismissed.method`, identical on mobile; web never sends 'swipe'). */

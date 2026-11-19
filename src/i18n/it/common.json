@@ -266,7 +266,8 @@
       "taken_other": "{{count}} presi",
       "skipped_one": "{{count}} saltato",
       "skipped_other": "{{count}} saltati"
-    }
+    },
+    "markAllFailed": "Impossibile segnare tutto come letto. Controlla la connessione e riprova."
   },
   "trialCharge": {
     "endsSentence": "La tua prova gratuita termina il {{date}}.",
@@ -281,6 +282,7 @@
   "writeRetry": {
     "notice_one": "Impossibile salvare {{count}} modifica",
     "notice_other": "Impossibile salvare {{count}} modifiche",
-    "retry": "Riprova"
+    "retry": "Riprova",
+    "lost": "Non sono state salvate prima della chiusura dell'app. Controllale e rifalle."
   }
 }

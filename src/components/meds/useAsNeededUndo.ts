@@ -10,7 +10,7 @@ import {
   type RecentlyLoggedConflict,
 } from '@/api/medicationAsNeeded';
 import { isAmbiguousConfirmFailure } from '@/lib/confirmVerify';
-import { enqueueWriteRetry, isRetryableTransportFailure } from '@/lib/writeRetryQueue';
+import { enqueueWriteRetry, isQueueableFailure } from '@/lib/writeRetryQueue';
 import { queryClient } from '@/lib/queryClient';
 import { queryKeys } from '@/lib/queryKeys';
 import { MEDICATION_UNDO_DELAY_MS } from './useMedicationUndo';
@@ -186,7 +186,7 @@ export function useAsNeededUndo({
           },
           (error: unknown) => {
             const conflict = asNeededRecentlyLogged(error);
-            if (!conflict && isRetryableTransportFailure(error)) {
+            if (!conflict && isQueueableFailure(error)) {
               // TRANSPORT failure (timeout / network_error): quiet retry with backoff
               // (lib/writeRetryQueue.ts), one aggregated notice if it never lands. The
               // entry stays pending (the card keeps its "logging" look) and no error is
