@@ -59,8 +59,16 @@ export interface WriteRetryEntry {
   circleId: string;
   /** One attempt. Resolves on success (a `replayed: true` answer is success). */
   send: () => Promise<unknown>;
-  /** Re-read before a resend: true when the earlier attempt already landed. */
-  landed?: () => Promise<boolean>;
+  /**
+   * Re-read before a resend. TRI-STATE (a boolean is `recorded` / `not_recorded`):
+   *  - `recorded`     the earlier attempt landed: nothing is sent.
+   *  - `not_recorded` it did not: send.
+   *  - `unverified`   the re-read failed (or threw): NOTHING is sent this round, next backoff rung.
+   *  - `superseded`   the item was answered some other way meanwhile: drop quietly (`onSuperseded`).
+   */
+  landed?: () => Promise<boolean | 'recorded' | 'not_recorded' | 'unverified' | 'superseded'>;
+  /** A queued entry was withdrawn by a newer intent (`cancelWriteRetry`) or superseded. */
+  onCancelled?: () => void;
   /** The write is on the server (sent, replayed, or found landed). */
   onSettled?: (via: WriteRetryVia | 'landed', result?: unknown) => void;
   /** A definite refusal came back (not retryable): report it as today. */
@@ -108,6 +116,10 @@ const failed = new Map<string, { uid: string; entry: WriteRetryEntry; tapAt: num
 export const FAILED_WRITE_MAX_AGE_MS = 10 * 60_000;
 /** Bumped by sign-out: a foreground retry sleeping across it must not resend. */
 let sessionEpoch = 0;
+/** Sign-out counter: a retry sleeping across it must not resend. */
+export function getWriteSessionEpoch(): number {
+  return sessionEpoch;
+}
 const latestSeq = new Map<string, number>();
 const inFlight = new Set<string>();
 const listeners = new Set<() => void>();
@@ -364,11 +376,13 @@ export function enqueueWriteRetry(entry: WriteRetryEntry, opts: { tapAt?: number
  */
 export function cancelWriteRetry(key: string): boolean {
   const had = queued.has(key);
+  const cancelled = queued.get(key)?.entry ?? failed.get(key)?.entry;
   latestSeq.set(key, ++seqCounter);
   queued.delete(key);
   const hadFailed = failed.delete(key);
   if (had || hadFailed) notify();
   schedule();
+  if (cancelled) safe(() => cancelled.onCancelled?.());
   return had;
 }
 
@@ -384,6 +398,9 @@ function isCurrent(q: Queued): boolean {
   return latestSeq.get(q.entry.key) === q.seq && queued.get(q.entry.key) === q;
 }
 
+/** Sentinel: the re-read could not tell; nothing was sent, take the next rung. */
+const UNVERIFIED = new Error('write retry: re-read unverified');
+
 async function attempt(q: Queued): Promise<void> {
   const { entry } = q;
   if (!isCurrent(q)) return;
@@ -393,17 +410,28 @@ async function attempt(q: Queued): Promise<void> {
   }
   inFlight.add(entry.key);
   try {
-    let landedAlready = false;
+    let verdict: 'recorded' | 'not_recorded' | 'unverified' | 'superseded' = 'not_recorded';
     let result: unknown;
     if (entry.landed) {
       try {
-        landedAlready = await entry.landed();
+        const v = await entry.landed();
+        verdict = v === true ? 'recorded' : v === false ? 'not_recorded' : v;
       } catch {
-        landedAlready = false;
+        verdict = 'unverified';
       }
     }
     // The re-read took time: the user may have taken the write back meanwhile.
     if (!isCurrent(q)) return;
+    if (verdict === 'superseded') {
+      // Answered another way meanwhile (the person's own newer answer): never overwrite it.
+      queued.delete(entry.key);
+      notify();
+      safe(() => entry.onCancelled?.());
+      return;
+    }
+    // Could not tell whether the earlier attempt landed: a blind resend could double it.
+    if (verdict === 'unverified') throw UNVERIFIED;
+    const landedAlready = verdict === 'recorded';
     if (!landedAlready) result = await entry.send();
     inFlight.delete(entry.key);
     if (queued.get(entry.key) === q) queued.delete(entry.key);
@@ -413,7 +441,7 @@ async function attempt(q: Queued): Promise<void> {
   } catch (error) {
     inFlight.delete(entry.key);
     if (!isCurrent(q)) return;
-    if (!isQueueableFailure(error)) {
+    if (error !== UNVERIFIED && !isQueueableFailure(error)) {
       // A real refusal (403 / 404 / 409 / 402 ...): never retried, today's copy.
       queued.delete(entry.key);
       safe(() => entry.onRefused?.(error));

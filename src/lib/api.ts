@@ -9,12 +9,17 @@ import {
   WRITE_RETRY_LADDER_MS,
   autoRetryKind,
   isIdempotencySupported,
+  isInProgress409,
   isNoAnswer,
+  WRITE_RETRY_FROZEN_SLACK_MS,
+  WRITE_RETRY_MAX_TOTAL_MS,
+  waitUntilPresent,
   newIdempotencyKey,
   noteIdempotencyHeaders,
   waitPresentBounded,
   type AutoRetryState,
 } from './idempotentWrite';
+import { getWriteSessionEpoch } from './writeRetryQueue';
 import { noteReviewBlockingError } from './reviewMoments';
 import { markPaywallRefusal } from './apiErrors';
 
@@ -205,6 +210,7 @@ apiClient.interceptors.request.use(
     // its attempts (the retry reuses this config, so the header is the same). Old backends
     // (no `Idempotency-Supported` seen yet) get no key and no retry.
     const retryState = config as InternalAxiosRequestConfig & AutoRetryState;
+    retryState._writeEpoch ??= getWriteSessionEpoch();
     if (method === 'post' && !retryState._writeRetries) {
       const hasKey = !!config.headers.get('Idempotency-Key');
       if (
@@ -264,17 +270,33 @@ apiClient.interceptors.response.use(
     // AUTOMATIC WRITE RETRY: a write that got NO answer is repeated (1 / 3 / 7 s) before the caller
     // ever sees a failure. Only the final failure reaches the caller's onError (so `error_occurred`
     // fires once). A 4xx / 5xx answer is never retried here.
-    if (originalRequest && !axios.isCancel(error) && isNoAnswer(error)) {
+    if (originalRequest && !axios.isCancel(error) && (isNoAnswer(error) || isInProgress409(error))) {
       const state = originalRequest as InternalAxiosRequestConfig & AutoRetryState;
       const hasKey = !!originalRequest.headers?.get?.('Idempotency-Key');
       const kind = autoRetryKind(originalRequest.method, originalRequest.url, hasKey, state);
       const done = state._writeRetries ?? 0;
-      if (kind && (kind === 'idempotent' || hasKey) && done < WRITE_RETRY_LADDER_MS.length) {
+      // 409 IDEMPOTENCY_IN_PROGRESS = our own first attempt is still running on the server: wait
+      // and send again with the SAME key (only a keyed request can get it).
+      const eligible = isInProgress409(error) ? hasKey && !!kind : kind && (kind === 'idempotent' || hasKey);
+      if (eligible && done < WRITE_RETRY_LADDER_MS.length) {
         state._writeRetries = done + 1;
+        const firstAt = (state._writeFirstFailAt ??= Date.now());
+        const epoch = state._writeEpoch ?? getWriteSessionEpoch();
         const delay = WRITE_RETRY_LADDER_MS[done] ?? 0;
-        if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+        const sleepStart = Date.now();
+        await new Promise((r) => setTimeout(r, delay));
+        // Too late (a tab asleep across the wait, or the whole ladder gone stale): stop with the
+        // original failure instead of resending an old write (mirrors mobile's FROZEN_SLACK_MS).
+        const overshoot = Date.now() - sleepStart - delay;
+        const waitStart = Date.now();
         await waitPresentBounded();
-        return apiClient(originalRequest);
+        // An OFFLINE refusal would end the ladder with the offline error: wait for online instead.
+        if (isOfflineNow()) await waitUntilPresent();
+        state._writeWaitedMs = (state._writeWaitedMs ?? 0) + (Date.now() - waitStart);
+        const age = Date.now() - firstAt - state._writeWaitedMs;
+        const stale = overshoot > WRITE_RETRY_FROZEN_SLACK_MS || age > WRITE_RETRY_MAX_TOTAL_MS;
+        // A sign-out (or another account) during the wait: never resend under the new session.
+        if (!stale && epoch === getWriteSessionEpoch()) return apiClient(originalRequest);
       }
     }
     // A DELETE whose earlier attempt landed (the response was lost) answers 404 on the repeat:

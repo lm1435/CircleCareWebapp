@@ -179,15 +179,33 @@ export async function sendIdempotentWrite<T>(
  * repeat could answer a false 409 / 404, so it is NOT auto-retried here: one-tap actions go through
  * the persistent queue (lib/writeRetryQueue.ts), the rest show their error once.
  */
-const KEYED_POST_ROUTES: readonly RegExp[] = [
+export const KEYED_POST_ROUTES: readonly RegExp[] = [
   /^\/circles$/,
   /^\/circles\/[^/]+\/vitals$/,
   /^\/circles\/[^/]+\/providers$/,
+  /^\/circles\/[^/]+\/documents\/upload$/,
   /^\/circles\/[^/]+\/invites$/,
+  /^\/invites\/[^/]+\/accept$/,
+  /^\/invites\/code\/[^/]+\/accept$/,
+  /^\/invites\/[^/]+\/resend$/,
   /^\/feedback$/,
   /^\/circles\/[^/]+\/dose-alerts\/answer$/,
+  /^\/circles\/[^/]+\/medications\/[^/]+\/as-needed-doses\/[^/]+\/remove$/,
+  /^\/circles\/[^/]+\/events\/import$/,
+  /^\/circles\/[^/]+\/events\/[^/]+\/shift\/assign$/,
   /^\/invites\/code\/[^/]+\/preview$/, // a read in POST clothing
 ];
+
+/**
+ * Keyed POSTs whose CALLER mints the key (one per form attempt) and still wants the automatic
+ * ladder: the ladder reuses the caller's key. Every other caller key means the caller retries itself.
+ * (POST /circles/:id/leave is NOT keyed: the backend route has no `idempotent` middleware.)
+ */
+const CALLER_KEYED_AUTO_RETRY: readonly RegExp[] = [/^\/circles$/];
+
+/** Too-late guards for the ladder (mirrors mobile's FROZEN_SLACK_MS): a sleep that overshoots, or a stale ladder. */
+export const WRITE_RETRY_FROZEN_SLACK_MS = 5_000;
+export const WRITE_RETRY_MAX_TOTAL_MS = 2 * 60_000;
 
 /** Never repeated: account deletion (a repeat after success answers 401, and it is irreversible). */
 const NEVER_RETRY: readonly RegExp[] = [/^\/users\/me$/];
@@ -199,6 +217,12 @@ export interface AutoRetryState {
   _autoKeyed?: boolean;
   /** A caller that retries itself (queue, in-call helpers) opts out. */
   _noAutoRetry?: boolean;
+  /** Session epoch at the first send (a sign-out during the ladder stops it). */
+  _writeEpoch?: number;
+  /** When the first no-answer failure was seen (age guard). */
+  _writeFirstFailAt?: number;
+  /** Time spent waiting for the tab / network (does not count towards the age guard). */
+  _writeWaitedMs?: number;
 }
 
 function pathOf(url: string | undefined): string {
@@ -221,7 +245,10 @@ export function autoRetryKind(
     return hasCallerKey && !state._autoKeyed ? null : 'idempotent';
   }
   if (m === 'post' && KEYED_POST_ROUTES.some((r) => r.test(path))) {
-    return hasCallerKey && !state._autoKeyed ? null : 'keyed_post';
+    if (hasCallerKey && !state._autoKeyed && !CALLER_KEYED_AUTO_RETRY.some((r) => r.test(path))) {
+      return null;
+    }
+    return 'keyed_post';
   }
   return null;
 }
@@ -232,6 +259,12 @@ export function isNoAnswer(err: unknown): boolean {
   if (!e || typeof e !== 'object') return false;
   if (e.response) return false;
   return e.isAxiosError === true || e.code === 'ECONNABORTED' || e.code === 'ETIMEDOUT' || e.code === 'ERR_NETWORK';
+}
+
+/** 409 IDEMPOTENCY_IN_PROGRESS: our own first attempt is still running on the server. */
+export function isInProgress409(err: unknown): boolean {
+  const e = err as { response?: { status?: unknown; data?: { error?: { code?: unknown } } } } | null;
+  return e?.response?.status === 409 && e.response.data?.error?.code === 'IDEMPOTENCY_IN_PROGRESS';
 }
 
 /** Wait until present, but never longer than `maxMs` (a retry must not hang a form for good). */

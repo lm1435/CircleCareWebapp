@@ -80,9 +80,9 @@ describe('automatic write retry (api client)', () => {
     expect(seen).toHaveLength(1);
   });
 
-  it('NEGATIVE: an action POST (not a create route) is never auto-retried', async () => {
+  it('NEGATIVE: an action POST (not a keyed route, e.g. leave circle: no backend key) is never auto-retried', async () => {
     const seen = script([dropped]);
-    await expect(apiClient.post('/invites/i1/accept')).rejects.toBeTruthy();
+    await expect(apiClient.post('/circles/c1/leave')).rejects.toBeTruthy();
     expect(seen).toHaveLength(1);
   });
 
@@ -118,5 +118,74 @@ describe('automatic write retry (api client)', () => {
   it('NEGATIVE: a 404 on the FIRST attempt of a DELETE is still a failure', async () => {
     script([(c) => refused(c, 404, 'NOT_FOUND')]);
     await expect(apiClient.delete('/circles/c1/vitals/v1')).rejects.toMatchObject({ error: { code: 'NOT_FOUND' } });
+  });
+
+  // ── 1.4.3 retry review S5 / S7 / S4 / N3 / N4 ────────────────────────────────────────────────
+  it.each([
+    '/invites/i1/accept',
+    '/invites/code/ABC12345/accept',
+    '/invites/i1/resend',
+    '/circles/c1/documents/upload',
+    '/circles/c1/medications/m1/as-needed-doses/d1/remove',
+    '/circles/c1/events/import',
+    '/circles/c1/events/e1/shift/assign',
+    '/feedback',
+    '/circles/c1/dose-alerts/answer',
+  ])('S7 positive: keyed POST %s retries with the SAME key', async (url) => {
+    const seen = script([dropped, (c) => reply(c, 200)]);
+    await apiClient.post(url, {});
+    expect(seen).toHaveLength(2);
+    expect(seen[0].headers.get('Idempotency-Key')).toBeTruthy();
+    expect(seen[1].headers.get('Idempotency-Key')).toBe(seen[0].headers.get('Idempotency-Key'));
+  });
+
+  it('S7 positive: manual Create circle (caller key) auto-retries with its own stable key', async () => {
+    const seen = script([dropped, (c) => reply(c, 200)]);
+    await apiClient.post('/circles', {}, { headers: { 'Idempotency-Key': 'create-key-123456789' } });
+    expect(seen).toHaveLength(2);
+    expect(seen[1].headers.get('Idempotency-Key')).toBe('create-key-123456789');
+  });
+
+  it('S5 positive: 409 IDEMPOTENCY_IN_PROGRESS waits and resends with the same key', async () => {
+    const seen = script([(c) => refused(c, 409, 'IDEMPOTENCY_IN_PROGRESS'), (c) => reply(c, 200)]);
+    await expect(apiClient.post('/circles/c1/vitals', {})).resolves.toBeTruthy();
+    expect(seen).toHaveLength(2);
+    expect(seen[1].headers.get('Idempotency-Key')).toBe(seen[0].headers.get('Idempotency-Key'));
+  });
+
+  it('S5 negative: any other 409 is a refusal, sent once', async () => {
+    const seen = script([(c) => refused(c, 409, 'DOSE_ALREADY_RECORDED')]);
+    await expect(apiClient.post('/circles/c1/vitals', {})).rejects.toBeTruthy();
+    expect(seen).toHaveLength(1);
+  });
+
+  it('S4 negative: a sleep that overshoots (tab asleep) stops with the original failure', async () => {
+    const seen = script([dropped, (c) => reply(c, 200)]);
+    const real = Date.now.bind(Date);
+    let jump = 0;
+    const spy = vi.spyOn(Date, 'now').mockImplementation(() => real() + jump);
+    const realTimeout = globalThis.setTimeout;
+    const tspy = vi.spyOn(globalThis, 'setTimeout').mockImplementation(((fn: () => void, ms?: number) =>
+      realTimeout(() => {
+        jump += 60_000; // the lid was closed for a minute
+        fn();
+      }, ms)) as never);
+    await expect(apiClient.patch('/users/me', { first_name: 'A' })).rejects.toBeTruthy();
+    tspy.mockRestore();
+    spy.mockRestore();
+    expect(seen).toHaveLength(1);
+  });
+
+  it('N3 negative: a sign-out during the wait means nothing is resent', async () => {
+    const { clearWriteRetryQueue } = await import('@/lib/writeRetryQueue');
+    const seen = script([
+      (c) => {
+        clearWriteRetryQueue();
+        return dropped(c);
+      },
+      (c) => reply(c, 200),
+    ]);
+    await expect(apiClient.patch('/users/me', { first_name: 'A' })).rejects.toBeTruthy();
+    expect(seen).toHaveLength(1);
   });
 });
