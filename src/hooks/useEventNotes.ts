@@ -21,7 +21,7 @@ import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { failureContext, isPermissionDeniedError, type FailureAction } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
 import { clearDraftRequestId, requestIdForDraft } from '@/lib/noteRequestId';
-import { sendWithQuietRetry } from '@/lib/writeRetryQueue';
+import { SessionEndedError, sendWithQuietRetry } from '@/lib/writeRetryQueue';
 
 // PORT of mobile/src/hooks/useEventNotes.ts. Notes are INSTANCE-scoped: every
 // hook splits the (possibly composite `parentUUID_YYYY-MM-DD`) eventId so the
@@ -157,7 +157,7 @@ export function useCreateNote(): UseMutationResult<EventNote, unknown, CreateNot
           client_request_id: clientRequestId,
         })
       ).then((note) => {
-        clearDraftRequestId(scope);
+        clearDraftRequestId(scope, clientRequestId);
         return note;
       });
     },
@@ -165,8 +165,11 @@ export function useCreateNote(): UseMutationResult<EventNote, unknown, CreateNot
       invalidateNotes(queryClient, variables.circleId, variables.eventId, variables.scheduledDate);
       Analytics.eventNoteAdded(variables.circleId);
     },
-    onError: (error, variables) =>
-      refreshFlagsOnPermissionError(queryClient, variables.circleId, error, 'create'),
+    onError: (error, variables) => {
+      // Session ended mid-retry: nothing of this account's is left to refresh or report.
+      if (error instanceof SessionEndedError) return;
+      refreshFlagsOnPermissionError(queryClient, variables.circleId, error, 'create');
+    },
   });
 }
 

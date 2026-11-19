@@ -22,7 +22,7 @@ import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { failureContext, isPermissionDeniedError, type FailureAction } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
 import { clearDraftRequestId, requestIdForDraft } from '@/lib/noteRequestId';
-import { sendWithQuietRetry } from '@/lib/writeRetryQueue';
+import { SessionEndedError, sendWithQuietRetry } from '@/lib/writeRetryQueue';
 import { useAuthStore } from '@/store/authStore';
 import { olderPageRange } from '@/lib/noteDate';
 
@@ -162,7 +162,7 @@ export function useCreateCareNote(): UseMutationResult<
       return sendWithQuietRetry(`care_note:${clientRequestId}`, 'care_note', () =>
         createCareNote(circleId, { ...input, client_request_id: clientRequestId })
       ).then((note) => {
-        clearDraftRequestId(scope);
+        clearDraftRequestId(scope, clientRequestId);
         return note;
       });
     },
@@ -214,12 +214,16 @@ export function useCreateCareNote(): UseMutationResult<
       return { previous } satisfies CreateCareNoteContext;
     },
     onError: (error, variables, context) => {
+      // The session ended while the write waited: the caches were cleared with it, so there is nothing
+      // to roll back INTO (and the rows would belong to the next account).
+      if (error instanceof SessionEndedError) return;
       context?.previous.forEach(([key, data]) => {
         queryClient.setQueryData(key, data);
       });
       refreshFlagsOnPermissionError(queryClient, variables.circleId, error, 'create');
     },
-    onSettled: (_note, _error, variables) => {
+    onSettled: (_note, error, variables) => {
+      if (error instanceof SessionEndedError) return;
       invalidateCareNotes(queryClient, variables.circleId);
     },
   });

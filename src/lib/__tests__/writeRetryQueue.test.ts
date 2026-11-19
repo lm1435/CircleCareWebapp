@@ -22,6 +22,7 @@ import {
   pendingCount,
   retryFailedWrites,
   sendWithQuietRetry,
+  SessionEndedError,
   type WriteRetryEntry,
 } from '@/lib/writeRetryQueue';
 
@@ -445,5 +446,46 @@ describe('foreground retry honours sign-out and offline (W3)', () => {
     await tick(2100);
     await expect(run).resolves.toBe('ok');
     expect(send).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('N-W3: foreground exits after the backoff sleep report the give-up', () => {
+  it('POSITIVE: a sign-out mid-backoff throws a typed SessionEndedError and fires gave_up once', async () => {
+    const send = vi.fn().mockRejectedValue(network());
+    const settled = sendWithQuietRetry('sk', 'care_note', send).catch((e) => e);
+    await tick(0);
+    clearWriteRetryQueue();
+    await tick(10_000);
+    const error = await settled;
+    expect(error).toBeInstanceOf(SessionEndedError);
+    expect((error as Error).message).toBe('Write cancelled: session ended');
+    expect(Analytics.writeRetryGaveUp).toHaveBeenCalledTimes(1);
+    expect(Analytics.writeRetryGaveUp).toHaveBeenCalledWith('care_note', 1);
+  });
+
+  it('POSITIVE: going offline during the backoff rethrows the transport error and fires gave_up once', async () => {
+    const send = vi.fn().mockRejectedValue(network());
+    const settled = sendWithQuietRetry('ok', 'event_note', send).catch((e) => e);
+    await tick(0);
+    onlineManager.setOnline(false);
+    await tick(10_000);
+    expect(await settled).toEqual(network());
+    expect(Analytics.writeRetryGaveUp).toHaveBeenCalledTimes(1);
+    expect(Analytics.writeRetryGaveUp).toHaveBeenCalledWith('event_note', 1);
+  });
+
+  it('NEGATIVE: a first-attempt refusal is NOT a give-up (no retry ever happened)', async () => {
+    const send = vi.fn().mockRejectedValue(refusal('VIEW_ONLY'));
+    await expect(sendWithQuietRetry('nk', 'care_note', send)).rejects.toEqual(refusal('VIEW_ONLY'));
+    expect(Analytics.writeRetryGaveUp).not.toHaveBeenCalled();
+  });
+
+  it('NEGATIVE: an ordinary transport give-up is not a SessionEndedError', async () => {
+    const send = vi.fn().mockRejectedValue(network());
+    const settled = sendWithQuietRetry('tk', 'care_note', send).catch((e) => e);
+    await tick(60_000);
+    const error = await settled;
+    expect(error).not.toBeInstanceOf(SessionEndedError);
+    expect(Analytics.writeRetryGaveUp).toHaveBeenCalledTimes(1); // the max-age exit, still once
   });
 });

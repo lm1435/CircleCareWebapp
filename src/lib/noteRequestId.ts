@@ -19,8 +19,14 @@ export function requestIdForDraft(scope: string, fingerprint: string): string {
   return id;
 }
 
-/** The save landed: the next note in this scope is a new one. */
-export function clearDraftRequestId(scope: string): void {
+/**
+ * The save landed: the next note in this scope is a new one. Only clears when the id that landed is
+ * still the one held: a slow earlier save finishing after the user started (and keyed) a newer draft in
+ * the same scope must not wipe the newer draft's id.
+ */
+export function clearDraftRequestId(scope: string, id?: string): void {
+  const current = held.get(scope);
+  if (id !== undefined && current && current.id !== id) return;
   held.delete(scope);
 }
 

@@ -337,6 +337,18 @@ async function drain(force: boolean, via: WriteRetryVia): Promise<void> {
  * whose response was lost may have landed, and the server then answers the
  * resend 200 `replayed: true`, which resolves here like any success.
  */
+/**
+ * Thrown when the session ended (sign-out / account switch) while a foreground write was waiting to
+ * retry. The caches were already cleared with the session, so a mutation's `onError` must NOT run its
+ * optimistic rollback (it would write the old rows back into the next account's cache).
+ */
+export class SessionEndedError extends Error {
+  constructor() {
+    super('Write cancelled: session ended');
+    this.name = 'SessionEndedError';
+  }
+}
+
 const foregroundInFlight = new Set<string>();
 export const FOREGROUND_RETRY_DELAYS_MS = [2_000, 5_000, 10_000] as const;
 
@@ -377,8 +389,15 @@ export async function sendWithQuietRetry<T>(
         await new Promise((resolve) => setTimeout(resolve, delay));
         // Signed out meanwhile: never resend under another session. Offline: no
         // writes (owner decision 2026-10-14); the composer keeps its draft and error.
-        if (epoch !== sessionEpoch) throw new Error('Write cancelled: session ended');
-        if (isOfflineNow()) throw error;
+        // Both exits are a give-up after at least one retry: report it like the max-age exit does.
+        if (epoch !== sessionEpoch) {
+          safe(() => Analytics.writeRetryGaveUp(kind, 1));
+          throw new SessionEndedError();
+        }
+        if (isOfflineNow()) {
+          safe(() => Analytics.writeRetryGaveUp(kind, 1));
+          throw error;
+        }
       }
     }
   } finally {

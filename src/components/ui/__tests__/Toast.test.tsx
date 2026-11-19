@@ -511,4 +511,52 @@ describe('placement', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(document.activeElement).toBe(focusedInDialog);
   });
+
+  describe('N-W4: onClose when toasts replace each other', () => {
+    it('POSITIVE: two showToast calls in ONE tick: the first toast onClose still fires, once', () => {
+      reduceMotion(true);
+      const first = vi.fn();
+      const second = vi.fn();
+      const { show } = setup();
+      act(() => {
+        show('First', 'info', { label: 'Undo', onClick: () => {}, onClose: first });
+        show('Second', 'info', { label: 'Undo', onClick: () => {}, onClose: second });
+      });
+      expect(first).toHaveBeenCalledTimes(1);
+      expect(second).not.toHaveBeenCalled(); // the visible one has not closed
+      expect(screen.getByText('Second')).toBeInTheDocument();
+      expect(screen.queryByText('First')).not.toBeInTheDocument();
+    });
+
+    it('NEGATIVE: a toast dismissed by the user and then replaced fires onClose ONCE, not twice', () => {
+      reduceMotion(true);
+      const first = vi.fn();
+      const { show } = setup();
+      act(() => show('First', 'info', { label: 'Undo', onClick: () => {}, onClose: first }));
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+      act(() => show('Second', 'info'));
+      expect(first).toHaveBeenCalledTimes(1);
+    });
+
+    it('NEGATIVE: acting on a toast (its button) never fires onClose, replaced later or not', () => {
+      reduceMotion(true);
+      const first = vi.fn();
+      const { show } = setup();
+      act(() => show('First', 'info', { label: 'Undo', onClick: () => {}, onClose: first }));
+      fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+      act(() => show('Second', 'info'));
+      expect(first).not.toHaveBeenCalled();
+    });
+
+    it('POSITIVE: a long run of replaced toasts each close once (ids are not reused or lost)', () => {
+      reduceMotion(true);
+      const closes = Array.from({ length: 25 }, () => vi.fn());
+      const { show } = setup();
+      closes.forEach((onClose, i) => {
+        act(() => show(`T${i}`, 'info', { label: 'Undo', onClick: () => {}, onClose }));
+      });
+      closes.slice(0, -1).forEach((c) => expect(c).toHaveBeenCalledTimes(1));
+      expect(closes[closes.length - 1]).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -26,7 +26,7 @@ import { useCreateNote } from '../useEventNotes';
 import { useCreateCareNote } from '../useCareNotes';
 import { createNote } from '@/api/eventNotes';
 import { createCareNote } from '@/api/careNotes';
-import { __resetWriteRetryForTests } from '@/lib/writeRetryQueue';
+import { __resetWriteRetryForTests, clearWriteRetryQueue } from '@/lib/writeRetryQueue';
 
 const post = apiClient.post as unknown as Mock;
 const network = () => ({ isAxiosError: true, code: 'ERR_NETWORK', message: 'Network Error' });
@@ -253,5 +253,82 @@ describe('the request id is held with the draft (W4)', () => {
       await result.current.mutateAsync({ circleId: 'c1', input: { body: 'b' } });
     });
     expect(post.mock.calls[0][1].client_request_id).not.toBe(post.mock.calls[1][1].client_request_id);
+  });
+});
+
+// N-W3: a session that ended during the quiet retry must not run the optimistic rollback.
+describe('session ended mid-retry (N-W3)', () => {
+  const key = ['careNotes', 'c1', {}];
+  const seed = (qc: QueryClient) =>
+    qc.setQueryData(key, { notes: [{ id: 'old-row' }], today: '2026-08-08', timezone: 'America/Denver' });
+
+  it('POSITIVE: care note: the cleared cache is NOT repopulated by a rollback, and no error event is counted', async () => {
+    post.mockRejectedValue(network());
+    const qc = newQc();
+    seed(qc);
+    const { result } = renderHook(() => useCreateCareNote(), { wrapper: wrapper(qc) });
+    act(() => {
+      void result.current.mutateAsync({ circleId: 'c1', input: { body: 'hi' } }).catch(() => {});
+    });
+    await advance(100);
+    clearWriteRetryQueue(); // sign-out ...
+    qc.clear(); // ... clears the caches too
+    await advance(10_000);
+    expect(qc.getQueryData(key)).toBeUndefined();
+    expect(Analytics.errorOccurred).not.toHaveBeenCalled();
+    expect(post).toHaveBeenCalledTimes(1); // nothing resent under another session
+  });
+
+  it('POSITIVE: event note: a session-ended failure reports no error_occurred', async () => {
+    post.mockRejectedValue(network());
+    const { result } = renderHook(() => useCreateNote(), { wrapper: wrapper(newQc()) });
+    act(() => {
+      void result.current.mutateAsync({ circleId: 'c1', eventId: 'e1', body: 'hi' }).catch(() => {});
+    });
+    await advance(100);
+    clearWriteRetryQueue();
+    await advance(10_000);
+    expect(Analytics.errorOccurred).not.toHaveBeenCalled();
+  });
+
+  it('NEGATIVE: a normal give-up (same session) still rolls the optimistic row back and reports', async () => {
+    post.mockRejectedValue(network());
+    const qc = newQc();
+    seed(qc);
+    const { result } = renderHook(() => useCreateCareNote(), { wrapper: wrapper(qc) });
+    act(() => {
+      void result.current.mutateAsync({ circleId: 'c1', input: { body: 'hi' } }).catch(() => {});
+    });
+    await advance(60_000);
+    expect((qc.getQueryData(key) as { notes: { id: string }[] }).notes.map((n) => n.id)).toEqual(['old-row']);
+    expect(Analytics.errorOccurred).toHaveBeenCalled();
+  });
+});
+
+// N-W1: clearing the held id only clears the id that landed.
+describe('a slow earlier save never wipes a newer draft id (N-W1)', () => {
+  it('POSITIVE: save A lands after save B (same scope) failed: B re-save still reuses its id', async () => {
+    let releaseA!: (v: unknown) => void;
+    post
+      .mockImplementationOnce(() => new Promise((r) => (releaseA = r))) // A, slow
+      .mockRejectedValueOnce(refusal('INTERNAL_ERROR')) // B fails
+      .mockResolvedValue(created());
+    const { result } = renderHook(() => useCreateNote(), { wrapper: wrapper(newQc()) });
+    let aDone: Promise<unknown> = Promise.resolve();
+    act(() => {
+      aDone = result.current.mutateAsync({ circleId: 'c1', eventId: 'e1', body: 'A' });
+    });
+    await act(async () => {
+      await result.current.mutateAsync({ circleId: 'c1', eventId: 'e1', body: 'B' }).catch(() => {});
+    });
+    await act(async () => {
+      releaseA(created());
+      await aDone;
+    });
+    await act(async () => {
+      await result.current.mutateAsync({ circleId: 'c1', eventId: 'e1', body: 'B' });
+    });
+    const ids = post.mock.calls.map((c) => c[1].client_request_id);
+    expect(ids[2]).toBe(ids[1]);
   });
 });

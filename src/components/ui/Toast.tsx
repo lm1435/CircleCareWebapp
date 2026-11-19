@@ -281,13 +281,14 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactEleme
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
   const nextId = useRef(0);
 
+  const closedIds = useRef(new Set<number>());
   const remove = useCallback((id: number) => {
+    closedIds.current.delete(id); // gone for good: its id can never be closed again, so do not keep it
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
   const toastsRef = useRef<ToastEntry[]>([]);
   toastsRef.current = toasts;
-  const closedIds = useRef(new Set<number>());
   const fireClose = useCallback((toast: ToastEntry | undefined, acted = false) => {
     if (!toast || closedIds.current.has(toast.id)) return;
     closedIds.current.add(toast.id);
@@ -335,8 +336,16 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactEleme
    */
   const showToast = useCallback((message: string, type: ToastType = 'info', action?: ToastAction) => {
     const id = nextId.current++;
-    toastsRef.current.forEach((previous) => fireClose(previous));
-    setToasts([{ id, message, type, action, leaving: false }]);
+    // `toastsRef` only follows renders: two calls in ONE tick would leave the second blind to the
+    // first, whose `onClose` then never fired. So it is advanced here, synchronously.
+    const entry: ToastEntry = { id, message, type, action, leaving: false };
+    const replaced = toastsRef.current;
+    toastsRef.current = [entry];
+    replaced.forEach((previous) => {
+      fireClose(previous);
+      closedIds.current.delete(previous.id); // replaced: it leaves the list now, so the guard can go
+    });
+    setToasts([entry]);
   }, [fireClose]);
 
   const value = useMemo(() => ({ showToast }), [showToast]);
