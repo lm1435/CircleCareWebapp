@@ -29,6 +29,12 @@ export interface MarkFirstDoseTarget {
   eventId: string;
   /** `HH:MM` or `HH:MM:SS`, recipient frame. */
   time: string;
+  /**
+   * The recipient's today (`YYYY-MM-DD`). With it, a timeout / network failure RE-READS that day
+   * before any error is shown (verify-before-alert, 1.4.3 audit item 7): a Taken that landed with
+   * a lost response is a success, never "Something went wrong".
+   */
+  today?: string;
 }
 
 export function useMarkFirstDose(
@@ -62,6 +68,7 @@ export function useMarkFirstDose(
           status: 'taken',
           scheduled_time: toWireTime(target.time),
           mark_first_day: true,
+          ...(target.today ? { dose: { scheduled_date: target.today, parent_event_id: null } } : {}),
         });
         Analytics.markItTapped(surface, true);
         setDone(true);

@@ -5,7 +5,7 @@ import '@/i18n';
 
 vi.mock('@/api/medicationConfirmations', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/medicationConfirmations')>();
-  return { ...actual, confirmMedication: vi.fn() };
+  return { ...actual, confirmMedication: vi.fn(), getTodaysMedications: vi.fn() };
 });
 
 const showToast = vi.fn();
@@ -16,16 +16,19 @@ vi.mock('@/components/ui', async (importOriginal) => {
 
 const analytics = vi.hoisted(() => ({
   medicationConfirmed: vi.fn(),
+  medicationConfirmRecovered: vi.fn(),
   errorOccurred: vi.fn(),
   markItTapped: vi.fn(),
 }));
 vi.mock('@/lib/analytics', () => ({ Analytics: analytics, default: analytics }));
 
-import { confirmMedication } from '@/api/medicationConfirmations';
+import { confirmMedication, getTodaysMedications } from '@/api/medicationConfirmations';
 import { useMarkFirstDose } from '@/hooks/useMarkFirstDose';
 import { __resetOfflineWriteForTests, setOfflineWriteExplainer } from '@/lib/offlineWrite';
 
 const mockConfirm = vi.mocked(confirmMedication);
+const mockToday = vi.mocked(getTodaysMedications);
+const NETWORK = { isAxiosError: true, code: 'ERR_NETWORK', message: 'Network Error' };
 const CIRCLE_ID = 'circle-1';
 
 let queryClient: QueryClient;
@@ -43,6 +46,47 @@ beforeEach(() => {
 afterEach(() => {
   setOfflineWriteExplainer(null);
   act(() => onlineManager.setOnline(true));
+});
+
+describe('useMarkFirstDose: verify before alert (1.4.3 audit item 7)', () => {
+  const taken = { id: 'ev-1', scheduled_date: '2026-11-19', scheduled_time: '08:00:00', confirmation: { status: 'taken', confirmed_at: 'x', confirmed_by: 'u' } };
+
+  it('a lost response whose write DID land is a success: re-read says recorded, no error toast', async () => {
+    mockConfirm.mockRejectedValueOnce(NETWORK);
+    mockToday.mockResolvedValueOnce([taken] as never);
+    const { result } = renderHook(() => useMarkFirstDose(CIRCLE_ID, 'today'), { wrapper });
+    let ok = false;
+    await act(async () => {
+      ok = await result.current.mark({ eventId: 'ev-1', time: '08:00:00', today: '2026-11-19' });
+    });
+    expect(ok).toBe(true);
+    expect(mockToday).toHaveBeenCalledWith(CIRCLE_ID, '2026-11-19');
+    expect(showToast).not.toHaveBeenCalledWith(expect.anything(), 'error');
+    expect(result.current.done).toBe(true);
+  });
+
+  it('NEGATIVE: the re-read says NOT recorded: the generic error shows and the line stays', async () => {
+    mockConfirm.mockRejectedValueOnce(NETWORK);
+    mockToday.mockResolvedValueOnce([{ ...taken, confirmation: null }] as never);
+    const { result } = renderHook(() => useMarkFirstDose(CIRCLE_ID, 'today'), { wrapper });
+    let ok = true;
+    await act(async () => {
+      ok = await result.current.mark({ eventId: 'ev-1', time: '08:00:00', today: '2026-11-19' });
+    });
+    expect(ok).toBe(false);
+    expect(showToast).toHaveBeenCalledWith("Couldn't save. Please try again.", 'error');
+    expect(result.current.done).toBe(false);
+  });
+
+  it('NEGATIVE: a definitive refusal is never re-read (NOT_FIRST_DAY)', async () => {
+    mockConfirm.mockRejectedValueOnce({ success: false, error: { code: 'NOT_FIRST_DAY' } });
+    const { result } = renderHook(() => useMarkFirstDose(CIRCLE_ID, 'today'), { wrapper });
+    await act(async () => {
+      await result.current.mark({ eventId: 'ev-1', time: '08:00:00', today: '2026-11-19' });
+    });
+    expect(mockToday).not.toHaveBeenCalled();
+    expect(result.current.refused).toBe(true);
+  });
 });
 
 describe('useMarkFirstDose', () => {

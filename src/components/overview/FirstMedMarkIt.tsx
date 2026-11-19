@@ -99,7 +99,7 @@ export function FirstMedMarkIt({
   const handleMark = async (): Promise<void> => {
     if (state.kind !== 'rolled') return;
     // The LIVE root and time: an edit since the save must never mark a dose at the old time.
-    const ok = await markFirstDose.mark({ eventId: state.eventId, time: state.next.time });
+    const ok = await markFirstDose.mark({ eventId: state.eventId, time: state.next.time, today });
     if (ok) {
       markFirstMedNoteMarked(circleId, today);
       setTick((n) => n + 1);

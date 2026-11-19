@@ -161,7 +161,7 @@ describe('FirstMedMarkIt', () => {
     renderRow();
     await user.click(await screen.findByTestId('mark-it-button'));
 
-    expect(markHook.mark).toHaveBeenCalledWith({ eventId: 'ev-1', time: '08:00:00' });
+    expect(markHook.mark).toHaveBeenCalledWith({ eventId: 'ev-1', time: '08:00:00', today: TODAY });
     await waitFor(() => expect(screen.queryByTestId('mark-it-button')).not.toBeInTheDocument());
     const card = screen.getByTestId('first-med-mark-it');
     expect(within(card).getByText('Today')).toBeInTheDocument();
@@ -315,7 +315,7 @@ describe('FirstMedMarkIt follows the LIVE medication, never the save snapshot', 
     renderRow();
     await user.click(await screen.findByTestId('mark-it-button'));
     expect(markHook.mark).toHaveBeenCalledTimes(1);
-    expect(markHook.mark).toHaveBeenCalledWith({ eventId: 'ev-1', time: '06:45:00' });
+    expect(markHook.mark).toHaveBeenCalledWith({ eventId: 'ev-1', time: '06:45:00', today: TODAY });
   });
 
   it('P6 an edit lands while Today is open: the card follows it (calendar invalidation refetches)', async () => {
