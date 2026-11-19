@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { apiClient } from '@/lib/api';
-import { sendIdempotentWrite } from '@/lib/idempotentWrite';
+import { isRetryableWriteFailure, newIdempotencyKey, sendIdempotentWrite } from '@/lib/idempotentWrite';
 import { ENTRY_SOURCES, type EntrySource } from '@/utils/entrySource';
 
 // PORT of mobile/src/api/calendarEvents.ts (read-only subset needed by the web
@@ -694,18 +694,36 @@ export async function getMedicationPhotoUrl(
   }
 }
 
+/**
+ * One key per request OBJECT: a "Retry" that re-sends the same failed dose-time object reuses the
+ * key of its first try, so a first attempt that landed (answer lost) is replayed, never doubled
+ * (retry review N1). Dropped on success and on a definite refusal.
+ */
+const createKeys = new WeakMap<object, string>();
+
 export async function createEvent(
   circleId: string,
   data: CreateEventRequest
 ): Promise<CalendarEvent> {
   // One Idempotency-Key per save: a lost response is retried with it and the
   // backend replays the first answer instead of writing a second event.
-  const response = (await sendIdempotentWrite('event_create', (config) =>
-    config
-      ? apiClient.post(`/circles/${circleId}/events`, data, config)
-      : apiClient.post(`/circles/${circleId}/events`, data)
-  )) as unknown as SingleEventEnvelope;
-  return response.data.event;
+  const key = createKeys.get(data) ?? newIdempotencyKey();
+  createKeys.set(data, key);
+  try {
+    const response = (await sendIdempotentWrite(
+      'event_create',
+      (config) =>
+        config
+          ? apiClient.post(`/circles/${circleId}/events`, data, config)
+          : apiClient.post(`/circles/${circleId}/events`, data),
+      key
+    )) as unknown as SingleEventEnvelope;
+    createKeys.delete(data);
+    return response.data.event;
+  } catch (err) {
+    if (!isRetryableWriteFailure(err)) createKeys.delete(data);
+    throw err;
+  }
 }
 
 /**

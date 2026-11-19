@@ -195,3 +195,45 @@ describe('edit: response lost after the server wrote', () => {
     expect(patches[1].key).toBe(patches[0].key);
   });
 });
+
+describe('N1: a "Retry" of a failed dose-time create reuses its original Idempotency-Key', () => {
+  const body = { title: 'Dose', event_type: 'medication', scheduled_time: '12:00:00' } as never;
+  function drive(failures: number) {
+    const keys: Array<string | undefined> = [];
+    apiClient.defaults.adapter = vi.fn(async (config: InternalAxiosRequestConfig) => {
+      keys.push((config.headers?.get?.('Idempotency-Key') as string | undefined) || undefined);
+      if (keys.length <= failures) {
+        const err: any = new Error('Network Error');
+        err.isAxiosError = true;
+        err.code = 'ERR_NETWORK';
+        err.config = config;
+        throw err;
+      }
+      return {
+        data: { success: true, data: { event: { id: 'e1' } } },
+        status: 200,
+        statusText: 'OK',
+        headers: { 'idempotency-supported': '1' },
+        config,
+      } as never;
+    });
+    return keys;
+  }
+  beforeEach(() => __setIdempotencySupportedForTests(true));
+  afterEach(() => __setIdempotencySupportedForTests(false));
+
+  it('positive: the same failed object re-sent by Retry carries the SAME key', async () => {
+    const keys = drive(4); // first save: 4 attempts all dropped
+    await expect(createEvent('c1', body)).rejects.toBeTruthy();
+    await createEvent('c1', body); // the Retry button
+    expect(new Set(keys).size).toBe(1);
+    expect(keys.length).toBe(5);
+  });
+
+  it('negative: a different dose time (another object) gets its OWN key', async () => {
+    const keys = drive(0);
+    await createEvent('c1', { ...(body as object) } as never);
+    await createEvent('c1', { ...(body as object) } as never);
+    expect(new Set(keys).size).toBe(2);
+  });
+});

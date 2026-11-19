@@ -145,7 +145,8 @@ export function useCreateCircle(): UseMutationResult<Circle, unknown, CreateCirc
       void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
     },
     onError: (error: unknown) => {
-      // The backend caches a 4xx answer per key: only a failure with NO answer may reuse the key.
+      // A refusal (4xx) ends the attempt: only a failure with NO answer reuses the key. (POST /circles
+      // keeps its own `findCircleByCreateKey` lookup and caches no answer per key, so this is just caution.)
       if (!isNoResponseFailure(error)) attempt.current = null;
       if (isSubscriptionRequiredError(error)) {
         promptUpgrade();

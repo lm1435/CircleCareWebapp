@@ -123,11 +123,13 @@ export function newIdempotencyKey(): string {
  */
 export async function sendIdempotentWrite<T>(
   operation: IdempotentOperation,
-  send: (config: AxiosRequestConfig | undefined) => Promise<T>
+  send: (config: AxiosRequestConfig | undefined) => Promise<T>,
+  /** A caller-held key (a "Retry" on the same item reuses it); default: a fresh key per call. */
+  key?: string
 ): Promise<T> {
   if (!supported) return send(undefined);
 
-  const keyed: AxiosRequestConfig = { headers: { 'Idempotency-Key': newIdempotencyKey() } };
+  const keyed: AxiosRequestConfig = { headers: { 'Idempotency-Key': key ?? newIdempotencyKey() } };
   let retries = 0;
   let cause = '';
   let backgrounded = false;
