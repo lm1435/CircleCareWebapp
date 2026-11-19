@@ -693,4 +693,19 @@ describe('1.4.3 review fixes (web)', () => {
     await waitFor(() => expect(Analytics.shiftTaskAdded).toHaveBeenCalledTimes(1));
     expect(Analytics.shiftTaskAdded).toHaveBeenCalledWith(expect.objectContaining({ nextDay: true }));
   });
+
+  it('R-1 positive: editing a task of a repeating shift that itself repeats says "Repeats with <shift>" and reports completed state', () => {
+    setup({ event: linkedTask({ completed_at: '2026-11-10T16:00:00Z' }), initialType: undefined, shiftContext: contextFor(undefined, 'tasks') });
+    expect(screen.getByTestId('shift-task-repeat-locked')).toHaveTextContent('Repeats with Afternoons');
+    expect(Analytics.shiftTaskEditOpened).toHaveBeenCalledWith(expect.objectContaining({ state: 'completed', recurring: true }));
+  });
+
+  it('R-1 negative: a one-off task on a repeating shift never says "Repeats with" (it reads the task, not the shift)', () => {
+    const one = linkedTask({ recurrence_rule: null, parent_event_id: null });
+    setup({ event: one, initialType: undefined, shiftContext: contextFor(undefined, 'tasks') });
+    const line = screen.getByTestId('shift-task-repeat-locked');
+    expect(line).not.toHaveTextContent('Repeats with');
+    expect(line).toHaveTextContent(/^Only /);
+    expect(Analytics.shiftTaskEditOpened).toHaveBeenCalledWith(expect.objectContaining({ state: 'open', recurring: false }));
+  });
 });

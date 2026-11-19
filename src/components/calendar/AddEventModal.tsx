@@ -1545,7 +1545,7 @@ function AddEventForm({
     Analytics.shiftTaskEditOpened({
       source: shiftMode.source,
       linked: true,
-      state: 'open',
+      state: event?.completed_at ? 'completed' : 'open',
       recurring: isRecurringEdit,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per opened editor
@@ -4395,6 +4395,7 @@ function AddEventForm({
         <section aria-labelledby="sf-when" className="flex flex-col gap-3">
           {sectionHeading('sf-when', t('addEvent.simple.when'))}
           <div
+            // card-shell-ok: read-only value tile matching the "When" tiles, not a card
             className="flex min-w-0 flex-col gap-1 rounded-xl border border-line bg-bg-2 px-3 py-2"
             data-testid="shift-task-locked-day"
           >
@@ -4405,7 +4406,7 @@ function AddEventForm({
           </div>
           {isEditing ? (
             <Text variant="caption" data-testid="shift-task-repeat-locked">
-              {shiftMode.repeating
+              {isRecurringEdit
                 ? t('shifts:tasks.editor.repeatLocked', { shift: shiftMode.title })
                 : t('shifts:tasks.form.onlyDate', { date: shiftDayText })}
             </Text>

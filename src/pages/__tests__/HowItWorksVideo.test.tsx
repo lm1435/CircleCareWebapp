@@ -129,9 +129,8 @@ describe('HowItWorksPage video', () => {
   });
 
   it.each([
-    ['fr-CA', 'fr-CA'],
-    ['pt-PT', 'pt-PT'],
-    ['de', 'de'],
+    ['es', 'es'],
+    ['en', 'en'],
     ['ja', 'en'],
   ])('P: app language %s -> preview-demo-%s-16x9 (unknown -> en), language enum on events', async (lang, file) => {
     await i18n.changeLanguage(lang);
@@ -141,6 +140,18 @@ describe('HowItWorksPage video', () => {
     fireEvent.play(video());
     expect(Analytics.previewVideoStarted).toHaveBeenCalledWith(file, 'web');
   });
+
+  it.each(['fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT'])(
+    'N: app language %s has no uploaded video yet -> the carousel, no player, no preview_video_failed',
+    async (lang) => {
+      await i18n.changeLanguage(lang);
+      renderPage();
+      expect(screen.queryByTestId('preview-video')).toBeNull();
+      expect(document.querySelector('video')).toBeNull();
+      expect(Analytics.previewVideoFailed).not.toHaveBeenCalled();
+      expect(Analytics.previewVideoStarted).not.toHaveBeenCalled();
+    }
+  );
 
   it('N: a build with a local http storage base shows the carousel, no player source, no video events (mobile 630d46cb)', () => {
     const original = env.VITE_SUPABASE_URL;

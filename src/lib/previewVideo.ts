@@ -3,7 +3,7 @@ import { normalizeLocale, type SupportedLanguage } from '@/i18n/locales';
 
 /**
  * "See how it works" preview video (1.4.3): a FIXED address per app language,
- * no app config, no settings. Every language has a file; replacing a video =
+ * no app config, no settings. Only the languages in PREVIEW_VIDEO_LANGUAGES have a file yet (the rest get null = the carousel); replacing a video =
  * overwriting the file in the public `help-videos` bucket.
  *
  *   {SUPABASE_URL}/storage/v1/object/public/help-videos/preview-demo-{lang}-{cut}.mp4
@@ -30,6 +30,13 @@ export interface PreviewVideoSource {
   language: SupportedLanguage;
 }
 
+/**
+ * Languages whose preview-video file is UPLOADED to the `help-videos` bucket. Add a language here when its video is
+ * recorded and uploaded (the other languages return null, so the caller shows the carousel: no 400, no
+ * preview_video_failed, no broken poster).
+ */
+export const PREVIEW_VIDEO_LANGUAGES: readonly SupportedLanguage[] = ['en', 'es'];
+
 const BUCKET_PATH = '/storage/v1/object/public/help-videos/';
 
 /** The configured https storage base (trailing slash trimmed), or null: no video. */
@@ -43,7 +50,7 @@ export function previewVideoStorageBase(configured: string | null | undefined): 
   return null;
 }
 
-/** The fixed preview-video file for the app language and cut; null when the build has no https storage base. */
+/** The fixed preview-video file for the app language and cut; null when the build has no https storage base or the language has no uploaded video yet. */
 export function previewVideoSource(
   language: string | null | undefined,
   cut: PreviewVideoCut,
@@ -52,6 +59,7 @@ export function previewVideoSource(
   const storage = previewVideoStorageBase(base);
   if (!storage) return null;
   const lang = normalizeLocale(language);
+  if (!PREVIEW_VIDEO_LANGUAGES.includes(lang)) return null;
   const name = `${storage}${BUCKET_PATH}preview-demo-${lang}-${cut}`;
   return { src: `${name}.mp4`, poster: `${name}.jpg`, language: lang };
 }
