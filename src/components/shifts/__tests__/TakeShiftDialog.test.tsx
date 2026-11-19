@@ -287,7 +287,8 @@ describe('TakeShiftDialog', () => {
 
   it('a network / server failure stays inline with the message, keeps the dialog open and can be retried', async () => {
     const user = userEvent.setup();
-    mockTake.mockRejectedValueOnce(new Error('Network Error'));
+    // A 5xx ANSWER (not a transport failure: those retry in-call first, item 9).
+    mockTake.mockRejectedValueOnce({ success: false, error: { code: 'INTERNAL_ERROR', message: 'x' } });
     const { onClose } = renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
     await user.click(screen.getByRole('button', { name: 'Take shift' }));
     expect(await screen.findByTestId('take-shift-error')).toHaveTextContent(

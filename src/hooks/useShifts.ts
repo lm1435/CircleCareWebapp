@@ -12,6 +12,7 @@ import {
   createShift,
   dropShift,
   getShifts,
+  isShiftTakenError,
   rescheduleShiftSeries,
   takeShift,
   updateShift,
@@ -37,6 +38,8 @@ import { queryKeys } from '@/lib/queryKeys';
 import { Analytics } from '@/lib/analytics';
 import { raiseReviewMoment } from '@/lib/reviewMoments';
 import { useAuthStore } from '@/store/authStore';
+import { FOREGROUND_RETRY_DELAYS_MS, isRetryableTransportFailure } from '@/lib/writeRetryQueue';
+import { isOfflineNow } from '@/hooks/useIsOffline';
 import {
   canTakeFuture,
   countOpenUpcoming,
@@ -355,6 +358,67 @@ export interface AssignShiftVariables extends ShiftActionVariables {
   userId: string;
 }
 
+/** Does the re-read row describe the occurrence the person acted on? */
+function sameOccurrence(row: CalendarEvent, shift: CalendarEvent): boolean {
+  if (row.id === shift.id) return true;
+  return (
+    row.scheduled_date === shift.scheduled_date &&
+    (row.parent_event_id ?? row.id) === (shift.parent_event_id ?? shift.id)
+  );
+}
+
+/**
+ * Take / drop with a SHORT IN-CALL RETRY (1.4.3 audit item 9). The dialog is open and showing its
+ * spinner, so a timeout / dropped connection retries here (2 / 5 / 10 s) instead of failing at once;
+ * the optimistic rows stay and roll back only after the last attempt (the caller's onError).
+ * Before EVERY resend the shift is re-read: if the first POST landed (the response was lost) the
+ * wanted state is already there and nothing is sent again. A resend answered SHIFT_ALREADY_TAKEN
+ * counts as success only when the re-read says the holder is ME; someone else holding it stays the
+ * conflict. Only transport failures retry; a 4xx goes straight out.
+ */
+export async function sendShiftActionWithRetry(
+  circleId: string,
+  shift: CalendarEvent,
+  want: { holder: string | null },
+  send: () => Promise<ShiftActionResult>
+): Promise<ShiftActionResult> {
+  /** The occurrence as the server has it now, or null when it cannot be read. */
+  const reread = async (): Promise<CalendarEvent | null> => {
+    try {
+      const rows = await getShifts(circleId, shift.scheduled_date, shift.scheduled_date);
+      return rows.find((r) => sameOccurrence(r, shift)) ?? null;
+    } catch {
+      return null;
+    }
+  };
+  const asResult = (row: CalendarEvent): ShiftActionResult => ({
+    event: row,
+    rootId: row.parent_event_id ?? row.id,
+  });
+  const holds = (row: CalendarEvent | null): row is CalendarEvent =>
+    !!row && (row.assigned_to ?? null) === want.holder;
+
+  let retries = 0;
+  for (;;) {
+    try {
+      return await send();
+    } catch (error) {
+      if (retries > 0 && want.holder !== null && isShiftTakenError(error)) {
+        const row = await reread();
+        if (holds(row)) return asResult(row);
+        throw error;
+      }
+      const delay = FOREGROUND_RETRY_DELAYS_MS[retries];
+      if (!isRetryableTransportFailure(error) || delay === undefined) throw error;
+      retries += 1;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      if (isOfflineNow()) throw error;
+      const row = await reread();
+      if (holds(row)) return asResult(row);
+    }
+  }
+}
+
 interface OptimisticContext {
   snapshot?: Snapshot;
 }
@@ -369,11 +433,13 @@ export function useTakeShift(
 
   return useMutation({
     mutationFn: ({ shift, scope, reminders }: TakeShiftVariables) =>
-      takeShift(circleId, shift.id, {
-        scope,
-        scheduledDate: shift.scheduled_date,
-        ...(reminders !== undefined ? shiftReminderBody(reminders) : {}),
-      }),
+      sendShiftActionWithRetry(circleId, shift, { holder: me?.id ?? null }, () =>
+        takeShift(circleId, shift.id, {
+          scope,
+          scheduledDate: shift.scheduled_date,
+          ...(reminders !== undefined ? shiftReminderBody(reminders) : {}),
+        })
+      ),
     onMutate: async ({ shift, scope, reminders }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.shifts(circleId) });
       return {
@@ -421,7 +487,9 @@ export function useDropShift(
 
   return useMutation({
     mutationFn: ({ shift, scope }: ShiftActionVariables) =>
-      dropShift(circleId, shift.id, { scope, scheduledDate: shift.scheduled_date }),
+      sendShiftActionWithRetry(circleId, shift, { holder: null }, () =>
+        dropShift(circleId, shift.id, { scope, scheduledDate: shift.scheduled_date })
+      ),
     onMutate: async ({ shift, scope }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.shifts(circleId) });
       return {
