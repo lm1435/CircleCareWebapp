@@ -40,6 +40,42 @@ export function takeParkedNoteDraft(
   return p.draft;
 }
 
+// Event notes (appointment / dose / task notes) park the same way, keyed per circle AND event
+// occurrence (1.4.3 audit item 1). Twin of mobile/src/utils/parkedNoteDraft.ts.
+type ParkedEvent = { body: string; userId: string; parkedAt: number };
+const parkedEvent = new Map<string, ParkedEvent>();
+
+const eventKey = (circleId: string, eventId: string, scheduledDate: string | null | undefined) =>
+  `${circleId}|${eventId}|${scheduledDate ?? ''}`;
+
+/** No-op without a signed-in user or with an empty body. */
+export function parkEventNoteDraft(
+  circleId: string,
+  eventId: string,
+  scheduledDate: string | null | undefined,
+  userId: string | null | undefined,
+  body: string
+): void {
+  if (!userId || !body.trim()) return;
+  parkedEvent.set(eventKey(circleId, eventId, scheduledDate), { body, userId, parkedAt: Date.now() });
+}
+
+/** Read and delete; null when it belongs to another user or is older than DRAFT_TTL_MS. */
+export function takeParkedEventNoteDraft(
+  circleId: string,
+  eventId: string,
+  scheduledDate: string | null | undefined,
+  userId: string | null | undefined
+): string | null {
+  const key = eventKey(circleId, eventId, scheduledDate);
+  const p = parkedEvent.get(key);
+  parkedEvent.delete(key);
+  if (!p || !userId || p.userId !== userId) return null;
+  if (Date.now() - p.parkedAt >= DRAFT_TTL_MS) return null;
+  return p.body;
+}
+
 export function clearParkedNoteDrafts(): void {
   parked.clear();
+  parkedEvent.clear();
 }

@@ -16,6 +16,7 @@ import '@/i18n';
 import { ToastProvider } from '@/components/ui';
 import type { EventNote } from '@/api/eventNotes';
 import { EventNotesPanel } from '../EventNotesPanel';
+import { clearParkedNoteDrafts } from '@/lib/parkedNoteDraft';
 
 // ── Hook mocks ───────────────────────────────────────────────────────────────
 
@@ -27,9 +28,9 @@ let queryState: { isPending: boolean; isError: boolean } = { isPending: false, i
 
 vi.mock('@/hooks/useEventNotes', () => ({
   useEventNotes: () => ({ data: notesData, ...queryState, refetch: vi.fn() }),
-  useCreateNote: () => ({ mutate: mockCreate, isPending: false }),
-  useUpdateNote: () => ({ mutate: mockUpdate, isPending: false }),
-  useDeleteNote: () => ({ mutate: mockDelete, isPending: false }),
+  useCreateNote: () => ({ mutateAsync: mockCreate, isPending: false }),
+  useUpdateNote: () => ({ mutateAsync: mockUpdate, isPending: false }),
+  useDeleteNote: () => ({ mutateAsync: mockDelete, isPending: false }),
 }));
 
 let circleState: { circle: { owner_id: string } | undefined; canEdit: boolean } = {
@@ -44,8 +45,11 @@ vi.mock('@/hooks/useCircle', () => ({
 let currentUserId: string | undefined = 'user-1';
 
 vi.mock('@/store/authStore', () => ({
-  useAuthStore: (selector: (s: { user: { id: string } | null }) => unknown) =>
-    selector({ user: currentUserId ? { id: currentUserId } : null }),
+  useAuthStore: Object.assign(
+    (selector: (s: { user: { id: string } | null }) => unknown) =>
+      selector({ user: currentUserId ? { id: currentUserId } : null }),
+    { getState: () => ({ user: currentUserId ? { id: currentUserId } : null }) }
+  ),
 }));
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -78,9 +82,10 @@ function renderPanel(eventId = EVENT_ID, scheduledDate?: string) {
 }
 
 beforeEach(() => {
-  mockCreate.mockReset();
-  mockUpdate.mockReset();
-  mockDelete.mockReset();
+  mockCreate.mockReset().mockResolvedValue({});
+  mockUpdate.mockReset().mockResolvedValue({});
+  mockDelete.mockReset().mockResolvedValue(undefined);
+  clearParkedNoteDrafts();
   notesData = [];
   queryState = { isPending: false, isError: false };
   circleState = { circle: { owner_id: 'owner-1' }, canEdit: true };
@@ -115,12 +120,10 @@ describe('EventNotesPanel', () => {
   // type-neutral sentence, never "Please try again" (no retry can succeed).
   it('maps a 409 OCCURRENCE_REMOVED rejection to the type-neutral removed message', async () => {
     const user = userEvent.setup();
+    mockCreate.mockRejectedValueOnce({ success: false, error: { code: 'OCCURRENCE_REMOVED', message: 'x' } });
     renderPanel();
     await user.type(screen.getByLabelText('Add a note'), 'Late note');
     await user.click(screen.getByRole('button', { name: 'Add note' }));
-
-    const { onError } = mockCreate.mock.calls[0][1];
-    act(() => onError({ success: false, error: { code: 'OCCURRENCE_REMOVED', message: 'x' } }));
 
     expect(
       await screen.findByText('This event was removed from the calendar for that day.')
@@ -131,12 +134,10 @@ describe('EventNotesPanel', () => {
 
   it('any other create failure keeps the generic save error', async () => {
     const user = userEvent.setup();
+    mockCreate.mockRejectedValueOnce({ success: false, error: { code: 'SERVER_ERROR', message: 'x' } });
     renderPanel();
     await user.type(screen.getByLabelText('Add a note'), 'Note');
     await user.click(screen.getByRole('button', { name: 'Add note' }));
-
-    const { onError } = mockCreate.mock.calls[0][1];
-    act(() => onError({ success: false, error: { code: 'SERVER_ERROR', message: 'x' } }));
 
     expect(await screen.findByText("Couldn't save your note. Please try again.")).toBeInTheDocument();
   });
@@ -317,10 +318,10 @@ describe('EventNotesPanel', () => {
       // the REQUEST returns, not inside `mutate()`. Firing them synchronously
       // would release the guard before `mutate` returned and this test would
       // pass against no guard at all.
-      let pending: Parameters<typeof mockCreate>[1] | undefined;
-      mockCreate.mockImplementation((_vars, opts) => {
-        pending = opts;
-      });
+      let fail: (e: unknown) => void = () => {};
+      mockCreate.mockImplementationOnce(
+        () => new Promise((_res, rej) => { fail = rej; })
+      );
       renderPanel();
 
       await user.type(screen.getByLabelText('Add a note'), 'Refill on Monday');
@@ -328,8 +329,7 @@ describe('EventNotesPanel', () => {
       expect(mockCreate).toHaveBeenCalledTimes(1);
 
       await act(async () => {
-        pending?.onError?.(new Error('500'));
-        pending?.onSettled?.();
+        fail(new Error('500'));
       });
 
       await submitFormTwice(composerForm());
@@ -343,7 +343,7 @@ describe('EventNotesPanel', () => {
       const user = userEvent.setup();
       // In flight: no callback fires, so the guard is still held on the second
       // click. `isPending` is mocked false throughout — only the ref can stop it.
-      mockUpdate.mockImplementation(() => {});
+      mockUpdate.mockImplementation(() => new Promise(() => {}));
       notesData = [makeNote({ author_id: 'user-1' })];
       renderPanel();
 
@@ -358,10 +358,10 @@ describe('EventNotesPanel', () => {
 
     it('still saves an edit on a genuine RESUBMIT after the first attempt failed', async () => {
       const user = userEvent.setup();
-      let pending: Parameters<typeof mockUpdate>[1] | undefined;
-      mockUpdate.mockImplementation((_vars, opts) => {
-        pending = opts;
-      });
+      let fail: (e: unknown) => void = () => {};
+      mockUpdate.mockImplementationOnce(
+        () => new Promise((_res, rej) => { fail = rej; })
+      );
       notesData = [makeNote({ author_id: 'user-1' })];
       renderPanel();
 
@@ -371,8 +371,7 @@ describe('EventNotesPanel', () => {
       expect(mockUpdate).toHaveBeenCalledTimes(1);
 
       await act(async () => {
-        pending?.onError?.(new Error('500'));
-        pending?.onSettled?.();
+        fail(new Error('500'));
       });
 
       // A failed save keeps the editor open, so the retry is the same button.
@@ -392,7 +391,7 @@ describe('EventNotesPanel', () => {
      */
     it('deletes ONE note when Confirm is clicked again a turn later, mid-request', async () => {
       const user = userEvent.setup();
-      mockDelete.mockImplementation(() => {});
+      mockDelete.mockImplementation(() => new Promise(() => {}));
       notesData = [makeNote({ author_id: 'user-1' })];
       renderPanel();
 
@@ -410,10 +409,10 @@ describe('EventNotesPanel', () => {
 
     it('still deletes on a genuine retry after the first delete failed', async () => {
       const user = userEvent.setup();
-      let pending: Parameters<typeof mockDelete>[1] | undefined;
-      mockDelete.mockImplementation((_vars, opts) => {
-        pending = opts;
-      });
+      let fail: (e: unknown) => void = () => {};
+      mockDelete.mockImplementationOnce(
+        () => new Promise((_res, rej) => { fail = rej; })
+      );
       notesData = [makeNote({ author_id: 'user-1' })];
       renderPanel();
 
@@ -423,8 +422,7 @@ describe('EventNotesPanel', () => {
 
       // A failed delete closes the dialog (and toasts); the retry reopens it.
       await act(async () => {
-        pending?.onError?.(new Error('500'));
-        pending?.onSettled?.();
+        fail(new Error('500'));
       });
       expect(screen.queryByRole('dialog')).toBeNull();
 

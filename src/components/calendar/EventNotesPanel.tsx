@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionDraft } from '@/hooks/useSessionDraft';
 import {
@@ -15,6 +15,8 @@ import { useCircle } from '@/hooks/useCircle';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { isOccurrenceRemovedError } from '@/lib/apiErrors';
 import { useAuthStore } from '@/store/authStore';
+import { parkEventNoteDraft, takeParkedEventNoteDraft } from '@/lib/parkedNoteDraft';
+import { SessionEndedError } from '@/lib/writeRetryQueue';
 import { useCreateNote, useDeleteNote, useEventNotes, useUpdateNote } from '@/hooks/useEventNotes';
 import type { EventNote } from '@/api/eventNotes';
 
@@ -179,6 +181,23 @@ export function EventNotesPanel({
   // COLLAPSED COMPOSER (owner design pass 2026-11-08, mock WebEvent.dc.html; mobile parity): a
   // single-line "Add a note…" field until it is focused or holds text, then the full textarea and
   // its Add note button. The SAME <textarea> grows (rows 1 -> 3), so focus never jumps.
+  // 1.4.3 audit item 1: a send that fails AFTER the panel closed has no composer to restore into.
+  // Only local UI updates are gated on `mountedRef`; the failure toast (root ToastProvider) and the
+  // parked draft are not. A draft parked by an earlier close is taken back once, for THIS event.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    const parked = takeParkedEventNoteDraft(
+      circleId,
+      eventId,
+      scheduledDate,
+      useAuthStore.getState().user?.id
+    );
+    if (parked) setComposer((current) => (current === '' ? parked : current));
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [circleId, eventId, scheduledDate]);
   const [composerFocused, setComposerFocused] = useState(false);
   const composerOpen = composerFocused || composer.length > 0;
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -202,58 +221,66 @@ export function EventNotesPanel({
   const editGuard = useSubmitGuard();
   const deleteGuard = useSubmitGuard();
 
-  function handleCreate(e: FormEvent): void {
+  // mutateAsync settled on the promise, never `mutate(vars, { onError })`: React Query drops
+  // per-call callbacks once the panel unmounts, which lost the failure AND the text (item 1).
+  async function handleCreate(e: FormEvent): Promise<void> {
     e.preventDefault();
     const body = composer.trim();
     if (!body || createNote.isPending || !createGuard.claim()) return;
-    createNote.mutate(
-      { circleId, eventId, body, scheduledDate },
-      {
-        onSuccess: () => setComposer(''),
-        // 409 OCCURRENCE_REMOVED: another caregiver removed THIS occurrence
-        // ("This appointment only" / "This task only") after the modal was
-        // opened. No retry can ever succeed, so "Please try again" is wrong
-        // advice. Type-neutral copy: a visit is not a "dose". Mobile shows the
-        // same sentence (calendar.alerts.noteOccurrenceRemovedError).
-        onError: (error) =>
-          showToast(
-            t(
-              isOccurrenceRemovedError(error)
-                ? 'calendar:notes.errorOccurrenceRemoved'
-                : 'calendar:notes.errorSaving'
-            ),
-            'error'
-          ),
-        onSettled: createGuard.release,
+    const submitterId = useAuthStore.getState().user?.id;
+    try {
+      await createNote.mutateAsync({ circleId, eventId, body, scheduledDate });
+      if (mountedRef.current) setComposer('');
+    } catch (error) {
+      // The session ended mid-retry (forced sign-out): nothing to report or park.
+      if (error instanceof SessionEndedError) return;
+      if (!mountedRef.current) {
+        // Only for the user STILL signed in as the submitter (never hand a health note to the
+        // next sign-in on a shared tab).
+        const signedInNow = useAuthStore.getState().user?.id;
+        if (signedInNow && signedInNow === submitterId) {
+          parkEventNoteDraft(circleId, eventId, scheduledDate, signedInNow, body);
+        }
       }
-    );
+      // 409 OCCURRENCE_REMOVED: another caregiver removed THIS occurrence ("This appointment
+      // only" / "This task only") after the modal was opened. No retry can ever succeed, so
+      // "Please try again" is wrong advice. Type-neutral copy (mobile: noteOccurrenceRemovedError).
+      showToast(
+        t(
+          isOccurrenceRemovedError(error)
+            ? 'calendar:notes.errorOccurrenceRemoved'
+            : 'calendar:notes.errorSaving'
+        ),
+        'error'
+      );
+    } finally {
+      createGuard.release();
+    }
   }
 
-  function handleSaveEdit(noteId: string, body: string): void {
+  async function handleSaveEdit(noteId: string, body: string): Promise<void> {
     if (!body || updateNote.isPending || !editGuard.claim()) return;
-    updateNote.mutate(
-      { circleId, eventId, noteId, body },
-      {
-        onSuccess: () => setEditingNoteId(null),
-        onError: () => showToast(t('calendar:notes.errorSaving'), 'error'),
-        onSettled: editGuard.release,
-      }
-    );
+    try {
+      await updateNote.mutateAsync({ circleId, eventId, noteId, body });
+      if (mountedRef.current) setEditingNoteId(null);
+    } catch {
+      showToast(t('calendar:notes.errorSaving'), 'error');
+    } finally {
+      editGuard.release();
+    }
   }
 
-  function handleConfirmDelete(): void {
+  async function handleConfirmDelete(): Promise<void> {
     if (!deletingNoteId || deleteNote.isPending || !deleteGuard.claim()) return;
-    deleteNote.mutate(
-      { circleId, eventId, noteId: deletingNoteId },
-      {
-        onSuccess: () => setDeletingNoteId(null),
-        onError: () => {
-          setDeletingNoteId(null);
-          showToast(t('calendar:notes.errorSaving'), 'error');
-        },
-        onSettled: deleteGuard.release,
-      }
-    );
+    try {
+      await deleteNote.mutateAsync({ circleId, eventId, noteId: deletingNoteId });
+      if (mountedRef.current) setDeletingNoteId(null);
+    } catch {
+      if (mountedRef.current) setDeletingNoteId(null);
+      showToast(t('calendar:notes.errorSaving'), 'error');
+    } finally {
+      deleteGuard.release();
+    }
   }
 
   const notes = notesQuery.data ?? [];
