@@ -911,7 +911,7 @@ export default function ProfilePage(): ReactElement {
                 {t('delete.description')}
               </Text>
               <Button
-                variant="danger"
+                variant="dangerFilled"
                 className="mt-5"
                 onClick={() => {
                   // Clear any stale error from a previous attempt before re-opening.

@@ -11,7 +11,7 @@ import { useIsOffline } from '@/hooks/useIsOffline';
 import { explainOfflineWrite, type OfflineWriteKind } from '@/lib/offlineWrite';
 
 /** Canonical variants (spec §4.5 — mobile parity). */
-export type ButtonVariant = 'primary' | 'outline' | 'outlineNeutral' | 'dangerOutline' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'outline' | 'outlineNeutral' | 'dangerOutline' | 'secondary' | 'ghost' | 'danger' | 'dangerFilled';
 
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
@@ -31,12 +31,6 @@ const VARIANT = {
   // fill, so only the first row's action reads as filled. Text >= 4.5:1 in both themes.
   outline:
     'bg-transparent text-primary-outline border-[1.5px] border-primary-outline hover:bg-moss-soft focus-visible:outline-primary-fill',
-  // Cream fill + `border-line-strong` (WCAG 1.4.11 control edge): the same resting treatment as an
-  // unselected chip, so a secondary button and a chip in one dialog read as
-  // one family. The earlier `bg-bg-2` tan fill was 1.09:1 against the page
-  // and 1.15:1 against a cream modal — no shape without the border, and a
-  // muddy one with it. Hover borrows the chip's `bg-bg-2` too.
-  secondary: 'bg-cream text-ink border-[1.5px] border-line-strong hover:bg-bg-2',
   // Detail-screen manage row (Edit / Assign / Discontinue): the outline geometry with a NEUTRAL edge
   // (`line-strong`, the 3:1 control edge) and the body ink. Mobile `outlineNeutral`.
   outlineNeutral:
@@ -45,10 +39,12 @@ const VARIANT = {
   // (never base terracotta; see web ADA audit). Mobile `dangerOutline`.
   dangerOutline:
     'bg-transparent text-terracotta-deep border-[1.5px] border-terracotta-deep hover:bg-terracotta-soft',
+  // `secondary` and `danger` are aliases of the outline looks (owner 1.4.3: every tinted button is outline).
   ghost: 'bg-transparent text-moss hover:bg-moss-soft',
   // `tone="neutral"` ghost: a quiet "Done" / "Cancel" text button under a filled primary (one-accent rule).
   ghostNeutral: 'bg-transparent text-ink-2 hover:bg-bg-2',
-  danger:
+  // Destructive CONFIRM inside a dialog: the old tinted fill, kept so the final step stands out.
+  dangerFilled:
     'bg-terracotta-soft text-terracotta-deep hover:bg-[color-mix(in_oklab,var(--color-terracotta-soft),black_6%)]',
 } as const;
 
@@ -63,9 +59,10 @@ const SIZE = {
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: VARIANT.primary,
   outline: VARIANT.outline,
-  secondary: VARIANT.secondary,
+  secondary: VARIANT.outlineNeutral,
   ghost: VARIANT.ghost,
-  danger: VARIANT.danger,
+  danger: VARIANT.dangerOutline,
+  dangerFilled: VARIANT.dangerFilled,
   outlineNeutral: VARIANT.outlineNeutral,
   dangerOutline: VARIANT.dangerOutline,
 };

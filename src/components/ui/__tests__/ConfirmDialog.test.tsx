@@ -66,7 +66,9 @@ describe('ConfirmDialog', () => {
   it('uses the secondary variant for cancel', () => {
     setup();
     const cancel = screen.getByRole('button', { name: 'Cancel' });
-    expect(cancel.className).toContain('bg-cream');
+    // 1.4.3 (owner): secondary is the outline look now (was the bg-cream fill); the border assertion is unchanged.
+    expect(cancel.className).toContain('bg-transparent');
+    expect(cancel.className).not.toContain('bg-cream');
     expect(cancel.className).toContain('border-line-strong ');
   });
 

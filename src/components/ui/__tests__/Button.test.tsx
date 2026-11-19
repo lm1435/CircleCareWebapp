@@ -89,15 +89,19 @@ describe('Button', () => {
       expect(cls).toContain('hover:bg-primary-fill-hover');
     });
 
-    it('secondary: cream with a 1.5px line border, the unselected-chip treatment', () => {
+    // 1.4.3 (owner): `secondary` is an alias of the outline look. It was a cream fill; the old assertions
+    // (bg-cream) described that fill, so they now assert the outline instead.
+    it('secondary: outline look (transparent, 1.5px line-strong border, body ink), same classes as outlineNeutral', () => {
       const { container } = render(<Button variant="secondary">S</Button>);
       const cls = btn(container).className;
-      expect(cls).toContain('bg-cream');
+      expect(cls).toContain('bg-transparent');
       expect(cls).toContain('text-ink');
       expect(cls).toContain('border-[1.5px]');
-      expect(cls).toContain('border-line-strong ');
-      expect(cls).not.toContain('border-line-2');
+      expect(cls).toContain('border-line-strong');
       expect(cls).toContain('hover:bg-bg-2');
+      expect(cls).not.toContain('bg-cream');
+      const neutral = btn(render(<Button variant="outlineNeutral">N</Button>).container).className;
+      expect(cls).toBe(neutral);
     });
 
     it('ghost: transparent with moss text and a moss-soft hover', () => {
@@ -109,45 +113,31 @@ describe('Button', () => {
       expect(cls).not.toContain('shadow-md');
     });
 
-    it('danger: terracotta-soft fill, terracotta-deep text, color-mix hover', () => {
-      const { container } = render(<Button variant="danger">D</Button>);
-      const cls = btn(container).className;
+    // 1.4.3 (owner): `danger` is an alias of dangerOutline; the old tinted fill lives on as `dangerFilled`.
+    it('danger: outline look (transparent, terracotta-deep border + text), same classes as dangerOutline', () => {
+      const cls = btn(render(<Button variant="danger">D</Button>).container).className;
+      expect(cls).toContain('bg-transparent');
+      expect(cls).toContain('text-terracotta-deep');
+      expect(cls).toContain('border-terracotta-deep');
+      expect(cls.split(' ')).not.toContain('bg-terracotta-soft');
+      expect(cls.split(' ')).not.toContain('text-terracotta');
+      expect(cls).toBe(btn(render(<Button variant="dangerOutline">D</Button>).container).className);
+    });
+
+    it('dangerFilled (destructive confirm): terracotta-soft fill, terracotta-deep text, no border', () => {
+      const cls = btn(render(<Button variant="dangerFilled">D</Button>).container).className;
       expect(cls).toContain('bg-terracotta-soft');
       expect(cls).toContain('text-terracotta-deep');
       expect(cls).toContain('hover:bg-[color-mix(in_oklab,var(--color-terracotta-soft),black_6%)]');
-      // Never raw --terracotta behind text (contrast rule) — only -deep.
+      expect(cls).not.toContain('border-[1.5px]');
       expect(cls.split(' ')).not.toContain('text-terracotta');
     });
 
-    it('outlineNeutral: no fill, 1.5px neutral line-strong border, body ink (manage row Edit / Assign)', () => {
-      const { container } = render(<Button variant="outlineNeutral">E</Button>);
-      const cls = btn(container).className;
-      expect(cls).toContain('bg-transparent');
-      expect(cls).toContain('text-ink');
-      expect(cls).toContain('border-[1.5px]');
-      expect(cls).toContain('border-line-strong');
-      expect(cls).not.toContain('bg-cream');
-      expect(cls).not.toContain('shadow-md');
-    });
-
-    it('dangerOutline: no fill, border + text in terracotta-deep, never raw terracotta text', () => {
-      const { container } = render(<Button variant="dangerOutline">D</Button>);
-      const cls = btn(container).className;
-      expect(cls).toContain('bg-transparent');
-      expect(cls).toContain('text-terracotta-deep');
-      expect(cls).toContain('border-[1.5px]');
-      expect(cls).toContain('border-terracotta-deep');
-      expect(cls.split(' ')).not.toContain('text-terracotta');
-      expect(cls.split(' ')).not.toContain('border-terracotta');
-      expect(cls.split(' ')).not.toContain('bg-terracotta-soft');
-    });
-
-    it('the filled danger and secondary are unchanged (confirm dialogs, Cancel)', () => {
-      const d = btn(render(<Button variant="danger">D</Button>).container).className;
-      expect(d).toContain('bg-terracotta-soft');
-      expect(d).not.toContain('border-[1.5px]');
-      const s = btn(render(<Button variant="secondary">S</Button>).container).className;
-      expect(s).toContain('bg-cream');
+    it('primary is unchanged', () => {
+      const cls = btn(render(<Button variant="primary">P</Button>).container).className;
+      expect(cls).toContain('bg-primary-fill');
+      expect(cls).toContain('shadow-md');
+      expect(cls).not.toContain('border-[1.5px]');
     });
 
     it('defaults to primary', () => {
