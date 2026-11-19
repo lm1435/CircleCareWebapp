@@ -102,6 +102,22 @@ describe('useAsNeededUndo: quiet retry', () => {
     expect(post.mock.calls[1][1].given_at).toBe(chosen);
   });
 
+  it('NIT given_at is never later than the send: a clock that stepped back is clamped', async () => {
+    post.mockRejectedValueOnce(network()).mockResolvedValue(ok());
+    const { result } = setup();
+    act(() => result.current.log(entry));
+    await advance(MEDICATION_UNDO_DELAY_MS);
+    // The device clock steps back 10 minutes before the retry fires.
+    vi.setSystemTime(new Date(TAP.getTime() - 10 * 60_000));
+    act(() => {
+      window.dispatchEvent(new Event('online')); // forced drain: the retry fires now
+    });
+    await advance(10);
+    expect(post).toHaveBeenCalledTimes(2);
+    const sent = new Date(post.mock.calls[1][1].given_at).getTime();
+    expect(sent).toBeLessThanOrEqual(Date.now());
+  });
+
   it('N7-4 no duplicate dose: the first attempt landed (lost response), the retry is a replay', async () => {
     post.mockRejectedValueOnce(network()).mockResolvedValue(ok(true));
     const onLogged = vi.fn();

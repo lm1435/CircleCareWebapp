@@ -351,3 +351,99 @@ describe('sendWithQuietRetry (the foreground form, for the note composers)', () 
     expect(send).toHaveBeenCalledTimes(2);
   });
 });
+
+// Review W1-W3.
+describe('offline timer and expiry (W1)', () => {
+  it('P-W1 offline past the max age gives up and shows the notice; timer fires stay bounded', async () => {
+    vi.useRealTimers();
+    const realSet = globalThis.setTimeout;
+    let fires = 0;
+    vi.spyOn(globalThis, 'setTimeout').mockImplementation(((fn: () => void, ms?: number) =>
+      realSet(() => {
+        fires += 1;
+        fn();
+      }, ms)) as typeof setTimeout);
+    const send = vi.fn().mockResolvedValue({});
+    const onGaveUp = vi.fn();
+    onlineManager.setOnline(false);
+    enqueueWriteRetry(entry('k', { send, onGaveUp }), { tapAt: Date.now() - WRITE_RETRY_MAX_AGE_MS + 1100 });
+    await new Promise((r) => realSet(r, 2600));
+    expect(send).not.toHaveBeenCalled();
+    expect(onGaveUp).toHaveBeenCalledTimes(1);
+    expect(getFailedCount()).toBe(1);
+    expect(fires).toBeLessThan(5); // a 0 ms spin would fire thousands of times
+    vi.restoreAllMocks();
+  });
+
+  it('N-W1 offline within the max age: no timer spin and nothing sent', async () => {
+    const send = vi.fn().mockResolvedValue({});
+    onlineManager.setOnline(false);
+    enqueueWriteRetry(entry('k', { send }));
+    const setSpy = vi.spyOn(globalThis, 'setTimeout');
+    await tick(60_000);
+    expect(send).not.toHaveBeenCalled();
+    expect(setSpy.mock.calls.length).toBeLessThan(5); // a 0 ms spin sets a timer per pass
+    setSpy.mockRestore();
+    expect(getFailedCount()).toBe(0);
+    expect(pendingCount()).toBe(1);
+  });
+});
+
+describe('given-up entries expire (W2)', () => {
+  it('P-W2 a fresh failed entry is counted and Retry resends it', async () => {
+    const send = vi.fn().mockRejectedValue(network());
+    enqueueWriteRetry(entry('k', { send }));
+    await tick(WRITE_RETRY_MAX_AGE_MS + 60_000);
+    expect(getFailedCount()).toBe(1);
+    const before = send.mock.calls.length;
+    retryFailedWrites();
+    await tick(0);
+    expect(send.mock.calls.length).toBe(before + 1);
+  });
+
+  it('N-W2 a failed entry older than 10 minutes is not counted and Retry does not resend it', async () => {
+    const send = vi.fn().mockRejectedValue(network());
+    enqueueWriteRetry(entry('k', { send }));
+    await tick(WRITE_RETRY_MAX_AGE_MS + 60_000);
+    expect(getFailedCount()).toBe(1);
+    const before = send.mock.calls.length;
+    await tick(10 * 60_000);
+    expect(getFailedCount()).toBe(0);
+    retryFailedWrites();
+    await tick(0);
+    expect(send.mock.calls.length).toBe(before);
+    expect(pendingCount()).toBe(0);
+  });
+});
+
+describe('foreground retry honours sign-out and offline (W3)', () => {
+  it('N-W3a no resend after sign-out mid-backoff', async () => {
+    const send = vi.fn().mockRejectedValue(network());
+    const run = sendWithQuietRetry('fk', 'event_note', send);
+    const settled = run.catch((e) => e);
+    await tick(0);
+    expect(send).toHaveBeenCalledTimes(1);
+    clearWriteRetryQueue();
+    await tick(10_000);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect((await settled) as Error).toBeInstanceOf(Error);
+  });
+
+  it('N-W3b no send while offline after the backoff sleep', async () => {
+    const send = vi.fn().mockRejectedValue(network());
+    const settled = sendWithQuietRetry('fk', 'event_note', send).catch((e) => e);
+    await tick(0);
+    onlineManager.setOnline(false);
+    await tick(10_000);
+    expect(send).toHaveBeenCalledTimes(1);
+    await settled;
+  });
+
+  it('P-W3 online and same session: the foreground retry still resends', async () => {
+    const send = vi.fn().mockRejectedValueOnce(network()).mockResolvedValue('ok');
+    const run = sendWithQuietRetry('fk', 'event_note', send);
+    await tick(2100);
+    await expect(run).resolves.toBe('ok');
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+});

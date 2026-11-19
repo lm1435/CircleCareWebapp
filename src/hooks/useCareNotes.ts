@@ -21,7 +21,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { failureContext, isPermissionDeniedError, type FailureAction } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
-import { newClientRequestId } from '@/lib/asNeeded';
+import { clearDraftRequestId, requestIdForDraft } from '@/lib/noteRequestId';
 import { sendWithQuietRetry } from '@/lib/writeRetryQueue';
 import { useAuthStore } from '@/store/authStore';
 import { olderPageRange } from '@/lib/noteDate';
@@ -156,10 +156,15 @@ export function useCreateCareNote(): UseMutationResult<
     mutationFn: ({ circleId, input }: CreateCareNoteVariables) => {
       // ONE request id per submit (1.4.3 item 7): see useCreateNote. The optimistic row stays
       // while a network drop is retried quietly; onError rolls it back only if every attempt fails.
-      const clientRequestId = newClientRequestId();
+      // Held with the draft (lib/noteRequestId.ts): a re-save of the same content reuses the id.
+      const scope = `care_note:${circleId}:${input.note_date ?? ''}`;
+      const clientRequestId = requestIdForDraft(scope, JSON.stringify(input));
       return sendWithQuietRetry(`care_note:${clientRequestId}`, 'care_note', () =>
         createCareNote(circleId, { ...input, client_request_id: clientRequestId })
-      );
+      ).then((note) => {
+        clearDraftRequestId(scope);
+        return note;
+      });
     },
     onMutate: async ({ circleId, input }) => {
       const prefix = queryKeys.careNotes(circleId);

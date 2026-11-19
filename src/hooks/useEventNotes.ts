@@ -20,7 +20,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { failureContext, isPermissionDeniedError, type FailureAction } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
-import { newClientRequestId } from '@/lib/asNeeded';
+import { clearDraftRequestId, requestIdForDraft } from '@/lib/noteRequestId';
 import { sendWithQuietRetry } from '@/lib/writeRetryQueue';
 
 // PORT of mobile/src/hooks/useEventNotes.ts. Notes are INSTANCE-scoped: every
@@ -142,18 +142,24 @@ export function useCreateNote(): UseMutationResult<EventNote, unknown, CreateNot
 
   return useMutation({
     mutationFn: ({ circleId, eventId, body, scheduledDate }: CreateNoteVariables) => {
-      // ONE request id per submit (1.4.3 item 7): a network drop is retried quietly with the SAME
-      // id, so a first attempt whose response was lost can never write a second note (the server
+      // ONE request id per DRAFT (1.4.3 item 7): held with the draft (lib/noteRequestId.ts), so a
+      // manual re-save of the same text after a failed-but-landed attempt reuses it instead of
+      // writing a second note; changed text gets a new one, success clears it. A network drop is
+      // retried quietly with the SAME id, so a first attempt whose response was lost can never write a second note (the server
       // answers the resend 200 `replayed: true`: the same note, success). The composer keeps its
       // text while this waits and shows its own error if every attempt fails.
-      const clientRequestId = newClientRequestId();
+      const scope = `event_note:${circleId}:${eventId}:${scheduledDate ?? ''}`;
+      const clientRequestId = requestIdForDraft(scope, body);
       return sendWithQuietRetry(`event_note:${clientRequestId}`, 'event_note', () =>
         createNote(circleId, eventId, {
           body,
           scheduled_date: scheduledDate,
           client_request_id: clientRequestId,
         })
-      );
+      ).then((note) => {
+        clearDraftRequestId(scope);
+        return note;
+      });
     },
     onSuccess: (_note, variables) => {
       invalidateNotes(queryClient, variables.circleId, variables.eventId, variables.scheduledDate);

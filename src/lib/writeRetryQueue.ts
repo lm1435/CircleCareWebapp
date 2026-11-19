@@ -1,6 +1,7 @@
 import { Analytics } from '@/lib/analytics';
 import { classifyFailureCode } from '@/lib/apiErrors';
 import { isOfflineNow } from '@/hooks/useIsOffline';
+import { clearAllDraftRequestIds } from '@/lib/noteRequestId';
 
 /**
  * ONE QUIET RETRY for a quick save that dies on a network drop (1.4.3, plan
@@ -80,7 +81,12 @@ export function isRetryableTransportFailure(error: unknown): boolean {
 }
 
 const queued = new Map<string, Queued>();
-const failed = new Map<string, WriteRetryEntry>();
+/** Given-up entries keep their ORIGINAL tap time, so Retry can refuse hours-old writes. */
+const failed = new Map<string, { entry: WriteRetryEntry; tapAt: number }>();
+/** A given-up write is offered for Retry only this long after the tap. */
+export const FAILED_WRITE_MAX_AGE_MS = 10 * 60_000;
+/** Bumped by sign-out: a foreground retry sleeping across it must not resend. */
+let sessionEpoch = 0;
 const latestSeq = new Map<string, number>();
 const inFlight = new Set<string>();
 const listeners = new Set<() => void>();
@@ -88,7 +94,6 @@ let seqCounter = 0;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let draining = false;
 let listening = false;
-let failedSnapshot = 0;
 
 function safe(fn: () => void): void {
   try {
@@ -98,8 +103,15 @@ function safe(fn: () => void): void {
   }
 }
 
+function pruneStaleFailed(): void {
+  const now = Date.now();
+  failed.forEach((f, key) => {
+    if (now - f.tapAt > FAILED_WRITE_MAX_AGE_MS) failed.delete(key);
+  });
+}
+
 function notify(): void {
-  failedSnapshot = failed.size;
+  pruneStaleFailed();
   listeners.forEach((l) => safe(l));
 }
 
@@ -111,8 +123,14 @@ export function subscribeWriteRetry(listener: () => void): () => void {
   };
 }
 
+/** Given-up writes still worth a Retry (older than the failed max age are excluded). */
 export function getFailedCount(): number {
-  return failedSnapshot;
+  const now = Date.now();
+  let count = 0;
+  failed.forEach((f) => {
+    if (now - f.tapAt <= FAILED_WRITE_MAX_AGE_MS) count += 1;
+  });
+  return count;
 }
 
 /** Entries waiting for a retry (not counting ones that gave up). */
@@ -141,6 +159,23 @@ function schedule(): void {
   }
   if (queued.size === 0) return;
   let next = Infinity;
+  if (isOfflineNow()) {
+    // Offline nothing is sent and the `online` listener drains, so NO retry timer
+    // (it would spin at 0 ms). One timer for the earliest max-age expiry only, so
+    // an over-age entry still gives up and the notice shows.
+    queued.forEach((q) => {
+      if (!inFlight.has(q.entry.key)) next = Math.min(next, q.tapAt + WRITE_RETRY_MAX_AGE_MS + 1);
+    });
+    if (next === Infinity) return;
+    timer = setTimeout(
+      () => {
+        timer = null;
+        void drain(false, 'backoff');
+      },
+      Math.max(1_000, next - Date.now())
+    );
+    return;
+  }
   queued.forEach((q) => {
     if (!inFlight.has(q.entry.key)) next = Math.min(next, q.nextAt);
   });
@@ -196,7 +231,7 @@ export function cancelWriteRetry(key: string): boolean {
 
 function giveUp(q: Queued): void {
   queued.delete(q.entry.key);
-  failed.set(q.entry.key, q.entry);
+  failed.set(q.entry.key, { entry: q.entry, tapAt: q.tapAt });
   safe(() => Analytics.writeRetryGaveUp(q.entry.kind, failed.size));
   safe(() => q.entry.onGaveUp?.());
   notify();
@@ -262,6 +297,12 @@ async function drain(force: boolean, via: WriteRetryVia): Promise<void> {
   try {
     for (;;) {
       const now = Date.now();
+      // Over-age entries give up BEFORE the offline return, so the notice shows.
+      [...queued.values()].forEach((q) => {
+        if (!inFlight.has(q.entry.key) && isCurrent(q) && now - q.tapAt > WRITE_RETRY_MAX_AGE_MS) {
+          giveUp(q);
+        }
+      });
       const due = [...queued.values()].filter(
         (q) => !inFlight.has(q.entry.key) && (force || q.nextAt <= now)
       );
@@ -311,6 +352,7 @@ export async function sendWithQuietRetry<T>(
   const delays = opts.delaysMs ?? FOREGROUND_RETRY_DELAYS_MS;
   const maxAge = opts.maxAgeMs ?? WRITE_RETRY_MAX_AGE_MS;
   const startedAt = Date.now();
+  const epoch = sessionEpoch;
   let retries = 0;
   try {
     for (;;) {
@@ -333,6 +375,10 @@ export async function sendWithQuietRetry<T>(
         if (retries === 0) safe(() => Analytics.writeRetryScheduled(kind, 1));
         retries += 1;
         await new Promise((resolve) => setTimeout(resolve, delay));
+        // Signed out meanwhile: never resend under another session. Offline: no
+        // writes (owner decision 2026-10-14); the composer keeps its draft and error.
+        if (epoch !== sessionEpoch) throw new Error('Write cancelled: session ended');
+        if (isOfflineNow()) throw error;
       }
     }
   } finally {
@@ -342,9 +388,13 @@ export async function sendWithQuietRetry<T>(
 
 /** The notice's Retry: every given-up entry goes again with a fresh budget. */
 export function retryFailedWrites(): void {
-  const entries = [...failed.values()];
-  if (entries.length === 0) return;
+  pruneStaleFailed(); // hours-old writes are never resent
+  const entries = [...failed.values()].map((f) => f.entry);
   failed.clear();
+  if (entries.length === 0) {
+    notify();
+    return;
+  }
   const now = Date.now();
   entries.forEach((entry) => {
     const seq = ++seqCounter;
@@ -371,6 +421,8 @@ export function dismissFailedWrites(): void {
 
 /** Sign-out / account switch: nothing queued under the old session is ever sent. */
 export function clearWriteRetryQueue(): void {
+  sessionEpoch += 1;
+  clearAllDraftRequestIds();
   queued.forEach((_q, key) => latestSeq.set(key, ++seqCounter));
   queued.clear();
   failed.clear();
@@ -390,5 +442,4 @@ export function __resetWriteRetryForTests(): void {
   listeners.clear();
   draining = false;
   seqCounter = 0;
-  failedSnapshot = 0;
 }

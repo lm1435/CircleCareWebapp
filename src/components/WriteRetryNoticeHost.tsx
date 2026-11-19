@@ -2,6 +2,7 @@ import { useEffect, useRef, useSyncExternalStore, type ReactElement } from 'reac
 import { useTranslation } from 'react-i18next';
 import { useToast } from '@/components/ui';
 import {
+  dismissFailedWrites,
   getFailedCount,
   retryFailedWrites,
   subscribeWriteRetry,
@@ -25,6 +26,7 @@ export function WriteRetryNoticeHost(): ReactElement | null {
   const { showToast } = useToast();
   const count = useSyncExternalStore(subscribeWriteRetry, getFailedCount, () => 0);
   const shownFor = useRef(0);
+  const generation = useRef(0);
 
   useEffect(() => {
     if (count === 0) {
@@ -37,9 +39,15 @@ export function WriteRetryNoticeHost(): ReactElement | null {
       const current = getFailedCount();
       if (current === 0 || current === shownFor.current) return;
       shownFor.current = current;
+      const mine = ++generation.current;
       showToast(t('writeRetry.notice', { count: current }), 'error', {
         label: t('writeRetry.retry'),
         onClick: retryFailedWrites,
+        // Closed without Retry: forget what gave up. A toast REPLACED by a newer notice
+        // (more give-ups) must not dismiss the newer entries, hence the generation check.
+        onClose: () => {
+          if (generation.current === mine) dismissFailedWrites();
+        },
       });
     }, NOTICE_SETTLE_MS);
     return () => clearTimeout(id);

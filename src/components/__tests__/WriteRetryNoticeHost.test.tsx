@@ -103,4 +103,36 @@ describe('WriteRetryNoticeHost', () => {
     });
     expect(showToast).not.toHaveBeenCalled();
   });
+
+  it('W2 the toast closing without Retry dismisses what gave up; using Retry does not', async () => {
+    render(<WriteRetryNoticeHost />);
+    enqueueWriteRetry({
+      key: 'k',
+      kind: 'task_complete',
+      circleId: 'c1',
+      send: vi.fn().mockRejectedValue(network()),
+    });
+    await giveUp();
+    expect(getFailedCount()).toBe(1);
+    act(() => showToast.mock.calls[0][2].onClose());
+    expect(getFailedCount()).toBe(0);
+  });
+
+  it('N-W2 a toast replaced by a newer notice does not dismiss the newer give-ups', async () => {
+    render(<WriteRetryNoticeHost />);
+    const add = (k: string) =>
+      enqueueWriteRetry({
+        key: k,
+        kind: 'task_complete',
+        circleId: 'c1',
+        send: vi.fn().mockRejectedValue(network()),
+      });
+    add('a');
+    await giveUp();
+    add('b');
+    await giveUp();
+    expect(showToast).toHaveBeenCalledTimes(2);
+    act(() => showToast.mock.calls[0][2].onClose()); // the replaced one closing
+    expect(getFailedCount()).toBe(2);
+  });
 });

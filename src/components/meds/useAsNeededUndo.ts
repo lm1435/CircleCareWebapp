@@ -127,16 +127,26 @@ export function useAsNeededUndo({
    */
   const queueRetry = useCallback(
     (entry: PendingEntry): void => {
-      const body: LogAsNeededDoseRequest = entry.body.given_at
-        ? entry.body
-        : { ...entry.body, given_at: new Date(entry.tapAt).toISOString() };
+      // Frozen to the tap, but never later than the moment of THE SEND (a device clock
+      // that stepped back would otherwise put it in the future: the server rejects > 2 min).
+      const bodyAtSend = (): LogAsNeededDoseRequest =>
+        entry.body.given_at
+          ? entry.body
+          : {
+              ...entry.body,
+              given_at: new Date(Math.min(entry.tapAt, Date.now())).toISOString(),
+            };
       enqueueWriteRetry(
         {
           key: `as_needed_dose:${entry.body.client_request_id}`,
           kind: 'as_needed_dose',
           circleId: entry.circleId,
           send: () =>
-            mutateAsyncRef.current({ eventId: entry.eventId, body, circleId: entry.circleId }),
+            mutateAsyncRef.current({
+              eventId: entry.eventId,
+              body: bodyAtSend(),
+              circleId: entry.circleId,
+            }),
           onSettled: (_via, result) => {
             clearEntry(entry.eventId);
             onLoggedRef.current?.(entry, result as LogAsNeededDoseResult);

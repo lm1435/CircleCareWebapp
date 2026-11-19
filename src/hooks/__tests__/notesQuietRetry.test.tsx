@@ -187,3 +187,71 @@ describe('useCreateCareNote', () => {
     expect(post).toHaveBeenCalledTimes(1);
   });
 });
+
+// Review W4: the id is held with the DRAFT, not minted per submit.
+describe('the request id is held with the draft (W4)', () => {
+  const server500 = () => refusal('INTERNAL_ERROR');
+
+  it('P-W4a event note: a manual re-save of the same text reuses the id', async () => {
+    post.mockRejectedValueOnce(server500()).mockResolvedValue(created(true));
+    const { result } = renderHook(() => useCreateNote(), { wrapper: wrapper(newQc()) });
+    await act(async () => {
+      await result.current.mutateAsync({ circleId: 'c1', eventId: 'e1', body: 'same' }).catch(() => {});
+      await result.current.mutateAsync({ circleId: 'c1', eventId: 'e1', body: 'same' });
+    });
+    expect(post.mock.calls[0][1].client_request_id).toBe(post.mock.calls[1][1].client_request_id);
+  });
+
+  it('N-W4a event note: changed text gets a NEW id', async () => {
+    post.mockRejectedValueOnce(server500()).mockResolvedValue(created());
+    const { result } = renderHook(() => useCreateNote(), { wrapper: wrapper(newQc()) });
+    await act(async () => {
+      await result.current.mutateAsync({ circleId: 'c1', eventId: 'e1', body: 'one' }).catch(() => {});
+      await result.current.mutateAsync({ circleId: 'c1', eventId: 'e1', body: 'two' });
+    });
+    expect(post.mock.calls[0][1].client_request_id).not.toBe(post.mock.calls[1][1].client_request_id);
+  });
+
+  it('N-W4b event note: success clears it, the next identical note is a new note', async () => {
+    post.mockResolvedValue(created());
+    const { result } = renderHook(() => useCreateNote(), { wrapper: wrapper(newQc()) });
+    await act(async () => {
+      await result.current.mutateAsync({ circleId: 'c1', eventId: 'e1', body: 'same' });
+      await result.current.mutateAsync({ circleId: 'c1', eventId: 'e1', body: 'same' });
+    });
+    expect(post.mock.calls[0][1].client_request_id).not.toBe(post.mock.calls[1][1].client_request_id);
+  });
+
+  it('N-W4c event note: the same text on another event is a different note', async () => {
+    post.mockRejectedValueOnce(server500()).mockResolvedValue(created());
+    const { result } = renderHook(() => useCreateNote(), { wrapper: wrapper(newQc()) });
+    await act(async () => {
+      await result.current.mutateAsync({ circleId: 'c1', eventId: 'e1', body: 'same' }).catch(() => {});
+      await result.current.mutateAsync({ circleId: 'c1', eventId: 'e2', body: 'same' });
+    });
+    expect(post.mock.calls[0][1].client_request_id).not.toBe(post.mock.calls[1][1].client_request_id);
+  });
+
+  it('P-W4b care note: re-save reuses the id; changed text and success do not', async () => {
+    post.mockRejectedValueOnce(server500()).mockResolvedValue(created());
+    const { result } = renderHook(() => useCreateCareNote(), { wrapper: wrapper(newQc()) });
+    await act(async () => {
+      await result.current.mutateAsync({ circleId: 'c1', input: { body: 'a' } }).catch(() => {});
+      await result.current.mutateAsync({ circleId: 'c1', input: { body: 'a' } }); // lands, clears
+      await result.current.mutateAsync({ circleId: 'c1', input: { body: 'a' } }); // new note
+    });
+    const ids = post.mock.calls.map((c) => c[1].client_request_id);
+    expect(ids[0]).toBe(ids[1]);
+    expect(ids[2]).not.toBe(ids[1]);
+  });
+
+  it('N-W4d care note: changed content gets a new id', async () => {
+    post.mockRejectedValueOnce(server500()).mockResolvedValue(created());
+    const { result } = renderHook(() => useCreateCareNote(), { wrapper: wrapper(newQc()) });
+    await act(async () => {
+      await result.current.mutateAsync({ circleId: 'c1', input: { body: 'a' } }).catch(() => {});
+      await result.current.mutateAsync({ circleId: 'c1', input: { body: 'b' } });
+    });
+    expect(post.mock.calls[0][1].client_request_id).not.toBe(post.mock.calls[1][1].client_request_id);
+  });
+});

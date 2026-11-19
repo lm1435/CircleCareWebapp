@@ -27,6 +27,8 @@ export type ToastType = 'info' | 'success' | 'error';
 export interface ToastAction {
   label: string;
   onClick: () => void;
+  /** Fired once when the toast goes away WITHOUT the action being used (auto-dismiss, close, replaced). */
+  onClose?: () => void;
 }
 
 export interface Toast {
@@ -103,7 +105,7 @@ interface ToastItemProps {
   toast: ToastEntry;
   closeLabel: string;
   moreLabel: string;
-  onDismiss: (id: number) => void;
+  onDismiss: (id: number, acted?: boolean) => void;
   onExited: (id: number) => void;
 }
 
@@ -252,7 +254,7 @@ function ToastItem({
           onMouseDown={keepFocus}
           onClick={() => {
             toast.action?.onClick();
-            onDismiss(id);
+            onDismiss(id, true);
           }}
           className={expanded ? '-my-1 ml-auto shrink-0' : '-my-1 shrink-0'}
         >
@@ -283,8 +285,26 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactEleme
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
+  const toastsRef = useRef<ToastEntry[]>([]);
+  toastsRef.current = toasts;
+  const closedIds = useRef(new Set<number>());
+  const fireClose = useCallback((toast: ToastEntry | undefined, acted = false) => {
+    if (!toast || closedIds.current.has(toast.id)) return;
+    closedIds.current.add(toast.id);
+    if (acted) return;
+    try {
+      toast.action?.onClose?.();
+    } catch {
+      // A caller's close hook must never break the toast region.
+    }
+  }, []);
+
   const dismiss = useCallback(
-    (id: number) => {
+    (id: number, acted = false) => {
+      fireClose(
+        toastsRef.current.find((toast) => toast.id === id),
+        acted
+      );
       if (prefersReducedMotion()) {
         remove(id);
         return;
@@ -295,7 +315,7 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactEleme
       // Safety net for a browser that never fires `animationend`.
       window.setTimeout(() => remove(id), EXIT_FALLBACK_MS);
     },
-    [remove]
+    [remove, fireClose]
   );
 
   /**
@@ -315,8 +335,9 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactEleme
    */
   const showToast = useCallback((message: string, type: ToastType = 'info', action?: ToastAction) => {
     const id = nextId.current++;
+    toastsRef.current.forEach((previous) => fireClose(previous));
     setToasts([{ id, message, type, action, leaving: false }]);
-  }, []);
+  }, [fireClose]);
 
   const value = useMemo(() => ({ showToast }), [showToast]);
 
