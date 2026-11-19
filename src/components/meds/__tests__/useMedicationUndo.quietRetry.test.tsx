@@ -23,6 +23,7 @@ const analytics = vi.hoisted(() => ({
 vi.mock('@/lib/analytics', () => ({ Analytics: analytics, default: analytics }));
 
 import { confirmMedication, getTodaysMedications, type TodaysMedication } from '@/api/medicationConfirmations';
+import { useAuthStore } from '@/store/authStore';
 import { MEDICATION_UNDO_DELAY_MS, useMedicationUndo } from '@/components/meds/useMedicationUndo';
 import {
   WRITE_RETRY_MAX_AGE_MS,
@@ -45,8 +46,8 @@ const med = {
   parent_event_id: null,
   confirmation: null,
 } as unknown as TodaysMedication;
-const rowWith = (status: string | null) =>
-  [{ ...med, confirmation: status ? { status, confirmed_at: 'x', confirmed_by: 'u2' } : null }] as never;
+const rowWith = (status: string | null, by = 'u2') =>
+  [{ ...med, confirmation: status ? { status, confirmed_at: 'x', confirmed_by: by } : null }] as never;
 
 let client: QueryClient;
 const wrapper = ({ children }: { children: ReactNode }) => (
@@ -71,6 +72,7 @@ async function takeAndFire(h: ReturnType<typeof setup>) {
 }
 
 beforeEach(() => {
+  useAuthStore.setState({ user: { id: 'me' } as never });
   vi.useFakeTimers();
   vi.clearAllMocks();
   __resetWriteRetryForTests();
@@ -115,14 +117,15 @@ describe('dose Taken/Skipped quiet retry', () => {
     expect(h.onError).not.toHaveBeenCalled();
   });
 
-  it('S1 NEGATIVE: the dose was answered another way meanwhile (Skipped): the queued Taken never sends, the row is released', async () => {
+  it('S1 NEGATIVE: I answered it myself (Skipped) from another surface meanwhile: the queued Taken never sends, silently, the row is released', async () => {
     mockConfirm.mockRejectedValueOnce(network()).mockResolvedValue({} as never);
-    mockDay.mockResolvedValue(rowWith('skipped'));
+    mockDay.mockResolvedValue(rowWith('skipped', 'me'));
     const h = setup();
     await takeAndFire(h);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2_100);
     });
+    expect(h.onError).not.toHaveBeenCalled(); // silent
     expect(mockConfirm).toHaveBeenCalledTimes(1); // never overwritten
     expect(h.onConfirmed).not.toHaveBeenCalled();
     expect(h.result.current.pending).toEqual({});
@@ -131,6 +134,27 @@ describe('dose Taken/Skipped quiet retry', () => {
       await vi.advanceTimersByTimeAsync(60_000);
     });
     expect(mockConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it("another caregiver answered meanwhile: the resend's 409 goes to the existing dialog path and is never retried or overwritten", async () => {
+    mockConfirm
+      .mockRejectedValueOnce(network())
+      .mockRejectedValue({ success: false, error: { code: 'DOSE_ALREADY_RECORDED', message: 'x' } });
+    mockDay.mockResolvedValue(rowWith('skipped')); // by u2, not me
+    const h = setup();
+    await takeAndFire(h);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_100);
+    });
+    expect(mockConfirm).toHaveBeenCalledTimes(2);
+    expect(h.onError).toHaveBeenCalledTimes(1);
+    expect(h.onError.mock.calls[0][0]).toMatchObject({ error: { code: 'DOSE_ALREADY_RECORDED' } });
+    expect(h.onConfirmed).not.toHaveBeenCalled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(mockConfirm).toHaveBeenCalledTimes(2);
+    expect(pendingCount()).toBe(0);
   });
 
   it('S1 NEGATIVE: a newer confirm for the same dose withdraws the queued entry, which never sends', async () => {

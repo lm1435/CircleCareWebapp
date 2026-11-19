@@ -105,8 +105,9 @@ export function confirmVerdict(
 export async function verifyDoseForResend(
   circleId: string,
   dose: DoseRef,
-  status: ConfirmableStatus
-): Promise<'recorded' | 'answered_other' | 'unanswered' | 'unverified'> {
+  status: ConfirmableStatus,
+  myUserId?: string | null
+): Promise<'recorded' | 'answered_by_me' | 'answered_by_other' | 'unanswered' | 'unverified'> {
   try {
     if (!dose.scheduled_date) return 'unverified';
     const events = await getTodaysMedications(circleId, dose.scheduled_date);
@@ -121,8 +122,13 @@ export async function verifyDoseForResend(
         (e.id === dose.id || (seriesOf(e) === root && e.scheduled_date === dose.scheduled_date)) &&
         (dose.scheduled_time == null || e.scheduled_time === dose.scheduled_time || e.id === dose.id)
     );
-    const other = pool.some((e) => e.confirmation != null && e.confirmation.status !== 'missed');
-    return other ? 'answered_other' : 'unanswered';
+    const answers = pool.filter((e) => e.confirmation != null && e.confirmation.status !== 'missed');
+    if (answers.length === 0) return 'unanswered';
+    // Mine (a newer answer from another surface) is dropped silently; anyone else's is left to the
+    // resend, whose 409 shows the "someone else answered" message. Unknown author = not mine.
+    return myUserId && answers.every((e) => e.confirmation!.confirmed_by === myUserId)
+      ? 'answered_by_me'
+      : 'answered_by_other';
   } catch {
     return 'unverified';
   }

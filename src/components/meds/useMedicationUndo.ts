@@ -8,6 +8,7 @@ import { failureContext } from '@/lib/apiErrors';
 import { confirmFailureOutcome, verifyDoseForResend } from '@/lib/confirmVerify';
 import { cancelWriteRetry, enqueueWriteRetry, isQueueableFailure } from '@/lib/writeRetryQueue';
 import { startUndoTimer, type UndoTimer } from '@/lib/undoTimer';
+import { useAuthStore } from '@/store/authStore';
 import { queryKeys } from '@/lib/queryKeys';
 import type {
   ConfirmableStatus,
@@ -204,13 +205,18 @@ export function useMedicationUndo({
         // TRI-STATE (retry review B1 / S1): an unreadable re-read sends NOTHING this round, and a
         // dose already answered another way is never overwritten by the stale queued answer.
         landed: async () => {
-          const v = await verifyDoseForResend(entry.circleId, dose, entry.status);
+          const v = await verifyDoseForResend(
+            entry.circleId,
+            dose,
+            entry.status,
+            useAuthStore.getState().user?.id
+          );
           return v === 'recorded'
             ? 'recorded'
-            : v === 'answered_other'
+            : v === 'answered_by_me'
               ? 'superseded'
-              : v === 'unanswered'
-                ? 'not_recorded'
+              : v === 'unanswered' || v === 'answered_by_other'
+                ? 'not_recorded' // another caregiver's answer: the resend's 409 shows "someone else answered"
                 : 'unverified';
         },
         // Withdrawn by a newer answer (this or another surface), or already answered another way.
