@@ -205,6 +205,32 @@ describe('JoinCircleModal', () => {
     expect(screen.getByRole('button', { name: 'Find circle' })).toBeInTheDocument();
   });
 
+  it.each([
+    ['ERR_NETWORK', { isAxiosError: true, code: 'ERR_NETWORK', message: 'Network Error' }],
+    ['timeout', { isAxiosError: true, code: 'ECONNABORTED', message: 'timeout of 30000ms exceeded' }],
+  ])('item 14: a %s on look-up says the connection message, not "invalid code"', async (_n, err) => {
+    const user = userEvent.setup();
+    lookupMutate.mockImplementation((_code, opts) => opts?.onError?.(err));
+    renderModal();
+    await pasteCode(user, 'BADCOD');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('Network error. Please check your connection.')
+    );
+    expect(screen.getByRole('alert')).not.toHaveTextContent("couldn't find that invite code");
+  });
+
+  it('NEGATIVE item 14: a 404 INVITE_NOT_FOUND still says invalid code; a code-less non-network Error does too', async () => {
+    const user = userEvent.setup();
+    lookupMutate.mockImplementation((_code, opts) => opts?.onError?.(new Error('weird')));
+    renderModal();
+    await pasteCode(user, 'BADCOD');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent("We couldn't find that invite code.")
+    );
+  });
+
   it('accepts the invite → toast, close, and onJoined with the circle id', async () => {
     const user = userEvent.setup();
     lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(INVITE));

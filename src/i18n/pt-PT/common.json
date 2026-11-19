@@ -19,7 +19,8 @@
   "errors": {
     "saveFailed": "Não foi possível guardar as alterações. Tente novamente.",
     "subscriptionRequired": "Este é um recurso Premium. Abra a app CircleCare para fazer upgrade e o desbloquear.",
-    "permissionDenied": "Não tem permissão para fazer esta alteração."
+    "permissionDenied": "Não tem permissão para fazer esta alteração.",
+    "network": "Erro de rede. Verifique a sua ligação."
   },
   "upgradeGate": {
     "ownerOnly": "Este é um recurso Premium para este círculo. Apenas o proprietário do círculo pode fazer upgrade.",

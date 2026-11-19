@@ -99,7 +99,8 @@
   "errors": {
     "saveFailed": "Couldn't save your changes. Please try again.",
     "subscriptionRequired": "That's a Premium feature. Open the CircleCare app to upgrade and unlock it.",
-    "permissionDenied": "You don't have permission to make this change."
+    "permissionDenied": "You don't have permission to make this change.",
+    "network": "Network error. Please check your connection."
   },
   "upgradeGate": {
     "message": "That feature isn't included in the free plan. Upgrade to Premium to unlock it for your whole circle.",

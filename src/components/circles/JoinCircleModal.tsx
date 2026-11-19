@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card, Modal, Text, useToast } from '@/components/ui';
 import { getApiError } from '@/api/auth';
+import { isNoResponseFailure } from '@/lib/apiErrors';
 import { useLookupInviteByCode, useAcceptInviteByCode } from '@/hooks/useJoinCircle';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { joinedCircleMessage } from '@/hooks/useOpenJoinedCircle';
@@ -158,7 +159,13 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
     lookup.mutate(code, {
       onSuccess: (found) => setInvite(found),
       onError: (err) => {
-        setError(joinErrorMessage(t, getApiError(err)?.code, t('joinModal.invalidCode')));
+        const backendCode = getApiError(err)?.code;
+        // No backend code AND no answer at all = a connection problem, not a wrong code (1.4.3 audit 14).
+        setError(
+          !backendCode && isNoResponseFailure(err)
+            ? t('common:errors.network')
+            : joinErrorMessage(t, backendCode, t('joinModal.invalidCode'))
+        );
       },
       onSettled: () => lookupGuard.release(),
     });

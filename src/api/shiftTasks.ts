@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api';
+import { sendIdempotentWrite } from '@/lib/idempotentWrite';
 import type { CalendarEvent } from '@/api/calendarEvents';
 
 // Shift tasks API (docs/plans/shift-tasks.md section 4).
@@ -43,9 +44,17 @@ export async function createShiftTask(
   eventId: string,
   body: CreateShiftTaskBody
 ): Promise<CalendarEvent> {
-  const response = (await apiClient.post(
-    `/circles/${circleId}/events/${encodeURIComponent(eventId)}/shift/tasks`,
-    body
+  // One Idempotency-Key per save, retried 3 times on a lost answer (mobile parity:
+  // mobile/src/api/shifts.ts createShiftTask). The route mounts the `idempotent` middleware
+  // (backend routes/calendarEvents.ts, POST .../shift/tasks).
+  const response = (await sendIdempotentWrite('event_create', (config) =>
+    config
+      ? apiClient.post(
+          `/circles/${circleId}/events/${encodeURIComponent(eventId)}/shift/tasks`,
+          body,
+          config
+        )
+      : apiClient.post(`/circles/${circleId}/events/${encodeURIComponent(eventId)}/shift/tasks`, body)
   )) as unknown as { success: boolean; data: { event: CalendarEvent } };
   return response.data.event;
 }

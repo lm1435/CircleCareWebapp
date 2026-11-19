@@ -99,7 +99,8 @@
   "errors": {
     "saveFailed": "Impossible d’enregistrer vos modifications. Veuillez réessayer.",
     "subscriptionRequired": "Cette fonctionnalité est réservée à Premium. Ouvrez l’application CircleCare pour passer à Premium et la débloquer.",
-    "permissionDenied": "Vous n’avez pas l’autorisation d’effectuer cette modification."
+    "permissionDenied": "Vous n’avez pas l’autorisation d’effectuer cette modification.",
+    "network": "Erreur réseau. Vérifiez votre connexion."
   },
   "upgradeGate": {
     "message": "Cette fonctionnalité n’est pas incluse dans la formule gratuite. Passez à Premium pour la débloquer pour tout votre cercle.",
