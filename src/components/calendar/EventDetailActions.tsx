@@ -423,16 +423,16 @@ export function EventDetailActions({
       className="flex flex-wrap items-center justify-end gap-2"
     >
       {!isLockedCompletedTask && (
-        <Button variant="secondary" onClick={handleEditClick} offlineKind="change">
+        <Button variant="outlineNeutral" onClick={handleEditClick} offlineKind="change">
           {t('eventDetail.edit')}
         </Button>
       )}
       {isMedication && (
-        <Button variant="secondary" onClick={onDiscontinue} offlineKind="change">
+        <Button variant="outlineNeutral" onClick={onDiscontinue} offlineKind="change">
           {isDiscontinued ? t('discontinueMed.reactivate') : t('discontinueMed.discontinue')}
         </Button>
       )}
-      <Button variant="danger" onClick={onDelete} offlineKind="change">
+      <Button variant="dangerOutline" onClick={onDelete} offlineKind="change">
         {t('deleteEvent.delete')}
       </Button>
       {canConfirmDose && (

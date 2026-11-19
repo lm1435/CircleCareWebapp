@@ -119,6 +119,37 @@ describe('Button', () => {
       expect(cls.split(' ')).not.toContain('text-terracotta');
     });
 
+    it('outlineNeutral: no fill, 1.5px neutral line-strong border, body ink (manage row Edit / Assign)', () => {
+      const { container } = render(<Button variant="outlineNeutral">E</Button>);
+      const cls = btn(container).className;
+      expect(cls).toContain('bg-transparent');
+      expect(cls).toContain('text-ink');
+      expect(cls).toContain('border-[1.5px]');
+      expect(cls).toContain('border-line-strong');
+      expect(cls).not.toContain('bg-cream');
+      expect(cls).not.toContain('shadow-md');
+    });
+
+    it('dangerOutline: no fill, border + text in terracotta-deep, never raw terracotta text', () => {
+      const { container } = render(<Button variant="dangerOutline">D</Button>);
+      const cls = btn(container).className;
+      expect(cls).toContain('bg-transparent');
+      expect(cls).toContain('text-terracotta-deep');
+      expect(cls).toContain('border-[1.5px]');
+      expect(cls).toContain('border-terracotta-deep');
+      expect(cls.split(' ')).not.toContain('text-terracotta');
+      expect(cls.split(' ')).not.toContain('border-terracotta');
+      expect(cls.split(' ')).not.toContain('bg-terracotta-soft');
+    });
+
+    it('the filled danger and secondary are unchanged (confirm dialogs, Cancel)', () => {
+      const d = btn(render(<Button variant="danger">D</Button>).container).className;
+      expect(d).toContain('bg-terracotta-soft');
+      expect(d).not.toContain('border-[1.5px]');
+      const s = btn(render(<Button variant="secondary">S</Button>).container).className;
+      expect(s).toContain('bg-cream');
+    });
+
     it('defaults to primary', () => {
       const { container } = render(<Button>Default</Button>);
       expect(btn(container).className).toContain('bg-primary-fill');

@@ -203,17 +203,17 @@ export function MedicationDetailModal({
     canEdit || asNeeded ? (
       <div className="flex flex-wrap items-center justify-end gap-2" data-testid="med-detail-actions">
         {canEdit && (
-          <Button variant="secondary" onClick={onEdit} offlineKind="change">
+          <Button variant="outlineNeutral" onClick={onEdit} offlineKind="change">
             {t('meds:page.actions.edit')}
           </Button>
         )}
         {canEdit && !endedLabel && (
-          <Button variant="secondary" onClick={onToggleStatus} offlineKind="change">
+          <Button variant="outlineNeutral" onClick={onToggleStatus} offlineKind="change">
             {t(inactive ? 'meds:page.actions.reactivate' : 'meds:page.actions.discontinue')}
           </Button>
         )}
         {canEdit && (
-          <Button variant="danger" onClick={onDelete} offlineKind="change">
+          <Button variant="dangerOutline" onClick={onDelete} offlineKind="change">
             {t('meds:page.actions.delete')}
           </Button>
         )}

@@ -277,7 +277,7 @@ export function ShiftDetailModal({
           <div className="flex flex-wrap gap-2" data-testid="shift-detail-actions">
             <Button
               size="sm"
-              variant="secondary"
+              variant="outlineNeutral"
               offlineKind="change"
               onClick={() => onAction('edit', shift)}
             >
@@ -286,7 +286,7 @@ export function ShiftDetailModal({
             {canManageMembers && !ended && (
               <Button
                 size="sm"
-                variant="secondary"
+                variant="outlineNeutral"
                 offlineKind="change"
                 onClick={() => onAction('assign', shift)}
               >
@@ -295,7 +295,7 @@ export function ShiftDetailModal({
             )}
             <Button
               size="sm"
-              variant="danger"
+              variant="dangerOutline"
               offlineKind="change"
               onClick={() => onAction('delete', shift)}
             >

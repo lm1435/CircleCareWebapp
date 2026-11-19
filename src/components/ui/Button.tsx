@@ -11,7 +11,7 @@ import { useIsOffline } from '@/hooks/useIsOffline';
 import { explainOfflineWrite, type OfflineWriteKind } from '@/lib/offlineWrite';
 
 /** Canonical variants (spec §4.5 — mobile parity). */
-export type ButtonVariant = 'primary' | 'outline' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'outline' | 'outlineNeutral' | 'dangerOutline' | 'secondary' | 'ghost' | 'danger';
 
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
@@ -37,6 +37,14 @@ const VARIANT = {
   // and 1.15:1 against a cream modal — no shape without the border, and a
   // muddy one with it. Hover borrows the chip's `bg-bg-2` too.
   secondary: 'bg-cream text-ink border-[1.5px] border-line-strong hover:bg-bg-2',
+  // Detail-screen manage row (Edit / Assign / Discontinue): the outline geometry with a NEUTRAL edge
+  // (`line-strong`, the 3:1 control edge) and the body ink. Mobile `outlineNeutral`.
+  outlineNeutral:
+    'bg-transparent text-ink border-[1.5px] border-line-strong hover:bg-bg-2 focus-visible:outline-primary-fill',
+  // Detail-screen Delete: no fill, edge + label in terracotta-deep, the accessible danger TEXT token
+  // (never base terracotta; see web ADA audit). Mobile `dangerOutline`.
+  dangerOutline:
+    'bg-transparent text-terracotta-deep border-[1.5px] border-terracotta-deep hover:bg-terracotta-soft',
   ghost: 'bg-transparent text-moss hover:bg-moss-soft',
   // `tone="neutral"` ghost: a quiet "Done" / "Cancel" text button under a filled primary (one-accent rule).
   ghostNeutral: 'bg-transparent text-ink-2 hover:bg-bg-2',
@@ -58,6 +66,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   secondary: VARIANT.secondary,
   ghost: VARIANT.ghost,
   danger: VARIANT.danger,
+  outlineNeutral: VARIANT.outlineNeutral,
+  dangerOutline: VARIANT.dangerOutline,
 };
 
 type ButtonOwnProps = {

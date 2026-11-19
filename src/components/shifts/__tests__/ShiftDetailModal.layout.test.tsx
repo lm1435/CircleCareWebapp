@@ -254,6 +254,19 @@ describe('one footer action beside Close; Edit / Assign / Delete at the end', ()
     }
   });
 
+  it('P: the manage row is outline pills: Edit neutral, Delete in the danger text token, no tinted fill', () => {
+    renderDetail(shift());
+    const row = within(screen.getByTestId('shift-detail-actions'));
+    const edit = row.getByRole('button', { name: 'Edit' });
+    const del = row.getByRole('button', { name: 'Delete' });
+    expect(edit).toHaveClass('bg-transparent', 'border-line-strong', 'text-ink');
+    expect(del).toHaveClass('bg-transparent', 'border-terracotta-deep', 'text-terracotta-deep');
+    expect(del.className.split(' ')).not.toContain('text-terracotta');
+    expect(del.className.split(' ')).not.toContain('bg-terracotta-soft');
+    expect(edit).not.toHaveClass('bg-cream');
+    expect(edit).toHaveClass('min-h-[44px]');
+  });
+
   it('N: no Take and no Drop: the footer is Close alone', () => {
     circle({ canManageMembers: false });
     renderDetail(shift({ assigned_to: 'u-ana' }));

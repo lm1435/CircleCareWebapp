@@ -296,16 +296,18 @@ describe('MedicationDetailModal', () => {
   });
 
   // A scheduled medication's roster detail logs no dose, so NOTHING in it is filled: Edit and
-  // Discontinue are secondary, Delete the soft danger button (never a filled one).
+  // Discontinue are neutral outlines, Delete a danger outline (1.4.3 owner; never a filled one).
   it('fills no button on a scheduled medication', () => {
     render(<MedicationDetailModal {...baseProps} />);
     const footer = screen.getByTestId('med-detail-actions');
     const buttons = within(footer).getAllByRole('button');
     expect(buttons.filter((b) => b.className.split(/\s+/).includes('bg-primary-fill'))).toHaveLength(0);
-    expect(screen.getByRole('button', { name: 'meds:page.actions.edit' }).className).toContain('bg-cream');
-    expect(screen.getByRole('button', { name: 'meds:page.actions.delete' }).className).toContain(
-      'bg-terracotta-soft'
-    );
+    expect(screen.getByRole('button', { name: 'meds:page.actions.edit' }).className).toContain('border-line-strong');
+    expect(screen.getByRole('button', { name: 'meds:page.actions.edit' }).className).not.toContain('bg-cream');
+    const del = screen.getByRole('button', { name: 'meds:page.actions.delete' });
+    expect(del.className).toContain('border-terracotta-deep');
+    expect(del.className).toContain('text-terracotta-deep');
+    expect(del.className.split(' ')).not.toContain('bg-terracotta-soft');
   });
 
   describe('as needed', () => {
