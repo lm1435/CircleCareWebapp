@@ -1,0 +1,127 @@
+{
+  "note": "2 doses + a linked task + the coverer's own task count. As-needed, discontinued, outside-window doses, another member's task and an appointment never count.",
+  "shift": {
+    "id": "shift-occ",
+    "parent_event_id": "shift-root",
+    "title": "Day Shift",
+    "scheduled_date": "2026-11-12",
+    "scheduled_time": "08:00:00",
+    "duration_minutes": 480
+  },
+  "covererId": "cg-1",
+  "events": [
+    {
+      "id": "m0700",
+      "event_type": "medication",
+      "title": "Lisinopril 10mg",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "07:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "confirmation": null
+    },
+    {
+      "id": "m0900",
+      "event_type": "medication",
+      "title": "Lisinopril 10mg",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "09:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "confirmation": {
+        "status": "taken",
+        "confirmed_at": "2026-11-12T14:00:00Z"
+      }
+    },
+    {
+      "id": "m1200",
+      "event_type": "medication",
+      "title": "Lisinopril 10mg",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "12:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "confirmation": null
+    },
+    {
+      "id": "m-prn",
+      "event_type": "medication",
+      "title": "Lisinopril 10mg",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "12:30:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "confirmation": null,
+      "as_needed": true
+    },
+    {
+      "id": "m-disc",
+      "event_type": "medication",
+      "title": "Lisinopril 10mg",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "13:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "confirmation": null,
+      "discontinued_at": "2026-11-10T00:00:00Z"
+    },
+    {
+      "id": "t-linked",
+      "event_type": "task",
+      "title": "Call Dr Patel",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "14:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "shift": {
+        "status": "covered",
+        "date": "2026-11-12",
+        "root_id": "shift-root",
+        "window_start": "2026-11-12T08:00:00",
+        "window_end": "2026-11-12T16:00:00",
+        "title": "Day Shift"
+      }
+    },
+    {
+      "id": "t-own",
+      "event_type": "task",
+      "title": "Call Dr Patel",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "15:00:00",
+      "assigned_to": "cg-1",
+      "completed_at": "2026-11-12T15:00:00Z"
+    },
+    {
+      "id": "t-other",
+      "event_type": "task",
+      "title": "Call Dr Patel",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "10:00:00",
+      "assigned_to": "cg-2",
+      "completed_at": null
+    },
+    {
+      "id": "t-anyone",
+      "event_type": "task",
+      "title": "Call Dr Patel",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "11:00:00",
+      "assigned_to": null,
+      "completed_at": null
+    },
+    {
+      "id": "a1100",
+      "event_type": "appointment",
+      "title": "Cardiology visit",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "11:00:00",
+      "assigned_to": null,
+      "completed_at": null
+    }
+  ],
+  "expected": {
+    "total": 4,
+    "done": 2,
+    "nextKey": "m1200"
+  }
+}

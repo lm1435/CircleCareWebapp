@@ -1,0 +1,68 @@
+{
+  "note": "20:00 + 12 h. Items on the next calendar date inside the window count; an item after the end does not.",
+  "shift": {
+    "id": "shift-occ",
+    "parent_event_id": "shift-root",
+    "title": "Day Shift",
+    "scheduled_date": "2026-11-12",
+    "scheduled_time": "20:00:00",
+    "duration_minutes": 720
+  },
+  "covererId": "cg-1",
+  "events": [
+    {
+      "id": "m2100",
+      "event_type": "medication",
+      "title": "Lisinopril 10mg",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "21:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "confirmation": null
+    },
+    {
+      "id": "m0200",
+      "event_type": "medication",
+      "title": "Lisinopril 10mg",
+      "scheduled_date": "2026-11-13",
+      "scheduled_time": "02:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "confirmation": null
+    },
+    {
+      "id": "m0800",
+      "event_type": "medication",
+      "title": "Lisinopril 10mg",
+      "scheduled_date": "2026-11-13",
+      "scheduled_time": "08:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "confirmation": null
+    },
+    {
+      "id": "m0900",
+      "event_type": "medication",
+      "title": "Lisinopril 10mg",
+      "scheduled_date": "2026-11-13",
+      "scheduled_time": "09:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "confirmation": null
+    },
+    {
+      "id": "t0100",
+      "event_type": "task",
+      "title": "Call Dr Patel",
+      "scheduled_date": "2026-11-13",
+      "scheduled_time": "01:00:00",
+      "assigned_to": "cg-1",
+      "completed_at": null
+    }
+  ],
+  "expected": {
+    "total": 4,
+    "done": 0,
+    "nextKey": "m2100"
+  }
+}

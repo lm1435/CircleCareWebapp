@@ -1,0 +1,68 @@
+{
+  "note": "A skipped dose is handled. A legacy 'missed' dose is neither open nor done (stays in total). Next is the first OPEN item.",
+  "shift": {
+    "id": "shift-occ",
+    "parent_event_id": "shift-root",
+    "title": "Day Shift",
+    "scheduled_date": "2026-11-12",
+    "scheduled_time": "08:00:00",
+    "duration_minutes": 480
+  },
+  "covererId": "cg-1",
+  "events": [
+    {
+      "id": "m0900",
+      "event_type": "medication",
+      "title": "Lisinopril 10mg",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "09:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "confirmation": {
+        "status": "skipped",
+        "confirmed_at": "2026-11-12T14:00:00Z"
+      }
+    },
+    {
+      "id": "m1000",
+      "event_type": "medication",
+      "title": "Lisinopril 10mg",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "10:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "confirmation": {
+        "status": "missed",
+        "confirmed_at": "2026-11-12T14:00:00Z"
+      }
+    },
+    {
+      "id": "m1100",
+      "event_type": "medication",
+      "title": "Lisinopril 10mg",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "11:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "confirmation": null
+    },
+    {
+      "id": "m1200",
+      "event_type": "medication",
+      "title": "Lisinopril 10mg",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "12:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "confirmation": {
+        "status": "taken_late",
+        "confirmed_at": "2026-11-12T14:00:00Z"
+      }
+    }
+  ],
+  "expected": {
+    "total": 4,
+    "done": 2,
+    "nextKey": "m1100"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "note": "15 min after its start the appointment stops being next (10:00 start, now 10:15 local).",
+  "shift": {
+    "id": "shift-occ",
+    "parent_event_id": "shift-root",
+    "title": "Day Shift",
+    "scheduled_date": "2026-11-12",
+    "scheduled_time": "08:00:00",
+    "duration_minutes": 480
+  },
+  "covererId": "cg-1",
+  "events": [
+    {
+      "id": "a1000",
+      "event_type": "appointment",
+      "title": "Cardiology visit",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "10:00:00",
+      "assigned_to": null,
+      "completed_at": null
+    },
+    {
+      "id": "m1100",
+      "event_type": "medication",
+      "title": "Lisinopril 10mg",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "11:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "confirmation": null
+    }
+  ],
+  "expected": {
+    "total": 1,
+    "done": 0,
+    "nextKey": "m1100"
+  },
+  "live": {
+    "now": "2026-11-12T15:15:00Z",
+    "timezone": "America/New_York",
+    "nextKind": "medication",
+    "nextKey": "m1100"
+  }
+}

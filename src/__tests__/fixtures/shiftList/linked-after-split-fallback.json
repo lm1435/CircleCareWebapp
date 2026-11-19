@@ -1,0 +1,70 @@
+{
+  "note": "The task link points at an OLD series root; the same day + the same window + the same title still link it here. A different title does not.",
+  "shift": {
+    "id": "shift-occ",
+    "parent_event_id": "shift-root",
+    "title": "Day Shift",
+    "scheduled_date": "2026-11-12",
+    "scheduled_time": "08:00:00",
+    "duration_minutes": 480
+  },
+  "covererId": "cg-1",
+  "events": [
+    {
+      "id": "t-moved",
+      "event_type": "task",
+      "title": "Call Dr Patel",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "10:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "shift": {
+        "status": "covered",
+        "date": "2026-11-12",
+        "root_id": "old-root",
+        "window_start": "2026-11-12T08:00:00",
+        "window_end": "2026-11-12T16:00:00",
+        "title": "Day Shift"
+      }
+    },
+    {
+      "id": "t-other-title",
+      "event_type": "task",
+      "title": "Call Dr Patel",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "11:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "shift": {
+        "status": "covered",
+        "date": "2026-11-12",
+        "root_id": "old-root",
+        "window_start": "2026-11-12T08:00:00",
+        "window_end": "2026-11-12T16:00:00",
+        "title": "Evening Shift"
+      }
+    },
+    {
+      "id": "t-outside",
+      "event_type": "task",
+      "title": "Call Dr Patel",
+      "scheduled_date": "2026-11-12",
+      "scheduled_time": "12:00:00",
+      "assigned_to": null,
+      "completed_at": null,
+      "shift": {
+        "status": "outside",
+        "date": "2026-11-12",
+        "root_id": "shift-root",
+        "window_start": "2026-11-12T08:00:00",
+        "window_end": "2026-11-12T16:00:00",
+        "title": "Day Shift"
+      }
+    }
+  ],
+  "expected": {
+    "total": 1,
+    "done": 0,
+    "nextKey": "t-moved"
+  }
+}
