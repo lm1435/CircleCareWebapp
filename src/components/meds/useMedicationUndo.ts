@@ -5,8 +5,8 @@ import { todaysMedsKey, useConfirmMedication } from '@/hooks/useMedConfirmation'
 import { keepalivePost } from '@/lib/keepalivePost';
 import { Analytics } from '@/lib/analytics';
 import { failureContext } from '@/lib/apiErrors';
-import { confirmFailureOutcome, verifyConfirmLanded } from '@/lib/confirmVerify';
-import { enqueueWriteRetry, isQueueableFailure } from '@/lib/writeRetryQueue';
+import { confirmFailureOutcome, verifyDoseForResend } from '@/lib/confirmVerify';
+import { cancelWriteRetry, enqueueWriteRetry, isQueueableFailure } from '@/lib/writeRetryQueue';
 import { startUndoTimer, type UndoTimer } from '@/lib/undoTimer';
 import { queryKeys } from '@/lib/queryKeys';
 import type {
@@ -47,6 +47,11 @@ import type { MedicationConfirmEntry, MedicationConfirmSource } from '@/lib/anal
  */
 
 export const MEDICATION_UNDO_DELAY_MS = 5000;
+
+/** One queue key per dose, shared by every surface that answers it. */
+function doseRetryKey(entry: { circleId: string; med: { id: string; scheduled_date: string }; scheduledTime: string }): string {
+  return `medication_confirm:${entry.circleId}:${entry.med.id}:${entry.med.scheduled_date}:${entry.scheduledTime}`;
+}
 
 interface PendingEntry {
   med: TodaysMedication;
@@ -192,12 +197,29 @@ export function useMedicationUndo({
         onConfirmedRef.current?.(entry.status, entry.med, entry.circleId);
       };
       enqueueWriteRetry({
-        key: `medication_confirm:${entry.circleId}:${entry.med.id}:${entry.med.scheduled_date}:${entry.scheduledTime}`,
+        key: doseRetryKey(entry),
         kind: 'medication_confirm',
         circleId: entry.circleId,
         send: () => mutateAsyncRef.current(confirmVariables(entry)),
-        landed: async () =>
-          (await verifyConfirmLanded(entry.circleId, dose, entry.status)).verdict === 'recorded',
+        // TRI-STATE (retry review B1 / S1): an unreadable re-read sends NOTHING this round, and a
+        // dose already answered another way is never overwritten by the stale queued answer.
+        landed: async () => {
+          const v = await verifyDoseForResend(entry.circleId, dose, entry.status);
+          return v === 'recorded'
+            ? 'recorded'
+            : v === 'answered_other'
+              ? 'superseded'
+              : v === 'unanswered'
+                ? 'not_recorded'
+                : 'unverified';
+        },
+        // Withdrawn by a newer answer (this or another surface), or already answered another way.
+        onCancelled: () => {
+          clearEntry(entry.med.id);
+          const sent = entry.circleId;
+          void queryClient.invalidateQueries({ queryKey: todaysMedsKey(sent) });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.medicationConfirmations(sent) });
+        },
         onSettled: (via) => {
           if (via === 'landed') {
             // Nothing was sent: refresh what the rows read, as the keepalive path does.
@@ -305,6 +327,8 @@ export function useMedicationUndo({
       // — synchronous, so a flush (or `undo`) running in the same tick sees it
       // immediately, with no dependency on a state update having landed first.
       entry.fired = true;
+      // A newer answer for this dose (from any surface) wins over a queued older one (S1).
+      cancelWriteRetry(doseRetryKey(entry));
 
       // PK11: pagehide / hidden. One keepalive request per dose. The body is
       // exactly the one the axios path sends (no circleId, no `dose`).
@@ -369,6 +393,9 @@ export function useMedicationUndo({
           if (live) send(live);
         }, MEDICATION_UNDO_DELAY_MS),
       };
+      // The newest intent wins: withdraw a queued older answer for this dose NOW (S1), so it cannot
+      // resend during the undo window.
+      cancelWriteRetry(doseRetryKey(entry));
       entriesRef.current.set(med.id, entry);
       setPending((current) => ({ ...current, [med.id]: status }));
     },

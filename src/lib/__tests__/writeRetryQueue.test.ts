@@ -180,12 +180,26 @@ describe('landed and replayed', () => {
     expect(pendingCount()).toBe(0);
   });
 
-  it('a failing re-read does not block the resend', async () => {
+  it('B1 NEGATIVE: a failing or unverified re-read sends NOTHING that round (next rung decides)', async () => {
     const send = vi.fn().mockResolvedValue({});
-    const landed = vi.fn().mockRejectedValue(network());
+    const landed = vi.fn().mockRejectedValueOnce(network()).mockResolvedValueOnce('unverified').mockResolvedValue('not_recorded');
     enqueueWriteRetry(entry('k', { send, landed }));
     await tick(2100);
-    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).not.toHaveBeenCalled();
+    await tick(5100);
+    expect(send).not.toHaveBeenCalled();
+    await tick(10100);
+    expect(send).toHaveBeenCalledTimes(1); // a readable "not recorded" round sends
+  });
+
+  it('S1: a superseded verdict drops the entry quietly and never sends', async () => {
+    const send = vi.fn().mockResolvedValue({});
+    const onCancelled = vi.fn();
+    enqueueWriteRetry(entry('k', { send, onCancelled, landed: vi.fn().mockResolvedValue('superseded') }));
+    await tick(2100);
+    expect(send).not.toHaveBeenCalled();
+    expect(onCancelled).toHaveBeenCalledTimes(1);
+    expect(pendingCount()).toBe(0);
   });
 
   it('a server replayed:true answer is success like any other', async () => {

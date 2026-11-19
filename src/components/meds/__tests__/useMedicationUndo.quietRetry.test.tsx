@@ -115,26 +115,65 @@ describe('dose Taken/Skipped quiet retry', () => {
     expect(h.onError).not.toHaveBeenCalled();
   });
 
-  it("NEGATIVE: another caregiver answered meanwhile: the resend's 409 goes to the existing dialog path and is never retried or overwritten", async () => {
-    mockConfirm
-      .mockRejectedValueOnce(network())
-      .mockRejectedValue({ success: false, error: { code: 'DOSE_ALREADY_RECORDED', message: 'x' } });
-    // Another caregiver recorded SKIPPED: not what we sent, so landed() is false and we try; the server refuses.
+  it('S1 NEGATIVE: the dose was answered another way meanwhile (Skipped): the queued Taken never sends, the row is released', async () => {
+    mockConfirm.mockRejectedValueOnce(network()).mockResolvedValue({} as never);
     mockDay.mockResolvedValue(rowWith('skipped'));
     const h = setup();
     await takeAndFire(h);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2_100);
     });
-    expect(mockConfirm).toHaveBeenCalledTimes(2);
-    expect(h.onError).toHaveBeenCalledTimes(1);
-    expect(h.onError.mock.calls[0][0]).toMatchObject({ error: { code: 'DOSE_ALREADY_RECORDED' } });
+    expect(mockConfirm).toHaveBeenCalledTimes(1); // never overwritten
     expect(h.onConfirmed).not.toHaveBeenCalled();
+    expect(h.result.current.pending).toEqual({});
+    expect(pendingCount()).toBe(0);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(mockConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('S1 NEGATIVE: a newer confirm for the same dose withdraws the queued entry, which never sends', async () => {
+    mockConfirm.mockRejectedValueOnce(network()).mockResolvedValue({} as never);
+    mockDay.mockResolvedValue(rowWith(null));
+    const a = setup();
+    await takeAndFire(a);
+    expect(pendingCount()).toBe(1);
+    const b = setup(); // another surface, its own hook instance
+    act(() => b.result.current.confirm(med, 'skipped'));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(MEDICATION_UNDO_DELAY_MS + 50);
+    });
+    // exactly one more send (the Skipped), none from the queued Taken
+    expect(mockConfirm).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(mockConfirm.mock.calls[1])).toContain('skipped');
+    expect(JSON.stringify(mockConfirm.mock.calls[0])).toContain('taken');
+    expect(a.result.current.pending).toEqual({});
     await act(async () => {
       await vi.advanceTimersByTimeAsync(60_000);
     });
     expect(mockConfirm).toHaveBeenCalledTimes(2);
-    expect(pendingCount()).toBe(0);
+  });
+
+  it('B1 NEGATIVE: the re-read fails (unverified): NO POST is sent that round; a later readable round decides', async () => {
+    mockConfirm.mockRejectedValue(network());
+    // mutation verify fails, queue re-read 1 fails, re-read 2 finds it recorded
+    mockDay
+      .mockRejectedValueOnce(network())
+      .mockRejectedValueOnce(network())
+      .mockResolvedValue(rowWith('taken'));
+    const h = setup();
+    await takeAndFire(h);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_100);
+    });
+    expect(mockConfirm).toHaveBeenCalledTimes(1); // unverified round: nothing sent
+    expect(h.onConfirmed).not.toHaveBeenCalled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_100);
+    });
+    expect(mockConfirm).toHaveBeenCalledTimes(1); // it had landed: still never re-sent
+    expect(h.onConfirmed).toHaveBeenCalledTimes(1);
   });
 
   it('gives up after the max age: error_occurred ONCE, the row is released, no per-attempt noise', async () => {

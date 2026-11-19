@@ -97,6 +97,38 @@ export function confirmVerdict(
 }
 
 /**
+ * What a re-read day says about `dose` for a QUEUED resend: `recorded` (what we sent landed),
+ * `answered_other` (someone, usually this person from another surface, already answered it with a
+ * DIFFERENT status: never overwrite it), `unanswered` (safe to send) or `unverified`.
+ * `missed` is the system's mark, not an answer.
+ */
+export async function verifyDoseForResend(
+  circleId: string,
+  dose: DoseRef,
+  status: ConfirmableStatus
+): Promise<'recorded' | 'answered_other' | 'unanswered' | 'unverified'> {
+  try {
+    if (!dose.scheduled_date) return 'unverified';
+    const events = await getTodaysMedications(circleId, dose.scheduled_date);
+    if (!Array.isArray(events)) return 'unverified';
+    const verdict = confirmVerdict(events, dose, status);
+    if (verdict === 'recorded') return 'recorded';
+    if (verdict === 'unverified') return 'unverified';
+    const root = seriesOf(dose);
+    const pool = events.filter(
+      (e) =>
+        e != null &&
+        (e.id === dose.id || (seriesOf(e) === root && e.scheduled_date === dose.scheduled_date)) &&
+        (dose.scheduled_time == null || e.scheduled_time === dose.scheduled_time || e.id === dose.id)
+    );
+    const other = pool.some((e) => e.confirmation != null && e.confirmation.status !== 'missed');
+    return other ? 'answered_other' : 'unanswered';
+  } catch {
+    return 'unverified';
+  }
+}
+
+/**
  * Re-read the dose's day and say whether it landed. NEVER rejects: a failed
  * or unreadable re-read is 'unverified'. Returns the matching row when
  * recorded, so the caller can hand back a real confirmation.
