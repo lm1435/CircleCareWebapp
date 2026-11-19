@@ -18,17 +18,7 @@ import {
   isQueueableFailure,
 } from '@/lib/writeRetryQueue';
 import { failureContext } from '@/lib/apiErrors';
-
-/** Refetch every list that draws a task row. */
-function invalidateTaskQueries(
-  queryClient: ReturnType<typeof useQueryClient>,
-  circleId: string
-): Promise<unknown> {
-  return Promise.all([
-    queryClient.invalidateQueries({ queryKey: queryKeys.tasks(circleId) }),
-    queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) }),
-  ]);
-}
+import { invalidateTaskQueries, retryKeyOf } from '@/lib/taskCompletionShared';
 
 /** The occurrence a completion verifies against: the row that was tapped. */
 function occurrenceOf(task: CalendarEvent): OccurrenceRef & { title?: string } {
@@ -88,10 +78,6 @@ interface CommitJob {
   shiftLinked: boolean;
   circleId: string;
 }
-
-/** `task_complete:${circle}:${root}:${date}`: one queue entry per occurrence. */
-const retryKeyOf = (job: Pick<CommitJob, 'circleId' | 'target'>): string =>
-  `task_complete:${job.circleId}:${job.target.eventId}:${job.target.scheduledDate ?? ''}`;
 
 export interface UseTaskCompletionResult {
   /** Ids inside the 5s undo window — checked in the UI, not yet committed. */

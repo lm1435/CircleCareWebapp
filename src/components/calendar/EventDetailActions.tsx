@@ -8,6 +8,11 @@ import { getSeriesRoot } from '@/utils/medicationGrouping';
 import { isDoseConfirmable } from '@/utils/timezone';
 import { doseNeedsAnswer } from '@/utils/medicationDose';
 import { Analytics } from '@/lib/analytics';
+import { failureContext } from '@/lib/apiErrors';
+import { confirmFailureOutcome, verifyCompletionLanded } from '@/lib/confirmVerify';
+import { enqueueWriteRetry, isQueueableFailure } from '@/lib/writeRetryQueue';
+import { invalidateTaskQueries, retryKeyOf } from '@/lib/taskCompletionShared';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Task 1.6 — the Edit / Delete / Complete action set rendered in the
 // EventDetailModal `editActions` slot (gated on canEdit upstream). Complete is
@@ -129,6 +134,7 @@ export function EventDetailActions({
   const { t } = useTranslation(['calendar', 'common', 'tasks']);
   const { showToast } = useToast();
   const completeEvent = useCompleteEvent(circleId);
+  const queryClient = useQueryClient();
   const medicationStatus = useMedicationStatus(circleId);
   const [showInactiveEditPrompt, setShowInactiveEditPrompt] = useState(false);
   // WA6: `event` is a snapshot the parent may not refresh in place (it's set
@@ -278,6 +284,50 @@ export function EventDetailActions({
   // the backend already found due, inactive medication or not. See the header.
   const canConfirmDose = isMedication && needsAnswer && doseWithinConfirmWindow;
 
+  /**
+   * "Mark complete" from the detail view died on the network (1.4.3 audit item 6): same quiet retry as
+   * the Tasks list. The task shows done while the shared queue resends (re-reading first, so a write
+   * that landed is never sent twice); one aggregated notice follows only if it never lands.
+   */
+  function queueCompletion(
+    vars: Parameters<typeof completeEvent.mutateAsync>[0],
+    firstError: unknown
+  ): void {
+    const occurrence = vars.occurrence!;
+    const key = retryKeyOf({ circleId, target: { eventId: vars.eventId, scheduledDate: vars.scheduledDate } });
+    setLocallyCompletedAt(new Date().toISOString());
+    enqueueWriteRetry({
+      key,
+      kind: 'task_complete',
+      circleId,
+      send: () => completeEvent.mutateAsync({ ...vars, quietRetry: true }),
+      landed: async () => (await verifyCompletionLanded(circleId, occurrence)).verdict === 'recorded',
+      onSettled: (via) => {
+        if (via === 'landed') {
+          void invalidateTaskQueries(queryClient, circleId);
+        }
+        if (event.event_type === 'task' && event.shift && event.shift.status !== 'outside') {
+          Analytics.shiftTaskCompleted({ surface: 'calendar' });
+        }
+        const stampedAt = new Date().toISOString();
+        showToast(t('eventDetail.completedToast'), 'success');
+        setLocallyCompletedAt(stampedAt);
+        onCompleted?.({ ...event, completed_at: stampedAt } as CalendarEvent);
+      },
+      onRefused: () => setLocallyCompletedAt(null),
+      onGaveUp: () => {
+        setLocallyCompletedAt(null);
+        const outcome = confirmFailureOutcome(firstError);
+        Analytics.errorOccurred('calendar_events', 'calendar_events_update_failed', {
+          circle_id: circleId,
+          ...failureContext('calendar_events', 'update', firstError),
+          ...(outcome ? { outcome } : {}),
+        });
+        void invalidateTaskQueries(queryClient, circleId);
+      },
+    });
+  }
+
   async function handleComplete(): Promise<void> {
     try {
       // A VIRTUAL OCCURRENCE — AND ONLY A VIRTUAL ONE — IS ADDRESSED BY ITS
@@ -314,7 +364,7 @@ export function EventDetailActions({
       // request — a different id from anything the client has ever seen, under
       // no cache key it could invalidate. So the completion is read off the
       // response rather than re-fetched.
-      const completed = await completeEvent.mutateAsync({
+      const vars = {
         eventId: targetEventId,
         // Sent for the virtual case ONLY — it is the half of the address that
         // says WHICH day. A physical row needs no disambiguation, and sending
@@ -333,7 +383,16 @@ export function EventDetailActions({
           event_type: event.event_type,
           title: event.title,
         },
-      });
+      };
+      let completed: CalendarEvent | undefined;
+      try {
+        // quietRetry: a transport failure is not reported here, it is queued below.
+        completed = await completeEvent.mutateAsync({ ...vars, quietRetry: true });
+      } catch (error) {
+        if (!isQueueableFailure(error)) throw error;
+        queueCompletion(vars, error);
+        return;
+      }
       // `completed_at` is what every "is this done?" read in the UI keys on, so
       // it must not be left empty by a response that omitted it: the write
       // succeeded, and the exact millisecond is cosmetic next to that.

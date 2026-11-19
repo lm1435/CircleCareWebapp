@@ -5,6 +5,8 @@ import type { CalendarEvent } from '@/api/calendarEvents';
 import { Modal } from '@/components/ui';
 import { clickTwice, neverSettles } from '@/test/doubleSubmit';
 import { EventDetailActions } from '../EventDetailActions';
+import { apiClient } from '@/lib/api';
+import { __resetWriteRetryForTests, hasWriteRetry } from '@/lib/writeRetryQueue';
 
 // WA6 — after reactivate-for-edit succeeds, this component's OWN edit-guard
 // and Discontinue/Reactivate label must reflect the new state immediately,
@@ -20,6 +22,11 @@ const statusMutateAsync = vi.fn();
 vi.mock('@/hooks/useCalendarEvents', () => ({
   useCompleteEvent: () => ({ mutateAsync: completeMutateAsync, isPending: false }),
   useMedicationStatus: () => ({ mutateAsync: statusMutateAsync, isPending: false }),
+}));
+
+vi.mock('@tanstack/react-query', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@tanstack/react-query')>()),
+  useQueryClient: () => ({ invalidateQueries: vi.fn(() => Promise.resolve()) }),
 }));
 
 const medicationReactivated = vi.fn();
@@ -559,6 +566,7 @@ describe('EventDetailActions', () => {
       );
 
       expect(completeMutateAsync).toHaveBeenCalledWith({
+        quietRetry: true,
         eventId: 'parent-1',
         scheduledDate: '2026-08-06',
         // Verify-before-alert re-reads the OCCURRENCE that was pressed, never the root.
@@ -603,6 +611,7 @@ describe('EventDetailActions', () => {
       );
 
       expect(completeMutateAsync).toHaveBeenCalledWith({
+        quietRetry: true,
         eventId: 'child-0806',
         scheduledDate: undefined,
         occurrence: expect.objectContaining({ id: 'child-0806' }),
@@ -628,6 +637,7 @@ describe('EventDetailActions', () => {
       );
 
       expect(completeMutateAsync).toHaveBeenCalledWith({
+        quietRetry: true,
         eventId: 'child-0807',
         scheduledDate: undefined,
         occurrence: expect.objectContaining({ id: 'child-0807' }),
@@ -650,6 +660,7 @@ describe('EventDetailActions', () => {
 
       // `scheduledDate: undefined`, so `completeEvent` sends no body at all.
       expect(completeMutateAsync).toHaveBeenCalledWith({
+        quietRetry: true,
         eventId: 't-solo',
         scheduledDate: undefined,
         occurrence: expect.objectContaining({ id: 't-solo' }),
@@ -674,6 +685,7 @@ describe('EventDetailActions', () => {
       );
 
       expect(completeMutateAsync).toHaveBeenCalledWith({
+        quietRetry: true,
         eventId: 'parent-1',
         scheduledDate: undefined,
         occurrence: expect.objectContaining({ id: 'parent-1' }),
@@ -815,6 +827,7 @@ describe('EventDetailActions', () => {
       // The request shape is unchanged — root + date.
       await waitFor(() =>
         expect(completeMutateAsync).toHaveBeenCalledWith({
+        quietRetry: true,
           eventId: 'parent-1',
           scheduledDate: '2026-08-06',
           occurrence: expect.objectContaining({ scheduled_date: '2026-08-06' }),
@@ -1562,6 +1575,75 @@ describe('EventDetailActions', () => {
 
       await clickTwice(screen.getByRole('button', { name: 'Done' }));
 
+      expect(completeMutateAsync).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // 1.4.3 audit item 6: "Mark complete" from the detail view retries quietly like the Tasks list.
+  describe('quiet retry of Done from the detail view', () => {
+    const network = { isAxiosError: true, code: 'ERR_NETWORK', message: 'Network Error' };
+    const task = () =>
+      makeMed({
+        id: 't-1',
+        event_type: 'task',
+        title: 'Water the plants',
+        medication_name: null,
+        medication_dosage: null,
+        completed_at: null,
+      });
+    const renderTask = (onCompleted = vi.fn()) => {
+      render(
+        <EventDetailActions
+          circleId="circle-1"
+          careRecipientTimezone="America/New_York"
+          onConfirmDose={vi.fn()}
+          event={task()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onDiscontinue={vi.fn()}
+          onCompleted={onCompleted}
+        />
+      );
+      return onCompleted;
+    };
+    beforeEach(() => {
+      __resetWriteRetryForTests();
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+    afterEach(() => {
+      __resetWriteRetryForTests();
+      vi.useRealTimers();
+    });
+
+    it('a network failure is queued (no error shown), then the resend lands and the toast shows', async () => {
+      completeMutateAsync.mockRejectedValueOnce(network).mockResolvedValue({ completed_at: '2026-07-29T12:00:00Z' });
+      vi.mocked(apiClient.get).mockResolvedValue({ success: true, data: { events: [] } } as never);
+      const onCompleted = renderTask();
+      await act(async () => {
+        screen.getByRole('button', { name: 'Done' }).click();
+      });
+      await waitFor(() => expect(hasWriteRetry('task_complete:circle-1:t-1:')).toBe(true));
+      expect(showToast).not.toHaveBeenCalledWith(expect.anything(), 'error');
+      expect(onCompleted).not.toHaveBeenCalled();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2_500);
+      });
+      expect(completeMutateAsync).toHaveBeenCalledTimes(2);
+      expect(onCompleted).toHaveBeenCalledTimes(1);
+      expect(showToast).toHaveBeenCalledWith(expect.any(String), 'success');
+    });
+
+    it('NEGATIVE: a refusal (403) is NOT queued; nothing is resent', async () => {
+      completeMutateAsync.mockRejectedValue({ success: false, error: { code: 'VIEW_ONLY', message: 'x' } });
+      renderTask();
+      await act(async () => {
+        screen.getByRole('button', { name: 'Done' }).click();
+      });
+      await waitFor(() => expect(completeMutateAsync).toHaveBeenCalledTimes(1));
+      expect(hasWriteRetry('task_complete:circle-1:t-1:')).toBe(false);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
       expect(completeMutateAsync).toHaveBeenCalledTimes(1);
     });
   });
