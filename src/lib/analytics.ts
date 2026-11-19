@@ -541,6 +541,26 @@ const SHIFT_TASK_SURFACES = ['shift_detail', 'today', 'tasks', 'calendar'] as co
 const SHIFT_TASK_TASKS_BUCKETS = ['0', '1', '2-3', '4+'] as const;
 const SHIFT_TASK_DONE_BUCKETS = ['none', 'some', 'all'] as const;
 const SHIFT_TASK_DELETE_SCOPES = ['occurrence', 'future', 'all'] as const;
+// 1.4.3 shift task add / edit (docs/plans/shift-task-add-edit-1-4-3.md section 5).
+const SHIFT_TASK_EDITOR_SOURCES = ['shift_detail', 'saved_sheet'] as const;
+const SHIFT_TASK_EDIT_SOURCES = ['shift_detail', 'tasks', 'calendar'] as const;
+const SHIFT_TASK_SAVED_SOURCES = ['shift_detail', 'saved_sheet', 'tasks', 'calendar'] as const;
+const SHIFT_TASK_COVERERS = ['me', 'other', 'open'] as const;
+const SHIFT_TASK_TIME_DEFAULTS = ['next_half_hour', 'shift_start'] as const;
+const SHIFT_TASK_SAVE_MODES = ['add', 'edit'] as const;
+const SHIFT_TASK_EDIT_STATES = ['open', 'completed'] as const;
+const SHIFT_TASK_DELETE_SURFACES = ['shift_detail', 'editor'] as const;
+const SHIFT_TASK_FAIL_REASONS = [
+  'name_missing',
+  'outside_window',
+  'shift_ended',
+  'shift_gone',
+  'invalid_date',
+  'unsupported',
+  'subscription',
+  'permission',
+  'other',
+] as const;
 const SHIFT_SAVED_SHEET_ACTIONS = ['add_task', 'add_next', 'done'] as const;
 const SHIFT_EDIT_WARNING_KINDS = ['time', 'date', 'repeat'] as const;
 const SHIFT_EDIT_WARNING_BUCKETS = ['1', '2-3', '4+'] as const;
@@ -582,6 +602,9 @@ export type EntryFormOrigin =
   | 'list_button'
   // 1.4.2: opened from a care-assistant reply button ("I can't add it, but here's where").
   | 'ai_chat'
+  // 1.4.3: the shift task add / edit (the full task editor in shift mode).
+  | 'shift_detail'
+  | 'shift_saved_sheet'
   | 'other';
 export type EntryFormStep = 'what' | 'when' | 'how_often' | 'who';
 export type TimeChipId = 'morning' | 'midday' | 'evening' | 'bedtime' | 'other';
@@ -2041,9 +2064,53 @@ export const Analytics = {
     capture('shift_form_reminder_expanded', { editing: opts.editing === true }),
   /** The Take dialog's reminder row "Change" opened the reminder choices. */
   shiftTakeReminderExpanded: () => capture('shift_take_reminder_expanded', {}),
-  shiftTaskDeleted: (opts: { scope: string }) =>
+  shiftTaskDeleted: (opts: { scope: string; surface?: string }) =>
     capture('shift_task_deleted', {
       scope: pickEnum(opts.scope, SHIFT_TASK_DELETE_SCOPES, 'occurrence'),
+      ...(opts.surface ? { surface: pickEnum(opts.surface, SHIFT_TASK_DELETE_SURFACES, 'editor') } : {}),
+    }),
+  /** The full task editor was shown in shift ADD mode. Enums / booleans only. */
+  shiftTaskAddOpened: (opts: { source: string; shiftRepeats: boolean; coverer: string; timeDefault: string }) =>
+    capture('shift_task_add_opened', {
+      source: pickEnum(opts.source, SHIFT_TASK_EDITOR_SOURCES, 'shift_detail'),
+      shift_repeats: opts.shiftRepeats === true,
+      coverer: pickEnum(opts.coverer, SHIFT_TASK_COVERERS, 'open'),
+      time_default: pickEnum(opts.timeDefault, SHIFT_TASK_TIME_DEFAULTS, 'shift_start'),
+    }),
+  /** A shift task save succeeded. `fieldsUsed` 0-4: end time, details, reminders changed, only this day. */
+  shiftTaskSaved: (opts: {
+    mode: string;
+    source: string;
+    fieldsUsed: number;
+    oneOff: boolean;
+    nextDay: boolean;
+    timeChanged: boolean;
+    nameChanged: boolean;
+    detailsSaved: boolean;
+  }) =>
+    capture('shift_task_saved', {
+      mode: pickEnum(opts.mode, SHIFT_TASK_SAVE_MODES, 'add'),
+      source: pickEnum(opts.source, SHIFT_TASK_SAVED_SOURCES, 'shift_detail'),
+      fields_used: Math.max(0, Math.min(4, Math.trunc(opts.fieldsUsed) || 0)),
+      one_off: opts.oneOff === true,
+      next_day: opts.nextDay === true,
+      time_changed: opts.timeChanged === true,
+      name_changed: opts.nameChanged === true,
+      details_saved: opts.detailsSaved === true,
+    }),
+  /** A row tap opened the editor or the read-only detail. */
+  shiftTaskEditOpened: (opts: { source: string; linked: boolean; state: string; recurring: boolean }) =>
+    capture('shift_task_edit_opened', {
+      source: pickEnum(opts.source, SHIFT_TASK_EDIT_SOURCES, 'shift_detail'),
+      linked: opts.linked === true,
+      state: pickEnum(opts.state, SHIFT_TASK_EDIT_STATES, 'open'),
+      recurring: opts.recurring === true,
+    }),
+  /** Any refused or failed shift task save (closed reason enum, never a message). */
+  shiftTaskSaveFailed: (opts: { mode: string; reason: string }) =>
+    capture('shift_task_save_failed', {
+      mode: pickEnum(opts.mode, SHIFT_TASK_SAVE_MODES, 'add'),
+      reason: pickEnum(opts.reason, SHIFT_TASK_FAIL_REASONS, 'other'),
     }),
   shiftEditTasksWarningShown: (opts: { countBucket: string; kind: string }) =>
     capture('shift_edit_tasks_warning_shown', {

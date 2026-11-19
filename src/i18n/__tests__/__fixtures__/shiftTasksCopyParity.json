@@ -45,6 +45,20 @@
     "editWarning_other": "{{count}} tasks fall outside the new hours. They'll stay on the calendar as tasks for Anyone.",
     "deleteImpact_one": "This also removes its {{count}} upcoming task. Completed tasks stay in history.",
     "deleteImpact_other": "This also removes its {{count}} upcoming tasks. Completed tasks stay in history.",
-    "list.late": "Late"
+    "list.late": "Late",
+    "list.editLabel": "Edit {{name}}",
+    "list.viewLabel": "View {{name}}",
+    "list.openHint": "Opens the task",
+    "editor.lockedDay": "{{date}} · during {{shift}}",
+    "editor.onShift": "On {{shift}} · {{window}}",
+    "editor.repeatEvery": "Every time this shift happens",
+    "editor.repeatLocked": "Repeats with {{shift}}",
+    "editor.owner": "Whoever is on this shift",
+    "editor.ownerNow": "Right now: {{name}}",
+    "editor.ownerOpen": "No one is on this shift yet",
+    "editor.sameSideOfMidnight": "This task has to stay on the same side of midnight. Delete it and add it again to move it.",
+    "editor.deleteTask": "Delete task",
+    "editor.deleted": "Task deleted",
+    "editor.updated": "Task updated"
   }
 }

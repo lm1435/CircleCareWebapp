@@ -311,7 +311,10 @@
       "doneLabel": "Done, {{name}}",
       "takenLabel": "Taken, {{name}}",
       "missed": "Not marked",
-      "late": "Late"
+      "late": "Late",
+      "editLabel": "Edit {{name}}",
+      "viewLabel": "View {{name}}",
+      "openHint": "Opens the task"
     },
     "card": {
       "progress": "{{done}} of {{total}} done"
@@ -324,6 +327,19 @@
     "editWarning_one": "{{count}} task falls outside the new hours. It'll stay on the calendar as a task for Anyone.",
     "editWarning_other": "{{count}} tasks fall outside the new hours. They'll stay on the calendar as tasks for Anyone.",
     "deleteImpact_one": "This also removes its {{count}} upcoming task. Completed tasks stay in history.",
-    "deleteImpact_other": "This also removes its {{count}} upcoming tasks. Completed tasks stay in history."
+    "deleteImpact_other": "This also removes its {{count}} upcoming tasks. Completed tasks stay in history.",
+    "editor": {
+      "lockedDay": "{{date}} · during {{shift}}",
+      "onShift": "On {{shift}} · {{window}}",
+      "repeatEvery": "Every time this shift happens",
+      "repeatLocked": "Repeats with {{shift}}",
+      "owner": "Whoever is on this shift",
+      "ownerNow": "Right now: {{name}}",
+      "ownerOpen": "No one is on this shift yet",
+      "sameSideOfMidnight": "This task has to stay on the same side of midnight. Delete it and add it again to move it.",
+      "deleteTask": "Delete task",
+      "deleted": "Task deleted",
+      "updated": "Task updated"
+    }
   }
 }

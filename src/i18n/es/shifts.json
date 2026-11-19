@@ -311,7 +311,10 @@
       "doneLabel": "Listo, {{name}}",
       "takenLabel": "Tomado, {{name}}",
       "missed": "Sin marcar",
-      "late": "Atrasado"
+      "late": "Atrasado",
+      "editLabel": "Editar {{name}}",
+      "viewLabel": "Ver {{name}}",
+      "openHint": "Abre la tarea"
     },
     "card": {
       "progress": "{{done}} de {{total}} hechas"
@@ -324,6 +327,19 @@
     "editWarning_one": "{{count}} tarea queda fuera del nuevo horario. Seguirá en el calendario como tarea para cualquiera.",
     "editWarning_other": "{{count}} tareas quedan fuera del nuevo horario. Seguirán en el calendario como tareas para cualquiera.",
     "deleteImpact_one": "Esto también elimina su {{count}} tarea próxima. Las tareas completadas se quedan en el historial.",
-    "deleteImpact_other": "Esto también elimina sus {{count}} tareas próximas. Las tareas completadas se quedan en el historial."
+    "deleteImpact_other": "Esto también elimina sus {{count}} tareas próximas. Las tareas completadas se quedan en el historial.",
+    "editor": {
+      "lockedDay": "{{date}} · durante {{shift}}",
+      "onShift": "En {{shift}} · {{window}}",
+      "repeatEvery": "Cada vez que ocurra este turno",
+      "repeatLocked": "Se repite con {{shift}}",
+      "owner": "Quien cubra este turno",
+      "ownerNow": "Ahora: {{name}}",
+      "ownerOpen": "Aún nadie cubre este turno",
+      "sameSideOfMidnight": "Esta tarea debe quedarse del mismo lado de la medianoche. Elimínala y agrégala de nuevo para cambiarla.",
+      "deleteTask": "Eliminar tarea",
+      "deleted": "Tarea eliminada",
+      "updated": "Tarea actualizada"
+    }
   }
 }

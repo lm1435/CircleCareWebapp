@@ -176,4 +176,69 @@ describe('shifts analytics', () => {
       expect(Object.keys(props)).not.toContain('circle_id');
     }
   });
+
+  // ── 1.4.3 shift task add / edit (plan section 5): enums / booleans / counts only ──────────────────
+  it('shift_task_add_opened: closed enums, no ids', async () => {
+    const A = await load();
+    A.shiftTaskAddOpened({ source: 'saved_sheet', shiftRepeats: true, coverer: 'me', timeDefault: 'next_half_hour' });
+    expect(last()).toEqual([
+      'shift_task_add_opened',
+      { source: 'saved_sheet', shift_repeats: true, coverer: 'me', time_default: 'next_half_hour' },
+    ]);
+    A.shiftTaskAddOpened({ source: 'bogus', shiftRepeats: false, coverer: 'bogus', timeDefault: 'bogus' });
+    expect(last()[1]).toEqual({ source: 'shift_detail', shift_repeats: false, coverer: 'open', time_default: 'shift_start' });
+  });
+
+  it('shift_task_saved: mode / source enums, fields_used clamped 0-4, booleans', async () => {
+    const A = await load();
+    A.shiftTaskSaved({ mode: 'edit', source: 'tasks', fieldsUsed: 9, oneOff: true, nextDay: true, timeChanged: true, nameChanged: false, detailsSaved: true });
+    expect(last()).toEqual([
+      'shift_task_saved',
+      { mode: 'edit', source: 'tasks', fields_used: 4, one_off: true, next_day: true, time_changed: true, name_changed: false, details_saved: true },
+    ]);
+    A.shiftTaskSaved({ mode: 'x', source: 'x', fieldsUsed: -2, oneOff: false, nextDay: false, timeChanged: false, nameChanged: false, detailsSaved: false });
+    expect(last()[1]).toMatchObject({ mode: 'add', source: 'shift_detail', fields_used: 0, details_saved: false });
+  });
+
+  it('shift_task_edit_opened and shift_task_save_failed use closed enums', async () => {
+    const A = await load();
+    A.shiftTaskEditOpened({ source: 'calendar', linked: true, state: 'completed', recurring: false });
+    expect(last()).toEqual(['shift_task_edit_opened', { source: 'calendar', linked: true, state: 'completed', recurring: false }]);
+    A.shiftTaskSaveFailed({ mode: 'edit', reason: 'outside_window' });
+    expect(last()).toEqual(['shift_task_save_failed', { mode: 'edit', reason: 'outside_window' }]);
+    A.shiftTaskSaveFailed({ mode: 'edit', reason: 'Margaret at 5 Elm St' });
+    expect(last()[1].reason).toBe('other');
+  });
+
+  it('shift_task_deleted keeps its scope and gains the surface only when given', async () => {
+    const A = await load();
+    A.shiftTaskDeleted({ scope: 'future' });
+    expect(last()).toEqual(['shift_task_deleted', { scope: 'future' }]);
+    A.shiftTaskDeleted({ scope: 'all', surface: 'editor' });
+    expect(last()).toEqual(['shift_task_deleted', { scope: 'all', surface: 'editor' }]);
+    A.shiftTaskDeleted({ scope: 'all', surface: 'bogus' });
+    expect(last()[1].surface).toBe('editor');
+  });
+
+  it('N12 none of the new events can carry a circle id, a title or free text', async () => {
+    const A = await load();
+    A.shiftTaskAddOpened({ source: 'shift_detail', shiftRepeats: true, coverer: 'other', timeDefault: 'shift_start' });
+    A.shiftTaskSaved({ mode: 'add', source: 'shift_detail', fieldsUsed: 1, oneOff: false, nextDay: false, timeChanged: false, nameChanged: true, detailsSaved: true });
+    A.shiftTaskEditOpened({ source: 'tasks', linked: true, state: 'open', recurring: true });
+    A.shiftTaskSaveFailed({ mode: 'add', reason: 'other' });
+    for (const call of capture.mock.calls as Array<[string, Record<string, unknown>]>) {
+      for (const [key, value] of Object.entries(call[1])) {
+        expect(key).not.toMatch(/circle|title|name$|text|details$/i);
+        expect(typeof value === 'string' ? value.length < 24 : true).toBe(true);
+      }
+    }
+  });
+
+  it('entry_form_opened accepts the two shift entries', async () => {
+    const A = await load();
+    A.entryFormOpened({ type: 'task', entry: 'shift_detail' });
+    expect(last()).toEqual(['entry_form_opened', { type: 'task', entry: 'shift_detail' }]);
+    A.entryFormOpened({ type: 'task', entry: 'shift_saved_sheet' });
+    expect(last()[1].entry).toBe('shift_saved_sheet');
+  });
 });

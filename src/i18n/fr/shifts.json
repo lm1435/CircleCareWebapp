@@ -311,7 +311,10 @@
       "doneLabel": "Terminé, {{name}}",
       "takenLabel": "Prise, {{name}}",
       "missed": "Non renseignée",
-      "late": "En retard"
+      "late": "En retard",
+      "editLabel": "Modifier {{name}}",
+      "viewLabel": "Voir {{name}}",
+      "openHint": "Ouvre la tâche"
     },
     "card": {
       "progress": "{{done}} sur {{total}} faites"
@@ -324,6 +327,19 @@
     "editWarning_one": "{{count}} tâche tombe en dehors des nouveaux horaires. Elle restera au calendrier comme tâche pour tout le monde.",
     "editWarning_other": "{{count}} tâches tombent en dehors des nouveaux horaires. Elles resteront au calendrier comme tâches pour tout le monde.",
     "deleteImpact_one": "Cela supprime aussi sa {{count}} tâche à venir. Les tâches terminées restent dans l’historique.",
-    "deleteImpact_other": "Cela supprime aussi ses {{count}} tâches à venir. Les tâches terminées restent dans l’historique."
+    "deleteImpact_other": "Cela supprime aussi ses {{count}} tâches à venir. Les tâches terminées restent dans l’historique.",
+    "editor": {
+      "lockedDay": "{{date}} · pendant {{shift}}",
+      "onShift": "Sur {{shift}} · {{window}}",
+      "repeatEvery": "À chaque fois que cette garde a lieu",
+      "repeatLocked": "Se répète avec {{shift}}",
+      "owner": "La personne de garde",
+      "ownerNow": "En ce moment : {{name}}",
+      "ownerOpen": "Personne n’est encore de garde",
+      "sameSideOfMidnight": "Cette tâche doit rester du même côté de minuit. Supprimez-la et ajoutez-la de nouveau pour la déplacer.",
+      "deleteTask": "Supprimer la tâche",
+      "deleted": "Tâche supprimée",
+      "updated": "Tâche mise à jour"
+    }
   }
 }

@@ -311,7 +311,10 @@
       "doneLabel": "Erledigt, {{name}}",
       "takenLabel": "Eingenommen, {{name}}",
       "missed": "Nicht eingetragen",
-      "late": "Überfällig"
+      "late": "Überfällig",
+      "editLabel": "Bearbeiten: {{name}}",
+      "viewLabel": "Ansehen: {{name}}",
+      "openHint": "Öffnet die Aufgabe"
     },
     "card": {
       "progress": "{{done}} von {{total}} erledigt"
@@ -324,6 +327,19 @@
     "editWarning_one": "{{count}} Aufgabe liegt außerhalb der neuen Zeiten. Sie bleibt als Aufgabe für Jeden im Kalender.",
     "editWarning_other": "{{count}} Aufgaben liegen außerhalb der neuen Zeiten. Sie bleiben als Aufgaben für Jeden im Kalender.",
     "deleteImpact_one": "Dadurch wird auch die bevorstehende Aufgabe ({{count}}) gelöscht. Erledigte Aufgaben bleiben im Verlauf.",
-    "deleteImpact_other": "Dadurch werden auch die {{count}} bevorstehenden Aufgaben gelöscht. Erledigte Aufgaben bleiben im Verlauf."
+    "deleteImpact_other": "Dadurch werden auch die {{count}} bevorstehenden Aufgaben gelöscht. Erledigte Aufgaben bleiben im Verlauf.",
+    "editor": {
+      "lockedDay": "{{date}} · während {{shift}}",
+      "onShift": "Bei {{shift}} · {{window}}",
+      "repeatEvery": "Jedes Mal, wenn diese Schicht stattfindet",
+      "repeatLocked": "Wiederholt sich mit {{shift}}",
+      "owner": "Wer diese Schicht hat",
+      "ownerNow": "Gerade: {{name}}",
+      "ownerOpen": "Noch niemand hat diese Schicht",
+      "sameSideOfMidnight": "Diese Aufgabe muss auf derselben Seite von Mitternacht bleiben. Löschen Sie sie und fügen Sie sie neu hinzu, um sie zu verschieben.",
+      "deleteTask": "Aufgabe löschen",
+      "deleted": "Aufgabe gelöscht",
+      "updated": "Aufgabe aktualisiert"
+    }
   }
 }

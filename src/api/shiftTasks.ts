@@ -22,6 +22,20 @@ export interface CreateShiftTaskBody {
   scheduled_time: string;
   /** A one-off on this occurrence instead of repeating with the shift. */
   only_this_day?: boolean;
+  // 1.4.3 ATOMIC CREATE: the editor's extras travel in the same single POST (additive, all optional).
+  // Sent only when the user set them: name + time alone is the body it always was. Never
+  // assigned_to / recurrence_* / the task's own date in shift mode.
+  description?: string;
+  /** Minutes between the task's start and its end (an end that is not the start). */
+  duration_minutes?: number;
+  location?: string;
+  color_hex?: string;
+  notifications_enabled?: boolean;
+  reminder_at_due?: boolean;
+  reminder_15m?: boolean;
+  reminder_30m?: boolean;
+  reminder_1h?: boolean;
+  reminder_24h?: boolean;
 }
 
 export async function createShiftTask(
@@ -70,7 +84,7 @@ export const isShiftTaskTimeUnsupportedError = (err: unknown): boolean =>
   codeOf(err) === 'SHIFT_TASK_TIME_UNSUPPORTED';
 
 /**
- * The save refusals ShiftTaskFormModal answers with its OWN copy (not the generic "couldn't add").
+ * The save refusals the shift task editor (AddEventModal, shift mode) answers with its OWN copy (not the generic "couldn't add").
  * `useAddShiftTask` reports them with `handled: true` so the digest can tell a handled refusal from a
  * failure. Keep in step with the modal's branches (pinned by its test). Mobile twin:
  * `SHIFT_TASK_HANDLED_CODES` in mobile/src/utils/shiftTasks.ts.

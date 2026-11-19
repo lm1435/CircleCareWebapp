@@ -137,6 +137,11 @@
       "titleOpen": "Liste de ce quart · {{done}} sur {{total}} faites",
       "titleOpenEmpty": "Liste de ce quart",
       "late": "En retard"
+    },
+    "editor": {
+      "repeatEvery": "À chaque fois que ce quart a lieu",
+      "owner": "La personne qui a ce quart",
+      "ownerOpen": "Personne n’a encore ce quart"
     }
   }
 }

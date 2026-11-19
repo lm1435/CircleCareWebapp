@@ -311,7 +311,10 @@
       "doneLabel": "Fatto, {{name}}",
       "takenLabel": "Presa, {{name}}",
       "missed": "Non segnata",
-      "late": "In ritardo"
+      "late": "In ritardo",
+      "editLabel": "Modifica {{name}}",
+      "viewLabel": "Vedi {{name}}",
+      "openHint": "Apre l'attività"
     },
     "card": {
       "progress": "{{done}} di {{total}} fatte"
@@ -324,6 +327,19 @@
     "editWarning_one": "{{count}} attività cade fuori dai nuovi orari. Resterà nel calendario come attività per chiunque.",
     "editWarning_other": "{{count}} attività cadono fuori dai nuovi orari. Resteranno nel calendario come attività per chiunque.",
     "deleteImpact_one": "Questo elimina anche la sua {{count}} attività in programma. Le attività completate restano nello storico.",
-    "deleteImpact_other": "Questo elimina anche le sue {{count}} attività in programma. Le attività completate restano nello storico."
+    "deleteImpact_other": "Questo elimina anche le sue {{count}} attività in programma. Le attività completate restano nello storico.",
+    "editor": {
+      "lockedDay": "{{date}} · durante {{shift}}",
+      "onShift": "Su {{shift}} · {{window}}",
+      "repeatEvery": "Ogni volta che questo turno si ripete",
+      "repeatLocked": "Si ripete con {{shift}}",
+      "owner": "Chi è di turno",
+      "ownerNow": "Ora: {{name}}",
+      "ownerOpen": "Nessuno è ancora di turno",
+      "sameSideOfMidnight": "Questa attività deve restare dallo stesso lato della mezzanotte. Eliminala e aggiungila di nuovo per spostarla.",
+      "deleteTask": "Elimina attività",
+      "deleted": "Attività eliminata",
+      "updated": "Attività aggiornata"
+    }
   }
 }

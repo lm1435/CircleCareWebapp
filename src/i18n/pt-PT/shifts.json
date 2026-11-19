@@ -156,6 +156,14 @@
       "titleYouEmpty": "A sua lista",
       "titleOpenEmpty": "Lista deste turno",
       "late": "Em atraso"
+    },
+    "editor": {
+      "repeatEvery": "Sempre que este turno acontecer",
+      "owner": "Quem estiver neste turno",
+      "ownerOpen": "Ainda não há ninguém neste turno",
+      "sameSideOfMidnight": "Esta tarefa tem de ficar do mesmo lado da meia-noite. Elimine-a e adicione-a de novo para a mudar.",
+      "deleteTask": "Eliminar tarefa",
+      "deleted": "Tarefa eliminada"
     }
   }
 }

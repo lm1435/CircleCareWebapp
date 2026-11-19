@@ -44,10 +44,10 @@ export function useShiftOccurrenceEvents(
   };
 }
 
-/** POST .../shift/tasks. The caller fires the analytics (it knows the entry point). */
+/** POST .../shift/tasks (ONE write carrying every field, 1.4.3). The caller fires the analytics (it knows the entry point). */
 export function useAddShiftTask(
   circleId: string
-): UseMutationResult<CalendarEvent, unknown, { shift: CalendarEvent; body: CreateShiftTaskBody }> {
+): UseMutationResult<CalendarEvent, unknown, { shift: Pick<CalendarEvent, 'id'>; body: CreateShiftTaskBody }> {
   const queryClient = useQueryClient();
   // The cache / paywall half of a failed shift write; the words are the form's (inline or toast).
   const onError = useShiftMutationOnError(circleId, 'create', SHIFT_TASK_HANDLED_CODES);

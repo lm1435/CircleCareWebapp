@@ -590,6 +590,14 @@ describe('W5: no unreferenced en keys', () => {
     'shifts:tasks.form.delete',
     'shifts:tasks.form.editTitle',
     'shifts:tasks.form.explainOnce',
+    // 1.4.3: the two-field shift task form is retired on web (the full task editor in shift mode replaced it).
+    // These leaves stay because shiftTasksCopyParity pins them against mobile's copy.
+    'shifts:tasks.form.errorName',
+    'shifts:tasks.form.name',
+    'shifts:tasks.form.namePlaceholder',
+    'shifts:tasks.form.onlyDateHint',
+    'shifts:tasks.form.save',
+    'shifts:tasks.form.time',
     // Mobile-parity Wave 2, Task 9. Added ahead of the UI that consumes them so
     // both locales land in one reviewable change:
     //   `addMenu.*` -> Task 10 `AddMenu`

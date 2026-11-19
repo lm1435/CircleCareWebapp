@@ -311,7 +311,10 @@
       "doneLabel": "Concluído, {{name}}",
       "takenLabel": "Tomado, {{name}}",
       "missed": "Não marcado",
-      "late": "Atrasado"
+      "late": "Atrasado",
+      "editLabel": "Editar {{name}}",
+      "viewLabel": "Ver {{name}}",
+      "openHint": "Abre a tarefa"
     },
     "card": {
       "progress": "{{done}} de {{total}} concluídas"
@@ -324,6 +327,19 @@
     "editWarning_one": "{{count}} tarefa fica fora do novo horário. Ela continuará no calendário como tarefa para qualquer pessoa.",
     "editWarning_other": "{{count}} tarefas ficam fora do novo horário. Elas continuarão no calendário como tarefas para qualquer pessoa.",
     "deleteImpact_one": "Isso também exclui {{count}} tarefa futura deste plantão. As tarefas concluídas ficam no histórico.",
-    "deleteImpact_other": "Isso também exclui {{count}} tarefas futuras deste plantão. As tarefas concluídas ficam no histórico."
+    "deleteImpact_other": "Isso também exclui {{count}} tarefas futuras deste plantão. As tarefas concluídas ficam no histórico.",
+    "editor": {
+      "lockedDay": "{{date}} · durante {{shift}}",
+      "onShift": "Em {{shift}} · {{window}}",
+      "repeatEvery": "Toda vez que este plantão acontecer",
+      "repeatLocked": "Repete com {{shift}}",
+      "owner": "Quem estiver neste plantão",
+      "ownerNow": "Agora: {{name}}",
+      "ownerOpen": "Ainda não há ninguém neste plantão",
+      "sameSideOfMidnight": "Esta tarefa precisa ficar do mesmo lado da meia-noite. Exclua e adicione de novo para mudá-la.",
+      "deleteTask": "Excluir tarefa",
+      "deleted": "Tarefa excluída",
+      "updated": "Tarefa atualizada"
+    }
   }
 }
