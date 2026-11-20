@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { previewVideoSource, type PreviewVideoSource } from '@/lib/previewVideo';
+import { previewVideoMayBeMissing, previewVideoSource, type PreviewVideoSource } from '@/lib/previewVideo';
 import { prefersReducedMotion } from '@/components/ui/motion';
 import { Icon } from '@/components/ui';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -58,6 +58,20 @@ function PreviewVideo({
   const started = useRef(false);
   const completed = useRef(false);
   const failed = useRef(false);
+
+  // A <video poster> that 404s fails silently (no event): probe it, and hand over to the carousel.
+  useEffect(() => {
+    const probe = new Image();
+    probe.onerror = () => {
+      if (failed.current) return;
+      failed.current = true;
+      onFailed();
+    };
+    probe.src = video.poster;
+    return () => {
+      probe.onerror = null;
+    };
+  }, [video.poster]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const el = ref.current;
@@ -118,7 +132,10 @@ function PreviewVideo({
           onError={() => {
             if (failed.current) return;
             failed.current = true;
-            Analytics.previewVideoFailed(video.language, 'web');
+            // A missing file (language not uploaded yet) before any frame is not a failure to report.
+            if (started.current || !previewVideoMayBeMissing(video.language)) {
+              Analytics.previewVideoFailed(video.language, 'web');
+            }
             onFailed();
           }}
         />

@@ -142,16 +142,61 @@ describe('HowItWorksPage video', () => {
   });
 
   it.each(['fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT'])(
-    'N: app language %s has no uploaded video yet -> the carousel, no player, no preview_video_failed',
+    'P: app language %s plays its own address',
     async (lang) => {
       await i18n.changeLanguage(lang);
       renderPage();
-      expect(screen.queryByTestId('preview-video')).toBeNull();
-      expect(document.querySelector('video')).toBeNull();
-      expect(Analytics.previewVideoFailed).not.toHaveBeenCalled();
-      expect(Analytics.previewVideoStarted).not.toHaveBeenCalled();
+      expect(video().getAttribute('src')).toBe(`${BASE}/preview-demo-${lang}-16x9.mp4`);
     }
   );
+
+  it('N: a missing fr file (video error before any frame) shows the carousel and fires NO preview_video_failed', async () => {
+    await i18n.changeLanguage('fr');
+    renderPage();
+    act(() => {
+      fireEvent.error(video());
+    });
+    expect(screen.queryByTestId('preview-video')).toBeNull();
+    expect(Analytics.previewVideoFailed).not.toHaveBeenCalled();
+  });
+
+  it('P: a real failure in fr after playback started still reports', async () => {
+    await i18n.changeLanguage('fr');
+    renderPage();
+    fireEvent.play(video());
+    act(() => {
+      fireEvent.error(video());
+    });
+    expect(Analytics.previewVideoFailed).toHaveBeenCalledWith('fr', 'web');
+  });
+
+  it('N: reduced motion + a missing poster shows the carousel, not a broken image, no failure event', async () => {
+    reduceMotion = true;
+    await i18n.changeLanguage('fr');
+    const instances: { onerror: null | (() => void); src: string }[] = [];
+    const RealImage = window.Image;
+    vi.stubGlobal(
+      'Image',
+      class {
+        onerror: null | (() => void) = null;
+        src = '';
+        constructor() {
+          instances.push(this);
+        }
+      }
+    );
+    try {
+      renderPage();
+      expect(instances.at(-1)?.src).toBe(`${BASE}/preview-demo-fr-16x9.jpg`);
+      act(() => {
+        instances.at(-1)?.onerror?.();
+      });
+      expect(screen.queryByTestId('preview-video')).toBeNull();
+      expect(Analytics.previewVideoFailed).not.toHaveBeenCalled();
+    } finally {
+      vi.stubGlobal('Image', RealImage);
+    }
+  });
 
   it('N: a build with a local http storage base shows the carousel, no player source, no video events (mobile 630d46cb)', () => {
     const original = env.VITE_SUPABASE_URL;

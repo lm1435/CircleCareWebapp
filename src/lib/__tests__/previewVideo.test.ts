@@ -1,13 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { PREVIEW_VIDEO_LANGUAGES, previewVideoSource, previewVideoStorageBase } from '@/lib/previewVideo';
+import { previewVideoMayBeMissing, previewVideoSource, previewVideoStorageBase } from '@/lib/previewVideo';
 
 // 1.4.3 "See how it works" video: a FIXED address per app language (no app
 // config). Mirrors mobile src/__tests__/utils/previewVideo.test.ts.
 const HOST = 'https://x.supabase.co';
 const DIR = `${HOST}/storage/v1/object/public/help-videos`;
-const LANGS = ['en', 'es'] as const;
-const NOT_UPLOADED = ['fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT'] as const;
+const LANGS = ['en', 'es', 'fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT'] as const;
 
 describe('previewVideoSource', () => {
   it.each(LANGS)('P: %s -> its own 16:9 file and poster', (lang) => {
@@ -18,23 +17,20 @@ describe('previewVideoSource', () => {
     });
   });
 
-  it.each(NOT_UPLOADED)('N: %s has no uploaded file yet -> null (carousel), never a URL that 400s', (lang) => {
-    expect(previewVideoSource(lang, '16x9', HOST)).toBeNull();
-    expect(previewVideoSource(lang, '4x5', HOST)).toBeNull();
-  });
-
-  it('P: the uploaded list is exactly en + es (add a language here when its video exists)', () => {
-    expect([...PREVIEW_VIDEO_LANGUAGES]).toEqual(['en', 'es']);
+  it('P: only non-en/es languages may be missing (analytics skip), and nothing is gated', () => {
+    expect(previewVideoMayBeMissing('en')).toBe(false);
+    expect(previewVideoMayBeMissing('es')).toBe(false);
+    expect(previewVideoMayBeMissing('fr')).toBe(true);
   });
 
   it('P: the cut is part of the name (4x5 on the phone, 16x9 on the web)', () => {
     expect(previewVideoSource('es', '4x5', HOST)?.src).toBe(`${DIR}/preview-demo-es-4x5.mp4`);
   });
 
-  it('P: regional tags resolve as i18n does (es-MX -> es); a regional tag of a language with no file stays null', () => {
+  it('P: regional tags resolve as i18n does (es-MX -> es); regional tags of other languages map to their file', () => {
     expect(previewVideoSource('es-MX', '16x9', HOST)?.language).toBe('es');
-    expect(previewVideoSource('pt_PT', '16x9', HOST)).toBeNull();
-    expect(previewVideoSource('fr-ca', '16x9', HOST)).toBeNull();
+    expect(previewVideoSource('pt_PT', '16x9', HOST)?.language).toBe('pt-PT');
+    expect(previewVideoSource('fr-ca', '16x9', HOST)?.language).toBe('fr-CA');
   });
 
   it.each(['ja', 'zz-ZZ', '', null, undefined])('P: unknown language %p -> en', (lang) => {

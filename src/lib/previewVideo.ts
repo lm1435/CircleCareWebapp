@@ -3,8 +3,9 @@ import { normalizeLocale, type SupportedLanguage } from '@/i18n/locales';
 
 /**
  * "See how it works" preview video (1.4.3): a FIXED address per app language,
- * no app config, no settings. Only the languages in PREVIEW_VIDEO_LANGUAGES have a file yet (the rest get null = the carousel); replacing a video =
- * overwriting the file in the public `help-videos` bucket.
+ * no app config, no settings. Every supported language returns its address, uploaded or not: uploading a language's file makes it live with no
+ * app update. A file that is not there yet falls back to the carousel in the caller; replacing a video = overwriting
+ * the file in the public `help-videos` bucket.
  *
  *   {SUPABASE_URL}/storage/v1/object/public/help-videos/preview-demo-{lang}-{cut}.mp4
  *   poster: the same name with `.jpg`
@@ -31,9 +32,9 @@ export interface PreviewVideoSource {
 }
 
 /**
- * Languages whose preview-video file is UPLOADED to the `help-videos` bucket. Add a language here when its video is
- * recorded and uploaded (the other languages return null, so the caller shows the carousel: no 400, no
- * preview_video_failed, no broken poster).
+ * DOCUMENTATION + analytics only, never a gate: the languages whose file is known to be uploaded to `help-videos`.
+ * previewVideoSource returns an address for every language. A load failure in any other language is probably a file
+ * not uploaded yet (callers fall back to the carousel and skip preview_video_failed, see previewVideoMayBeMissing).
  */
 export const PREVIEW_VIDEO_LANGUAGES: readonly SupportedLanguage[] = ['en', 'es'];
 
@@ -50,7 +51,7 @@ export function previewVideoStorageBase(configured: string | null | undefined): 
   return null;
 }
 
-/** The fixed preview-video file for the app language and cut; null when the build has no https storage base or the language has no uploaded video yet. */
+/** The fixed preview-video file for the app language and cut; null only when the build has no https storage base. */
 export function previewVideoSource(
   language: string | null | undefined,
   cut: PreviewVideoCut,
@@ -59,7 +60,11 @@ export function previewVideoSource(
   const storage = previewVideoStorageBase(base);
   if (!storage) return null;
   const lang = normalizeLocale(language);
-  if (!PREVIEW_VIDEO_LANGUAGES.includes(lang)) return null;
   const name = `${storage}${BUCKET_PATH}preview-demo-${lang}-${cut}`;
   return { src: `${name}.mp4`, poster: `${name}.jpg`, language: lang };
+}
+
+/** True when a load failure before any frame is most likely a file not uploaded yet (not en/es): do not report it. */
+export function previewVideoMayBeMissing(language: string): boolean {
+  return !(PREVIEW_VIDEO_LANGUAGES as readonly string[]).includes(language);
 }
