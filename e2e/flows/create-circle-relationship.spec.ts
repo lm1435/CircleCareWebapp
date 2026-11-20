@@ -1,6 +1,7 @@
 import { test, expect } from '../fixtures';
 import { dbQuery, sqlStr } from '../unhappy';
-import { cookieLogin, createScopedAccount, uniq, type ScopedAccount } from '../unhappy/auth-invites/_helpers';
+import { apiSession } from '../unhappy';
+import { cookieLogin, createCircle, createScopedAccount, uniq, type ScopedAccount } from '../unhappy/auth-invites/_helpers';
 
 // 1.4.2: "Who are you caring for?" on the web create-circle form, mobile parity
 // (mobile/src/screens/circle/CreateCircleScreen.tsx + Maestro auth/first-run-wizard).
@@ -15,15 +16,20 @@ test.describe('create circle: Who are you caring for? (1.4.2, mobile parity)', (
   test.setTimeout(90_000);
   let acct: ScopedAccount;
 
-  test.beforeEach(async ({ page: _page, context, baseURL }) => {
+  test.beforeEach(async ({ page: _page, context, baseURL, request }) => {
     void _page;
     acct = await createScopedAccount('rel');
     await cookieLogin(context, acct, baseURL);
+    // 1.4.3 first run v2: a first circle forms from the one question, so this form (the chips) is the picker's
+    // "Create circle" for a FURTHER circle. Two circles exist (a single one skips the picker); the account is premium.
+    const api = await apiSession(request, acct);
+    await createCircle(api, uniq('relA'));
+    await createCircle(api, uniq('relB'));
   });
 
   async function openCreate(page: import('@playwright/test').Page) {
     await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: /^(Start a care circle|Create circle)$/ }).first().click();
+    await page.getByRole('button', { name: 'Create circle', exact: true }).first().click();
     return page.getByRole('dialog');
   }
 

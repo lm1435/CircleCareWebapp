@@ -370,6 +370,16 @@ const SURFACES: Surface[] = [
   },
 ];
 
+const ABORT_RESENT = new Set([
+  'care note post (NotesPage)',
+  'event note create (EventNotesPanel)',
+  'vital add (VitalFormModal)',
+  'emergency medical info (EditMedicalInfoModal)',
+  'circle settings (EditCirclePage)',
+  'invite member (InviteMemberModal)',
+  'create circle (CreateCircleModal)',
+]);
+
 const FAULTS: Array<{ label: string; fault: FaultOptions }> = [
   { label: 'HTTP 500', fault: { status: 500, code: 'SERVER_ERROR', message: 'Internal server error' } },
   { label: 'network abort', fault: { abort: true } },
@@ -388,22 +398,37 @@ for (const surface of SURFACES) {
       try {
         const save = await surface.prepare(ctx);
         // One save = the first attempt plus the surface's automatic resends; the fault outlasts them all.
-        const perSave = 1 + (surface.autoRetries ?? 0);
-        const injected = await failRequest(page, surface.method, surface.path, { ...fault, times: perSave });
+        // 1.4.3 (1a6c4c4, 4a6c0df): a write that got NO answer (network abort) is resent by the API client / quiet
+        // retry with the SAME Idempotency-Key (1/3/7 s ladder) before the person sees an error; how many resends a
+        // surface gets depends on its route class, so for those surfaces the fault outlasts the whole ladder and the
+        // attempts actually made are counted. A 500 is an answer and is never resent.
+        const resentOnAbort = (fault.abort && ABORT_RESENT.has(surface.name)) || !!surface.autoRetries;
+        let perSave = 1 + (surface.autoRetries ?? 0);
+        const injected = await failRequest(page, surface.method, surface.path, {
+          ...fault,
+          times: resentOnAbort ? 4 : perSave,
+        });
         const sent = countRequests(page, surface.method, surface.path);
         const idempotencyKeys = () => sent.requests.map((r) => r.headers()['idempotency-key']);
 
         await save.click();
-        await injected.expectHits(perSave, { timeoutMs: 20_000 });
-        await expect(errorToast(page, surface.toast)).toBeVisible({ timeout: 15_000 });
+        if (resentOnAbort) {
+          await expect(errorToast(page, surface.toast)).toBeVisible({ timeout: 45_000 });
+          await injected.dispose();
+          perSave = injected.hits;
+          expect(perSave, 'the no-answer save was resent at least once before the error').toBeGreaterThan(1);
+        } else {
+          await injected.expectHits(perSave, { timeoutMs: 20_000 });
+          await expect(errorToast(page, surface.toast)).toBeVisible({ timeout: 15_000 });
+        }
         await expect(errorToast(page, surface.toast)).toHaveCount(1);
         await surface.inputKept(ctx);
         await expect(save).toBeEnabled();
         expect(sent.count, 'one save (and its automatic resends) so far').toBe(perSave);
         if (perSave > 1) {
           const keys = idempotencyKeys();
-          expect(keys[0], 'the save carries an Idempotency-Key').toBeTruthy();
-          expect(new Set(keys).size, `the resends reuse the save's key: ${keys.join(', ')}`).toBe(1);
+          // Keyed POSTs carry one Idempotency-Key through every resend; a PATCH/PUT is idempotent by itself and has none.
+          if (keys[0]) expect(new Set(keys).size, `the resends reuse the save's key: ${keys.join(', ')}`).toBe(1);
         }
         expect(dbCount(surface.rows(ctx)), 'nothing written by the failed attempt').toBe(0);
 
@@ -415,7 +440,7 @@ for (const surface of SURFACES) {
           await save.click({ timeout: 2_000 });
           await expect(inlineError, 'the retry clears the inline error').toHaveCount(0);
           await surface.succeeded(ctx);
-          await sent.expectCount(2);
+          await sent.expectCount(perSave + 1);
           expect(dbCount(surface.rows(ctx)), 'exactly one row after the retry').toBe(1);
           sent.dispose();
           return;
@@ -473,7 +498,8 @@ for (const surface of SURFACES) {
         ).toBe(true);
         await surface.succeeded(ctx);
         await sent.expectCount(perSave + 1);
-        if (perSave > 1) {
+        // Circle create (8026e13) deliberately reuses its key for the user's retry after a no-answer failure.
+        if (perSave > 1 && idempotencyKeys()[0] && !(fault.abort && surface.name.startsWith('create circle'))) {
           expect(idempotencyKeys()[perSave], 'the user\'s retry is a NEW save with a new key').not.toBe(idempotencyKeys()[0]);
         }
         expect(dbCount(surface.rows(ctx)), 'exactly one row after the retry').toBe(1);

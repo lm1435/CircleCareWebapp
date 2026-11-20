@@ -525,6 +525,9 @@ test.describe('shift tasks', () => {
     await form.getByRole('textbox', { name: /^Title/ }).fill('Walk with Rosa');
     await fillSimpleTime(form, '10:00');
     await (await unfoldSimpleEnd(form)).fill('10:45');
+    // Details sits in the folded "More details" (the end time was already visible, so nothing opened it).
+    const moreDetails = form.getByRole('button', { name: /^More details/ });
+    if ((await moreDetails.count()) > 0 && (await moreDetails.getAttribute('aria-expanded')) !== 'true') await moreDetails.click();
     await form.getByLabel(/^Details/).fill('Slow pace, the garden loop');
     await expandReminders(form);
     await form.getByRole('checkbox', { name: /15 minutes before/i }).click();
@@ -652,7 +655,7 @@ test.describe('shift tasks', () => {
     await detail.getByRole('button', { name: /^Edit One only/ }).click();
     await page.getByRole('dialog', { name: 'Edit task' }).getByTestId('add-event-delete').click();
     const confirm = page.getByRole('dialog', { name: 'Delete task' });
-    await confirm.getByRole('button', { name: 'Delete' }).click();
+    await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
     const back = page.getByRole('dialog', { name: 'Afternoons' });
     await expect(back.getByTestId('shift-task-row-name')).toHaveText(['Repeats daily'], { timeout: 20_000 });
     await expect(page.getByText('Task deleted')).toBeVisible();
@@ -663,11 +666,14 @@ test.describe('shift tasks', () => {
     const scope = page.getByRole('dialog', { name: 'Delete task' });
     await expect(scope.getByRole('radio', { name: 'This task only' })).toBeChecked();
     await scope.getByRole('radio', { name: 'This and all future tasks' }).click();
-    await scope.getByRole('button', { name: 'Delete' }).click();
+    await scope.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'Afternoons' }).getByTestId('shift-task-row')).toHaveCount(0, {
       timeout: 20_000,
     });
-    expect(datesOf(await occurrences(s, 'Repeats daily', s.today, dateInTz(s.tz, 5)))).toEqual([]);
+    // The row leaves the list at once; the server delete settles a moment later (poll, do not read it once).
+    await expect
+      .poll(async () => datesOf(await occurrences(s, 'Repeats daily', s.today, dateInTz(s.tz, 5))), { timeout: 20_000 })
+      .toEqual([]);
   });
 
   test('a completed row opens the read-only detail (notes, Delete, no Edit); a medication row is not tappable', async ({ page }) => {
