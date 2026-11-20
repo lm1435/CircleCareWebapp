@@ -15,6 +15,7 @@ import {
   shiftWindow,
   tasksBucket,
   timeInsideShiftWindow,
+  windowDayForTime,
 } from '../shiftTasks';
 
 // docs/plans/shift-tasks.md: the list rules, mirrored client-side from the owner's edge-case fixture:
@@ -499,5 +500,18 @@ describe('rowMatchesHighlight', () => {
     expect(rowMatchesHighlight(row('t2'), 't1')).toBe(false);
     expect(rowMatchesHighlight(row('t10'), 't1')).toBe(false);
     expect(rowMatchesHighlight(row('t10_2026-11-10', 't10'), 't1')).toBe(false);
+  });
+});
+
+describe('windowDayForTime ("Add to this shift": the day a start falls on inside the window)', () => {
+  const night = { scheduledDate: '2026-11-10', startTime: '20:00' };
+  it('POS a time at or after the shift start is the shift day; a time before it is the NEXT day', () => {
+    expect(windowDayForTime(night, '20:00')).toBe('2026-11-10');
+    expect(windowDayForTime(night, '23:30')).toBe('2026-11-10');
+    expect(windowDayForTime(night, '02:00')).toBe('2026-11-11');
+  });
+  it('NEG a same-day shift never moves the day for an in-window time, and month ends roll correctly', () => {
+    expect(windowDayForTime({ scheduledDate: '2026-11-10', startTime: '14:00' }, '16:00')).toBe('2026-11-10');
+    expect(windowDayForTime({ scheduledDate: '2026-11-30', startTime: '20:00' }, '01:00')).toBe('2026-12-01');
   });
 });

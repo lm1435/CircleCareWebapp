@@ -273,7 +273,8 @@ test.describe('shift tasks', () => {
 
     // Add from the detail: a one-off ("Only <date>").
     await expect(detail.getByTestId('shift-detail-add-task')).toHaveAttribute('data-variant', 'ghost');
-    await detail.getByRole('button', { name: 'Add a task', exact: true }).click();
+    await detail.getByRole('button', { name: 'Add to this shift', exact: true }).click();
+    await page.getByTestId('shift-add-task').click();
     const second = page.getByRole('dialog', { name: 'New task' });
     await second.getByRole('textbox', { name: /^Title/ }).fill('Walk');
     await fillSimpleTime(second, '15:00');
@@ -520,7 +521,8 @@ test.describe('shift tasks', () => {
     await seedShift(s);
     const writes = watchWrites(page);
     const detail = await openDay(page);
-    await detail.getByRole('button', { name: 'Add a task', exact: true }).click();
+    await detail.getByRole('button', { name: 'Add to this shift', exact: true }).click();
+    await page.getByTestId('shift-add-task').click();
     const form = page.getByRole('dialog', { name: 'New task' });
     await form.getByRole('textbox', { name: /^Title/ }).fill('Walk with Rosa');
     await fillSimpleTime(form, '10:00');
@@ -626,7 +628,8 @@ test.describe('shift tasks', () => {
     const writes = watchWrites(page);
 
     // add
-    await detail.getByRole('button', { name: 'Add a task', exact: true }).click();
+    await detail.getByRole('button', { name: 'Add to this shift', exact: true }).click();
+    await page.getByTestId('shift-add-task').click();
     const add = page.getByRole('dialog', { name: 'New task' });
     await expect(add.getByTestId('shift-task-time-hint')).toHaveText('Between 10:00 AM and 2:00 PM');
     await add.getByRole('textbox', { name: /^Title/ }).fill('Too early');

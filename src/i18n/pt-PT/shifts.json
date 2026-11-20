@@ -149,6 +149,15 @@
     "count_one": "{{count}} turno",
     "count_other": "{{count}} turnos"
   },
+  "add": {
+    "button": "Adicionar a este turno",
+    "title": "Adicionar a este turno",
+    "taskHint": "Algo para fazer durante o turno",
+    "medicationHint": "Um novo medicamento com uma dose neste turno",
+    "appointmentHint": "Uma visita ou chamada durante o turno",
+    "lockedHint": "Fixado no turno",
+    "emptyHint": "Adicione uma tarefa, um medicamento ou uma consulta para quem ficar com este turno."
+  },
   "tasks": {
     "list": {
       "titleYou": "A sua lista · {{done}} de {{total}} concluídas",

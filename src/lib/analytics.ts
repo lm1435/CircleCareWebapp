@@ -544,6 +544,7 @@ const SHIFT_ASSIGN_ROLES = ['owner', 'manager'] as const;
 const SHIFT_TEASER_SOURCES = ['toggle', 'add_menu', 'shifts_nudge'] as const;
 // Shift tasks (docs/plans/shift-tasks.md section 8): closed enums, identical on mobile.
 const SHIFT_TASK_SOURCES = ['saved_sheet', 'shift_detail'] as const;
+const SHIFT_ITEM_TYPES = ['task', 'medication', 'appointment'] as const;
 const SHIFT_TASK_SURFACES = ['shift_detail', 'today', 'tasks', 'calendar'] as const;
 const SHIFT_TASK_TASKS_BUCKETS = ['0', '1', '2-3', '4+'] as const;
 const SHIFT_TASK_DONE_BUCKETS = ['none', 'some', 'all'] as const;
@@ -2051,6 +2052,9 @@ export const Analytics = {
       shift_repeats: opts.shiftRepeats === true,
       next_day: opts.nextDay === true,
     }),
+  // "Add to this shift" (1.4.3): one event per successful save of an item added from a shift; enum only.
+  shiftItemAdded: (opts: { type: string }) =>
+    capture('shift_item_added', { type: pickEnum(opts.type, SHIFT_ITEM_TYPES, 'task') }),
   shiftTaskCompleted: (opts: { surface: string }) =>
     capture('shift_task_completed', {
       surface: pickEnum(opts.surface, SHIFT_TASK_SURFACES, 'tasks'),

@@ -21,7 +21,8 @@ import { ShiftComposer } from './ShiftComposer';
 import { ShiftDetailModal, type ShiftDetailAction } from './ShiftDetailModal';
 import { ShiftFormModal, type ShiftFormSource } from './ShiftFormModal';
 import { ShiftScopeDialog } from './ShiftScopeDialog';
-import { shiftContextFromShift, type ShiftListRow } from './shiftTasks';
+import { shiftContextFromShift, type ShiftListRow, type ShiftWindowContext } from './shiftTasks';
+import { ShiftAddChooser } from './ShiftAddChooser';
 import { TakeShiftDialog } from './TakeShiftDialog';
 import { holdsOnlyThisDay, isShiftRepeating, memberShortName } from './shiftUtils';
 
@@ -29,6 +30,9 @@ type Active =
   // `highlightTaskId`: a task save just came back here; its row gets the moss ring once.
   | { kind: 'detail'; shift: CalendarEvent; highlightTaskId?: string | null }
   | { kind: 'take' | 'drop' | 'assign' | 'edit' | 'delete' | 'addTask'; shift: CalendarEvent }
+  // "Add to this shift" (1.4.3): the chooser replaces the detail, and the medication / appointment forms (window
+  // mode) replace the chooser. Every close path of each returns to the detail.
+  | { kind: 'addChooser' | 'addMedication' | 'addAppointment'; shift: CalendarEvent }
   // A task row tapped on the detail (1.4.3): the editor, the read-only detail of a completed one, and
   // that detail's Delete. ONE dialog at a time: the detail is replaced, and every close path returns to it.
   | { kind: 'editTask' | 'viewTask' | 'deleteTask'; shift: CalendarEvent; task: ShiftListRow }
@@ -131,6 +135,12 @@ function ActiveDialog({
     [shiftForContext, members, viewerId]
   );
 
+  // Window mode of the medication / appointment forms: the same stable context plus who holds the shift.
+  const shiftWindow = useMemo<ShiftWindowContext | null>(
+    () => (shiftContext && shiftForContext ? { ...shiftContext, covererId: shiftForContext.assigned_to ?? null } : null),
+    [shiftContext, shiftForContext]
+  );
+
   // Classified failures close the dialog with a toast; a network / server failure
   // stays open with the message inline so the action can be retried.
   const fail = (err: unknown, verb: 'drop' | 'assign' | 'delete'): void => {
@@ -190,6 +200,34 @@ function ActiveDialog({
           shiftContext={shiftContext}
           onClose={() => setActive({ kind: 'detail', shift })}
           onShiftTaskSaved={({ taskId }) => setActive({ kind: 'detail', shift, highlightTaskId: taskId })}
+        />
+      );
+    case 'addChooser':
+      return (
+        <ShiftAddChooser
+          shift={shift}
+          onClose={() => setActive({ kind: 'detail', shift })}
+          onChoose={(choice) =>
+            setActive({
+              kind: choice === 'task' ? 'addTask' : choice === 'medication' ? 'addMedication' : 'addAppointment',
+              shift,
+            })
+          }
+        />
+      );
+    case 'addMedication':
+    case 'addAppointment':
+      // The FULL medication / appointment form in window mode: an ordinary event created through the normal
+      // path (not linked to the shift). Closing it any way, or a save, returns to the detail.
+      return (
+        <AddEventModal
+          circleId={circleId}
+          initialType={active.kind === 'addMedication' ? 'medication' : 'appointment'}
+          entry="shift_detail"
+          shiftWindow={shiftWindow}
+          onClose={() => setActive({ kind: 'detail', shift })}
+          // The new row is ringed on the detail ("Also happening" opens itself for an appointment).
+          onShiftItemSaved={({ id }) => setActive({ kind: 'detail', shift, highlightTaskId: id })}
         />
       );
     case 'editTask': {

@@ -271,6 +271,20 @@
     "count_one": "{{count}} shift",
     "count_other": "{{count}} shifts"
   },
+  "add": {
+    "button": "Add to this shift",
+    "title": "Add to this shift",
+    "subtitle": "{{date}}, {{start}} – {{end}}",
+    "task": "Task",
+    "taskHint": "Something to do during the shift",
+    "medication": "Medication",
+    "medicationHint": "A new medicine with a dose in this shift",
+    "appointment": "Appointment",
+    "appointmentHint": "A visit or call during the shift",
+    "cancel": "Cancel",
+    "lockedHint": "Locked to shift",
+    "emptyHint": "Add a task, a medication or an appointment for whoever takes this shift."
+  },
   "tasks": {
     "addTask": "Add a task to this shift",
     "added": "Task added",

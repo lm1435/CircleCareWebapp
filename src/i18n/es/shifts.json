@@ -271,6 +271,20 @@
     "count_one": "{{count}} turno",
     "count_other": "{{count}} turnos"
   },
+  "add": {
+    "button": "Agregar a este turno",
+    "title": "Agregar a este turno",
+    "subtitle": "{{date}}, {{start}} – {{end}}",
+    "task": "Tarea",
+    "taskHint": "Algo que hacer durante el turno",
+    "medication": "Medicamento",
+    "medicationHint": "Un medicamento nuevo con una dosis en este turno",
+    "appointment": "Cita",
+    "appointmentHint": "Una visita o llamada durante el turno",
+    "cancel": "Cancelar",
+    "lockedHint": "Fijado al turno",
+    "emptyHint": "Agrega una tarea, un medicamento o una cita para quien cubra este turno."
+  },
   "tasks": {
     "addTask": "Agregar una tarea a este turno",
     "added": "Tarea agregada",

@@ -239,6 +239,7 @@ describe('shift detail: task rows open the editor (modal swap)', () => {
   it('P-add Add a task opens the full editor; a save returns with the new row ringed and one POST was sent', async () => {
     const { user } = await openDetail();
     await user.click(within(detail()).getAllByTestId('shift-detail-add-task')[0]);
+    await user.click(await screen.findByTestId('shift-add-task'));
     const editor = await screen.findByRole('dialog', { name: 'New task' });
     expect(within(editor).getByTestId('shift-task-chip')).toBeInTheDocument();
     await user.type(within(editor).getByRole('textbox', { name: /^Title/ }), 'Help with lunch');
@@ -253,6 +254,7 @@ describe('shift detail: task rows open the editor (modal swap)', () => {
   it('closing the Add editor without saving returns to the detail with no ring', async () => {
     const { user } = await openDetail();
     await user.click(within(detail()).getAllByTestId('shift-detail-add-task')[0]);
+    await user.click(await screen.findByTestId('shift-add-task'));
     await user.click(await screen.findByRole('button', { name: 'Cancel' }));
     expect(await screen.findByRole('dialog', { name: 'Afternoons' })).toBeInTheDocument();
     expect(screen.queryByTestId('highlight-ring')).toBeNull();

@@ -53,6 +53,8 @@ import {
   crossesMidnightSide,
   defaultShiftTaskTime,
   shiftContextFromLink,
+  windowDayForTime,
+  type ShiftWindowContext,
   timeInsideShiftWindow,
   type ShiftTaskContext,
   type ShiftTimeDefault,
@@ -262,6 +264,19 @@ export interface AddEventModalProps {
    * the shift detail can ring the row. Omitted = `onClose`.
    */
   onShiftTaskSaved?: (result: { mode: 'add' | 'edit'; taskId: string }) => void;
+  /**
+   * WINDOW MODE (1.4.3, "Add to this shift"): the medication or appointment form opened from a shift. The day is
+   * locked to the shift day, the (first dose's / start) time defaults inside the window and must stay inside it
+   * (an after-midnight time of an overnight shift is the NEXT day), and an appointment's "Who's going" opens on the
+   * shift's coverer. The item is an ordinary event created through the normal path: NOT linked to the shift.
+   * Create only; ignored for a task (that is `shiftContext`) and when editing.
+   */
+  shiftWindow?: ShiftWindowContext | null;
+  /**
+   * Window mode: called after a save INSTEAD of `onClose`, with the new item's id, so the shift detail can ring its
+   * row. Omitted = `onClose`.
+   */
+  onShiftItemSaved?: (result: { type: 'medication' | 'appointment'; id: string }) => void;
   /** The Delete button's confirmed delete went through (the editor then closes). */
   onDeleted?: () => void;
 }
@@ -670,6 +685,8 @@ function AddEventForm({
   onFirstRunItemSaved,
   typeSwitch,
   shiftContext,
+  shiftWindow,
+  onShiftItemSaved,
   onShiftTaskSaved,
   onDeleted,
 }: AddEventModalProps & {
@@ -695,6 +712,8 @@ function AddEventForm({
   // without a shift context takes none of them (the payload suites pin that).
   const shiftMode: ShiftTaskContext | null = simpleKind === 'task' ? (shiftContext ?? null) : null;
   const shiftDay = shiftMode?.scheduledDate ?? '';
+  // WINDOW MODE (1.4.3): a NEW medication / appointment opened from a shift's "Add to this shift".
+  const windowMode: ShiftWindowContext | null = simpleKind !== 'task' && !isEditing ? (shiftWindow ?? null) : null;
   // Edits ALWAYS target the parent series (mobile has no "this event only" edit).
   const targetEventId = isEditing ? event.parent_event_id || event.id : undefined;
   // Editing any instance of a recurring event rewrites the whole series — warn.
@@ -849,7 +868,7 @@ function AddEventForm({
   });
   const presetApplied = useRef(false);
   const [description, setDescription] = useState(event?.description ?? '');
-  const [assignedTo, setAssignedTo] = useState<string | null>(event?.assigned_to ?? null);
+  const [assignedTo, setAssignedTo] = useState<string | null>(event?.assigned_to ?? windowMode?.covererId ?? null);
 
   // An edit hydrates from the stored rule; a create may carry the wizard's
   // hand-off answer. `parseRecurrence` maps null/undefined to 'none', so an
@@ -1535,6 +1554,29 @@ function AddEventForm({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the zone is known
   }, [shiftMode, timezone, isEditing]);
+  /**
+   * WINDOW MODE (1.4.3): the same opening time as a shift task (next half hour inside the window when the shift is
+   * now, else the shift start), on the shift day (the NEXT day for an after-midnight time). An appointment also
+   * opens with its end (the form's usual 30 minutes); a medication has none.
+   */
+  const windowDefaultRef = useRef(false);
+  useEffect(() => {
+    if (!windowMode || !timezone || windowDefaultRef.current || datesTouched.current) return;
+    const slot = defaultShiftTaskTime(windowMode, timezone);
+    const viewer = eventDatesFromApi({
+      scheduledDate: windowDayForTime(windowMode, slot.time),
+      scheduledTime: slot.time,
+      timezone,
+    });
+    if (!viewer.timeStr) return;
+    windowDefaultRef.current = true;
+    datesTouched.current = true;
+    setDateStr(viewer.dateStr);
+    setTimeStr(viewer.timeStr);
+    setChipInstant(viewer.instant ?? null);
+    if (!isMedication) setEndTimeStr(presetEndFor(viewer.timeStr, DEFAULT_DURATION_MINUTES));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the zone is known
+  }, [windowMode, timezone]);
   // A linked task opened from the Tasks / Calendar pages (its context came off its own `shift` link). The shift
   // list reports its own taps (it knows linked vs regular and the completed rows).
   const editOpenedRef = useRef(false);
@@ -2160,6 +2202,7 @@ function AddEventForm({
 
   async function persist(data: CreateEventRequest, withExtraDoses = false): Promise<void> {
     let savedInfo: SavedMedicationInfo | undefined;
+    let windowItemId: string | null = null;
     try {
       if (isEditing && targetEventId) {
         await updateEvent.mutateAsync({ eventId: targetEventId, data });
@@ -2175,6 +2218,11 @@ function AddEventForm({
         else showToast(t(isRecurringEdit ? 'addEvent.updatedSeries' : 'addEvent.updated'), 'success');
       } else {
         const created = await createEvent.mutateAsync(data);
+        // "Add to this shift" (1.4.3): ONE count per saved item, after the write went through (enum only).
+        if (windowMode && (data.event_type === 'medication' || data.event_type === 'appointment')) {
+          Analytics.shiftItemAdded({ type: data.event_type });
+          windowItemId = created?.id ?? null;
+        }
         if (data.event_type === 'appointment' && data.provider_id) {
           Analytics.providerLinked({ source: 'add' });
         }
@@ -2329,7 +2377,11 @@ function AddEventForm({
       }
       savedRef.current = true;
       onSaved?.(savedInfo);
-      onClose();
+      if (windowMode && onShiftItemSaved && windowItemId && (eventType === 'medication' || eventType === 'appointment')) {
+        onShiftItemSaved({ type: eventType, id: windowItemId });
+      } else {
+        onClose();
+      }
     } catch (error) {
       // The mutation hooks surface their own permission/subscription/save toasts.
       // A REAL failure (the API refused or was unreachable): `error_code` is
@@ -2474,6 +2526,8 @@ function AddEventForm({
           shiftRepeats: mode.repeating,
           nextDay,
         });
+        // "Add to this shift" (1.4.3): the shared per-item count, beside the task's own event above.
+        Analytics.shiftItemAdded({ type: 'task' });
         showToast(t('shifts:tasks.added'), 'success');
       }
       Analytics.shiftTaskSaved({
@@ -2556,24 +2610,37 @@ function AddEventForm({
     }
 
     const built = buildPayload(timezone);
-    if (!built.ok) {
-      setErrors(built.errors);
+    // WINDOW MODE: the (first dose's / start) time must be inside the shift's window; refused here, before any write.
+    const windowOutside =
+      !!windowMode &&
+      !!recipientClock &&
+      !timeInsideShiftWindow(recipientClock, windowMode.startTime, windowMode.durationMinutes);
+    const blockedErrors: FieldErrors | null = !built.ok
+      ? windowOutside
+        ? { ...built.errors, scheduled_time: t('shifts:tasks.form.errorOutside') }
+        : built.errors
+      : windowOutside
+        ? { scheduled_time: t('shifts:tasks.form.errorOutside') }
+        : null;
+    if (!built.ok || blockedErrors) {
+      const errs: FieldErrors = blockedErrors ?? {};
+      setErrors(errs);
       Analytics.entryValidationBlocked(
         validationReason({
           hasTitle: title.trim().length > 0,
           isMedication,
           hasTime: !!timeStr,
           hasEndTime: !!endTimeStr,
-          errors: built.errors,
+          errors: errs,
         }),
         eventType
       );
       // Cover every field that can error so focus always lands on an errored
       // control — including the title id for the OTHER type and the Zod-derived
       // fields (description, location, dosage, recurrence) (WCAG SC 3.3.1).
-      const revealed = revealErrorFields(built.errors);
+      const revealed = revealErrorFields(errs);
       const focusErrors = (): void =>
-        focusFirstError(simpleFocusErrors(built.errors, simpleKind), SIMPLE_FOCUS_ORDER);
+        focusFirstError(simpleFocusErrors(errs, simpleKind), SIMPLE_FOCUS_ORDER);
       if (revealed) setTimeout(focusErrors, 0);
       else focusErrors();
       return;
@@ -2677,7 +2744,9 @@ function AddEventForm({
     (isAsNeeded || dateStr !== '') &&
     (!isMedication || isAsNeeded || timeStr !== '') &&
     // Shift mode: the time is required (no "Any time").
-    (!shiftMode || timeStr !== '');
+    (!shiftMode || timeStr !== '') &&
+    // Window mode: an appointment's start time is required too (no "Any time").
+    (!windowMode || timeStr !== '');
   // The first required field still empty, in the order the form lists them.
   const missingField: 'title' | 'date' | 'time' | null = requiredFilled
     ? null
@@ -3152,7 +3221,8 @@ function AddEventForm({
       // With no time the date IS the recipient's day (`eventDatesForApi`'s date-only branch), so the day stays
       // the recipient day the time was on: the viewer-frame day of a far-zone chip would otherwise become it, and
       // the next chip would land a day off (untap-then-tap is how the multi-select chips switch).
-      if (recipientStartDate) moveViewerDay(recipientStartDate);
+      if (windowMode) moveViewerDay(windowMode.scheduledDate);
+      else if (recipientStartDate) moveViewerDay(recipientStartDate);
       setTimeStr('');
       setChipInstant(null);
       setExtraDoses([]);
@@ -3160,8 +3230,11 @@ function AddEventForm({
     }
     if (!timezone) return;
     const viewer = eventDatesFromApi({
-      // A cleared start date falls back to the recipient's today, the day the form opened on.
-      scheduledDate: recipientStartDate ?? defaultNewEventDate(timezone),
+      // A cleared start date falls back to the recipient's today, the day the form opened on. Window mode: the
+      // shift day, or the next day for a time before the shift's start (the shift's overnight half).
+      scheduledDate: windowMode
+        ? windowDayForTime(windowMode, time)
+        : (recipientStartDate ?? defaultNewEventDate(timezone)),
       scheduledTime: time,
       timezone,
     });
@@ -3359,7 +3432,8 @@ function AddEventForm({
     clearError('scheduled_time');
     if (!next) {
       // With no time the date IS the circle's day: restore it (a far-zone time had moved the viewer day).
-      if (recipientStartDate) moveViewerDay(recipientStartDate);
+      if (windowMode) moveViewerDay(windowMode.scheduledDate);
+      else if (recipientStartDate) moveViewerDay(recipientStartDate);
       setTimeStr('');
       setChipInstant(null);
       setEndTimeStr('');
@@ -3367,7 +3441,9 @@ function AddEventForm({
     }
     if (!timezone || next === recipientClock) return;
     const viewer = eventDatesFromApi({
-      scheduledDate: recipientStartDate ?? defaultNewEventDate(timezone),
+      scheduledDate: windowMode
+        ? windowDayForTime(windowMode, next)
+        : (recipientStartDate ?? defaultNewEventDate(timezone)),
       scheduledTime: next,
       timezone,
     });
@@ -3644,8 +3720,39 @@ function AddEventForm({
   const repeatEndError =
     errors.recurrence_end_date ??
     (repeatEndBeforeStart ? t('shifts:validation.repeatEndBeforeStart') : undefined);
+  // WINDOW MODE: the Starts tile is the task's read-only locked day (no picker), with the small "Locked to shift" hint.
+  const windowStartsTile = windowMode ? (
+    <div className="flex min-w-0 flex-col gap-1">
+      <div
+        // card-shell-ok: read-only value tile matching the "When" tiles, not a card
+        className="flex min-w-0 flex-col gap-1 rounded-xl border border-line bg-bg-2 px-3 py-2"
+        data-testid="shift-window-locked-day"
+      >
+        <span className={VALUE_TILE_LABEL}>{t('addEvent.simple.starts')}</span>
+        <span className="text-base font-medium text-ink">
+          {t('shifts:tasks.editor.lockedDay', { date: dayText(windowMode.scheduledDate), shift: windowMode.title })}
+        </span>
+      </div>
+      <Text variant="caption" data-testid="shift-window-locked-hint">
+        {t('shifts:add.lockedHint')}
+      </Text>
+    </div>
+  ) : null;
+  const windowEndClock = windowMode
+    ? shiftEnd(windowMode.scheduledDate, windowMode.startTime, windowMode.durationMinutes).time
+    : '';
+  // WINDOW MODE: "Between 9:00 AM and 5:00 PM", as under a shift task's time.
+  const windowTimeHint = windowMode ? (
+    <Text variant="caption" data-testid="shift-window-time-hint">
+      {t('shifts:tasks.form.timeHint', {
+        start: clockText(windowMode.startTime),
+        end: clockText(windowEndClock),
+      })}
+    </Text>
+  ) : null;
   const whenDateTiles = (
     <div className="grid grid-cols-2 gap-2" data-testid="when-date-tiles">
+      {windowStartsTile ?? (
       <div className="flex min-w-0 flex-col gap-1">
         {valueTile({
           kind: 'date',
@@ -3661,6 +3768,7 @@ function AddEventForm({
         })}
         {fieldError('scheduled_date', startTileError)}
       </div>
+      )}
       <div className="flex min-w-0 flex-col gap-1">
         {valueTile({
           kind: 'date',
@@ -3944,7 +4052,7 @@ function AddEventForm({
           [
             { value: 'daily', label: t('addEvent.simple.everyDay') },
             { value: 'weekly', label: t('addEvent.simple.everyWeek') },
-            ...(isEditing && !isAsNeededEdit
+            ...((isEditing && !isAsNeededEdit) || windowMode
               ? []
               : [{ value: 'as_needed', label: t('addEvent.simple.whenNeeded') }]),
           ],
@@ -4016,6 +4124,7 @@ function AddEventForm({
               {timeErrorText}
             </p>
           )}
+          {windowTimeHint}
           <DoseSummaryLine
             text={doseSummaryText}
             note={doseSummaryNote?.text ?? null}
@@ -4156,8 +4265,10 @@ function AddEventForm({
 
       <section aria-labelledby="sf-what-time" className="flex flex-col gap-3">
         {sectionHeading('sf-what-time', t('addEvent.simple.whatTime'))}
-        {timeChoice('appt-time')}
-        {showTaskTimeField && fromToTiles('appt')}
+        {/* Window mode: a start time is required (no "Any time"), inside the shift's window. */}
+        {!windowMode && timeChoice('appt-time')}
+        {(windowMode || showTaskTimeField) && fromToTiles('appt')}
+        {windowTimeHint}
         {zoneCaptionLine}
       </section>
 

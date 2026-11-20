@@ -421,10 +421,10 @@ describe('task rows (1.4.3)', () => {
     expect(onHighlightDone).toHaveBeenCalledTimes(1);
   });
 
-  it('N Add still asks for addTask only (a row open never reuses it)', () => {
+  it('N Add asks for the chooser only (a row open never reuses it)', () => {
     const onAction = vi.fn();
     renderDetail(shift(), RECIPIENT_TZ, onAction);
     (listProps.value?.onAdd as () => void)();
-    expect(onAction).toHaveBeenLastCalledWith('addTask', expect.anything());
+    expect(onAction).toHaveBeenLastCalledWith('addChooser', expect.anything());
   });
 });

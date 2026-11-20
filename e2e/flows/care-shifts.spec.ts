@@ -248,7 +248,9 @@ test.describe('premium owner', () => {
     await expect(detail.getByTestId('shift-task-section')).not.toContainText('0 of 0');
     const emptyCard = detail.getByTestId('shift-task-list-empty-card');
     await expect(emptyCard).toContainText("Nothing on this shift's list yet.");
-    await expect(emptyCard.getByRole('button', { name: 'Add a task', exact: true })).toHaveAttribute('data-variant', 'ghost');
+    // 1.4.3 "Add to this shift": the ghost button sits OUTSIDE the card, below it (one code path, empty or not).
+    await expect(emptyCard.getByTestId('shift-detail-add-task')).toHaveCount(0);
+    await expect(detail.getByRole('button', { name: 'Add to this shift', exact: true })).toHaveAttribute('data-variant', 'ghost');
     const footer = detail.locator('[data-modal-footer]');
     await expect(footer.getByRole('button', { name: 'Take shift', exact: true })).toHaveClass(/bg-primary-fill/);
     await expect(footer.getByRole('button', { name: 'Close', exact: true })).toBeVisible();

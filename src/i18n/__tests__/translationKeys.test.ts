@@ -587,6 +587,8 @@ describe('W5: no unreferenced en keys', () => {
     'shifts:summary_other',
     // Shift tasks: mobile-canonical leaf key kept for parity (docs/plans/shift-tasks.md).
     'shifts:tasks.form.explainOnce',
+    // 1.4.3: the detail's button now reads `shifts:add.button`; the old label stays pinned by shiftTasksCopyParity (mobile twin).
+    'shifts:tasks.form.title',
     // Mobile-parity Wave 2, Task 9. Added ahead of the UI that consumes them so
     // both locales land in one reviewable change:
     //   `addMenu.*` -> Task 10 `AddMenu`

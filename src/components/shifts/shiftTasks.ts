@@ -367,6 +367,25 @@ export interface ShiftTaskContext {
   source: ShiftTaskSource;
 }
 
+/**
+ * WINDOW MODE of the appointment and medication forms ("Add to this shift"): the same context a task gets, plus who
+ * holds the shift (the appointment's "Who's going" opens on them). The item is NOT linked to the shift server-side.
+ */
+export interface ShiftWindowContext extends ShiftTaskContext {
+  /** Member id of whoever is on the shift now; null when it is open. */
+  covererId: string | null;
+}
+
+/** The day a start `time` falls on inside the shift's window: the shift day, or the NEXT day before the shift's start clock. */
+export function windowDayForTime(
+  window: Pick<ShiftTaskContext, 'scheduledDate' | 'startTime'>,
+  time: string
+): string {
+  return time && time.slice(0, 5) < window.startTime.slice(0, 5)
+    ? addDays(window.scheduledDate, 1)
+    : window.scheduledDate;
+}
+
 export function shiftContextFromShift(
   shift: CalendarEvent,
   members: readonly { id: string; first_name?: string | null; email?: string | null }[],

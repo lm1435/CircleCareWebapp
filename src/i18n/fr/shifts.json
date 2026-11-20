@@ -271,6 +271,20 @@
     "count_one": "{{count}} garde",
     "count_other": "{{count}} gardes"
   },
+  "add": {
+    "button": "Ajouter à cette garde",
+    "title": "Ajouter à cette garde",
+    "subtitle": "{{date}}, {{start}} – {{end}}",
+    "task": "Tâche",
+    "taskHint": "Une chose à faire pendant la garde",
+    "medication": "Médicament",
+    "medicationHint": "Un nouveau médicament avec une prise pendant cette garde",
+    "appointment": "Rendez-vous",
+    "appointmentHint": "Une visite ou un appel pendant la garde",
+    "cancel": "Annuler",
+    "lockedHint": "Lié à la garde",
+    "emptyHint": "Ajoutez une tâche, un médicament ou un rendez-vous pour la personne de garde."
+  },
   "tasks": {
     "addTask": "Ajouter une tâche à cette garde",
     "added": "Tâche ajoutée",

@@ -271,6 +271,20 @@
     "count_one": "{{count}} Schicht",
     "count_other": "{{count}} Schichten"
   },
+  "add": {
+    "button": "Zu dieser Schicht hinzufügen",
+    "title": "Zu dieser Schicht hinzufügen",
+    "subtitle": "{{date}}, {{start}} – {{end}}",
+    "task": "Aufgabe",
+    "taskHint": "Etwas, das während der Schicht zu tun ist",
+    "medication": "Medikament",
+    "medicationHint": "Ein neues Medikament mit einer Dosis in dieser Schicht",
+    "appointment": "Termin",
+    "appointmentHint": "Ein Besuch oder Anruf während der Schicht",
+    "cancel": "Abbrechen",
+    "lockedHint": "An die Schicht gebunden",
+    "emptyHint": "Fügen Sie eine Aufgabe, ein Medikament oder einen Termin für die Person hinzu, die diese Schicht übernimmt."
+  },
   "tasks": {
     "addTask": "Aufgabe zu dieser Schicht hinzufügen",
     "added": "Aufgabe hinzugefügt",

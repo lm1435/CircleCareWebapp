@@ -258,21 +258,28 @@ describe('shift detail list: a dose nobody answered', () => {
 });
 
 describe('shift detail list: states', () => {
-  it('empty: ONE card with "Nothing on this shift\'s list yet." and a borderless "Add a task" inside it', async () => {
+  it('empty: ONE card with "Nothing on this shift\'s list yet." and the Add to this shift button OUTSIDE it, below', async () => {
     const onAdd = vi.fn();
     eventsHook.value = { ...eventsHook.value, events: [] };
     renderList({ onAdd });
     const card = screen.getByTestId('shift-task-list-empty-card');
     expect(within(card).getByTestId('shift-task-list-empty')).toHaveTextContent("Nothing on this shift's list yet.");
-    const add = within(card).getByRole('button', { name: 'Add a task' });
+    // The Add button sits OUTSIDE the card, directly below it
+    expect(within(card).queryByTestId('shift-detail-add-task')).toBeNull();
+    const add = screen.getByRole('button', { name: 'Add to this shift' });
+    expect(card.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(add).toHaveAttribute('data-variant', 'ghost');
     expect(add.className).toMatch(/text-moss/);
     expect(add.className).not.toMatch(/border-\[1\.5px\]/);
     expect(add.className).toMatch(/min-h-\[44px\]/);
     await userEvent.setup().click(add);
     expect(onAdd).toHaveBeenCalledTimes(1);
-    // ONE Add control, inside the card
+    // ONE Add control
     expect(screen.getAllByTestId('shift-detail-add-task')).toHaveLength(1);
+    // POS the quieter hint line is there for someone who can add
+    expect(within(card).getByTestId('shift-task-list-empty-hint')).toHaveTextContent(
+      'Add a task, a medication or an appointment for whoever takes this shift.'
+    );
   });
 
   it('P: empty titles drop the counter ("Lucia\'s list" / "Your list" / "This shift\'s list")', () => {
@@ -291,7 +298,7 @@ describe('shift detail list: states', () => {
     renderList();
     expect(screen.getByTestId('shift-task-list-title')).toHaveTextContent(/ · \d of \d done$/);
     expect(screen.queryByTestId('shift-task-list-empty-card')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add a task' })).toHaveAttribute('data-variant', 'ghost');
+    expect(screen.getByRole('button', { name: 'Add to this shift' })).toHaveAttribute('data-variant', 'ghost');
   });
 
   it('N: an empty list never says "0 of 0 done"', () => {
@@ -549,5 +556,59 @@ describe('shift detail list: opening a task (1.4.3)', () => {
     cleanup();
     renderList({ onOpenTask: vi.fn(), highlightTaskId: 'nope' });
     expect(screen.queryByTestId('highlight-ring')).toBeNull();
+  });
+});
+
+describe('Add to this shift: empty hint and the highlight of a just-added item', () => {
+  it('NEG the empty hint is absent when the list has items, for a view-only viewer and on an ended shift', () => {
+    renderList();
+    expect(screen.queryByTestId('shift-task-list-empty-hint')).toBeNull();
+    cleanup();
+    eventsHook.value = { ...eventsHook.value, events: [] };
+    renderList({ canWrite: false });
+    expect(screen.getByTestId('shift-task-list-empty')).toBeInTheDocument();
+    expect(screen.queryByTestId('shift-task-list-empty-hint')).toBeNull();
+    cleanup();
+    renderList({ ended: true });
+    expect(screen.queryByTestId('shift-task-list-empty-hint')).toBeNull();
+  });
+
+  it('POS a just-added appointment opens "Also happening" on its own and rings its row', async () => {
+    const visit = ev('visit-root_2026-11-09', { event_type: 'appointment', title: 'Dr visit', scheduled_time: '16:30:00', parent_event_id: 'visit-root' });
+    eventsHook.value = { ...eventsHook.value, events: [...FIXTURE, visit] };
+    renderList({ highlightTaskId: 'visit-root' });
+    const also = await screen.findByTestId('shift-also-list');
+    expect(within(also).getByText('Dr visit')).toBeInTheDocument();
+    const rows = within(also).getAllByTestId('shift-also-row');
+    const row = rows.find((r) => r.textContent?.includes('Dr visit'))!;
+    expect(within(row).getByTestId('highlight-ring')).toBeInTheDocument();
+    expect(screen.getAllByTestId('highlight-ring')).toHaveLength(1);
+  });
+
+  it('NEG a just-added plain task rings in the list and "Also happening" stays folded', () => {
+    renderList({ highlightTaskId: 'Linked one-off' });
+    expect(screen.queryByTestId('shift-also-list')).toBeNull();
+    expect(screen.getByTestId('shift-also-toggle')).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getAllByTestId('highlight-ring')).toHaveLength(1);
+  });
+
+  it('NEG no highlight: "Also happening" stays folded', () => {
+    renderList();
+    expect(screen.queryByTestId('shift-also-list')).toBeNull();
+  });
+});
+
+describe('Add to this shift: one button, one place', () => {
+  it('POS with items the button renders exactly once, outside the list, below it', () => {
+    renderList();
+    expect(screen.getAllByTestId('shift-detail-add-task')).toHaveLength(1);
+    const add = screen.getByTestId('shift-detail-add-task');
+    const list = screen.getByTestId('shift-task-list');
+    expect(list.contains(add)).toBe(false);
+    expect(add).toHaveAttribute('data-variant', 'ghost');
+    expect(add.className).toMatch(/text-moss/);
+    expect(add.className).toMatch(/bg-transparent/);
+    expect(add.className).not.toMatch(/(^|\s)(border|bg-moss|bg-primary)|dashed/);
+    expect(list.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

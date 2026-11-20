@@ -128,6 +128,14 @@ export function ShiftTaskList({
 
   const progress = { done: model.done, total: model.total };
   const empty = model.total === 0;
+  // A just-added appointment lives in "Also happening": open the group on its own so the ring is seen (no analytics:
+  // it is not a tap). A plain task or a medication rings in the list and never opens it.
+  const alsoHit =
+    highlightTaskId !== null &&
+    model.also.some((e) => rowMatchesHighlight({ key: e.id, event: e }, highlightTaskId));
+  useEffect(() => {
+    if (alsoHit) setAlsoOpen(true);
+  }, [alsoHit]);
   const title = model.open
     ? empty
       ? t('shifts:tasks.list.titleOpenEmpty')
@@ -247,7 +255,7 @@ export function ShiftTaskList({
         leftIcon={<Icon name="add-outline" size="row" />}
         onClick={onAdd}
       >
-        {t('shifts:tasks.form.title')}
+        {t('shifts:add.button')}
       </Button>
     </div>
   ) : null;
@@ -282,7 +290,11 @@ export function ShiftTaskList({
         <p className="m-0 text-base text-ink-2" data-testid="shift-task-list-empty">
           {t('shifts:tasks.list.empty')}
         </p>
-        {addButton}
+        {canAdd ? (
+          <p className="m-0 text-sm text-ink-3" data-testid="shift-task-list-empty-hint">
+            {t('shifts:add.emptyHint')}
+          </p>
+        ) : null}
       </Card>
     );
   } else {
@@ -365,7 +377,8 @@ export function ShiftTaskList({
         </span>
       ) : null}
       {body}
-      {loaded && model.rows.length === 0 ? null : addButton}
+      {/* ONE Add control, one code path: directly below the list card, empty or not. */}
+      {addButton}
       {loaded && model.also.length > 0 ? (
         <div className="border-t border-line-2 pt-3">
           <button
@@ -387,9 +400,12 @@ export function ShiftTaskList({
           {alsoOpen ? (
             <ul id={alsoId} className="m-0 flex list-none flex-col p-0" data-testid="shift-also-list">
               {model.also.map((event) => (
-                <li key={event.id} className="flex flex-col py-2" data-testid="shift-also-row">
+                <li key={event.id} className="relative flex flex-col py-2" data-testid="shift-also-row">
                   <span className="break-words text-base text-ink">{event.title}</span>
                   <span className="text-xs text-ink-2">{time(event)}</span>
+                  {highlightTaskId !== null && rowMatchesHighlight({ key: event.id, event }, highlightTaskId) ? (
+                    <HighlightRing onDone={onHighlightDone} />
+                  ) : null}
                 </li>
               ))}
             </ul>

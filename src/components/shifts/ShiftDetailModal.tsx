@@ -36,6 +36,8 @@ export type ShiftDetailAction =
   | 'edit'
   | 'delete'
   | 'addTask'
+  // The "Add to this shift" button (1.4.3): opens the Task / Medication / Appointment chooser.
+  | 'addChooser'
   // A task row's text was tapped (1.4.3): an open task opens the editor, a completed one the read-only detail.
   | 'editTask'
   | 'viewTask';
@@ -284,7 +286,7 @@ export function ShiftDetailModal({
           viewerId={viewerId}
           canWrite={canWrite}
           ended={ended}
-          onAdd={() => onAction('addTask', shift)}
+          onAdd={() => onAction('addChooser', shift)}
           onOpenTask={(row) => onAction(row.done ? 'viewTask' : 'editTask', shift, row)}
           highlightTaskId={highlightTaskId}
           onHighlightDone={onHighlightDone}

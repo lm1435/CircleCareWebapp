@@ -123,4 +123,17 @@ describe('shift tasks analytics', () => {
     A.shiftTaskDeleted({ scope: 'all' });
     for (const [, props] of capture.mock.calls) expect(props).not.toHaveProperty('circle_id');
   });
+
+  it('shift_item_added (Add to this shift): the type enum only; anything else falls back, nothing else rides along', async () => {
+    const A = await load();
+    for (const type of ['task', 'medication', 'appointment'] as const) {
+      A.shiftItemAdded({ type });
+      expect(last()[0]).toBe('shift_item_added');
+      expect(last()[1]).toEqual(expect.objectContaining({ type }));
+    }
+    A.shiftItemAdded({ type: 'Metformin 500mg' });
+    expect(last()[1]).toEqual(expect.objectContaining({ type: 'task' }));
+    expect(JSON.stringify(last()[1])).not.toContain('Metformin');
+    expect(JSON.stringify(capture.mock.calls)).not.toContain('circle_id');
+  });
 });

@@ -271,6 +271,20 @@
     "count_one": "{{count}} plantão",
     "count_other": "{{count}} plantões"
   },
+  "add": {
+    "button": "Adicionar a este plantão",
+    "title": "Adicionar a este plantão",
+    "subtitle": "{{date}}, {{start}} – {{end}}",
+    "task": "Tarefa",
+    "taskHint": "Algo para fazer durante o plantão",
+    "medication": "Medicamento",
+    "medicationHint": "Um novo medicamento com uma dose neste plantão",
+    "appointment": "Consulta",
+    "appointmentHint": "Uma visita ou ligação durante o plantão",
+    "cancel": "Cancelar",
+    "lockedHint": "Fixado no plantão",
+    "emptyHint": "Adicione uma tarefa, um medicamento ou uma consulta para quem assumir este plantão."
+  },
   "tasks": {
     "addTask": "Adicionar uma tarefa a este plantão",
     "added": "Tarefa adicionada",

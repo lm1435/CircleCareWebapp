@@ -132,6 +132,15 @@
   "detail": {
     "openChipSpoken": "À pourvoir, personne sur ce quart pour l’instant"
   },
+  "add": {
+    "button": "Ajouter à ce quart",
+    "title": "Ajouter à ce quart",
+    "taskHint": "Une chose à faire pendant le quart",
+    "medicationHint": "Un nouveau médicament avec une prise pendant ce quart",
+    "appointmentHint": "Une visite ou un appel pendant le quart",
+    "lockedHint": "Lié au quart",
+    "emptyHint": "Ajoutez une tâche, un médicament ou un rendez-vous pour la personne qui a ce quart."
+  },
   "tasks": {
     "list": {
       "titleOpen": "Liste de ce quart · {{done}} sur {{total}} faites",
