@@ -645,6 +645,9 @@ export function cloneCircle(args: {
     circle_id: `${sqlStr(newCircle)}::uuid`,
     related_event_id: 'NULL',
     refill_group_id: 'NULL',
+    // A linked shift task's `shift_event_id` points at a shift of the SOURCE circle; the
+    // `assert_shift_event_link_same_circle` trigger refuses that, so it is remapped in the third pass.
+    shift_event_id: 'NULL',
     medication_photo_url: 'NULL',
   };
   statements.push(
@@ -665,20 +668,22 @@ export function cloneCircle(args: {
       where: `s.circle_id = ${sqlStr(src)}::uuid and s.parent_event_id is not null`,
     })
   );
-  // Third pass: the two SET NULL self-pointers, now that every row exists.
+  // Third pass: the SET NULL self-pointers (and the shift-task link), now that every row exists.
   // A no-op on a template that uses neither (the demo seed does not), so it
   // does not bump `updated_at` on rows that had nothing to fix.
   statements.push(`
     update calendar_events t
        set related_event_id = rm.new,
-           refill_group_id  = fm.new
+           refill_group_id  = fm.new,
+           shift_event_id   = sm.new
       from calendar_events s
            join _evmap m  on m.old  = s.id
            left join _evmap rm on rm.old = s.related_event_id
            left join _evmap fm on fm.old = s.refill_group_id
+           left join _evmap sm on sm.old = s.shift_event_id
      where t.id = m.new
        and s.circle_id = ${sqlStr(src)}::uuid
-       and (s.related_event_id is not null or s.refill_group_id is not null);
+       and (s.related_event_id is not null or s.refill_group_id is not null or s.shift_event_id is not null);
   `);
 
   // 3) Plain circle children — fresh ids, remapped circle + user columns.
