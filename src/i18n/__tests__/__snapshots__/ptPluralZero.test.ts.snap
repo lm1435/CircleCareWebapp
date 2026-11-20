@@ -337,6 +337,16 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Difícil: 1",
     "Difícil: 2",
   ],
+  "pt notes:row.seenBy3": [
+    "Visto por {{first}}, {{second}} e mais 0",
+    "Visto por {{first}}, {{second}} e mais 1",
+    "Visto por {{first}}, {{second}} e mais 2",
+  ],
+  "pt notes:row.seenByMore": [
+    "+0 mais",
+    "+1 mais",
+    "+2 mais",
+  ],
   "pt overview:quickAccess.medsRefill": [
     "nenhuma reposição em breve",
     "1 reposição em breve",
@@ -811,6 +821,16 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Difícil: 0",
     "Difícil: 1",
     "Difícil: 2",
+  ],
+  "pt-PT notes:row.seenBy3": [
+    "Visto por {{first}}, {{second}} e mais 0",
+    "Visto por {{first}}, {{second}} e mais 1",
+    "Visto por {{first}}, {{second}} e mais 2",
+  ],
+  "pt-PT notes:row.seenByMore": [
+    "+0 mais",
+    "+1 mais",
+    "+2 mais",
   ],
   "pt-PT overview:quickAccess.medsRefill": [
     "nenhuma reposição em breve",

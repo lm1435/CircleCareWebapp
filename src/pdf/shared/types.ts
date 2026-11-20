@@ -156,6 +156,13 @@ export interface PdfAdherenceReport {
   as_needed?: { medications: PdfAsNeededMedication[] } | null;
 }
 
+/** One point of a vital's trend line: ISO instant, systolic/primary value, optional diastolic. */
+export interface PdfVitalsSeriesPoint {
+  at: string;
+  value1: number;
+  value2?: number;
+}
+
 /** One row of the report's Health Vitals table. */
 export interface PdfVitalsSummary {
   /** Already-localised label ("Blood pressure"), not the raw vital type. */
@@ -170,6 +177,8 @@ export interface PdfVitalsSummary {
   minReading?: { value1: number; value2?: number };
   /** Blood pressure only: the whole reading with the highest systolic. */
   maxReading?: { value1: number; value2?: number };
+  /** Trend points, ascending by time, at most 120. Absent on summaries built by older code. */
+  series?: PdfVitalsSeriesPoint[];
 }
 
 /** A recorded vital as `computeVitalsSummary` reads it. */
@@ -200,4 +209,45 @@ export interface CareSummaryCareNote {
   authorFirstName: string | null;
   body: string | null;
   mood: 'great' | 'good' | 'okay' | 'tough' | null;
+}
+
+/** The four canonical Daily Care Note moods, in display order (best → hardest). */
+export type PdfCareNoteMood = 'great' | 'good' | 'okay' | 'tough';
+
+/** A Daily Care Note as `computeMoodSummary` reads it. ONLY the day and the
+ *  mood: the note's body never enters the adherence report. `mood` is typed
+ *  loosely because a newer server may send a mood this build does not know;
+ *  unknown values are ignored, never printed. */
+export interface PdfMoodNote {
+  /** Used to de-duplicate a note returned by two fetch windows. */
+  id?: string;
+  /** YYYY-MM-DD in the care recipient's timezone. */
+  note_date: string;
+  mood?: string | null;
+}
+
+/** Mood counts for one block of days of the report period. */
+export interface PdfMoodBucket {
+  /** YYYY-MM-DD, inclusive. */
+  start: string;
+  /** YYYY-MM-DD, inclusive (clamped to the period end). */
+  end: string;
+  counts: Record<PdfCareNoteMood, number>;
+}
+
+/** The adherence report's "Day ratings" section, as the template reads it. */
+export interface PdfMoodSummary {
+  /** Totals over the whole period, one count per NOTE that carries a mood. */
+  counts: Record<PdfCareNoteMood, number>;
+  /** Notes with a known mood inside the period. Always > 0. */
+  ratedNotes: number;
+  /** Distinct days with at least one rated note. */
+  ratedDays: number;
+  /** Inclusive day count of the period (start..end). */
+  periodDays: number;
+  /** Consecutive blocks covering the whole period, oldest first, empty ones
+   *  included. Counted back from the period END, so only the oldest may be short. */
+  buckets: PdfMoodBucket[];
+  /** Distinct days with at least one 'tough' note, oldest first. */
+  toughDays: string[];
 }

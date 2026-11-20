@@ -5,6 +5,7 @@
  * script.
  */
 import type { PdfHealthVital, PdfVitalsSummary } from './types';
+import { buildVitalSeries } from './vitalsTrend';
 
 // Keys only — the labels are resolved through the report's own `t` so the
 // vitals section matches every other cell in the PDF, which already uses
@@ -105,6 +106,7 @@ export function computeVitalsSummary(
       min,
       max,
       ...bp,
+      series: buildVitalSeries(entries),
     });
   }
   return result;

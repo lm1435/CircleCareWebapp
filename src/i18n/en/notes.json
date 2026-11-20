@@ -39,6 +39,13 @@
     "delete": "Delete",
     "edited": "Edited",
     "formerMember": "Former member",
+    "seenBy1": "Seen by {{name}}",
+    "seenBy2": "Seen by {{first}} and {{second}}",
+    "seenBy3_one": "Seen by {{first}}, {{second}} and {{count}} other",
+    "seenBy3_other": "Seen by {{first}}, {{second}} and {{count}} others",
+    "seenByListLabel": "Seen by",
+    "seenByMore_one": "+{{count}} more",
+    "seenByMore_other": "+{{count}} more",
     "actionsFor": "Actions for note by {{author}}"
   },
   "day": {

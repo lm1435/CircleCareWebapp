@@ -10,9 +10,12 @@ import type {
   PdfAdherenceReportByMedication,
   PdfAdherenceReportDaily,
   PdfAsNeededMedication,
+  PdfCareNoteMood,
+  PdfMoodSummary,
   PdfVitalsSummary,
 } from './types';
 import { PDF_PALETTE as CC } from './palette';
+import { renderVitalTrendSvg } from './vitalsTrend';
 import { getSharedPdfStyles, displayValue, computeAge, escapeHtml } from './pdfBranding';
 
 /**
@@ -52,6 +55,24 @@ export const KEEP_WITH_HEADING_MAX_ROWS = 12;
 function keepWithHeading(rows: number): string {
   return rows <= KEEP_WITH_HEADING_MAX_ROWS ? ' keep-together' : '';
 }
+
+/** Mood column header. Each branch is a LITERAL key so the i18n coverage ratchet
+ *  sees the call sites (mirrors `careNoteMoodLabel` in careSummaryTemplate.ts). */
+function moodLabel(mood: PdfCareNoteMood, env: PdfEnv): string {
+  switch (mood) {
+    case 'great':
+      return env.t('notes.moods.great');
+    case 'good':
+      return env.t('notes.moods.good');
+    case 'okay':
+      return env.t('notes.moods.okay');
+    default:
+      return env.t('notes.moods.tough');
+  }
+}
+
+/** Most tough days the "Day ratings" section lists before "+N more". */
+export const MOOD_TOUGH_DAYS_MAX = 31;
 
 /** " mmHg", " kg", " °C" after a value; a percentage takes its sign with no space ("96%"). */
 function vitalUnitSuffix(unit: string): string {
@@ -188,6 +209,9 @@ export interface AdherenceReportTemplateOptions {
   circleName: string;
   careRecipientTimezone: string;
   vitalsData?: PdfVitalsSummary[];
+  /** The period's Daily Care Note moods (`computeMoodSummary`). Omitted or
+   *  undefined prints no "Day ratings" section at all — never an empty one. */
+  moodSummary?: PdfMoodSummary;
   /** Care recipient's date of birth (YYYY-MM-DD), or null/omitted when unknown.
    *  Drives the header's "DOB … · Age …" line; the line is omitted entirely
    *  when this is absent, rather than printing a blank. */
@@ -412,6 +436,64 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
     total: t('medicationHistory.export.total'),
   };
   const tileLabelPx = summaryTileLabelFontPx(Object.values(tileLabels));
+
+  // Day ratings: counts and dates only, never note text or authors. Printed only
+  // when a summary exists (callers never build one with zero rated notes).
+  // Trend line per vital sits in the first cell under the name. A sixth column was measured at
+  // the 504pt iOS print width and left 2px of slack in es/fr/pt (a wrap on a slightly wider
+  // font); under the name the five columns keep >= ~24px of slack in all six languages.
+  // Summaries without `series` (or with < 2 points) print exactly the old cell.
+  const vitalTrendSvgs = (vitalsData ?? []).map((v) => renderVitalTrendSvg(v.series));
+
+  const moodSection = (() => {
+    const mood = options.moodSummary;
+    if (!mood) return '';
+    const moods: PdfCareNoteMood[] = ['great', 'good', 'okay', 'tough'];
+    const range = (start: string, end: string): string =>
+      start === end
+        ? noWrap(formatDateForPdf(start, locale))
+        : t('medicationHistory.export.dateRange', {
+            start: noWrap(formatDateForPdf(start, locale)),
+            end: noWrap(formatDateForPdf(end, locale)),
+          });
+    const countCells = (c: Record<PdfCareNoteMood, number>): string =>
+      moods.map((m) => `<td style="text-align:center">${escapeHtml(String(c[m]))}</td>`).join('');
+    const bucketRows = mood.buckets.length > 1
+      ? mood.buckets.map((b) => `
+        <tr>
+          <th scope="row" style="text-align:left;font-weight:normal">${range(b.start, b.end)}</th>
+          ${countCells(b.counts)}
+        </tr>`).join('')
+      : '';
+    const shownTough = mood.toughDays.slice(0, MOOD_TOUGH_DAYS_MAX);
+    const hiddenTough = mood.toughDays.length - shownTough.length;
+    const toughLine = shownTough.length > 0
+      ? `
+    <p style="margin:8px 0 0;font-size:11px;color:${CC.inkSoft}">${escapeHtml(t('medicationHistory.export.moodToughDays'))}: ${shownTough.map((d) => noWrap(formatDateForPdf(d, locale))).join(', ')}${hiddenTough > 0 ? ` ${escapeHtml(t('medicationHistory.export.moodMore', { count: hiddenTough }))}` : ''}</p>`
+      : '';
+    const title = escapeHtml(t('medicationHistory.export.moodTitle'));
+    return `
+  <div class="section${keepWithHeading(mood.buckets.length + 1)}">
+    <div class="section-title">${title}</div>
+    <p style="margin:0 0 8px;font-size:11px;color:${CC.inkSoft}">${escapeHtml(t('medicationHistory.export.moodSubtitle', { notes: mood.ratedNotes, days: mood.ratedDays, total: mood.periodDays }))}</p>
+    <table role="table" aria-label="${title}">
+      <caption class="visually-hidden">${title}</caption>
+      <thead>
+        <tr>
+          <th scope="col">${escapeHtml(t('medicationHistory.export.moodPeriod'))}</th>
+          ${moods.map((m) => `<th scope="col" style="text-align:center">${escapeHtml(moodLabel(m, env))}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>${bucketRows}
+        <tr>
+          <th scope="row" style="text-align:left"><strong>${escapeHtml(t('medicationHistory.export.moodTotal'))}</strong></th>
+          ${moods.map((m) => `<td style="text-align:center"><strong>${escapeHtml(String(mood.counts[m]))}</strong></td>`).join('')}
+        </tr>
+      </tbody>
+    </table>${toughLine}
+  </div>
+  `;
+  })();
 
   return `<!DOCTYPE html>
 <html lang="${langCode}">
@@ -662,9 +744,9 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
           <th scope="col" style="text-align:center">${t('medicationHistory.export.vitalMax')}</th>
         </tr>
       </thead>
-      <tbody>${vitalsData.map(v => `
+      <tbody>${vitalsData.map((v, i) => `
         <tr>
-          <td>${escapeHtml(v.type)}</td>
+          <td>${escapeHtml(v.type)}${vitalTrendSvgs[i] ? `<div style="margin-top:4px">${vitalTrendSvgs[i]}</div>` : ''}</td>
           <td style="text-align:center">${v.latest.value2 != null ? `${v.latest.value1}/${v.latest.value2}` : `${v.latest.value1}`}${vitalUnitSuffix(v.latest.unit)}</td>
           <td style="text-align:center">${v.average2 != null ? `${v.average}/${v.average2}` : `${v.average}`}${vitalUnitSuffix(v.latest.unit)}</td>
           <td style="text-align:center">${v.minReading && v.minReading.value2 != null ? `${v.minReading.value1}/${v.minReading.value2}` : `${v.minReading ? v.minReading.value1 : v.min}`}${vitalUnitSuffix(v.latest.unit)}</td>
@@ -674,6 +756,9 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
     </table>
   </div>
   ` : ''}
+
+  <!-- Care note moods (counts and dates only) -->
+  ${moodSection}
   </main>
 
   <footer class="footer">

@@ -2210,6 +2210,18 @@ export const Analytics = {
       days_back: opts.daysBack,
     }),
   careNoteDeleted: (circleId: string) => capture('care_note_deleted', { circle_id: circleId }),
+  /**
+   * "Seen by" read receipts were recorded (>0 newly marked). `count` ONLY: no ids, names, text or
+   * circle_id. Twin of mobile.
+   */
+  careNotesSeenRecorded: (opts: { count: number }) =>
+    capture('care_notes_seen_recorded', { count: opts.count }),
+  /**
+   * The full "Seen by" reader list was OPENED (3+ readers). `reader_count` and `trigger` (hover|focus|click; mobile sends tap) ONLY: no ids, names or
+   * circle_id. Twin of mobile.
+   */
+  careNoteSeenByExpanded: (opts: { readerCount: number; trigger: 'hover' | 'focus' | 'click' }) =>
+    capture('care_note_seen_by_expanded', { reader_count: opts.readerCount, trigger: opts.trigger }),
 
   // --- Documents (web-new) ---
   documentUploaded: (circleId: string, category: string, fileType: string) =>
@@ -2515,8 +2527,16 @@ export const Analytics = {
    * web fires when the dialog is REQUESTED (plan decision 7). Same name, same
    * shape — `period` is the '7d' | … | 'all' enum, never a date.
    */
-  adherenceReportExported: (circleId: string, period: string) =>
-    capture('adherence_report_exported', { circle_id: circleId, period }),
+  adherenceReportExported: (
+    circleId: string,
+    period: string,
+    opts?: { hasMoodSummary: boolean }
+  ) =>
+    capture('adherence_report_exported', {
+      circle_id: circleId,
+      period,
+      ...(opts ? { has_mood_summary: opts.hasMoodSummary } : {}),
+    }),
 
   /**
    * The care summary was handed off — `format` mirrors mobile's two shares.

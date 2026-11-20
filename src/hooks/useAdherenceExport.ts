@@ -7,6 +7,7 @@ import {
 } from '@/api/medicationConfirmations';
 import { getCircleDetail, type CircleDetail } from '@/api/circleMembers';
 import { getVitals } from '@/api/vitals';
+import { getCareNotes } from '@/api/careNotes';
 import { queryClient } from '@/lib/queryClient';
 import { queryKeys } from '@/lib/queryKeys';
 import { useToast } from '@/components/ui';
@@ -16,7 +17,8 @@ import { adherenceReportFileTitle, generateAdherenceReportHtml } from '@/pdf/adh
 import { PrintError, printHtml } from '@/pdf/printHtml';
 import { mapPdfKey } from '@/pdf/pdfEnv';
 import { computeVitalsSummary } from '@/pdf/shared/vitalsSummary';
-import type { PdfVitalsSummary } from '@/pdf/shared/types';
+import { loadMoodSummary } from '@/pdf/shared/moodSummary';
+import type { PdfMoodSummary, PdfVitalsSummary } from '@/pdf/shared/types';
 
 /**
  * Web twin of `mobile/src/hooks/useAdherenceExport.ts` (plan
@@ -50,6 +52,15 @@ import type { PdfVitalsSummary } from '@/pdf/shared/types';
  * `is_premium_circle` from the DETAIL response (see `hooks/useCircle.ts`) at
  * call time -- if the flag flipped since the button was pressed, the report
  * goes out without vitals rather than failing.
+ *
+ * DAY RATINGS. The report also carries a "Day ratings" section built from the
+ * moods on Daily Care Notes inside the report's own date range. Notes are read
+ * with `getCareNotes` (the endpoint rejects a window over 92 days, so a long
+ * "All time" report is read as several consecutive windows) and reduced to
+ * `{ id, note_date, mood }` BEFORE anything else sees them: note bodies never
+ * travel toward the document. It is not premium-gated (the export already is)
+ * and never blocks: if ANY window fails the section is dropped entirely, never
+ * printed undercounted, with no toast and no failure event. Mobile parity.
  *
  * NOT THE CARE SUMMARY. The Emergency page's care summary PDF
  * (`useCareSummaryExport`) stays FREE for everyone; only this report is gated.
@@ -141,21 +152,33 @@ export function useAdherenceExport({ circleId }: UseAdherenceExportOptions): Use
         return false;
       }
 
-      // 2. Vitals for the report's own range, premium only, never blocking.
-      let vitalsData: PdfVitalsSummary[] | undefined;
-      if (circle.is_premium_circle) {
+      // 2. Vitals (premium only) and day ratings for the report's own range,
+      // concurrently, neither ever blocking.
+      const vitalsPromise = async (): Promise<PdfVitalsSummary[] | undefined> => {
+        if (!circle.is_premium_circle) return undefined;
         try {
           const vitals = await getVitals(circleId, {
             from: report.start_date,
             to: report.end_date,
           });
           if (vitals.length > 0) {
-            vitalsData = computeVitalsSummary(vitals, (key) => i18n.t(mapPdfKey(key)));
+            return computeVitalsSummary(vitals, (key) => i18n.t(mapPdfKey(key)));
           }
         } catch {
           // Vitals fetch failure should not block the report (mobile parity).
         }
-      }
+        return undefined;
+      };
+      // The rules (one <=92-day window at a time, all windows or nothing, never
+      // throws, only id / note_date / mood kept) live in the shared
+      // `loadMoodSummary`, which the mobile hook calls too.
+      const moodPromise = (): Promise<PdfMoodSummary | undefined> =>
+        loadMoodSummary(
+          async (from, to) => (await getCareNotes(circleId, { from, to })).notes,
+          report.start_date,
+          report.end_date
+        );
+      const [vitalsData, moodSummary] = await Promise.all([vitalsPromise(), moodPromise()]);
 
       // 3. Render + print. Anything from here on is an export failure.
       const stage: ExportFailureStage = 'print';
@@ -172,6 +195,7 @@ export function useAdherenceExport({ circleId }: UseAdherenceExportOptions): Use
           circleName: circle.name,
           careRecipientTimezone: circle.care_recipient_timezone,
           vitalsData,
+          moodSummary,
           recipientDob: circle.recipient_dob,
           preparedBy,
         });
@@ -180,7 +204,9 @@ export function useAdherenceExport({ circleId }: UseAdherenceExportOptions): Use
           html,
           title: adherenceReportFileTitle(circle.recipient_name, report.period_days),
         });
-        Analytics.adherenceReportExported(circleId, period);
+        Analytics.adherenceReportExported(circleId, period, {
+          hasMoodSummary: moodSummary !== undefined,
+        });
         return true;
       } catch (err) {
         Analytics.adherenceReportExportFailed({

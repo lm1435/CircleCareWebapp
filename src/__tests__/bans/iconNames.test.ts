@@ -42,6 +42,9 @@ const SVG_ALLOWLIST = [
   'components/circles/firstRun/CircleEmblem.tsx',
   'components/meds/AdherenceRing.tsx',
   'components/vitals/VitalsChart.tsx',
+  // Adherence report PDF: the per-vital trend line is a data chart drawn as an
+  // inline SVG string for print, not an icon. Mirrored from mobile (pdf/shared).
+  'pdf/shared/vitalsTrend.ts',
 ];
 
 function walk(dir: string, out: string[] = []): string[] {

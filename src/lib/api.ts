@@ -315,10 +315,13 @@ apiClient.interceptors.response.use(
 
     const failedStatus = error.response?.status;
     const isWrite = (originalRequest?.method ?? 'get').toLowerCase() !== 'get';
+    // The silent "Seen by" POST is not a user save: its failure must not start the review quiet period.
+    const isSilentSeenPost = /\/care-notes\/seen\/?(\?.*)?$/.test(originalRequest?.url ?? '');
     if (
-      failedStatus === undefined ||
-      failedStatus >= 500 ||
-      (isWrite && failedStatus >= 400 && failedStatus !== 401 && failedStatus !== 402)
+      !isSilentSeenPost &&
+      (failedStatus === undefined ||
+        failedStatus >= 500 ||
+        (isWrite && failedStatus >= 400 && failedStatus !== 401 && failedStatus !== 402))
     ) {
       try {
         noteReviewBlockingError();

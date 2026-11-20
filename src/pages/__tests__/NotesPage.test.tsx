@@ -20,6 +20,7 @@ import '@/i18n';
 import i18n from '@/i18n';
 import { ToastProvider } from '@/components/ui';
 import NotesPage from '../NotesPage';
+import { resetMarkCareNotesSeenSession } from '@/hooks/useMarkCareNotesSeen';
 import type { CareNote } from '@/api/careNotes';
 import { daysBetween, olderPageRange, olderPagesNeeded } from '@/lib/noteDate';
 import { __resetEmailLinkLandingForTests } from '@/lib/emailLinkLanding';
@@ -81,6 +82,12 @@ vi.mock('@/store/authStore', () => {
   return { useAuthStore };
 });
 
+const mockMarkSeen = vi.fn();
+vi.mock('@/api/careNotes', async () => {
+  const actual = await vi.importActual<typeof import('@/api/careNotes')>('@/api/careNotes');
+  return { ...actual, markCareNotesSeen: (...a: unknown[]) => mockMarkSeen(...a) };
+});
+
 const mockCareNotesViewed = vi.fn();
 const mockCareNoteAdded = vi.fn();
 const mockCareNoteUpdated = vi.fn();
@@ -97,6 +104,7 @@ vi.mock('@/lib/analytics', () => ({
     careNoteUpdated: (...args: unknown[]) => mockCareNoteUpdated(...args),
     careNoteDeleted: (...args: unknown[]) => mockCareNoteDeleted(...args),
     careNotesOlderLoaded: (...args: unknown[]) => mockCareNotesOlderLoaded(...args),
+    careNotesSeenRecorded: vi.fn(),
     errorOccurred: vi.fn(),
     emailLinkOpened: (...args: unknown[]) => mockEmailLinkOpened(...args),
     noteDraftRestored: (...args: unknown[]) => mockNoteDraftRestored(...args),
@@ -1746,5 +1754,77 @@ describe('NotesPage — restored draft line', () => {
     renderCircle(OTHER_CIRCLE);
     expect(textbox()).toHaveValue('B words');
     expect(line()).toBeInTheDocument();
+  });
+});
+
+// "Seen by" marking is wired from this page (rows carry data-care-note-id for the shared observer).
+describe('NotesPage: seen-by marking wiring', () => {
+  const NOTE_ID = '00000000-0000-4000-8000-0000000000aa';
+  let io: { cb: IntersectionObserverCallback } | null = null;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    io = null;
+    resetMarkCareNotesSeenSession();
+    mockMarkSeen.mockReset();
+    mockMarkSeen.mockResolvedValue({ marked: 1 });
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(cb: IntersectionObserverCallback) {
+          io = { cb };
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      }
+    );
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  async function seeRow(text: string) {
+    const li = rowContaining(text);
+    expect(li.getAttribute('data-care-note-id')).not.toBeNull();
+    await act(async () => {
+      io!.cb(
+        [{ target: li, isIntersecting: true, intersectionRatio: 1 } as unknown as IntersectionObserverEntry],
+        {} as IntersectionObserver
+      );
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+  }
+
+  it("P: another member's note seen for 1 s is marked from the page", async () => {
+    mockUseCareNotes.mockReturnValue(
+      notesResult([makeNote({ id: NOTE_ID, author_id: 'user-2', body: 'From Luis' })])
+    );
+    renderCollapsed();
+    await seeRow('From Luis');
+    expect(mockMarkSeen).toHaveBeenCalledWith(CIRCLE_ID, [
+      { note_id: NOTE_ID, updated_at: '2026-03-15T14:00:00Z' },
+    ]);
+  });
+
+  it("N: the viewer's own note is not marked from the page", async () => {
+    mockUseCareNotes.mockReturnValue(
+      notesResult([makeNote({ id: NOTE_ID, author_id: 'user-1', body: 'Mine' })])
+    );
+    renderCollapsed();
+    await seeRow('Mine');
+    expect(mockMarkSeen).not.toHaveBeenCalled();
+  });
+
+  it('N: placeholder data from a previously viewed circle is not marked', async () => {
+    mockUseCareNotes.mockReturnValue(
+      notesResult([makeNote({ id: NOTE_ID, author_id: 'user-2', body: 'Old circle' })], {
+        isPlaceholderData: true,
+      })
+    );
+    renderCollapsed();
+    await seeRow('Old circle');
+    expect(mockMarkSeen).not.toHaveBeenCalled();
   });
 });

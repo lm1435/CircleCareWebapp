@@ -39,6 +39,13 @@
     "delete": "Eliminar",
     "edited": "Editada",
     "formerMember": "Exmiembro",
+    "seenBy1": "Visto por {{name}}",
+    "seenBy2": "Visto por {{first}} y {{second}}",
+    "seenBy3_one": "Visto por {{first}}, {{second}} y {{count}} más",
+    "seenBy3_other": "Visto por {{first}}, {{second}} y {{count}} más",
+    "seenByListLabel": "Visto por",
+    "seenByMore_one": "+{{count}} más",
+    "seenByMore_other": "+{{count}} más",
     "actionsFor": "Acciones para la nota de {{author}}"
   },
   "day": {

@@ -719,6 +719,31 @@ describe('PDF export events mirror mobile exactly (plan pdf-export-parity, decis
     });
   });
 
+  it('adherence_report_exported adds has_mood_summary (boolean only) when given', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.adherenceReportExported('circle-123', '30d', { hasMoodSummary: true });
+    expect(capture).toHaveBeenLastCalledWith('adherence_report_exported', {
+      circle_id: 'circle-123',
+      period: '30d',
+      has_mood_summary: true,
+    });
+    Analytics.adherenceReportExported('circle-123', '30d', { hasMoodSummary: false });
+    expect(capture).toHaveBeenLastCalledWith('adherence_report_exported', {
+      circle_id: 'circle-123',
+      period: '30d',
+      has_mood_summary: false,
+    });
+  });
+
+  // N6: the property set is exactly this - never a note count, a mood or text.
+  it('adherence_report_exported property set is exactly circle_id, period, has_mood_summary', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.adherenceReportExported('circle-123', 'all', { hasMoodSummary: true });
+    const props = capture.mock.calls[capture.mock.calls.length - 1][1] as Record<string, unknown>;
+    expect(Object.keys(props).sort()).toEqual(['circle_id', 'has_mood_summary', 'period']);
+    expect(typeof props.has_mood_summary).toBe('boolean');
+  });
+
   it('care_summary_shared carries circle_id + format', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
     Analytics.careSummaryShared('circle-123', 'pdf');

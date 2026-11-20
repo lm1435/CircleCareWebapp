@@ -55,6 +55,17 @@ export interface CareNote {
     first_name: string | null;
     last_name: string | null;
   } | null;
+  /**
+   * ADDITIVE ("Seen by"): readers of this note's CURRENT version who are current circle members
+   * and not the author; the viewer is included once they have seen it. ABSENT from an older
+   * backend or when that read failed, so absence must never be read as "unread".
+   */
+  seen_by?: CareNoteReader[];
+}
+
+export interface CareNoteReader {
+  user_id: string;
+  first_name: string | null;
 }
 
 export interface GetCareNotesParams {
@@ -144,4 +155,27 @@ export async function updateCareNote(
 
 export async function deleteCareNote(circleId: string, noteId: string): Promise<void> {
   await apiClient.delete(`/circles/${circleId}/care-notes/${noteId}`);
+}
+
+export interface CareNoteSeenPair {
+  note_id: string;
+  /** Echoed exactly as received on the note. */
+  updated_at: string;
+}
+
+/** Max pairs the backend accepts per request. */
+export const MAX_SEEN_PER_REQUEST = 100;
+
+/**
+ * Records that the viewer has read these notes ("Seen by"). `marked` is how many reads were newly
+ * recorded. An older backend answers 404 (the caller latches off).
+ */
+export async function markCareNotesSeen(
+  circleId: string,
+  notes: CareNoteSeenPair[]
+): Promise<{ marked: number }> {
+  const response = (await apiClient.post(`/circles/${circleId}/care-notes/seen`, {
+    notes,
+  })) as unknown as { success: boolean; data: { marked: number } };
+  return { marked: response?.data?.marked ?? 0 };
 }

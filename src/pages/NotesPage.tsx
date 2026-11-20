@@ -46,6 +46,7 @@ import {
 import { useCircle } from '@/hooks/useCircle';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { useAuthStore } from '@/store/authStore';
+import { useMarkCareNotesSeen } from '@/hooks/useMarkCareNotesSeen';
 import { Analytics } from '@/lib/analytics';
 import { parkNoteDraft, takeParkedNoteDraft } from '@/lib/parkedNoteDraft';
 import { takeDraft } from '@/lib/sessionDraft';
@@ -298,6 +299,14 @@ export default function NotesPage(): ReactElement {
     [notesQuery.data, older.notes]
   );
   const timezone = notesQuery.data?.timezone ?? 'America/New_York';
+  // "Seen by" receipts: marked from THIS page only (never inside useCareNotes, which QuickAccess
+  // also uses). Off while the list is placeholder data from a previously viewed circle.
+  useMarkCareNotesSeen({
+    circleId,
+    notes,
+    viewerId: currentUserId,
+    enabled: !notesQuery.isPlaceholderData,
+  });
   const hourCycle = useHourCycle();
 
   // Widen the window to include `pendingDate` (older pages past 92 days), then

@@ -11,6 +11,10 @@ import {
 import { NoteComposer, type NoteDraft } from './NoteComposer';
 import type { CareNote } from '@/api/careNotes';
 import { useHourCycle } from '@/hooks/useHourCycle';
+import { useAuthStore } from '@/store/authStore';
+import { SEEN_ROW_ATTR } from '@/hooks/useMarkCareNotesSeen';
+import { seenByNames } from '@/lib/careNoteSeenBy';
+import { SeenByCaption } from './SeenByCaption';
 import { formatTimeOfDay } from '@/utils/timezone';
 import type { HourCycle } from '@/utils/hourCycle';
 
@@ -114,6 +118,7 @@ export function NoteRow({
 }: NoteRowProps): ReactElement {
   const { t } = useTranslation('notes');
   const hourCycle = useHourCycle();
+  const viewerId = useAuthStore((s) => s.user?.id);
   const [draft, setDraft] = useState<NoteDraft>(() => ({
     body: note.body ?? '',
     mood: note.mood,
@@ -173,9 +178,26 @@ export function NoteRow({
   const wasEdited = note.updated_at !== note.created_at;
   const hasPills = note.mood !== null || note.categories.length > 0;
 
+  // "Seen by": readers other than the viewer and the author. Nothing to show renders NOTHING
+  // (absence is never "Not seen": members on old app builds never register as readers).
+  const readers = seenByNames(note, viewerId, t('shifts:someone'));
+  const seenByLine =
+    readers.length === 0
+      ? null
+      : readers.length === 1
+        ? t('row.seenBy1', { name: readers[0] })
+        : readers.length === 2
+          ? t('row.seenBy2', { first: readers[0], second: readers[1] })
+          : t('row.seenBy3', { first: readers[0], second: readers[1], count: readers.length - 2 });
+
   if (editing) {
     return (
-      <Card as="li" padding="sm" className="border-[1.5px] border-line-2">
+      <Card
+        as="li"
+        padding="sm"
+        className="border-[1.5px] border-line-2"
+        {...{ [SEEN_ROW_ATTR]: note.id }}
+      >
         <NoteComposer
           idPrefix={`note-edit-${note.id}`}
           draft={draft}
@@ -214,7 +236,12 @@ export function NoteRow({
   ];
 
   return (
-    <Card as="li" padding="sm" className="border-[1.5px] border-line-2 flex items-start gap-3">
+    <Card
+      as="li"
+      padding="sm"
+      className="border-[1.5px] border-line-2 flex items-start gap-3"
+      {...{ [SEEN_ROW_ATTR]: note.id }}
+    >
       <span
         aria-hidden="true"
         className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-dusk-soft text-sm font-semibold text-dusk"
@@ -250,6 +277,13 @@ export function NoteRow({
             ))}
           </div>
         )}
+
+        {seenByLine &&
+          (readers.length >= 3 ? (
+            <SeenByCaption line={seenByLine} names={readers} />
+          ) : (
+            <p className="m-0 mt-2 text-xs text-ink-3">{seenByLine}</p>
+          ))}
       </div>
 
       {menuItems.length > 0 && (

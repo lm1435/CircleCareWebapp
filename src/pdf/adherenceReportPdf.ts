@@ -8,7 +8,7 @@
  * cast) and supplies the {@link PdfEnv} from `./pdfEnv`.
  */
 import type { AdherenceReport } from '@/api/medicationConfirmations';
-import type { PdfVitalsSummary } from './shared/types';
+import type { PdfMoodSummary, PdfVitalsSummary } from './shared/types';
 import type { AdherenceReportTemplateOptions } from './shared/adherenceReportTemplate';
 import { renderAdherenceReportHtml } from './shared/adherenceReportTemplate';
 import { buildPdfEnv } from './pdfEnv';
@@ -19,6 +19,9 @@ export interface WebAdherenceReportOptions {
   circleName: string;
   careRecipientTimezone: string;
   vitalsData?: PdfVitalsSummary[];
+  /** The period's Daily Care Note moods (shared `computeMoodSummary`).
+   *  Omitted prints no "Day ratings" section at all. */
+  moodSummary?: PdfMoodSummary;
   /** Care recipient's date of birth (YYYY-MM-DD), or null/omitted when unknown.
    *  Drives the header's "DOB … · Age …" line; the line is omitted entirely
    *  when this is absent, rather than printing a blank. */

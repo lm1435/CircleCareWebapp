@@ -292,4 +292,63 @@ test.describe('adherence report export', () => {
     await page.getByRole('dialog', { name: 'Adherence report' }).getByRole('button', { name: 'Export report' }).click();
     await readPrinted(page);
   });
+
+  // Day ratings: the report carries the period's Daily Care Note moods. Seeded
+  // through the API (rated notes on recent days); the printed totals must
+  // equal what was seeded, a note outside the 7-day window must not count.
+  async function seedNote(day: string, mood: 'great' | 'good' | 'okay' | 'tough' | null, body?: string): Promise<void> {
+    const res = await api.post(`/api/circles/${circleId}/care-notes`, {
+      note_date: day,
+      ...(mood ? { mood } : {}),
+      ...(body ? { body } : {}),
+    });
+    expect(res.ok(), `seed note ${day}: ${await res.text()}`).toBe(true);
+  }
+
+  const dayRatingsTotals = (page: Page) =>
+    page.evaluate(() => {
+      const el = document.querySelector('iframe[aria-hidden="true"]') as HTMLIFrameElement | null;
+      const doc = el?.contentDocument;
+      const table = doc?.querySelector('table[aria-label="Day ratings"]');
+      if (!table) return null;
+      const cells = Array.from(table.querySelectorAll('tbody tr:last-child td')).map((td) => td.textContent?.trim() ?? '');
+      return cells;
+    });
+
+  test('POSITIVE: rated care notes in the period print a "Day ratings" section with the right totals', async ({ page }) => {
+    const today = dateInTz(tz, 0);
+    await seedNote(addDaysISO(today, -3), 'good');
+    await seedNote(addDaysISO(today, -2), 'great');
+    await seedNote(addDaysISO(today, -1), 'tough', `ZZ_E2E_BODY_${uniqueSuffix()}`);
+    // OUTSIDE the 7-day window: must not be counted.
+    await seedNote(addDaysISO(today, -20), 'tough');
+
+    await armPrintCapture(page);
+    await openExport(page, circleId);
+    await exportLast7(page);
+    const printed = await readPrinted(page);
+
+    expect(printed.text).toContain('Day ratings');
+    // Columns: great, good, okay, tough.
+    expect(await dayRatingsTotals(page)).toEqual(['1', '1', '0', '1']);
+    // The note body never reaches the document.
+    expect(printed.html).not.toContain('ZZ_E2E_BODY_');
+  });
+
+  test('NEGATIVE: no rated note in the period prints no "Day ratings" section', async ({ page }) => {
+    const today = dateInTz(tz, 0);
+    // A mood-less note inside the period and a rated one outside it.
+    await seedNote(addDaysISO(today, -2), null, 'plain note, no rating');
+    await seedNote(addDaysISO(today, -20), 'great');
+
+    await armPrintCapture(page);
+    await openExport(page, circleId);
+    await exportLast7(page);
+    const printed = await readPrinted(page);
+
+    expect(printed.text).not.toContain('Day ratings');
+    expect(await dayRatingsTotals(page)).toBeNull();
+    // The rest of the report is intact.
+    expect(printed.text).toContain(medName);
+  });
 });

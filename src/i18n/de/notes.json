@@ -39,6 +39,13 @@
     "delete": "Löschen",
     "edited": "Bearbeitet",
     "formerMember": "Ehemaliges Mitglied",
+    "seenBy1": "Gesehen von {{name}}",
+    "seenBy2": "Gesehen von {{first}} und {{second}}",
+    "seenBy3_one": "Gesehen von {{first}}, {{second}} und {{count}} weiterer Person",
+    "seenBy3_other": "Gesehen von {{first}}, {{second}} und {{count}} weiteren Personen",
+    "seenByListLabel": "Gesehen von",
+    "seenByMore_one": "+{{count}} weitere",
+    "seenByMore_other": "+{{count}} weitere",
     "actionsFor": "Aktionen für die Notiz von {{author}}"
   },
   "day": {
