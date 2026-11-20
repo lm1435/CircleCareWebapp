@@ -188,8 +188,11 @@ describe('shift mode: add', () => {
     expect(screen.getByTestId('shift-task-locked-day')).toHaveTextContent('Tue, Nov 10 · during Afternoons');
     // A locked day is not a picker.
     expect(screen.queryByLabelText(/^Starts/)).toBeNull();
-    expect(screen.getByRole('radio', { name: 'Every time this shift happens' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'Only Tue, Nov 10' })).not.toBeChecked();
+    // An add is "this day only": no repeat choice, just the caption (owner decision, 1.4.3).
+    expect(screen.queryByRole('radio', { name: 'Every time this shift happens' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Only Tue, Nov 10' })).toBeNull();
+    expect(screen.queryByTestId('shift-task-repeat')).toBeNull();
+    expect(screen.getByTestId('shift-task-only-day')).toHaveTextContent('Only Tue, Nov 10');
     expect(fromInput().value).toBe('14:00');
     expect(screen.getByTestId('task-to-tile')).toHaveTextContent(/To\s*No end/);
     expect(screen.getByTestId('shift-task-time-hint')).toHaveTextContent('Between 2:00 PM and 8:00 PM');
@@ -241,9 +244,10 @@ describe('shift mode: add', () => {
       scheduledDate: '2026-11-10',
       title: 'Give lunch',
       scheduled_time: '14:00',
+      only_this_day: true,
     });
     expect(JSON.stringify(lastPost())).toBe(
-      '{"scheduledDate":"2026-11-10","title":"Give lunch","scheduled_time":"14:00"}'
+      '{"scheduledDate":"2026-11-10","title":"Give lunch","scheduled_time":"14:00","only_this_day":true}'
     );
     expect(mutateUpdate).not.toHaveBeenCalled();
     expect(mutateCreateEvent).not.toHaveBeenCalled();
@@ -255,7 +259,6 @@ describe('shift mode: add', () => {
     await user.type(titleBox(), 'Walk');
     fireEvent.change(fromInput(), { target: { value: '15:00' } });
     fireEvent.change(toInput(), { target: { value: '15:45' } });
-    await user.click(screen.getByRole('radio', { name: 'Only Tue, Nov 10' }));
     await user.click(screen.getByRole('button', { name: /^More details/ }));
     await user.type(screen.getByLabelText(/^Details/), 'Slow pace');
     await user.click(screen.getByRole('button', { name: /^Reminders/ }));
@@ -278,7 +281,7 @@ describe('shift mode: add', () => {
     });
     expect(mutateUpdate).not.toHaveBeenCalled();
     expect(Analytics.shiftTaskSaved).toHaveBeenCalledWith(
-      expect.objectContaining({ mode: 'add', fieldsUsed: 4, oneOff: true, nextDay: false, detailsSaved: true })
+      expect.objectContaining({ mode: 'add', fieldsUsed: 3, oneOff: true, nextDay: false, detailsSaved: true })
     );
   });
 
@@ -313,7 +316,7 @@ describe('shift mode: add', () => {
       mode: 'add',
       source: 'shift_detail',
       fieldsUsed: 0,
-      oneOff: false,
+      oneOff: true,
       nextDay: false,
       timeChanged: false,
       nameChanged: false,
@@ -321,7 +324,7 @@ describe('shift mode: add', () => {
     });
     expect(Analytics.shiftTaskAdded).toHaveBeenCalledWith({
       source: 'shift_detail',
-      oneOff: false,
+      oneOff: true,
       shiftRepeats: true,
       nextDay: false,
     });

@@ -229,7 +229,9 @@ test.describe('shift tasks', () => {
     await expect(taskForm.getByTestId('shift-task-chip')).toHaveText(/^On Afternoons · /);
     await expect(taskForm.getByTestId('shift-task-locked-day')).toContainText(`${shortDate(s.today)} · during Afternoons`);
     await expect(taskForm.getByTestId('shift-task-owner')).toHaveText('Whoever is on this shift');
-    await expect(taskForm.getByRole('radio', { name: 'Every time this shift happens' })).toBeChecked();
+    // An add is "this day only" (owner 2026-11-19): no repeat choice, just the caption.
+    await expect(taskForm.getByRole('radio', { name: 'Every time this shift happens' })).toHaveCount(0);
+    await expect(taskForm.getByTestId('shift-task-only-day')).toHaveText(`Only ${shortDate(s.today)}`);
     await expect(taskForm.getByRole('radio', { name: 'Any time' })).toHaveCount(0);
     await expect(taskForm.getByTestId('shift-task-time-hint')).toHaveText('Between 12:00 AM and 12:00 AM');
     // An empty title is refused inline (Save points at the field).
@@ -237,7 +239,6 @@ test.describe('shift tasks', () => {
     await expect(taskForm.getByText('Please enter a title.')).toBeVisible();
     await taskForm.getByRole('textbox', { name: /^Title/ }).fill('Lunch');
     await fillSimpleTime(taskForm, '12:00');
-    await expect(taskForm.getByRole('radio', { name: `Only ${shortDate(s.today)}` })).not.toBeChecked();
     await checkA11y(page, 'shift-task-editor-add-light', testInfo);
     await taskForm.getByTestId('add-event-save').click();
 
@@ -252,7 +253,7 @@ test.describe('shift tasks', () => {
           from calendar_events
          where circle_id = ${sqlStr(s.circleId)}::uuid and event_type = 'task' and parent_event_id is null
          order by created_at`);
-    expect(linked()).toEqual([{ title: 'Lunch', rule: 'daily', linked: true }]);
+    expect(linked()).toEqual([{ title: 'Lunch', rule: null, linked: true }]);
 
     // The card counts it; the detail lists it, and an OPEN shift says so.
     await openShifts(page, s.circleId, 'Day');
@@ -278,7 +279,6 @@ test.describe('shift tasks', () => {
     const second = page.getByRole('dialog', { name: 'New task' });
     await second.getByRole('textbox', { name: /^Title/ }).fill('Walk');
     await fillSimpleTime(second, '15:00');
-    await second.getByRole('radio', { name: `Only ${shortDate(s.today)}` }).click();
     await second.getByTestId('add-event-save').click();
 
     // Back on the detail, where the new task is on the list in time order.
@@ -289,7 +289,7 @@ test.describe('shift tasks', () => {
     await expect(back.getByTestId('shift-task-row-name')).toHaveText(['Lunch', 'Walk']);
     await checkA11y(page, 'shift-tasks-detail-light', testInfo);
     expect(linked().map((r) => [r.title, r.rule])).toEqual([
-      ['Lunch', 'daily'],
+      ['Lunch', null],
       ['Walk', null],
     ]);
     await back.getByRole('button', { name: 'Close' }).last().click();

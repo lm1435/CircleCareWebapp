@@ -283,7 +283,8 @@
     "appointmentHint": "A visit or call during the shift",
     "cancel": "Cancel",
     "lockedHint": "Locked to shift",
-    "emptyHint": "Add a task, a medication or an appointment for whoever takes this shift."
+    "emptyHint": "Add a task, a medication or an appointment for whoever takes this shift.",
+    "errorPast": "Pick a time that hasn't passed yet."
   },
   "tasks": {
     "addTask": "Add a task to this shift",

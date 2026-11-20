@@ -589,6 +589,8 @@ describe('W5: no unreferenced en keys', () => {
     'shifts:tasks.form.explainOnce',
     // 1.4.3: the detail's button now reads `shifts:add.button`; the old label stays pinned by shiftTasksCopyParity (mobile twin).
     'shifts:tasks.form.title',
+    // 1.4.3: an add from the shift is "this day only" (no repeat choice); the label stays for mobile parity.
+    'shifts:tasks.editor.repeatEvery',
     // Mobile-parity Wave 2, Task 9. Added ahead of the UI that consumes them so
     // both locales land in one reviewable change:
     //   `addMenu.*` -> Task 10 `AddMenu`

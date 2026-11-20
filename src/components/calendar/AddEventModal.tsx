@@ -892,9 +892,12 @@ function AddEventForm({
       ? 'as_needed'
       : // A new simple medication starts on "Every day": the pills below always have one answer. An edit
         // keeps its stored rule.
-        !isEditing && simpleKind === 'medication'
-        ? 'daily'
-        : initialRecurrenceState.choice
+        windowMode
+        ? // "Add to this shift" saves ONE-TIME (no repeat controls, no recurrence keys).
+          'none'
+        : !isEditing && simpleKind === 'medication'
+          ? 'daily'
+          : initialRecurrenceState.choice
   );
   const [asNeededReason, setAsNeededReason] = useState(event?.as_needed_reason ?? '');
 
@@ -1033,8 +1036,10 @@ function AddEventForm({
   // PK9: a NEW event survives a forced sign-out (sessionStorage, same user,
   // 30 min). The core fields only; recurrence/reminder choices are cheap to
   // redo and tie to rules that must be re-derived. Edits are not drafts.
+  // Window mode ("Add to this shift") keeps no draft: a restore would write its own day under the locked tile, and a
+  // window draft would restore into the next plain form (Fable S4; mobile parity).
   useSessionDraft<AddEventDraft>(
-    isEditing ? null : `calendar:addEvent:${circleId}:${eventType}`,
+    isEditing || windowMode ? null : `calendar:addEvent:${circleId}:${eventType}`,
     () =>
       title.trim() || dosage.trim() || location.trim() || description.trim()
         ? {
@@ -1560,6 +1565,7 @@ function AddEventForm({
    * opens with its end (the form's usual 30 minutes); a medication has none.
    */
   const windowDefaultRef = useRef(false);
+  const windowAbandonedRef = useRef(false);
   useEffect(() => {
     if (!windowMode || !timezone || windowDefaultRef.current || datesTouched.current) return;
     const slot = defaultShiftTaskTime(windowMode, timezone);
@@ -1592,8 +1598,6 @@ function AddEventForm({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per opened editor
   }, [shiftMode, isEditing]);
-  /** Shift mode, a repeating shift: "Only <date>" instead of "Every time this shift happens". */
-  const [shiftOnlyDay, setShiftOnlyDay] = useState(false);
   /** Shift mode: the retryable failure line (network / server) and the delete confirm. */
   const [shiftSaveError, setShiftSaveError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -2098,7 +2102,8 @@ function AddEventForm({
         return true;
       })
       .map((dose) => {
-        let rowDate = dose.scheduledDate;
+        // Window mode: each dose is dated by ITS OWN clock (an after-midnight dose of an overnight shift is the next day).
+        let rowDate = windowMode ? windowDayForTime(windowMode, dose.scheduledTime) : dose.scheduledDate;
         if (recurrence === 'days_of_week' && selectedDays.length > 0 && selectedDays.length < 7) {
           rowDate = nextDateOnWeekdays(rowDate, selectedDays) ?? rowDate;
         }
@@ -2220,7 +2225,7 @@ function AddEventForm({
         const created = await createEvent.mutateAsync(data);
         // "Add to this shift" (1.4.3): ONE count per saved item, after the write went through (enum only).
         if (windowMode && (data.event_type === 'medication' || data.event_type === 'appointment')) {
-          Analytics.shiftItemAdded({ type: data.event_type });
+          Analytics.shiftItemAdded({ type: data.event_type, shiftRepeating: windowMode.repeating });
           windowItemId = created?.id ?? null;
         }
         if (data.event_type === 'appointment' && data.provider_id) {
@@ -2503,7 +2508,8 @@ function AddEventForm({
           scheduledDate: mode.scheduledDate,
           title: trimmed,
           scheduled_time: clock,
-          ...(shiftOnlyDay && mode.repeating ? { only_this_day: true } : {}),
+          // An ADD from the shift is "this day only" (1.4.3 owner decision): the Every-time-this-shift choice is gone.
+          only_this_day: true,
           ...(description.trim() ? { description: description.trim() } : {}),
           ...(span !== null ? { duration_minutes: span } : {}),
           ...(remindersDefault
@@ -2522,12 +2528,12 @@ function AddEventForm({
         taskId = created.id;
         Analytics.shiftTaskAdded({
           source: mode.source,
-          oneOff: !!body.only_this_day,
+          oneOff: mode.repeating,
           shiftRepeats: mode.repeating,
           nextDay,
         });
         // "Add to this shift" (1.4.3): the shared per-item count, beside the task's own event above.
-        Analytics.shiftItemAdded({ type: 'task' });
+        Analytics.shiftItemAdded({ type: 'task', shiftRepeating: mode.repeating });
         showToast(t('shifts:tasks.added'), 'success');
       }
       Analytics.shiftTaskSaved({
@@ -2536,10 +2542,9 @@ function AddEventForm({
         fieldsUsed:
           (span !== null ? 1 : 0) +
           (description.trim() ? 1 : 0) +
-          (!remindersDefault ? 1 : 0) +
-          (shiftOnlyDay && mode.repeating ? 1 : 0),
+          (!remindersDefault ? 1 : 0),
         // An edit's one-off is a fact about the task (not recurring); an add's is the only-this-day choice.
-        oneOff: isEditing ? !isRecurringEdit : shiftOnlyDay && mode.repeating,
+        oneOff: isEditing ? !isRecurringEdit : mode.repeating,
         nextDay,
         timeChanged,
         nameChanged,
@@ -2610,17 +2615,36 @@ function AddEventForm({
     }
 
     const built = buildPayload(timezone);
-    // WINDOW MODE: the (first dose's / start) time must be inside the shift's window; refused here, before any write.
+    // WINDOW MODE: EVERY start time (the appointment's, each medication dose) must be inside the shift's window and not
+    // already past; refused here, before any write. The day is checked too: the start must be on the window's day for
+    // that clock (the shift's, or the next one after midnight on an overnight shift), whatever moved the form's date
+    // (Fable S4). Outside the window takes precedence over past.
+    const windowClocks = !windowMode
+      ? []
+      : isMedication
+        ? doseRecipientTimes.filter((clock) => clock !== '')
+        : recipientClock
+          ? [recipientClock]
+          : [];
     const windowOutside =
       !!windowMode &&
-      !!recipientClock &&
-      !timeInsideShiftWindow(recipientClock, windowMode.startTime, windowMode.durationMinutes);
+      (windowClocks.some((clock) => !timeInsideShiftWindow(clock, windowMode.startTime, windowMode.durationMinutes)) ||
+        (!!recipientClock && recipientStartDate !== windowDayForTime(windowMode, recipientClock)));
+    const windowPast =
+      !!windowMode &&
+      !windowOutside &&
+      windowClocks.some((clock) => isEventPastDue(windowDayForTime(windowMode, clock), clock, timezone));
+    const windowError = windowOutside
+      ? t('shifts:tasks.form.errorOutside')
+      : windowPast
+        ? t('shifts:add.errorPast')
+        : null;
     const blockedErrors: FieldErrors | null = !built.ok
-      ? windowOutside
-        ? { ...built.errors, scheduled_time: t('shifts:tasks.form.errorOutside') }
+      ? windowError
+        ? { ...built.errors, scheduled_time: windowError }
         : built.errors
-      : windowOutside
-        ? { scheduled_time: t('shifts:tasks.form.errorOutside') }
+      : windowError
+        ? { scheduled_time: windowError }
         : null;
     if (!built.ok || blockedErrors) {
       const errs: FieldErrors = blockedErrors ?? {};
@@ -2686,6 +2710,19 @@ function AddEventForm({
   // Every user-initiated close (×, Cancel, Escape) comes through here; a
   // successful save calls the `onClose` prop directly and is never an abandon.
   function handleClose(): void {
+    // "Add to this shift": the editor closed without a save. A refused time still on screen is its own reason.
+    if (windowMode && !savedRef.current && !windowAbandonedRef.current) {
+      windowAbandonedRef.current = true;
+      const shown = errors.scheduled_time;
+      Analytics.shiftItemAddAbandoned({
+        type: eventType,
+        shiftRepeating: windowMode.repeating,
+        reason:
+          shown && (shown === t('shifts:tasks.form.errorOutside') || shown === t('shifts:add.errorPast'))
+            ? 'refused_time'
+            : 'cancel',
+      });
+    }
     if (!isEditing && !savedRef.current && !abandonReportedRef.current) {
       if (isMedication) {
         abandonReportedRef.current = true;
@@ -3730,7 +3767,11 @@ function AddEventForm({
       >
         <span className={VALUE_TILE_LABEL}>{t('addEvent.simple.starts')}</span>
         <span className="text-base font-medium text-ink">
-          {t('shifts:tasks.editor.lockedDay', { date: dayText(windowMode.scheduledDate), shift: windowMode.title })}
+          {/* The day the entry saves on: the next one for an after-midnight time on an overnight shift (Fable S3). */}
+          {t('shifts:tasks.editor.lockedDay', {
+            date: dayText(recipientClock ? windowDayForTime(windowMode, recipientClock) : windowMode.scheduledDate),
+            shift: windowMode.title,
+          })}
         </span>
       </div>
       <Text variant="caption" data-testid="shift-window-locked-hint">
@@ -3769,6 +3810,7 @@ function AddEventForm({
         {fieldError('scheduled_date', startTileError)}
       </div>
       )}
+      {!windowMode && (
       <div className="flex min-w-0 flex-col gap-1">
         {valueTile({
           kind: 'date',
@@ -3796,6 +3838,7 @@ function AddEventForm({
         })}
         {fieldError('recurrence_end_date', repeatEndError)}
       </div>
+      )}
     </div>
   );
 
@@ -4048,7 +4091,7 @@ function AddEventForm({
         {/* Every day / Every week / When needed / Custom… (Once and the rarer repeats). Scheduled <-> as
             needed is locked after create (the server refuses it): an edit of a scheduled medication never
             offers "When needed"; an as-needed one shows it lit and the whole choice disabled. */}
-        {howOftenGrid(
+        {!windowMode && howOftenGrid(
           [
             { value: 'daily', label: t('addEvent.simple.everyDay') },
             { value: 'weekly', label: t('addEvent.simple.everyWeek') },
@@ -4252,7 +4295,7 @@ function AddEventForm({
       <section aria-labelledby="sf-when" className="flex flex-col gap-3">
         {sectionHeading('sf-when', t('addEvent.simple.when'), true)}
         {whenDateTiles}
-        {howOftenGrid(
+        {!windowMode && howOftenGrid(
           [
             { value: 'none', label: t('addEvent.simple.once') },
             { value: 'daily', label: t('addEvent.simple.everyDay') },
@@ -4577,18 +4620,10 @@ function AddEventForm({
                 : t('shifts:tasks.form.onlyDate', { date: shiftDayText })}
             </Text>
           ) : shiftMode.repeating ? (
-            <ChipSelect
-              id="shift-task-repeat"
-              label={t('addEvent.simple.howOften')}
-              variant="tile"
-              allowDeselect={false}
-              options={[
-                { value: 'every', label: t('shifts:tasks.editor.repeatEvery') },
-                { value: 'only', label: t('shifts:tasks.form.onlyDate', { date: shiftDayText }) },
-              ]}
-              value={shiftOnlyDay ? 'only' : 'every'}
-              onChange={(next) => setShiftOnlyDay(next === 'only')}
-            />
+            // An add is "this day only": no repeat choice (1.4.3 owner decision).
+            <Text variant="caption" data-testid="shift-task-only-day">
+              {t('shifts:tasks.form.onlyDate', { date: shiftDayText })}
+            </Text>
           ) : (
             <Text variant="caption" data-testid="shift-task-form-explain">
               {t('shifts:tasks.form.explainOnce')}

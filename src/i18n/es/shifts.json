@@ -283,7 +283,8 @@
     "appointmentHint": "Una visita o llamada durante el turno",
     "cancel": "Cancelar",
     "lockedHint": "Fijado al turno",
-    "emptyHint": "Agrega una tarea, un medicamento o una cita para quien cubra este turno."
+    "emptyHint": "Agrega una tarea, un medicamento o una cita para quien cubra este turno.",
+    "errorPast": "Elige una hora que todavía no haya pasado."
   },
   "tasks": {
     "addTask": "Agregar una tarea a este turno",

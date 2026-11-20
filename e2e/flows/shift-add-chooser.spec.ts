@@ -105,7 +105,7 @@ test.describe('add to this shift', () => {
     await expect(form).toBeVisible();
 
     // Inside it: saves, returns to the detail with "Also happening" open and the new row there.
-    await fillSimpleTime(form, '18:00');
+    await fillSimpleTime(form, '23:45');
     await form.getByTestId('add-event-save').click();
     const back = page.getByRole('dialog', { name: 'Afternoons' });
     await expect(back).toBeVisible({ timeout: 20_000 });
@@ -119,7 +119,7 @@ test.describe('add to this shift', () => {
     const visit = rows.filter((e) => e.event_type === 'appointment' && e.title === 'Dr Rivera visit');
     expect(visit).toHaveLength(1);
     expect(visit[0].scheduled_date).toBe(s.today);
-    expect((visit[0].scheduled_time as string).slice(0, 5)).toBe('18:00');
+    expect((visit[0].scheduled_time as string).slice(0, 5)).toBe('23:45');
     expect(visit[0].shift ?? null).toBeNull();
   });
 });

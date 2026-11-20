@@ -42,6 +42,7 @@ import iconChevronDown from '../../../node_modules/ionicons/dist/svg/chevron-dow
 import iconPencilOutline from '../../../node_modules/ionicons/dist/svg/pencil-outline.svg?raw';
 import iconAlertCircleOutline from '../../../node_modules/ionicons/dist/svg/alert-circle-outline.svg?raw';
 import iconCheckmark from '../../../node_modules/ionicons/dist/svg/checkmark.svg?raw';
+import iconCheckmarkOutline from '../../../node_modules/ionicons/dist/svg/checkmark-outline.svg?raw';
 import iconCheckmarkCircle from '../../../node_modules/ionicons/dist/svg/checkmark-circle.svg?raw';
 import iconEllipseOutline from '../../../node_modules/ionicons/dist/svg/ellipse-outline.svg?raw';
 import iconMailOutline from '../../../node_modules/ionicons/dist/svg/mail-outline.svg?raw';
@@ -117,6 +118,7 @@ export const ICON_NAMES = [
   'star',
   'alert-circle-outline',
   'checkmark',
+  'checkmark-outline',
   'checkmark-circle',
   'ellipse-outline',
   'mail-outline',
@@ -191,6 +193,7 @@ export const ICON_FILES: Record<IconName, string> = {
   'pencil-outline': iconPencilOutline,
   'alert-circle-outline': iconAlertCircleOutline,
   checkmark: iconCheckmark,
+  'checkmark-outline': iconCheckmarkOutline,
   'checkmark-circle': iconCheckmarkCircle,
   'ellipse-outline': iconEllipseOutline,
   'mail-outline': iconMailOutline,

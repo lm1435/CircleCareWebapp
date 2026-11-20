@@ -545,6 +545,9 @@ const SHIFT_TEASER_SOURCES = ['toggle', 'add_menu', 'shifts_nudge'] as const;
 // Shift tasks (docs/plans/shift-tasks.md section 8): closed enums, identical on mobile.
 const SHIFT_TASK_SOURCES = ['saved_sheet', 'shift_detail'] as const;
 const SHIFT_ITEM_TYPES = ['task', 'medication', 'appointment'] as const;
+const SHIFT_ADD_CHOICES = ['task', 'medication', 'appointment', 'cancel'] as const;
+const SHIFT_ADD_ABANDON_TYPES = ['medication', 'appointment'] as const;
+const SHIFT_ADD_ABANDON_REASONS = ['cancel', 'refused_time'] as const;
 const SHIFT_TASK_SURFACES = ['shift_detail', 'today', 'tasks', 'calendar'] as const;
 const SHIFT_TASK_TASKS_BUCKETS = ['0', '1', '2-3', '4+'] as const;
 const SHIFT_TASK_DONE_BUCKETS = ['none', 'some', 'all'] as const;
@@ -2053,8 +2056,26 @@ export const Analytics = {
       next_day: opts.nextDay === true,
     }),
   // "Add to this shift" (1.4.3): one event per successful save of an item added from a shift; enum only.
-  shiftItemAdded: (opts: { type: string }) =>
-    capture('shift_item_added', { type: pickEnum(opts.type, SHIFT_ITEM_TYPES, 'task') }),
+  shiftItemAdded: (opts: { type: string; shiftRepeating?: boolean }) =>
+    capture('shift_item_added', {
+      type: pickEnum(opts.type, SHIFT_ITEM_TYPES, 'task'),
+      shift_repeating: opts.shiftRepeating === true,
+    }),
+  // The chooser: opened once, closed once (a pick, or any cancel / close path = 'cancel'). Enums and booleans only.
+  shiftAddChooserOpened: (opts: { shiftRepeating: boolean; listEmpty: boolean }) =>
+    capture('shift_add_chooser_opened', {
+      shift_repeating: opts.shiftRepeating === true,
+      list_empty: opts.listEmpty === true,
+    }),
+  shiftAddChooserClosed: (opts: { choice: string }) =>
+    capture('shift_add_chooser_closed', { choice: pickEnum(opts.choice, SHIFT_ADD_CHOICES, 'cancel') }),
+  // A medication / appointment editor opened from a shift closed without a save.
+  shiftItemAddAbandoned: (opts: { type: string; shiftRepeating: boolean; reason: string }) =>
+    capture('shift_item_add_abandoned', {
+      type: pickEnum(opts.type, SHIFT_ADD_ABANDON_TYPES, 'appointment'),
+      shift_repeating: opts.shiftRepeating === true,
+      reason: pickEnum(opts.reason, SHIFT_ADD_ABANDON_REASONS, 'cancel'),
+    }),
   shiftTaskCompleted: (opts: { surface: string }) =>
     capture('shift_task_completed', {
       surface: pickEnum(opts.surface, SHIFT_TASK_SURFACES, 'tasks'),

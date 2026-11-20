@@ -283,7 +283,8 @@
     "appointmentHint": "Uma visita ou ligação durante o plantão",
     "cancel": "Cancelar",
     "lockedHint": "Fixado no plantão",
-    "emptyHint": "Adicione uma tarefa, um medicamento ou uma consulta para quem assumir este plantão."
+    "emptyHint": "Adicione uma tarefa, um medicamento ou uma consulta para quem assumir este plantão.",
+    "errorPast": "Escolha um horário que ainda não passou."
   },
   "tasks": {
     "addTask": "Adicionar uma tarefa a este plantão",

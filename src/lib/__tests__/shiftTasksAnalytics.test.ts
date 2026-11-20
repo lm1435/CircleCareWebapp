@@ -136,4 +136,22 @@ describe('shift tasks analytics', () => {
     expect(JSON.stringify(last()[1])).not.toContain('Metformin');
     expect(JSON.stringify(capture.mock.calls)).not.toContain('circle_id');
   });
+
+  it('add-from-shift events: enums and booleans only; stray strings fall back and nothing identifying rides along', async () => {
+    const A = await load();
+    A.shiftAddChooserOpened({ shiftRepeating: true, listEmpty: false });
+    expect(last()).toEqual(['shift_add_chooser_opened', expect.objectContaining({ shift_repeating: true, list_empty: false })]);
+    A.shiftAddChooserClosed({ choice: 'medication' });
+    expect(last()[1]).toEqual(expect.objectContaining({ choice: 'medication' }));
+    A.shiftAddChooserClosed({ choice: 'Metformin 500mg' });
+    expect(last()[1]).toEqual(expect.objectContaining({ choice: 'cancel' }));
+    A.shiftItemAdded({ type: 'appointment', shiftRepeating: true });
+    expect(last()[1]).toEqual(expect.objectContaining({ type: 'appointment', shift_repeating: true }));
+    A.shiftItemAddAbandoned({ type: 'task', shiftRepeating: 'yes' as unknown as boolean, reason: 'because I felt like it' });
+    expect(last()[0]).toBe('shift_item_add_abandoned');
+    expect(last()[1]).toEqual(expect.objectContaining({ type: 'appointment', shift_repeating: false, reason: 'cancel' }));
+    A.shiftItemAddAbandoned({ type: 'medication', shiftRepeating: false, reason: 'refused_time' });
+    expect(last()[1]).toEqual(expect.objectContaining({ type: 'medication', reason: 'refused_time' }));
+    expect(JSON.stringify(capture.mock.calls)).not.toMatch(/circle_id|Metformin|felt like/);
+  });
 });

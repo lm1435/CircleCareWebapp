@@ -116,12 +116,13 @@ describe('saved dialog -> full task editor (shift mode)', () => {
       scheduledDate: '2026-11-10',
       title: 'Give lunch',
       scheduled_time: '14:00',
+      only_this_day: true,
     });
     expect(screen.queryByTestId('highlight-ring')).toBeNull();
     expect(await screen.findByText('Task added')).toBeInTheDocument();
     expect(Analytics.shiftTaskAdded).toHaveBeenCalledWith({
       source: 'saved_sheet',
-      oneOff: false,
+      oneOff: true,
       shiftRepeats: true,
       nextDay: false,
     });

@@ -138,6 +138,9 @@ const SPIED = [
   'shiftTaskSaveFailed',
   'shiftTaskListViewed',
   'shiftItemAdded',
+  'shiftAddChooserOpened',
+  'shiftAddChooserClosed',
+  'shiftItemAddAbandoned',
 ] as const;
 
 beforeEach(() => {
@@ -206,7 +209,7 @@ describe('Add to this shift: the button and the chooser', () => {
     expect(createShiftTask).toHaveBeenCalledTimes(1);
     expect(Analytics.shiftTaskAdded).toHaveBeenCalledTimes(1);
     expect(Analytics.shiftItemAdded).toHaveBeenCalledTimes(1);
-    expect(Analytics.shiftItemAdded).toHaveBeenCalledWith({ type: 'task' });
+    expect(Analytics.shiftItemAdded).toHaveBeenCalledWith({ type: 'task', shiftRepeating: true });
   });
 
   it('POS Appointment opens the appointment form in window mode (locked day, default time inside the window); closing returns to the detail', async () => {
@@ -248,7 +251,7 @@ describe('Add to this shift: the button and the chooser', () => {
     });
     expect(createShiftTask).not.toHaveBeenCalled();
     expect(Analytics.shiftItemAdded).toHaveBeenCalledTimes(1);
-    expect(Analytics.shiftItemAdded).toHaveBeenCalledWith({ type: 'appointment' });
+    expect(Analytics.shiftItemAdded).toHaveBeenCalledWith({ type: 'appointment', shiftRepeating: true });
   });
 
   it('POS after an appointment save the detail returns with "Also happening" opened and the new row ringed; after a task save it stays folded', async () => {
@@ -318,5 +321,46 @@ describe('Add to this shift: the button and the chooser', () => {
     await user.click(within(form).getByTestId('add-event-save'));
     await waitFor(() => expect(gate.promptLapsed).toHaveBeenCalledTimes(1));
     expect(Analytics.shiftItemAdded).not.toHaveBeenCalled();
+  });
+});
+
+describe('Add to this shift: chooser analytics', () => {
+  it('NEG nothing fires until the chooser opens (opening the detail alone is silent)', async () => {
+    await openDetail();
+    expect(Analytics.shiftAddChooserOpened).not.toHaveBeenCalled();
+    expect(Analytics.shiftAddChooserClosed).not.toHaveBeenCalled();
+  });
+
+  it('POS opening reports shift_repeating and list_empty once; a pick reports the choice once', async () => {
+    const { user } = await openDetail();
+    await openChooser(user);
+    expect(Analytics.shiftAddChooserOpened).toHaveBeenCalledTimes(1);
+    expect(Analytics.shiftAddChooserOpened).toHaveBeenCalledWith({ shiftRepeating: true, listEmpty: true });
+    await user.click(screen.getByTestId('shift-add-medication'));
+    expect(Analytics.shiftAddChooserClosed).toHaveBeenCalledTimes(1);
+    expect(Analytics.shiftAddChooserClosed).toHaveBeenCalledWith({ choice: 'medication' });
+  });
+
+  it('POS Cancel and Escape each report "cancel" exactly once per open', async () => {
+    const { user } = await openDetail();
+    await openChooser(user);
+    await user.click(screen.getByTestId('shift-add-cancel'));
+    await screen.findByRole('dialog', { name: 'Afternoons' });
+    expect(Analytics.shiftAddChooserClosed).toHaveBeenCalledTimes(1);
+    expect(Analytics.shiftAddChooserClosed).toHaveBeenLastCalledWith({ choice: 'cancel' });
+    await openChooser(user);
+    await user.keyboard('{Escape}');
+    await screen.findByRole('dialog', { name: 'Afternoons' });
+    expect(Analytics.shiftAddChooserOpened).toHaveBeenCalledTimes(2);
+    expect(Analytics.shiftAddChooserClosed).toHaveBeenCalledTimes(2);
+  });
+
+  it('POS list_empty is false when the shift has an item, shift_repeating false for a one-off shift', async () => {
+    rowsHook.events = [
+      { id: 'dose-1', circle_id: 'c', event_type: 'medication', title: 'Metformin', medication_name: 'Metformin', scheduled_date: '2026-11-10', scheduled_time: '15:00:00', created_at: '', updated_at: '' },
+    ];
+    const { user } = await openDetail(shift({ recurrence_rule: null, parent_event_id: null as never }));
+    await openChooser(user);
+    expect(Analytics.shiftAddChooserOpened).toHaveBeenCalledWith({ shiftRepeating: false, listEmpty: false });
   });
 });

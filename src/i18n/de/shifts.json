@@ -283,7 +283,8 @@
     "appointmentHint": "Ein Besuch oder Anruf während der Schicht",
     "cancel": "Abbrechen",
     "lockedHint": "An die Schicht gebunden",
-    "emptyHint": "Fügen Sie eine Aufgabe, ein Medikament oder einen Termin für die Person hinzu, die diese Schicht übernimmt."
+    "emptyHint": "Fügen Sie eine Aufgabe, ein Medikament oder einen Termin für die Person hinzu, die diese Schicht übernimmt.",
+    "errorPast": "Wählen Sie eine Uhrzeit, die noch nicht vorbei ist."
   },
   "tasks": {
     "addTask": "Aufgabe zu dieser Schicht hinzufügen",

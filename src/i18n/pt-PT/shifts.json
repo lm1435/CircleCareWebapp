@@ -156,7 +156,8 @@
     "medicationHint": "Um novo medicamento com uma dose neste turno",
     "appointmentHint": "Uma visita ou chamada durante o turno",
     "lockedHint": "Fixado no turno",
-    "emptyHint": "Adicione uma tarefa, um medicamento ou uma consulta para quem ficar com este turno."
+    "emptyHint": "Adicione uma tarefa, um medicamento ou uma consulta para quem ficar com este turno.",
+    "errorPast": "Escolha uma hora que ainda não tenha passado."
   },
   "tasks": {
     "list": {

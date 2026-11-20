@@ -205,6 +205,7 @@ function ActiveDialog({
     case 'addChooser':
       return (
         <ShiftAddChooser
+          circleId={circleId}
           shift={shift}
           onClose={() => setActive({ kind: 'detail', shift })}
           onChoose={(choice) =>
