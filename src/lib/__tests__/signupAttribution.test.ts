@@ -73,8 +73,80 @@ describe('source derivation', () => {
 });
 
 describe('analytics props', () => {
-  it('is conservative: source + utm/src only', () => {
+  it('is conservative: source + utm/src only; the ref hostname goes to the backend, never PostHog', () => {
     captureSignupAttribution('?utm_source=fb&ref=r', '/invite/ABC234');
     expect(getSignupAttributionProps()).toEqual({ source: 'invite', utm_source: 'fb' });
+    expect(getSignupAttribution().signup_source_detail.ref).toBe('r');
+  });
+  it('NEGATIVE: a non-hostname ref never reaches props', () => {
+    captureSignupAttribution('?ref=https://evil.example/path?q=1', '/');
+    expect(getSignupAttributionProps()).toEqual({ source: 'web' });
+  });
+});
+
+describe('referrer host (ref)', () => {
+  it('POSITIVE: records the referrer HOSTNAME when the landing URL has no ref param', () => {
+    captureSignupAttribution(
+      '?utm_source=circlecare.app&utm_medium=web&utm_campaign=hero_start',
+      '/signup',
+      'https://www.Google.com/search?q=dementia+care&token=abc#frag'
+    );
+    const a = getSignupAttribution();
+    expect(a).toEqual({
+      signup_source: 'web',
+      signup_source_detail: {
+        utm_source: 'circlecare.app',
+        utm_medium: 'web',
+        utm_campaign: 'hero_start',
+        ref: 'www.google.com',
+      },
+    });
+    const all = JSON.stringify(a) + JSON.stringify(sessionStorage) + JSON.stringify(getSignupAttributionProps());
+    expect(all).not.toContain('dementia');
+    expect(all).not.toContain('search');
+    expect(all).not.toContain('token');
+    expect(all).not.toContain('https');
+  });
+
+  it('POSITIVE: marketing-site referrer (circlecare.app) is a valid source', () => {
+    captureSignupAttribution('', '/signup', 'https://circlecare.app/pricing');
+    expect(getSignupAttribution().signup_source_detail).toEqual({ ref: 'circlecare.app' });
+  });
+
+  it('POSITIVE: a ref param wins over the referrer', () => {
+    captureSignupAttribution('?ref=news.ycombinator.com', '/signup', 'https://circlecare.app/');
+    expect(getSignupAttribution().signup_source_detail.ref).toBe('news.ycombinator.com');
+  });
+
+  it('NEGATIVE: a malformed (URL) ref param is never stored or sent; the referrer host is used', () => {
+    captureSignupAttribution('?ref=https://x.com/a?q=secret', '/signup', 'https://circlecare.app/');
+    expect(getSignupAttribution().signup_source_detail.ref).toBe('circlecare.app');
+    expect(JSON.stringify(sessionStorage)).not.toContain('secret');
+  });
+
+  it('NEGATIVE: own-domain referrers are ignored (my.circlecare.app and the current host)', () => {
+    captureSignupAttribution('', '/signup', 'https://my.circlecare.app/login?email=a@b.com');
+    captureSignupAttribution('', '/signup', `${window.location.origin}/login`);
+    expect(getSignupAttribution().signup_source_detail).toEqual({});
+    expect(JSON.stringify(sessionStorage)).not.toContain('my.circlecare.app');
+  });
+
+  it('NEGATIVE: empty / unparseable / non-http referrers record nothing', () => {
+    captureSignupAttribution('', '/', '');
+    captureSignupAttribution('', '/', 'not a url');
+    captureSignupAttribution('', '/', 'about:blank');
+    expect(getSignupAttribution().signup_source_detail).toEqual({});
+  });
+
+  it('NEGATIVE: first touch is never overwritten by a later referrer or ref param', () => {
+    captureSignupAttribution('', '/', 'https://www.bing.com/search?q=x');
+    captureSignupAttribution('', '/', 'https://www.google.com/');
+    captureSignupAttribution('?ref=facebook.com', '/');
+    expect(getSignupAttribution().signup_source_detail.ref).toBe('www.bing.com');
+  });
+
+  it('NEGATIVE: an IP/port referrer keeps the host only (no port)', () => {
+    captureSignupAttribution('', '/', 'http://example.org:8080/a?b=c');
+    expect(getSignupAttribution().signup_source_detail.ref).toBe('example.org');
   });
 });
