@@ -197,6 +197,8 @@ export function CreateCircleModal({
       create.mutate(data, {
         onSuccess: (circle) => {
           Analytics.circleCreated(isSelfCare);
+          // The circle was created WITH a date of birth: `dob_added {surface}` (enum only, never the date).
+          if (typeof data.recipient_dob === 'string' && data.recipient_dob) Analytics.dobAdded('create_circle');
           if (data.timezone) {
             try {
               Analytics.circleTimezoneSet({

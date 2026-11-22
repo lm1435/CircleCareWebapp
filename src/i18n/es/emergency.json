@@ -445,5 +445,12 @@
   },
   "recentMedications": "Recientes (últimos 30 días)",
   "stoppedOn": "Suspendido el {{date}}",
-  "medicationsLoadError": "No se pudo cargar esta información"
+  "medicationsLoadError": "No se pudo cargar esta información",
+  "dobPrompt": {
+    "add": "Agregar fecha de nacimiento",
+    "missing": "No se ha indicado la fecha de nacimiento.",
+    "missingBody": "Ayuda a los paramédicos y médicos a confirmar quién es {{name}}.",
+    "addShort": "Agregar",
+    "exportAnyway": "Exportar de todos modos"
+  }
 }

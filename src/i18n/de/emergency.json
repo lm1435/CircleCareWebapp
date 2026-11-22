@@ -445,5 +445,12 @@
   },
   "recentMedications": "Zuletzt (letzte 30 Tage)",
   "stoppedOn": "Abgesetzt am {{date}}",
-  "medicationsLoadError": "Diese Informationen konnten nicht geladen werden"
+  "medicationsLoadError": "Diese Informationen konnten nicht geladen werden",
+  "dobPrompt": {
+    "add": "Geburtsdatum hinzufügen",
+    "missing": "Das Geburtsdatum ist nicht eingetragen.",
+    "missingBody": "So können Rettungskräfte und Ärzte bestätigen, wer {{name}} ist.",
+    "addShort": "Hinzufügen",
+    "exportAnyway": "Trotzdem exportieren"
+  }
 }

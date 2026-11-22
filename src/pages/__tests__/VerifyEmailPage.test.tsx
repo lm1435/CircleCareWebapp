@@ -706,3 +706,59 @@ describe('VerifyEmailPage — first run v2 auto-submit', () => {
     auto.mockRestore();
   });
 });
+
+// FIRST RUN FUNNEL (owner 2026-11-22): `code` failed with a closed reason, back on Back.
+describe('VerifyEmailPage — first run funnel (code step)', () => {
+  let stepFailed: ReturnType<typeof vi.spyOn>;
+  let stepCompleted: ReturnType<typeof vi.spyOn>;
+  let backTapped: ReturnType<typeof vi.spyOn>;
+  beforeEach(async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    const { resetFirstRunFunnelForTests } = await import('@/lib/firstRunFunnel');
+    resetFirstRunFunnelForTests();
+    mockNavigate.mockReset();
+    mockedPost.mockReset();
+    tokenAccessor.clear();
+    sessionStorage.clear();
+    useAuthStore.setState({ user: null, isAuthenticated: false, isBootstrapping: false });
+    stepFailed = vi.spyOn(Analytics, 'firstRunStepFailed').mockImplementation(() => {});
+    stepCompleted = vi.spyOn(Analytics, 'firstRunStepCompleted').mockImplementation(() => {});
+    backTapped = vi.spyOn(Analytics, 'firstRunBackTapped').mockImplementation(() => {});
+    vi.spyOn(Analytics, 'firstRunStepViewed').mockImplementation(() => {});
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it('POSITIVE: a wrong (or expired) code is a failed code step with invalid_code, once', async () => {
+    mockedPost.mockRejectedValue(rejectedCode);
+    renderVerify();
+    await enterOtp('999999');
+    await screen.findByRole('alert');
+    expect(stepFailed).toHaveBeenCalledTimes(1);
+    expect(stepFailed).toHaveBeenCalledWith('code', 'invalid_code', 'email');
+    expect(stepCompleted).not.toHaveBeenCalled();
+  });
+
+  it('POSITIVE: the OTP lock (429 RATE_LIMIT) is rate_limited; no answer is network', async () => {
+    mockedPost.mockRejectedValueOnce({ success: false, error: { code: 'RATE_LIMIT', message: 'x' } });
+    renderVerify();
+    await enterOtp('999999');
+    await waitFor(() => expect(stepFailed).toHaveBeenCalledWith('code', 'rate_limited', 'email'));
+    mockedPost.mockRejectedValueOnce(networkError());
+    await userEvent.setup().click(screen.getByRole('button', { name: /^Verify/ }));
+    await waitFor(() => expect(stepFailed).toHaveBeenLastCalledWith('code', 'network', 'email'));
+  });
+
+  it('NEGATIVE: a correct code completes the step and sends no failure', async () => {
+    mockAuthEndpoints();
+    renderVerify();
+    await enterOtp('123456');
+    await waitFor(() => expect(stepCompleted).toHaveBeenCalledWith('code', expect.any(String), 'email', undefined));
+    expect(stepFailed).not.toHaveBeenCalled();
+  });
+
+  it('POSITIVE: Back is a back on the code step', async () => {
+    renderVerify();
+    await userEvent.setup().click(screen.getByRole('button', { name: /back/i }));
+    expect(backTapped).toHaveBeenCalledWith('code');
+  });
+});

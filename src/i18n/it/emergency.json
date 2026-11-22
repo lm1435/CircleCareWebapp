@@ -445,5 +445,12 @@
   },
   "recentMedications": "Recenti (ultimi 30 giorni)",
   "stoppedOn": "Interrotto il {{date}}",
-  "medicationsLoadError": "Impossibile caricare queste informazioni"
+  "medicationsLoadError": "Impossibile caricare queste informazioni",
+  "dobPrompt": {
+    "add": "Aggiungi la data di nascita",
+    "missing": "La data di nascita non è impostata.",
+    "missingBody": "Aiuta i soccorritori e i medici a confermare l’identità di {{name}}.",
+    "addShort": "Aggiungi",
+    "exportAnyway": "Esporta comunque"
+  }
 }

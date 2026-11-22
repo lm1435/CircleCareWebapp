@@ -184,6 +184,34 @@ describe('FirstRunWizardModal v2: first item', () => {
   });
 });
 
+// first_run_step_skipped (owner 2026-11-22, mobile parity): the optional first item left unsaved, once per run.
+describe('FirstRunWizardModal: first_run_step_skipped', () => {
+  it('POSITIVE: Skip for now / x sends first_run_step_skipped {first_item, path} once, before Today ends the run', async () => {
+    const stepSkipped = vi.spyOn(Analytics, 'firstRunStepSkipped').mockImplementation(() => {});
+    renderWizard();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'stub-skip' }));
+    expect(stepSkipped).toHaveBeenCalledTimes(1);
+    expect(stepSkipped).toHaveBeenCalledWith('first_item', 'email');
+  });
+
+  it('NEGATIVE: a saved first item never reports a skip (and Go to Today afterwards does not either)', async () => {
+    const stepSkipped = vi.spyOn(Analytics, 'firstRunStepSkipped').mockImplementation(() => {});
+    renderWizard();
+    await saveFirstItem();
+    fireEvent.click(screen.getByRole('button', { name: 'Go to Today' }));
+    expect(stepSkipped).not.toHaveBeenCalled();
+  });
+
+  it('NEGATIVE: a second wizard in the same run (reopened) does not send a second skip', async () => {
+    const stepSkipped = vi.spyOn(Analytics, 'firstRunStepSkipped').mockImplementation(() => {});
+    const { firstRunFunnel } = await import('@/lib/firstRunFunnel');
+    firstRunFunnel.viewed('first_item');
+    firstRunFunnel.skipped('first_item');
+    firstRunFunnel.skipped('first_item');
+    expect(stepSkipped).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('FirstRunWizardModal v2: All set', () => {
   it('POSITIVE: after a medication: the 8:00 AM title, three rows, the Optional invite block', async () => {
     renderWizard();

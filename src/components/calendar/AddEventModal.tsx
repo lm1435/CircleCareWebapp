@@ -81,6 +81,7 @@ import {
   type EntryFormStep,
   type TimeChipId,
 } from '@/lib/analytics';
+import { firstRunFailReason, firstRunFunnel } from '@/lib/firstRunFunnel';
 import { chipForTime } from '@/lib/medTimeOfDay';
 import { useAuthStore } from '@/store/authStore';
 import { useLargeTextLayoutEvent } from '@/lib/largeText';
@@ -2378,6 +2379,7 @@ function AddEventForm({
         errorCode: classifyFailureCode(error),
         ...(httpStatus !== undefined ? { httpStatus } : {}),
       });
+      if (firstRunMode) firstRunFunnel.failed('first_item', firstRunFailReason(error));
     }
   }
 
@@ -2432,13 +2434,15 @@ function AddEventForm({
     const clock = recipientClock;
     const storedClock = scheduleSource?.scheduled_time ? scheduleSource.scheduled_time.slice(0, 5) : '';
     const found: FieldErrors = {};
-    let reason: 'name_missing' | 'outside_window' | null = null;
+    let reason: 'name_missing' | 'outside_window' | 'missing_time' | null = null;
     if (!trimmed) {
       found.title = t('addEvent.validation.titleRequired');
       reason = 'name_missing';
     }
     if (!clock) {
       found.scheduled_time = t('addEvent.validation.pickTime');
+      // "Pick a time." (owner 2026-11-22, mobile parity): its own reason, not 'other'.
+      reason = reason ?? 'missing_time';
     } else if (!timeInsideShiftWindow(clock, mode.startTime, mode.durationMinutes)) {
       found.scheduled_time = outsideShiftMessage([clock]);
       reason = reason ?? 'outside_window';
@@ -2655,6 +2659,8 @@ function AddEventForm({
         }),
         eventType
       );
+      // First run: the required first-item step was blocked by the form.
+      if (firstRunMode) firstRunFunnel.failed('first_item', 'validation');
       // Cover every field that can error so focus always lands on an errored
       // control — including the title id for the OTHER type and the Zod-derived
       // fields (description, location, dosage, recurrence) (WCAG SC 3.3.1).
@@ -2827,10 +2833,20 @@ function AddEventForm({
   // `scheduled_date`, `scheduled_time`).
   function focusMissingField(): void {
     if (missingField === null) return;
-    // Shift mode: Save with the name empty is a failed save like the other shift reasons (mobile parity).
+    // Save pressed with a required field empty is a blocked entry (mobile parity: the same event on the
+    // same tap). "Pick a time." reports `missing_time` with the REAL type (appointment / task too).
+    Analytics.entryValidationBlocked(
+      missingField === 'title' ? 'missing_name' : missingField === 'time' ? 'missing_time' : 'invalid_field',
+      eventType
+    );
+    // Shift mode: Save with the name (or the time) empty is a failed save like the other shift reasons.
     if (shiftMode && missingField === 'title') {
       Analytics.shiftTaskSaveFailed({ mode: isEditing ? 'edit' : 'add', reason: 'name_missing' });
+    } else if (shiftMode && missingField === 'time') {
+      Analytics.shiftTaskSaveFailed({ mode: isEditing ? 'edit' : 'add', reason: 'missing_time' });
     }
+    // First run: the required first-item step was blocked by the form.
+    if (firstRunMode) firstRunFunnel.failed('first_item', 'validation');
     setPressedMissing(missingField);
     const id =
       missingField === 'title'
@@ -4982,6 +4998,9 @@ function validationReason(input: {
   | 'invalid_field' {
   if (!input.hasTitle) return 'missing_name';
   if (input.isMedication && input.errors.scheduled_time) return 'missing_time';
+  // An appointment / task with NO time picked ("Pick a time.": first run, a shift appointment). A time
+  // that IS set but refused (outside the shift) is not a missing time.
+  if (!input.isMedication && !input.hasTime && input.errors.scheduled_time) return 'missing_time';
   if (!input.isMedication && input.errors.endTime) {
     return input.hasTime && !input.hasEndTime ? 'missing_end_time' : 'end_time_after_start';
   }

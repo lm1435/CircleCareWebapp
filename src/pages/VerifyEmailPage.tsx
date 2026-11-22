@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { clearPendingSignupEmail, peekPendingSignupEmail } from '@/lib/pendingSignupEmail';
 import { Analytics } from '@/lib/analytics';
-import { firstRunFunnel } from '@/lib/firstRunFunnel';
+import { firstRunFailReason, firstRunFunnel } from '@/lib/firstRunFunnel';
 import { classifyFailureCode, isEmailRateLimitError, isRateLimitError } from '@/lib/apiErrors';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { Button, Card, Text, TextField } from '@/components/ui';
@@ -135,11 +135,13 @@ export default function VerifyEmailPage(): ReactElement {
     if (emailError) {
       setError(emailError);
       emailRef.current?.focus();
+      firstRunFunnel.failed('code', 'validation');
       return;
     }
     if (code.length !== OTP_LENGTH) {
       setError(t('verifyOtp.errors.incompleteCode'));
       otpRef.current?.focus();
+      firstRunFunnel.failed('code', 'validation');
       return;
     }
 
@@ -179,6 +181,9 @@ export default function VerifyEmailPage(): ReactElement {
       // A 429 says wait — "tap Resend" would spend the same limiter bucket.
       setError(isRateLimitError(err) ? t('rateLimited') : t('verifyOtp.errors.invalidCode'));
       Analytics.otpFailed();
+      // VERIFICATION_FAILED (wrong OR expired: the backend does not say which) -> invalid_code;
+      // the 429 lock -> rate_limited; nothing answered -> network.
+      firstRunFunnel.failed('code', firstRunFailReason(err));
       if (auto) Analytics.otpAutoSubmitted(false);
       submittedRef.current = false;
       // A DEFINITELY rejected code is emptied, not left to be typed over. This
@@ -267,7 +272,12 @@ export default function VerifyEmailPage(): ReactElement {
 
   return (
     <AuthShell>
-      <AuthTopBar onBack={goBack} />
+      <AuthTopBar
+        onBack={() => {
+          firstRunFunnel.back('code');
+          goBack();
+        }}
+      />
       <AuthHeader
         title={t('verifyOtp.title')}
         subtitle={

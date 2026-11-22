@@ -38,8 +38,12 @@ export function FirstRunWhoStep({ entry = 'web', onDone, initialName = '' }: Fir
 
   const submit = (event?: FormEvent): void => {
     event?.preventDefault();
-    // NEGATIVE GUARD: an empty or whitespace-only name never continues (Enter included).
-    if (!trimmed) return;
+    // NEGATIVE GUARD: an empty or whitespace-only name never continues (Enter included). Continue is
+    // disabled then, so only Enter gets here: the funnel still hears the blocked step.
+    if (!trimmed) {
+      firstRunFunnel.failed('who', 'validation');
+      return;
+    }
     setFirstRunDraft({ recipientName: trimmed, isSelfCare: false });
     Analytics.firstRunRecipientSubmitted(false);
     firstRunFunnel.completed('who');

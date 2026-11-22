@@ -397,6 +397,8 @@ export default function CirclePickerPage(): ReactElement {
       )}
       {showJoin && (
         <JoinCircleModal
+          // No circle yet: joining IS this person's first run (the funnel's `join` step).
+          firstRun={isEmpty}
           onClose={() => setShowJoin(false)}
           onJoined={(circleId) =>
             navigate(

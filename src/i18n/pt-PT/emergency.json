@@ -153,5 +153,9 @@
   },
   "sos": {
     "dial": "Marcar {{number}}"
+  },
+  "dobPrompt": {
+    "missing": "A data de nascimento não está definida.",
+    "missingBody": "Ajuda os socorristas e os médicos a confirmar quem é {{name}}."
   }
 }

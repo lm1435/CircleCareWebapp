@@ -37,6 +37,11 @@ export interface RecipientHeaderProps {
    * string defensively so a shape change can never crash the emergency sheet.
    */
   conditions?: string[] | string | null;
+  /**
+   * No DOB on file and the viewer may edit the circle (owner 2026-11-22): a quiet "Add date of birth"
+   * row under the name. Omitted = no row (view-only, or a DOB is already there).
+   */
+  onAddDob?: () => void;
 }
 
 /** Normalize conditions (array | string | nullish) to a single display line. */
@@ -58,6 +63,7 @@ export function RecipientHeader({
   photoUrl,
   dob,
   conditions,
+  onAddDob,
 }: RecipientHeaderProps): ReactElement {
   const { t, i18n } = useTranslation('emergency');
   const dobLabel = dob ? formatDob(dob, i18n.language) : null;
@@ -79,6 +85,16 @@ export function RecipientHeader({
               <dd className="m-0 text-md font-medium leading-relaxed text-ink">{dobLabel}</dd>
             </dl>
           )}
+          {!dobLabel && onAddDob ? (
+            <button
+              type="button"
+              onClick={onAddDob}
+              data-testid="recipient-add-dob"
+              className="no-print mt-1 inline-flex min-h-[44px] items-center text-sm font-semibold text-moss-deep underline-offset-2 hover:underline"
+            >
+              {t('dobPrompt.add')}
+            </button>
+          ) : null}
         </div>
       </div>
       {conditionsText && (

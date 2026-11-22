@@ -175,7 +175,9 @@ beforeEach(() => {
   mutateUpdate.mockResolvedValue({ id: 'task-1' });
   mutateDelete.mockResolvedValue(undefined);
   for (const name of SPIED) vi.spyOn(Analytics, name).mockImplementation(() => {});
+  stepFailedSpy = vi.spyOn(Analytics, 'firstRunStepFailed').mockImplementation(() => {});
 });
+let stepFailedSpy: ReturnType<typeof vi.spyOn>;
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -251,10 +253,26 @@ describe('shift mode: add', () => {
     expect(await screen.findByText('Pick a time.')).toBeInTheDocument();
     expect(screen.queryByText('Medications need a scheduled time.')).toBeNull();
     await waitFor(() => expect(document.getElementById('scheduled_time-tile')).toHaveFocus());
+    // owner 2026-11-22 (mobile parity): the press reports missing_time on BOTH events, with the real type.
+    expect(Analytics.entryValidationBlocked).toHaveBeenCalledWith('missing_time', 'task');
+    expect(Analytics.shiftTaskSaveFailed).toHaveBeenCalledWith({ mode: 'add', reason: 'missing_time' });
     fireEvent.submit(document.getElementById('add-event-form') as HTMLFormElement);
     await new Promise((r) => setTimeout(r, 50));
     expect(createShiftTask).not.toHaveBeenCalled();
     expect(onShiftTaskSaved).not.toHaveBeenCalled();
+    // The submit path names the same reason, never 'other'.
+    expect(Analytics.shiftTaskSaveFailed).toHaveBeenLastCalledWith({ mode: 'add', reason: 'missing_time' });
+    expect(Analytics.shiftTaskSaveFailed).not.toHaveBeenCalledWith({ mode: 'add', reason: 'other' });
+    // Not a first run: no first-run failure.
+    expect(stepFailedSpy).not.toHaveBeenCalled();
+  });
+
+  it('N-NOTIME-NAME a missing name stays name_missing (missing_time never masks it)', async () => {
+    const { user } = setup();
+    await user.click(save());
+    expect(Analytics.shiftTaskSaveFailed).toHaveBeenCalledWith({ mode: 'add', reason: 'name_missing' });
+    expect(Analytics.entryValidationBlocked).toHaveBeenCalledWith('missing_name', 'task');
+    expect(Analytics.shiftTaskSaveFailed).not.toHaveBeenCalledWith({ mode: 'add', reason: 'missing_time' });
   });
 
   it('P3 name + time only = ONE POST with exactly the old body, and no update call', async () => {

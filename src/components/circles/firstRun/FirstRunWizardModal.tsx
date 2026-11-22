@@ -105,6 +105,8 @@ export function FirstRunWizardModal({
       return;
     }
     Analytics.firstRunSkipped(circleId, 'close');
+    // Before Today: viewing Today ends the run, and the skip belongs to it.
+    firstRunFunnel.skipped('first_item');
     firstRunFunnel.viewed('today', circleId);
     onClose();
   };

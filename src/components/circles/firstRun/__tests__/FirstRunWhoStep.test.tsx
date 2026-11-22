@@ -17,7 +17,9 @@ beforeEach(() => {
   viewed = vi.spyOn(Analytics, 'firstRunRecipientViewed').mockImplementation(() => {});
   vi.spyOn(Analytics, 'firstRunStepViewed').mockImplementation(() => {});
   vi.spyOn(Analytics, 'firstRunStepCompleted').mockImplementation(() => {});
+  stepFailed = vi.spyOn(Analytics, 'firstRunStepFailed').mockImplementation(() => {});
 });
+let stepFailed: ReturnType<typeof vi.spyOn>;
 afterEach(() => vi.restoreAllMocks());
 
 function renderStep() {
@@ -60,6 +62,16 @@ describe('FirstRunWhoStep', () => {
     fireEvent.submit(screen.getByTestId('first-run-who'));
     expect(onDone).not.toHaveBeenCalled();
     expect(peekFirstRunDraft()).toBeNull();
+    // owner 2026-11-22: the blocked Enter is a failed `who` (validation), once.
+    expect(stepFailed).toHaveBeenCalledTimes(1);
+    expect(stepFailed).toHaveBeenCalledWith('who', 'validation', 'email');
+  });
+
+  it('NEGATIVE: a successful Continue / "It\'s for me" never sends a failure', async () => {
+    renderStep();
+    await userEvent.setup().type(screen.getByLabelText(/^Their name/), 'Rosa');
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Continue' }));
+    expect(stepFailed).not.toHaveBeenCalled();
   });
 
   it('NEGATIVE: a whitespace-only name blocks too, and shows no preview', async () => {

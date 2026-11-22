@@ -7,6 +7,7 @@ import { useUpdateCircle, useDeleteCircle } from '@/hooks/useCircleAdmin';
 import { useAuthStore } from '@/store/authStore';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { editPatch } from '@/utils/editPatch';
+import { Analytics } from '@/lib/analytics';
 import { PageMasthead } from '@/components/layout/PageMasthead';
 import { CircleTimezoneCard } from '@/components/circles/CircleTimezoneCard';
 import {
@@ -196,7 +197,13 @@ export default function EditCirclePage(): ReactElement {
         // `mutate` returns immediately, so there is no promise to hold it open.
         if (update.isPending || !submitGuard.claim()) return;
         update.mutate(data, {
-          onSuccess: () => showToast(t('edit.savedToast'), 'success'),
+          onSuccess: () => {
+            // A DOB saved here (added or changed, never a clear): `dob_added {surface}`, enum only.
+            if (typeof data.recipient_dob === 'string' && data.recipient_dob) {
+              Analytics.dobAdded('edit_circle');
+            }
+            showToast(t('edit.savedToast'), 'success');
+          },
           onSettled: submitGuard.release,
         });
       }

@@ -759,3 +759,75 @@ describe('AuthCallbackPage — stale visit (bare /auth/callback re-opened)', () 
     expect(localStorage.getItem('cc_pending_analytics_consent')).toBeNull();
   });
 });
+
+// FIRST RUN FUNNEL (owner 2026-11-22): the Apple / Google ACCOUNT step finishes here (mobile parity:
+// completed only when the account was created), and a sign-up handshake that fails or is cancelled
+// is a failed account step.
+describe('AuthCallbackPage — first run funnel (account)', () => {
+  let stepCompleted: ReturnType<typeof vi.spyOn>;
+  let stepFailed: ReturnType<typeof vi.spyOn>;
+  beforeEach(async () => {
+    const { resetFirstRunFunnelForTests, setFirstRunPath } = await import('@/lib/firstRunFunnel');
+    mockNavigate.mockReset();
+    mockedPost.mockReset();
+    mockedExchange.mockReset();
+    tokenAccessor.clear();
+    localStorage.clear();
+    sessionStorage.clear();
+    resetFirstRunFunnelForTests();
+    setFirstRunPath('google');
+    useAuthStore.setState({ user: null, isAuthenticated: false, isBootstrapping: false });
+    window.history.replaceState(null, '', '/auth/callback');
+    stepCompleted = vi.spyOn(Analytics, 'firstRunStepCompleted').mockImplementation(() => {});
+    stepFailed = vi.spyOn(Analytics, 'firstRunStepFailed').mockImplementation(() => {});
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it('POSITIVE: a sign-in that CREATED the account completes account once, path google', async () => {
+    setPendingAuthMethod('google');
+    arriveWithCode();
+    mockedPost.mockResolvedValueOnce({ ...sessionEnvelope, data: { ...sessionEnvelope.data, is_new_user: true } } as never);
+    renderCallback();
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalled());
+    expect(stepCompleted).toHaveBeenCalledTimes(1);
+    expect(stepCompleted).toHaveBeenCalledWith('account', expect.any(String), 'google', undefined);
+    expect(stepFailed).not.toHaveBeenCalled();
+  });
+
+  it('NEGATIVE: a returning user (login) never completes the account step', async () => {
+    setPendingAuthMethod('google');
+    arriveWithCode();
+    mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
+    renderCallback();
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalled());
+    expect(stepCompleted).not.toHaveBeenCalled();
+  });
+
+  it('POSITIVE: a SIGN-UP cancelled at the provider is a failed account with cancelled', async () => {
+    setPendingAuthMethod('google');
+    setPendingAnalyticsConsent(true);
+    window.history.replaceState(null, '', '/auth/callback#error=access_denied');
+    renderCallback();
+    await screen.findByText("No problem — you can sign in whenever you're ready.");
+    expect(stepFailed).toHaveBeenCalledTimes(1);
+    expect(stepFailed).toHaveBeenCalledWith('account', 'cancelled', 'google');
+  });
+
+  it('NEGATIVE: a LOGIN cancelled at the provider (no sign-up parked) is not a first-run failure', async () => {
+    setPendingAuthMethod('google');
+    window.history.replaceState(null, '', '/auth/callback#error=access_denied');
+    renderCallback();
+    await screen.findByText("No problem — you can sign in whenever you're ready.");
+    expect(stepFailed).not.toHaveBeenCalled();
+  });
+
+  it('POSITIVE: a sign-up whose session exchange the server refuses is a failed account (server)', async () => {
+    setPendingAuthMethod('apple');
+    setPendingAnalyticsConsent(false);
+    arriveWithCode();
+    mockedPost.mockRejectedValueOnce({ success: false, error: { code: 'SERVER_ERROR', message: 'x' } });
+    renderCallback();
+    await waitFor(() => expect(stepFailed).toHaveBeenCalledWith('account', 'server', 'google'));
+    expect(stepCompleted).not.toHaveBeenCalled();
+  });
+});

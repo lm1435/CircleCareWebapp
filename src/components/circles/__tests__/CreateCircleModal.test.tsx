@@ -457,3 +457,35 @@ describe('CreateCircleModal', () => {
     });
   });
 });
+
+// dob_added {surface: 'create_circle'} (owner 2026-11-22): a circle created WITH a DOB. Enum only.
+describe('CreateCircleModal dob_added', () => {
+  it('POSITIVE: created with a DOB -> dob_added {create_circle} once; the payload has the literal date', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    const added = vi.spyOn(Analytics, 'dobAdded').mockImplementation(() => {});
+    createMutate.mockImplementation((_data, opts) => opts?.onSuccess?.({ id: 'circle-new' }));
+    renderModal();
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/Care recipient name/), 'Rose Meza');
+    const { fireEvent } = await import('@testing-library/react');
+    fireEvent.change(screen.getByLabelText(/^Date of birth/), { target: { value: '1950-06-15' } });
+    await user.click(screen.getByRole('button', { name: 'Create circle' }));
+    await waitFor(() => expect(added).toHaveBeenCalledTimes(1));
+    expect(added).toHaveBeenCalledWith('create_circle');
+    expect(createMutate.mock.calls[0][0].recipient_dob).toBe('1950-06-15');
+    added.mockRestore();
+  });
+
+  it('NEGATIVE: created WITHOUT a DOB, or a failed create, never fires dob_added', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    const added = vi.spyOn(Analytics, 'dobAdded').mockImplementation(() => {});
+    createMutate.mockImplementation((_data, opts) => opts?.onSuccess?.({ id: 'circle-new' }));
+    renderModal();
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/Care recipient name/), 'Rose Meza');
+    await user.click(screen.getByRole('button', { name: 'Create circle' }));
+    await waitFor(() => expect(createMutate).toHaveBeenCalled());
+    expect(added).not.toHaveBeenCalled();
+    added.mockRestore();
+  });
+});

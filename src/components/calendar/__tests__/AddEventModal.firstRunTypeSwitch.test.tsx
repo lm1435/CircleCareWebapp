@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import { Analytics } from '@/lib/analytics';
 import { resetLargeTextReports } from '@/lib/largeText';
+import { resetFirstRunFunnelForTests } from '@/lib/firstRunFunnel';
 import { queryClient } from '@/lib/queryClient';
 import { searchDrugs } from '@/api/drugs';
 import { AddEventModal } from '../AddEventModal';
@@ -67,6 +68,8 @@ vi.mock('@/components/ui', async (importOriginal) => {
 
 let firstRunSaved: ReturnType<typeof vi.spyOn>;
 let switched: ReturnType<typeof vi.spyOn>;
+let blocked: ReturnType<typeof vi.spyOn>;
+let stepFailed: ReturnType<typeof vi.spyOn>;
 
 
 beforeEach(() => {
@@ -87,6 +90,11 @@ beforeEach(() => {
   vi.spyOn(Analytics, 'timeChipSelected').mockImplementation(() => {});
   vi.spyOn(Analytics, 'entrySaveTapped').mockImplementation(() => {});
   vi.spyOn(Analytics, 'largeTextLayout').mockImplementation(() => {});
+  resetFirstRunFunnelForTests();
+  blocked = vi.spyOn(Analytics, 'entryValidationBlocked').mockImplementation(() => {});
+  stepFailed = vi.spyOn(Analytics, 'firstRunStepFailed').mockImplementation(() => {});
+  vi.spyOn(Analytics, 'firstRunStepViewed').mockImplementation(() => {});
+  vi.spyOn(Analytics, 'firstRunStepCompleted').mockImplementation(() => {});
 });
 afterEach(() => {
   vi.restoreAllMocks();
@@ -237,6 +245,9 @@ describe('first run v2: time defaults', { timeout: 20_000 }, () => {
       await waitFor(() => expect(mutateCreate).toHaveBeenCalled(), { timeout: 5000 });
       await waitFor(() => expect(firstRunSaved).toHaveBeenCalled());
       expect(mutateCreate).toHaveBeenCalledTimes(1);
+      // NEGATIVE (owner 2026-11-22): a save that went through is never a failed step or a block.
+      expect(stepFailed).not.toHaveBeenCalled();
+      expect(blocked).not.toHaveBeenCalled();
       expect(mutateCreate.mock.calls[0][0]).toMatchObject({
         event_type: kind.toLowerCase(),
         scheduled_date: TODAY,
@@ -258,11 +269,34 @@ describe('first run v2: time defaults', { timeout: 20_000 }, () => {
       // Neutral copy (owner 2026-11-22), never the medication sentence.
       expect(await screen.findByText('Pick a time.')).toBeInTheDocument();
       expect(screen.queryByText('Medications need a scheduled time.')).toBeNull();
+      // owner 2026-11-22: the block reports missing_time with the REAL type (never invalid_field), and the
+      // first run hears a failed first_item (validation). One event per refused press.
+      expect(blocked).toHaveBeenCalledTimes(1);
+      expect(blocked).toHaveBeenCalledWith('missing_time', kind.toLowerCase());
+      expect(stepFailed).toHaveBeenCalledTimes(1);
+      expect(stepFailed).toHaveBeenCalledWith('first_item', 'validation', 'email');
       // Enter in the title submits the form directly: the payload check refuses it too.
       fireEvent.submit(document.getElementById('add-event-form') as HTMLFormElement);
       await new Promise((r) => setTimeout(r, 50));
       expect(mutateCreate).not.toHaveBeenCalled();
       expect(firstRunSaved).not.toHaveBeenCalled();
+      expect(blocked).toHaveBeenLastCalledWith('missing_time', kind.toLowerCase());
+      expect(blocked).not.toHaveBeenCalledWith('invalid_field', expect.anything());
+      expect(stepFailed).toHaveBeenCalledTimes(2);
+    });
+
+    it(`NEGATIVE: a first-run ${kind.toLowerCase()} whose save the server refuses is a failed first_item (server), never completed`, async () => {
+      const onFirstRunItemSaved = vi.fn();
+      mutateCreate.mockRejectedValueOnce({ success: false, error: { code: 'SERVER_ERROR', message: 'boom' } });
+      renderForm({ firstRun: true, firstRunTypeSwitch: true, onFirstRunItemSaved });
+      await switchTo(kind);
+      await screen.findByTestId(`${prefix}-from-tile`);
+      await user().type(document.getElementById('title') as HTMLElement, 'Call pharmacy');
+      pickTime('17:30');
+      await user().click(screen.getByTestId('add-event-save'));
+      await waitFor(() => expect(stepFailed).toHaveBeenCalledWith('first_item', 'server', 'email'));
+      expect(stepFailed).toHaveBeenCalledTimes(1);
+      expect(onFirstRunItemSaved).not.toHaveBeenCalled();
     });
   }
 
@@ -277,6 +311,26 @@ describe('first run v2: time defaults', { timeout: 20_000 }, () => {
     expect(mutateCreate.mock.calls[0][0].scheduled_time ?? null).toBeNull();
     expect(firstRunSaved).toHaveBeenCalledWith(expect.objectContaining({ hasTime: false, timeDefaultKept: false }));
     expect(onFirstRunItemSaved.mock.calls[0][0]).toMatchObject({ type: 'appointment', recipientTime: null });
+  });
+
+  it('NEGATIVE (first_run_step_skipped): the x on a dirty form -> "Discard changes?" -> Keep editing: no close, so no skip', async () => {
+    const stepSkipped = vi.spyOn(Analytics, 'firstRunStepSkipped').mockImplementation(() => {});
+    const { onClose } = renderForm({ firstRun: true, firstRunTypeSwitch: true });
+    await user().type(screen.getByLabelText(/^Dosage/), '500 mg');
+    await user().click(screen.getByRole('button', { name: 'Close event form' }));
+    expect(await screen.findByText('Discard changes?')).toBeInTheDocument();
+    const keep = screen.getAllByRole('button', { name: 'Keep editing' });
+    await user().click(keep[keep.length - 1]);
+    expect(onClose).not.toHaveBeenCalled();
+    // The skip is reported by the wizard host on its close (FirstRunWizardModal.test): no close, no skip.
+    expect(stepSkipped).not.toHaveBeenCalled();
+  });
+
+  it('NEGATIVE: outside first run a blocked save sends no first-run failure', async () => {
+    renderForm({ initialType: 'appointment' });
+    await user().click(screen.getByTestId('add-event-save'));
+    expect(blocked).toHaveBeenCalledWith('missing_name', 'appointment');
+    expect(stepFailed).not.toHaveBeenCalled();
   });
 
   it('NEGATIVE: outside first run an appointment still opens on "Any time"', async () => {

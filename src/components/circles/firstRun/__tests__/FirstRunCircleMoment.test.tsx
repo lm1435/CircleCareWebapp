@@ -112,6 +112,28 @@ describe('FirstRunCircleMoment', () => {
     expect(mockCreate.mock.calls.map((c) => c[1])).toEqual([KEY, KEY]);
   });
 
+  it('POSITIVE (owner 2026-11-22): a refused create is a failed circle_created with its reason; Retry that lands completes it', async () => {
+    const stepFailed = vi.spyOn(Analytics, 'firstRunStepFailed').mockImplementation(() => {});
+    const stepCompleted = vi.spyOn(Analytics, 'firstRunStepCompleted').mockImplementation(() => {});
+    setFirstRunDraft({ recipientName: 'Rosa', isSelfCare: false });
+    mockCreate
+      .mockRejectedValueOnce({ success: false, error: { code: 'SERVER_ERROR', message: 'Rosa failed' } })
+      .mockResolvedValueOnce({ circle: CIRCLE, existed: false });
+    renderMoment(ROSA);
+    await screen.findByTestId('first-run-circle-error');
+    expect(stepFailed).toHaveBeenCalledTimes(1);
+    expect(stepFailed).toHaveBeenCalledWith('circle_created', 'server', 'email');
+    expect(stepCompleted).not.toHaveBeenCalled();
+    // The recipient's name never rides on the event.
+    expect(JSON.stringify(stepFailed.mock.calls)).not.toContain('Rosa');
+    await act(async () => {
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Retry' }));
+    });
+    await screen.findByText("Rosa's circle is ready.");
+    expect(stepCompleted).toHaveBeenCalledWith('circle_created', expect.any(String), 'email', 'c1');
+    expect(stepFailed).toHaveBeenCalledTimes(1);
+  });
+
   it('NEGATIVE: a circle that already existed (an earlier request landed) is not counted as a second create', async () => {
     const created = vi.spyOn(Analytics, 'circleCreated');
     mockCreate.mockResolvedValue({ circle: CIRCLE, existed: true });

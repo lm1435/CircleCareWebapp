@@ -22,7 +22,7 @@ import { useOpenJoinedCircle } from '@/hooks/useOpenJoinedCircle';
 import type { AcceptInviteResponse } from '@/api/invites';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { consumePendingInviteCode, setPendingInviteCode } from '@/lib/pendingInviteCode';
-import { setFirstRunPath } from '@/lib/firstRunFunnel';
+import { firstRunFailReason, firstRunFunnel, getFirstRunPath, setFirstRunPath } from '@/lib/firstRunFunnel';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
 import { failureContext, isUnreportedFailure } from '@/lib/apiErrors';
@@ -192,6 +192,25 @@ export default function InviteLandingPage(): ReactElement {
   // exactly what `getApiError` reads (never err.response.data.error.code).
   const errorCopy = previewErrorCopy(t, getApiError(error)?.code);
 
+  // FIRST RUN FUNNEL, the invited path's `join` step (mobile's Join screen). A SIGNED-OUT arrival is a
+  // first run (path `invited`): viewed once; a link that cannot be used (malformed, not found, expired,
+  // spent) is a failed join with its closed reason, once per arrival. A signed-in visitor is not
+  // onboarding here unless this tab's run is already `invited` (the hand-off back from sign-up).
+  const joinViewedRef = useRef(false);
+  const joinPreviewFailedRef = useRef(false);
+  useEffect(() => {
+    if (isBootstrapping || isAuthenticated) return;
+    if (!joinViewedRef.current) {
+      joinViewedRef.current = true;
+      setFirstRunPath('invited');
+      firstRunFunnel.viewed('join');
+    }
+    if (isError && !joinPreviewFailedRef.current) {
+      joinPreviewFailedRef.current = true;
+      firstRunFunnel.failed('join', malformedCode ? 'invalid_code' : firstRunFailReason(error));
+    }
+  }, [isBootstrapping, isAuthenticated, isError, malformedCode, error]);
+
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -244,6 +263,7 @@ export default function InviteLandingPage(): ReactElement {
         navigate('/circles');
         return;
       }
+      if (getFirstRunPath() === 'invited') firstRunFunnel.failed('join', firstRunFailReason(err));
       // `error_occurred` for the admin digest: enums only — never the invite
       // code, no circle_id. ALREADY_MEMBER (above) is a success, not a failure.
       if (!isUnreportedFailure(err)) Analytics.errorOccurred('invite_accept', 'invite_accept_create_failed',
@@ -269,6 +289,8 @@ export default function InviteLandingPage(): ReactElement {
     // invites sent since January produced zero invite_accepted events, so there
     // was no way to tell a working join from a silently broken one.
     Analytics.inviteAccepted(undefined, 'invite_link');
+    // First run funnel: the invited path's `join` finished (the server made them a member).
+    if (getFirstRunPath() === 'invited') firstRunFunnel.completed('join');
     // Confirm the join by name and open the joined circle ("You've joined
     // <name>"); `circle: null` → generic copy + /circles.
     // Onboarding 1.3.1: a NEW member lands on the invitee welcome (names from the

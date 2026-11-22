@@ -445,5 +445,12 @@
   },
   "recentMedications": "Recent (last 30 days)",
   "stoppedOn": "Stopped {{date}}",
-  "medicationsLoadError": "Could not load this information"
+  "medicationsLoadError": "Could not load this information",
+  "dobPrompt": {
+    "add": "Add date of birth",
+    "missing": "Date of birth isn't set.",
+    "missingBody": "It helps first responders and doctors confirm who {{name}} is.",
+    "addShort": "Add",
+    "exportAnyway": "Export anyway"
+  }
 }

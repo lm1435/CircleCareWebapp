@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { AdditionalDoctor, EmergencyContact, EmergencyInfo, InsurancePlan } from '@/api/emergencyInfo';
@@ -41,6 +41,9 @@ import {
 import { PageMasthead, type MastheadAction } from '@/components/layout/PageMasthead';
 import { HealthTabs } from '@/components/layout/HealthTabs';
 import { useCircle } from '@/hooks/useCircle';
+import { useAuthStore } from '@/store/authStore';
+import { useIsOffline } from '@/hooks/useIsOffline';
+import { RecipientDobDialog } from '@/components/emergency/RecipientDobDialog';
 import { useCareSummaryExport } from '@/hooks/useCareSummaryExport';
 import { useCircleMembers } from '@/hooks/useCircleMembers';
 import { useCircles } from '@/hooks/useCircles';
@@ -201,7 +204,37 @@ export default function EmergencyInfoPage(): ReactElement {
   // Circle detail carries the recipient's photo, DOB, and conditions — the
   // GET /circles list does NOT. (verified: src/api/circleMembers.ts)
   const { data: circleDetail } = useCircleMembers(circleId);
-  const { canEdit, timezone: careRecipientTimezone } = useCircle(circleId);
+  const {
+    canEdit,
+    circle: circleSummary,
+    viewOnly,
+    readOnly,
+    timezone: careRecipientTimezone,
+  } = useCircle(circleId);
+  const isOffline = useIsOffline();
+  // DATE OF BIRTH PROMPT (owner 2026-11-22): onboarding no longer asks for it, and this page and the care
+  // summary are where an EMT identifies the patient by name + DOB. Offered only to whoever may edit the
+  // circle (the same rule as Edit circle: the owner, not view-only), only while none is on file. Mobile
+  // parity (2026-11-22): never on a LAPSED / read-only circle, never a view-only seat, never offline.
+  const currentUserId = useAuthStore((s) => s.user?.id);
+  const canEditCircle =
+    canEdit &&
+    !viewOnly &&
+    !readOnly &&
+    !isOffline &&
+    !!currentUserId &&
+    !!circleSummary &&
+    circleSummary.owner_id === currentUserId;
+  const dobMissing = !!circleDetail && !circleDetail.recipient_dob;
+  const offerDob = canEditCircle && dobMissing;
+  const [dobDialog, setDobDialog] = useState<'emergency_prompt' | 'export_prompt' | null>(null);
+  const [dobNoteOpen, setDobNoteOpen] = useState(false);
+  const dobViewedRef = useRef<{ emergency: boolean; export: boolean }>({ emergency: false, export: false });
+  useEffect(() => {
+    if (!offerDob || dobViewedRef.current.emergency) return;
+    dobViewedRef.current.emergency = true;
+    Analytics.dobPromptViewed('emergency');
+  }, [offerDob]);
   // Current medications (mobile parity, 1.4.3): the care summary's own window and selection.
   const medications = useEmergencyMedications(circleId, careRecipientTimezone);
   // SOS card: the browser's verified local number, or nothing (never a guess). Read once.
@@ -258,7 +291,18 @@ export default function EmergencyInfoPage(): ReactElement {
     // (e2e/unhappy/writes/toast-page-gate-overlap.spec.ts, Emergency, tablet).
     name: 'share-outline',
     label: t('careSummary.share'),
-    onClick: () => setPrivacyOpen(true),
+    // No DOB on file and the viewer can add one: ONE non-blocking note first ("Add" / "Export anyway").
+    onClick: () => {
+      if (!offerDob) {
+        setPrivacyOpen(true);
+        return;
+      }
+      if (!dobViewedRef.current.export) {
+        dobViewedRef.current.export = true;
+        Analytics.dobPromptViewed('export');
+      }
+      setDobNoteOpen(true);
+    },
     disabled: isExporting,
     busy: isExporting,
   };
@@ -587,6 +631,7 @@ export default function EmergencyInfoPage(): ReactElement {
               name={recipientName}
               photoUrl={circleDetail.recipient_photo_url}
               dob={circleDetail.recipient_dob}
+              onAddDob={offerDob ? () => setDobDialog('emergency_prompt') : undefined}
             />
           )}
 
@@ -702,6 +747,48 @@ export default function EmergencyInfoPage(): ReactElement {
           isSharing={isExporting}
           onShare={confirmExport}
           onCancel={() => setPrivacyOpen(false)}
+        />
+      )}
+
+      {/* ── Care summary without a DOB (owner 2026-11-22): one note, never a block. ── */}
+      {dobNoteOpen && (
+        <ConfirmDialog
+          title={t('dobPrompt.missing')}
+          message={t('dobPrompt.missingBody', {
+            name: recipientName || circleSummary?.name || '',
+          })}
+          confirmLabel={t('dobPrompt.addShort')}
+          cancelLabel={t('dobPrompt.exportAnyway')}
+          onConfirm={() => {
+            setDobNoteOpen(false);
+            setDobDialog('export_prompt');
+          }}
+          onCancel={() => {
+            setDobNoteOpen(false);
+            setPrivacyOpen(true);
+          }}
+          // Closed with x / Escape: nothing exported, nothing written.
+          onDismiss={() => setDobNoteOpen(false)}
+        />
+      )}
+
+      {/* ── Add date of birth: the Edit circle field and save, from here. ── */}
+      {dobDialog && (
+        <RecipientDobDialog
+          circleId={circleId}
+          surface={dobDialog}
+          onSaved={() => {
+            const fromExport = dobDialog === 'export_prompt';
+            setDobDialog(null);
+            // "Add" from the export note continues to the export once the DOB is saved.
+            if (fromExport) setPrivacyOpen(true);
+          }}
+          onCancel={() => {
+            const fromExport = dobDialog === 'export_prompt';
+            setDobDialog(null);
+            // Never a block: backing out of the picker still continues to the export.
+            if (fromExport) setPrivacyOpen(true);
+          }}
         />
       )}
 

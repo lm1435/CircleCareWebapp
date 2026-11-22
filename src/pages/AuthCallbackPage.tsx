@@ -15,6 +15,7 @@ import { recordAnalyticsConsentDecision } from '@/lib/analyticsConsentDecision';
 import { queueAnalyticsConsentForSignup } from '@/lib/analyticsConsentSync';
 import { Analytics } from '@/lib/analytics';
 import { authFailureCode } from '@/lib/apiErrors';
+import { firstRunFailReason, firstRunFunnel } from '@/lib/firstRunFunnel';
 import { Button, Spinner } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthTopBar } from '@/components/auth/AuthTopBar';
@@ -97,7 +98,8 @@ export default function AuthCallbackPage(): ReactElement {
       // unrelated sign-in (this browser can be signed in as a different
       // account minutes from now). A retry re-renders the signup page with the
       // box unticked and parks a fresh answer.
-      consumePendingAnalyticsConsent();
+      // A parked answer means the handshake started on /signup: a failed first-run ACCOUNT step.
+      const fromSignup = consumePendingAnalyticsConsent() !== null;
       // …and for the parked TERMS acceptance. Left behind, the next successful
       // callback in this tab (e.g. a returning user's OAuth LOGIN from /login,
       // which parks no terms of its own) consumed it and relayed
@@ -117,6 +119,9 @@ export default function AuthCallbackPage(): ReactElement {
         setStale(true);
         return;
       }
+      // First run funnel: the Apple / Google account step did not finish (cancelled at the provider
+      // is its own reason, so a shrug is not counted as a bug).
+      if (fromSignup) firstRunFunnel.failed('account', cancelled ? 'cancelled' : 'unknown');
       if (!cancelled) {
         // Until now this branch reported NOTHING, so a broken web OAuth login
         // was invisible in the funnel: login_started fired at the button, the
@@ -171,6 +176,7 @@ export default function AuthCallbackPage(): ReactElement {
           consumePendingAuthMethod() ?? 'oauth',
           authFailureCode(exchangeErr, undefined, 'OAUTH_CODE_EXCHANGE_FAILED')
         );
+        if (analyticsAnswer !== null) firstRunFunnel.failed('account', firstRunFailReason(exchangeErr));
         setFailure('error');
         return;
       } finally {
@@ -233,8 +239,12 @@ export default function AuthCallbackPage(): ReactElement {
         // `true` counts (a backend older than the flag reads as returning).
         // Exactly one of the two events fires.
         const method = consumePendingAuthMethod() ?? 'oauth';
-        if (response.data.is_new_user === true) Analytics.signupCompleted(method);
-        else Analytics.loginCompleted(method);
+        if (response.data.is_new_user === true) {
+          Analytics.signupCompleted(method);
+          // First run funnel: the Apple / Google ACCOUNT step finished (the server created the
+          // account). The path (`apple` / `google`, or `invited`) survived the redirect in this tab.
+          firstRunFunnel.completed('account');
+        } else Analytics.loginCompleted(method);
         // An invite handoff parks its code in sessionStorage (router state
         // cannot survive the OAuth full-page redirect) — detour through the
         // invite page. PEEK, don't consume: InviteLandingPage's own effect
@@ -259,6 +269,7 @@ export default function AuthCallbackPage(): ReactElement {
           consumePendingAuthMethod() ?? 'oauth',
           authFailureCode(err, getApiError(err)?.code, 'OAUTH_SESSION_FAILED')
         );
+        if (analyticsAnswer !== null) firstRunFunnel.failed('account', firstRunFailReason(err));
         setFailure('error');
       }
     })();

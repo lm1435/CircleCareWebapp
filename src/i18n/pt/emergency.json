@@ -445,5 +445,12 @@
   },
   "recentMedications": "Recentes (últimos 30 dias)",
   "stoppedOn": "Suspenso em {{date}}",
-  "medicationsLoadError": "Não foi possível carregar estas informações"
+  "medicationsLoadError": "Não foi possível carregar estas informações",
+  "dobPrompt": {
+    "add": "Adicionar data de nascimento",
+    "missing": "A data de nascimento não foi informada.",
+    "missingBody": "Ajuda socorristas e médicos a confirmar quem é {{name}}.",
+    "addShort": "Adicionar",
+    "exportAnyway": "Exportar mesmo assim"
+  }
 }

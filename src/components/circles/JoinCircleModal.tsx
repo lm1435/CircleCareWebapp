@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card, Modal, Text, useToast } from '@/components/ui';
 import { getApiError } from '@/api/auth';
@@ -13,6 +13,7 @@ import { JoinCodeField } from './JoinCodeField';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
 import { isOwnOrMemberInvite, type InviteByCode } from '@/api/invites';
+import { firstRunFailReason, firstRunFunnel, getFirstRunPath, setFirstRunPath } from '@/lib/firstRunFunnel';
 
 // Web port of mobile/src/components/JoinCircleModal.tsx — the two-step
 // join-by-code flow for an already-authenticated user:
@@ -38,6 +39,11 @@ export interface JoinCircleModalProps {
   onClose: () => void;
   /** Called after a successful join with the joined circle's id. */
   onJoined: (circleId: string) => void;
+  /**
+   * The person has NO circle yet ("I have an invite code" on the empty state): this modal is the
+   * first run's `join` step (path `invited`). Off for a second circle, which is not onboarding.
+   */
+  firstRun?: boolean;
 }
 
 /** Display name for the inviter — full name when known, else the email. */
@@ -101,7 +107,11 @@ function joinErrorMessage(
   }
 }
 
-export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): ReactElement {
+export function JoinCircleModal({
+  onClose,
+  onJoined,
+  firstRun: firstRunProp = false,
+}: JoinCircleModalProps): ReactElement {
   const { t } = useTranslation(['circles', 'invite']);
   const { showToast } = useToast();
 
@@ -128,6 +138,34 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
   // must not block each other.
   const lookupGuard = useSubmitGuard();
   const acceptGuard = useSubmitGuard();
+
+  // First run funnel (`join`, path `invited`): viewed once on arrival; completed only when the
+  // accept SUCCEEDED; failed with a closed reason on a refused look-up or accept; back on a close
+  // without joining. Never the code itself.
+  // Latched at open: the join itself refills the circle list, which flips the host's "no circle yet".
+  const [firstRun] = useState(firstRunProp);
+  const joinedRef = useRef(false);
+  const pathBeforeRef = useRef(getFirstRunPath());
+  useEffect(() => {
+    if (!firstRun) return;
+    pathBeforeRef.current = getFirstRunPath();
+    setFirstRunPath('invited');
+    firstRunFunnel.viewed('join');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per arrival
+  }, []);
+  const failJoin = (err: unknown): void => {
+    if (firstRun && getApiError(err)?.code !== 'ALREADY_MEMBER') {
+      firstRunFunnel.failed('join', firstRunFailReason(err));
+    }
+  };
+  const close = (): void => {
+    if (firstRun && !joinedRef.current) {
+      firstRunFunnel.back('join');
+      // Closed without joining: "Start a care circle" next is the owner path again, not `invited`.
+      setFirstRunPath(pathBeforeRef.current);
+    }
+    onClose();
+  };
 
   // Clipboard read is feature-detected: no readText → no button at all.
   const clipboardAvailable =
@@ -159,6 +197,7 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
     lookup.mutate(code, {
       onSuccess: (found) => setInvite(found),
       onError: (err) => {
+        failJoin(err);
         const backendCode = getApiError(err)?.code;
         // No backend code AND no answer at all = a connection problem, not a wrong code (1.4.3 audit 14).
         setError(
@@ -185,6 +224,10 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
         // the join-by-link path already does (InviteLandingPage). PHI-safe:
         // only the circle_id + a source enum, never the code itself.
         Analytics.inviteAccepted(invite.circle.id, 'code_entry');
+        if (firstRun) {
+          joinedRef.current = true;
+          firstRunFunnel.completed('join');
+        }
         // R4-5: joined their first circle here → onboarding complete. No-op
         // when this browser already saw the user with circles. Carries no code.
         trackOnboardingCompleted('joined');
@@ -201,6 +244,7 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
         onJoined(joined.id);
       },
       onError: (err) => {
+        failJoin(err);
         setError(joinErrorMessage(t, getApiError(err)?.code, t('joinModal.joinFailed')));
       },
       // Success closes the modal (unmount), so this only ever runs on failure —
@@ -226,14 +270,14 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
   return (
     <Modal
       title={t('joinModal.title')}
-      onClose={onClose}
+      onClose={close}
       closeLabel={t('joinModal.close')}
       initialFocusRef={codeFieldRef}
       size="sm"
       footer={
         !invite ? (
           <div className="flex flex-col gap-2">
-            <Button type="button" variant="secondary" size="lg" className="w-full" onClick={onClose}>
+            <Button type="button" variant="secondary" size="lg" className="w-full" onClick={close}>
               {t('joinModal.cancel')}
             </Button>
             <Button

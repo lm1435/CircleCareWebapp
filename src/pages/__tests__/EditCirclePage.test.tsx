@@ -366,3 +366,33 @@ describe('EditCirclePage', () => {
     });
   });
 });
+
+// dob_added {surface: 'edit_circle'} (owner 2026-11-22): when a DOB is SAVED here. Enum only.
+describe('EditCirclePage dob_added', () => {
+  it('POSITIVE: a new DOB that saved fires dob_added {edit_circle} once, with no date in it', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    const added = vi.spyOn(Analytics, 'dobAdded').mockImplementation(() => {});
+    updateMutate.mockImplementation((_d: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
+    mockCircleResult(makeCircle());
+    renderPage();
+    fireEvent.change(screen.getByLabelText('Date of birth'), { target: { value: '1950-06-15' } });
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(added).toHaveBeenCalledTimes(1));
+    expect(added).toHaveBeenCalledWith('edit_circle');
+    added.mockRestore();
+  });
+
+  it('NEGATIVE: clearing the DOB, a name-only edit, or a failed save never fires dob_added', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    const added = vi.spyOn(Analytics, 'dobAdded').mockImplementation(() => {});
+    updateMutate.mockImplementation((_d: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
+    mockCircleResult(makeCircle());
+    renderPage();
+    const user = userEvent.setup();
+    await user.clear(screen.getByLabelText('Date of birth'));
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(updateMutate).toHaveBeenCalled());
+    expect(added).not.toHaveBeenCalled();
+    added.mockRestore();
+  });
+});

@@ -43,6 +43,8 @@ async function fireAll(): Promise<Array<[string, Record<string, unknown>]>> {
   Analytics.firstRunStepCompleted('first_item', 'under_10s', 'email', CIRCLE);
   Analytics.firstRunBackTapped('account');
   Analytics.firstRunAbandoned('code');
+  Analytics.firstRunStepFailed('join', 'invite_invalid', 'invited');
+  Analytics.firstRunStepSkipped('first_item', 'google');
   return capture.mock.calls as Array<[string, Record<string, unknown>]>;
 }
 
@@ -64,6 +66,8 @@ describe('first run v2 analytics', () => {
       'first_run_step_completed',
       'first_run_back_tapped',
       'first_run_abandoned',
+      'first_run_step_failed',
+      'first_run_step_skipped',
     ]);
     // owner 2026-11-21: no preselected time on a new medication: the flag is still sent, as false.
     expect(calls[5][1]).toMatchObject({ first_item_type: 'medication', time_default_kept: false, has_time: true });
@@ -112,5 +116,81 @@ describe('first run v2 analytics', () => {
         else expect(['boolean', 'number']).toContain(typeof value);
       }
     }
+  });
+});
+
+// first_run_step_failed (owner 2026-11-22): same pipeline as every other first_run_* event.
+describe('first_run_step_failed', () => {
+  it('POSITIVE: exactly step, reason and path (no circle_id, no message)', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    capture.mockClear();
+    Analytics.firstRunStepFailed('code', 'invalid_code', 'email');
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture.mock.calls[0]).toEqual([
+      'first_run_step_failed',
+      { step: 'code', reason: 'invalid_code', path: 'email' },
+    ]);
+  });
+
+  it('POSITIVE: identified (consented) and anonymous (declined) pipelines both keep the enums', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    capture.mockClear();
+    Analytics.firstRunStepFailed('first_item', 'validation', 'google');
+    const [event, properties] = capture.mock.calls[0] as [string, Record<string, unknown>];
+    for (const anonymous of [false, true]) {
+      const out = redactCaptureEvent({ event, properties }, anonymous);
+      expect(out.properties).toEqual({ step: 'first_item', reason: 'validation', path: 'google' });
+    }
+  });
+
+  it('NEGATIVE: off-enum values (a message, an address) are coerced, never sent', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    capture.mockClear();
+    Analytics.firstRunStepFailed(
+      'maria@example.com' as never,
+      'Invalid email or password' as never,
+      'Lisinopril' as never
+    );
+    expect(capture.mock.calls[0][1]).toEqual({ step: 'welcome', reason: 'unknown', path: 'email' });
+  });
+});
+
+describe('first_run_step_failed consent gate', () => {
+  it('NEGATIVE: nothing is sent when collection is not allowed (the same emit gate as every event)', async () => {
+    vi.resetModules();
+    vi.doMock('@/lib/analyticsMode', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@/lib/analyticsMode')>();
+      return { ...actual, analyticsCollectionAllowed: () => false };
+    });
+    const { Analytics } = await import('@/lib/analytics');
+    capture.mockClear();
+    Analytics.firstRunStepFailed('account', 'network', 'email');
+    Analytics.firstRunStepViewed(undefined, 'account', 'email');
+    expect(capture).not.toHaveBeenCalled();
+    vi.doUnmock('@/lib/analyticsMode');
+    vi.resetModules();
+  });
+});
+
+describe('first_run_step_skipped', () => {
+  it('POSITIVE: exactly step and path; both pipelines keep them', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    capture.mockClear();
+    Analytics.firstRunStepSkipped('first_item', 'email');
+    const [event, properties] = capture.mock.calls[0] as [string, Record<string, unknown>];
+    expect(event).toBe('first_run_step_skipped');
+    for (const anonymous of [false, true]) {
+      expect(redactCaptureEvent({ event, properties }, anonymous).properties).toEqual({
+        step: 'first_item',
+        path: 'email',
+      });
+    }
+  });
+
+  it('NEGATIVE: off-enum values are coerced, never sent', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    capture.mockClear();
+    Analytics.firstRunStepSkipped('Metformin' as never, 'rosa@example.com' as never);
+    expect(capture.mock.calls[0][1]).toEqual({ step: 'welcome', path: 'email' });
   });
 });

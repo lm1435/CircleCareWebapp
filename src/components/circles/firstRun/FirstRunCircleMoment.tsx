@@ -11,7 +11,7 @@ import { Analytics } from '@/lib/analytics';
 import { classifyFailureCode } from '@/lib/apiErrors';
 import { createFirstCircleOnce } from '@/lib/firstRunCreate';
 import { clearFirstRun, type FirstRunDraft } from '@/lib/firstRunDraft';
-import { firstRunFunnel } from '@/lib/firstRunFunnel';
+import { firstRunFailReason, firstRunFunnel } from '@/lib/firstRunFunnel';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import {
   firstRunNavigationState,
@@ -139,6 +139,7 @@ export function FirstRunCircleMoment({ draft }: FirstRunCircleMomentProps): Reac
             retried,
           });
           Analytics.firstRunCircleMoment({ skipped: false, durationBucket: 'failed' });
+          firstRunFunnel.failed('circle_created', firstRunFailReason(error));
           setState('failed');
         }
       );

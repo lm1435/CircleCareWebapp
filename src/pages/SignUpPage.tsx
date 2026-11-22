@@ -44,7 +44,7 @@ import { useAuthBack } from '@/components/auth/useAuthBack';
 import { normalizeLocale } from '@/i18n/locales';
 import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { clearFirstRun, peekFirstRunDraft } from '@/lib/firstRunDraft';
-import { firstRunFunnel, setFirstRunPath } from '@/lib/firstRunFunnel';
+import { firstRunFailReason, firstRunFunnel, setFirstRunPath } from '@/lib/firstRunFunnel';
 import { FirstRunWhoStep } from '@/components/circles/firstRun/FirstRunWhoStep';
 import { FlowProgress } from '@/components/circles/firstRun/FlowProgress';
 import { JoinCodeField } from '@/components/circles/JoinCodeField';
@@ -128,6 +128,13 @@ export default function SignUpPage(): ReactElement {
   // owners. Someone holding an invite code never sees it (and any answer is dropped). A draft
   // already in memory (Back from the code page) goes straight to the account step.
   const [invited] = useState(() => peekPendingInviteCode() !== null);
+  // Funnel path: an owner's sign-up is `email` until a provider is chosen. Set during the FIRST render
+  // (lazy state), before the question's own mount effect reports `who`, so a path left in this tab by
+  // an earlier invite link or a cancelled Apple / Google attempt never labels this run.
+  useState(() => {
+    if (!invited) setFirstRunPath('email');
+    return null;
+  });
   const [stage, setStage] = useState<'who' | 'code' | 'account'>(() =>
     invited || peekFirstRunDraft() ? 'account' : 'who'
   );
@@ -142,6 +149,8 @@ export default function SignUpPage(): ReactElement {
   const cameFromWhoRef = useRef(false);
   useEffect(() => {
     if (stage === 'account') firstRunFunnel.viewed('account');
+    // "I have an invite code" is the web door to mobile's Join screen: the `join` step, path `invited`.
+    if (stage === 'code') firstRunFunnel.viewed('join');
     if (stage === 'account' && cameFromWhoRef.current) {
       document.getElementById('signup-account-heading')?.focus();
     }
@@ -223,6 +232,7 @@ export default function SignUpPage(): ReactElement {
       }
       setFieldErrors(localized);
       focusFirstError(localized, FIELD_ORDER);
+      firstRunFunnel.failed('account', 'validation');
       return;
     }
 
@@ -231,6 +241,7 @@ export default function SignUpPage(): ReactElement {
     // but the account must never be created without explicit consent.
     if (!termsAccepted) {
       setFormError(t('signup.errors.termsRequired'));
+      firstRunFunnel.failed('account', 'validation');
       return;
     }
 
@@ -313,6 +324,8 @@ export default function SignUpPage(): ReactElement {
       // PHI-safe: only the backend error CODE (or a generic fallback), never the
       // email or the full error object.
       Analytics.signupFailed('email', authFailureCode(err, apiError?.code, 'SIGNUP_FAILED'));
+      // The funnel's closed reason (code only, never the message or the address).
+      firstRunFunnel.failed('account', alreadyExists ? 'already_exists' : firstRunFailReason(err));
       // Supabase's per-address send cooldown: this address was sent a code a
       // moment ago (a re-submitted signup, or one that is unverified). Dead-ending
       // on "wait a few minutes" strands them; the code they need is already in
@@ -422,11 +435,13 @@ export default function SignUpPage(): ReactElement {
       if (error) {
         unparkHandshake();
         Analytics.signupFailed(provider, 'OAUTH_INIT_FAILED');
+        firstRunFunnel.failed('account', firstRunFailReason(error));
         setFormError(failureMessage);
       }
-    } catch {
+    } catch (err) {
       unparkHandshake();
       Analytics.signupFailed(provider, 'OAUTH_INIT_FAILED');
+      firstRunFunnel.failed('account', firstRunFailReason(err));
       setFormError(failureMessage);
     }
   };
@@ -447,6 +462,7 @@ export default function SignUpPage(): ReactElement {
       <AuthShell>
         <AuthTopBar
           onBack={() => {
+            firstRunFunnel.back('join');
             setInviteCodeInput('');
             setStage('who');
           }}
@@ -483,7 +499,12 @@ export default function SignUpPage(): ReactElement {
   if (stage === 'who') {
     return (
       <AuthShell>
-        <AuthTopBar onBack={goBack} />
+        <AuthTopBar
+          onBack={() => {
+            firstRunFunnel.back('who');
+            goBack();
+          }}
+        />
         <div className="mb-6">
           <FlowProgress current={1} />
         </div>
@@ -534,7 +555,10 @@ export default function SignUpPage(): ReactElement {
       <AuthTopBar
         onBack={
           invited
-            ? goBack
+            ? () => {
+                firstRunFunnel.back('account');
+                goBack();
+              }
             : () => {
                 firstRunFunnel.back('account');
                 setStage('who');

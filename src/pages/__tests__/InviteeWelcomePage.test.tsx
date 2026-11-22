@@ -150,3 +150,44 @@ describe('InviteeWelcomePage', () => {
     expect(screen.getByText('TODAY PAGE')).toBeInTheDocument();
   });
 });
+
+// FIRST RUN FUNNEL (owner 2026-11-22): the invited path's `invitee_welcome` step, then Today.
+describe('InviteeWelcomePage — first run funnel', () => {
+  let stepViewed: ReturnType<typeof vi.spyOn>;
+  let stepCompleted: ReturnType<typeof vi.spyOn>;
+  beforeEach(async () => {
+    const { resetFirstRunFunnelForTests } = await import('@/lib/firstRunFunnel');
+    resetFirstRunFunnelForTests();
+    stepViewed = vi.spyOn(Analytics, 'firstRunStepViewed').mockImplementation(() => {});
+    stepCompleted = vi.spyOn(Analytics, 'firstRunStepCompleted').mockImplementation(() => {});
+  });
+
+  it('POSITIVE: an invited run views invitee_welcome once, completes it on Go to Today, then views today', async () => {
+    const { setFirstRunPath } = await import('@/lib/firstRunFunnel');
+    setFirstRunPath('invited');
+    park({ inviterName: 'Sam', recipientName: 'Rose' });
+    renderPage();
+    expect(stepViewed).toHaveBeenCalledTimes(1);
+    expect(stepViewed).toHaveBeenCalledWith(undefined, 'invitee_welcome', 'invited');
+    expect(stepCompleted).not.toHaveBeenCalled();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Go to Today' }));
+    expect(stepCompleted).toHaveBeenCalledTimes(1);
+    expect(stepCompleted).toHaveBeenCalledWith('invitee_welcome', expect.any(String), 'invited', undefined);
+    expect(stepViewed).toHaveBeenLastCalledWith(undefined, 'today', 'invited');
+  });
+
+  it('NEGATIVE: someone joining a SECOND circle (no first run in this tab) sends no funnel event', async () => {
+    park({ inviterName: 'Sam', recipientName: 'Rose' });
+    renderPage();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Go to Today' }));
+    expect(stepViewed).not.toHaveBeenCalled();
+    expect(stepCompleted).not.toHaveBeenCalled();
+  });
+
+  it('NEGATIVE: nothing pending (reload) redirects to Today with no funnel event', async () => {
+    const { setFirstRunPath } = await import('@/lib/firstRunFunnel');
+    setFirstRunPath('invited');
+    renderPage();
+    expect(stepViewed).not.toHaveBeenCalled();
+  });
+});

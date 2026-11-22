@@ -5,6 +5,7 @@ import { Button, Card, Eyebrow } from '@/components/ui';
 import { TEXT_CLASS } from '@/components/ui/Text';
 import { useAuth } from '@/hooks/useAuth';
 import { Analytics } from '@/lib/analytics';
+import { firstRunFunnel, getFirstRunPath } from '@/lib/firstRunFunnel';
 import {
   clearPendingInviteeWelcome,
   peekPendingInviteeWelcome,
@@ -43,6 +44,9 @@ export default function InviteeWelcomePage(): ReactElement {
   const [welcome] = useState<InviteeWelcome | null>(() =>
     peekPendingInviteeWelcome(userId, circleId)
   );
+  // First run funnel: this screen is the invited path's `invitee_welcome` step when this tab's run is
+  // the invited one (or a run is open in memory). Someone joining a SECOND circle is not onboarding.
+  const [inFirstRun] = useState(() => getFirstRunPath() === 'invited' || firstRunFunnel.isActive());
   const shownAt = useRef<number>(Date.now());
   const tracked = useRef(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -55,6 +59,7 @@ export default function InviteeWelcomePage(): ReactElement {
     shownAt.current = Date.now();
     clearPendingInviteeWelcome(userId, circleId);
     Analytics.inviteeWelcomeViewed(welcome.role, items.length);
+    if (inFirstRun) firstRunFunnel.viewed('invitee_welcome');
     headingRef.current?.focus({ preventScroll: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once per mount
   }, []);
@@ -77,6 +82,12 @@ export default function InviteeWelcomePage(): ReactElement {
   const handleContinue = (): void => {
     const seconds = Math.max(0, Math.round((Date.now() - shownAt.current) / 1000));
     Analytics.inviteeWelcomeContinued(seconds);
+    if (inFirstRun) {
+      // "Go to Today" is the step's forward action (no server call); Today closes the run, exactly
+      // as mobile's circle screen does for the invited path.
+      firstRunFunnel.completed('invitee_welcome');
+      firstRunFunnel.viewed('today');
+    }
     navigate(`/circles/${circleId}`, { replace: true });
   };
 

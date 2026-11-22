@@ -28,7 +28,30 @@ export const FIRST_RUN_FUNNEL_STEPS = [
   'invitee_welcome',
 ] as const;
 export type FirstRunFunnelStep = (typeof FIRST_RUN_FUNNEL_STEPS)[number];
-export type FirstRunPath = 'email' | 'apple' | 'google' | 'invited';
+export const FIRST_RUN_PATHS = ['email', 'apple', 'google', 'invited'] as const;
+export type FirstRunPath = (typeof FIRST_RUN_PATHS)[number];
+/**
+ * `first_run_step_failed.reason` (owner 2026-11-22: "we have to know where we drop users"). A CLOSED
+ * set, same values as mobile; `invite_invalid` / `seat_full` are the join-only reasons. Never a message.
+ */
+export const FIRST_RUN_FAIL_REASONS = [
+  'network',
+  'server',
+  'validation',
+  'invalid_code',
+  'expired_code',
+  'rate_limited',
+  'already_exists',
+  'cancelled',
+  'unknown',
+  'invite_invalid',
+  'seat_full',
+] as const;
+export type FirstRunFailReason = (typeof FIRST_RUN_FAIL_REASONS)[number];
+export const DOB_PROMPT_SURFACES = ['emergency', 'export'] as const;
+export type DobPromptSurface = (typeof DOB_PROMPT_SURFACES)[number];
+export const DOB_ADDED_SURFACES = ['emergency_prompt', 'export_prompt', 'edit_circle', 'create_circle'] as const;
+export type DobAddedSurface = (typeof DOB_ADDED_SURFACES)[number];
 export type FirstRunDurationBucket = 'under_10s' | '10_to_30s' | '30_to_60s' | '1_to_3m' | 'over_3m';
 export type FirstRunItemType = 'medication' | 'appointment' | 'task';
 
@@ -571,6 +594,8 @@ const SHIFT_TASK_FAIL_REASONS = [
   'unsupported',
   'subscription',
   'permission',
+  // Save pressed with no time picked ("Pick a time.", owner 2026-11-22; mobile parity).
+  'missing_time',
   'other',
 ] as const;
 const SHIFT_SAVED_SHEET_ACTIONS = ['add_task', 'add_next', 'done'] as const;
@@ -1728,7 +1753,39 @@ export const Analytics = {
       ...(path ? { path } : {}),
     }),
 
+  /**
+   * A REQUIRED step's forward action failed (the server refused, nothing answered, or the form blocked
+   * the save). Enums only: `step`, `reason`, `path`. Never a message, never `circle_id`.
+   */
+  firstRunStepFailed: (step: FirstRunFunnelStep, reason: FirstRunFailReason, path: FirstRunPath) =>
+    capture('first_run_step_failed', {
+      step: pickEnum(step, FIRST_RUN_FUNNEL_STEPS, 'welcome'),
+      reason: pickEnum(reason, FIRST_RUN_FAIL_REASONS, 'unknown'),
+      path: pickEnum(path, FIRST_RUN_PATHS, 'email'),
+    }),
+
+  /**
+   * The OPTIONAL step (the first item) was left unsaved: Skip for now, x, Escape, Back. Once per run.
+   * Not `first_run_skipped` (the older wizard event with circle_id / via, kept as is). Enums only.
+   */
+  firstRunStepSkipped: (step: FirstRunFunnelStep, path: FirstRunPath) =>
+    capture('first_run_step_skipped', {
+      step: pickEnum(step, FIRST_RUN_FUNNEL_STEPS, 'welcome'),
+      path: pickEnum(path, FIRST_RUN_PATHS, 'email'),
+    }),
+
   firstRunBackTapped: (step: FirstRunFunnelStep) => capture('first_run_back_tapped', { step }),
+
+  // --- Date of birth prompt (owner 2026-11-22, 1.4.3; same events and enums as mobile) ---
+  // Onboarding no longer asks for a DOB, so Emergency info and the care summary nudge an editor to add
+  // it. Enums ONLY: never the date, never circle_id.
+
+  /** The "Add date of birth" row (emergency) or the pre-export note (export) was shown. */
+  dobPromptViewed: (surface: DobPromptSurface) =>
+    capture('dob_prompt_viewed', { surface: pickEnum(surface, DOB_PROMPT_SURFACES, 'emergency') }),
+  /** A date of birth was SAVED (the server answered), from where. */
+  dobAdded: (surface: DobAddedSurface) =>
+    capture('dob_added', { surface: pickEnum(surface, DOB_ADDED_SURFACES, 'edit_circle') }),
 
   firstRunAbandoned: (lastStep: FirstRunFunnelStep) =>
     capture('first_run_abandoned', { last_step: lastStep }),
