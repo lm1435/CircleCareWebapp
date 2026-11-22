@@ -174,7 +174,9 @@ test.describe('first-run wizard (first run v2: the first-item form -> All set)',
     await expect(page.getByLabel(COPY.en.nameLabel)).toHaveValue(DRUGS[2].name);
 
     const form = page.getByRole('dialog').last();
-    // First run v2: 8:00 AM Morning is already picked.
+    // owner 2026-11-21: no preselected time on a new medication: nothing is lit until the person picks Morning.
+    await expect(form.getByRole('checkbox', { name: /Morning$/ })).not.toBeChecked();
+    await form.getByRole('checkbox', { name: /Morning$/ }).click();
     await expect(form.getByRole('checkbox', { name: /Morning$/ })).toBeChecked();
     await form.getByRole('button', { name: 'Add medication' }).click();
 
@@ -231,7 +233,9 @@ test.describe('first-run wizard (first run v2: the first-item form -> All set)',
     await expect(page.getByText(c.title(recipient))).toBeVisible();
     await page.getByLabel(c.nameLabel).fill('Metformina');
     const form = page.getByRole('dialog').last();
-    // First run v2: the first time chip (Mañana, 8:00 a. m.) is already picked.
+    // owner 2026-11-21: no preselected time on a new medication; the person picks the first chip (Mañana, 8:00 a. m.).
+    await expect(form.locator('#time-chips').getByRole('checkbox').first()).not.toBeChecked();
+    await form.locator('#time-chips').getByRole('checkbox').first().click();
     await expect(form.locator('#time-chips').getByRole('checkbox').first()).toBeChecked();
     await form.getByRole('button', { name: c.save }).click();
     await expect(page.getByTestId('first-run-all-set').getByText('TODO LISTO')).toBeVisible({ timeout: 20_000 });
@@ -277,6 +281,8 @@ test.describe('first-run wizard (first run v2: the first-item form -> All set)',
       await asTyped.click();
       await expect(page.getByLabel(COPY.en.nameLabel)).toHaveValue('Doliprane');
       const form = page.getByRole('dialog').last();
+      // owner 2026-11-21: no preselected time on a new medication; the person picks Morning before Save.
+      await form.getByRole('checkbox', { name: /Morning$/ }).click();
       await form.getByRole('button', { name: 'Add medication' }).click();
       await expect(page.getByTestId('first-run-all-set').getByText('ALL SET')).toBeVisible({ timeout: 20_000 });
       expect(

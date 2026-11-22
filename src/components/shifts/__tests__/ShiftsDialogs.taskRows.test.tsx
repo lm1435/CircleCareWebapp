@@ -243,6 +243,8 @@ describe('shift detail: task rows open the editor (modal swap)', () => {
     const editor = await screen.findByRole('dialog', { name: 'New task' });
     expect(within(editor).getByTestId('shift-task-chip')).toBeInTheDocument();
     await user.type(within(editor).getByRole('textbox', { name: /^Title/ }), 'Help with lunch');
+    // Owner 2026-11-22: the editor opens with NO time; the person picks one.
+    fireEvent.change(within(editor).getByLabelText('From', { selector: 'input' }), { target: { value: '14:00' } });
     await user.click(within(editor).getByTestId('add-event-save'));
     await screen.findByRole('dialog', { name: 'Afternoons' });
     expect(createShiftTask).toHaveBeenCalledTimes(1);
@@ -326,7 +328,7 @@ describe('shift detail: task rows open the editor (modal swap)', () => {
     const editor = await screen.findByRole('dialog', { name: 'Edit task' });
     fireEvent.change(within(editor).getByLabelText('From', { selector: 'input' }), { target: { value: '22:00' } });
     await user.click(within(editor).getByTestId('add-event-save'));
-    expect(await within(editor).findByText('Pick a time inside this shift.')).toBeInTheDocument();
+    expect(await within(editor).findByText('Outside this shift: 10:00 PM. Pick a time inside the shift hours.')).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Afternoons' })).toBeNull();
     expect(updateEvent).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByTestId('highlight-ring')).toBeNull());

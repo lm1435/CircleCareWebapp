@@ -338,7 +338,9 @@ for (const vp of VIEWPORTS) {
           expectOneIdempotencyKey(injected.requests, 0, perSave);
           expectOneIdempotencyKey(injected.requests, perSave, 2 * perSave);
           const [a, b] = [injected.requests[0], injected.requests[perSave]].map((r) => r.headers()['idempotency-key']);
-          expect(a, 'a NEW save (the user pressed again) gets a new key').not.toBe(b);
+          // AddEventModal (owner 2026-11-21, "Option A"): an unchanged form's second press reuses its save's key.
+          if (modal.name === 'AddEventModal') expect(a, 'AddEventModal: the second press of an unchanged form reuses the key').toBe(b);
+          else expect(a, 'a NEW save (the user pressed again) gets a new key').not.toBe(b);
         }
         // The second failure's toast REPLACED the first: one node, and not the old one.
         await expect(page.locator('[data-e2e-first-toast]')).toHaveCount(0, { timeout: 15_000 });

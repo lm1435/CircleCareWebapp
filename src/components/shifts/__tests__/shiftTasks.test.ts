@@ -16,6 +16,8 @@ import {
   tasksBucket,
   timeInsideShiftWindow,
   windowDayForTime,
+  outsideShiftClocks,
+  spanInsideShiftWindow,
 } from '../shiftTasks';
 
 // docs/plans/shift-tasks.md: the list rules, mirrored client-side from the owner's edge-case fixture:
@@ -513,5 +515,42 @@ describe('windowDayForTime ("Add to this shift": the day a start falls on inside
   it('NEG a same-day shift never moves the day for an in-window time, and month ends roll correctly', () => {
     expect(windowDayForTime({ scheduledDate: '2026-11-10', startTime: '14:00' }, '16:00')).toBe('2026-11-10');
     expect(windowDayForTime({ scheduledDate: '2026-11-30', startTime: '20:00' }, '01:00')).toBe('2026-12-01');
+  });
+});
+
+describe('FIX 4: outsideShiftClocks names the picked times that are outside the window', () => {
+  it('P lists only the outside clocks, ascending and unique', () => {
+    expect(outsideShiftClocks(['20:00', '08:00', '15:00', '20:00'], '12:00', 360)).toEqual(['08:00', '20:00']);
+  });
+  it('N every time inside (the ends are inclusive) -> nothing is listed', () => {
+    expect(outsideShiftClocks(['12:00', '15:00', '18:00'], '12:00', 360)).toEqual([]);
+  });
+  it('N a time inside is never among the offenders', () => {
+    expect(outsideShiftClocks(['15:00', '19:00'], '12:00', 360)).not.toContain('15:00');
+  });
+  it('N no time picked (empty) -> nothing is listed, so the caller keeps the bare message', () => {
+    expect(outsideShiftClocks([], '12:00', 360)).toEqual([]);
+    expect(outsideShiftClocks([''], '12:00', 360)).toEqual([]);
+  });
+  it('overnight: after midnight inside the shift is fine, the daytime gap is not', () => {
+    expect(outsideShiftClocks(['23:00', '02:00', '12:00', '07:30'], '22:00', 540)).toEqual(['07:30', '12:00']);
+  });
+});
+
+describe('spanInsideShiftWindow: the END of an item added from a shift is inside it too', () => {
+  it('POS an end before or exactly on the shift end fits (12:00 PM + 6 h)', () => {
+    expect(spanInsideShiftWindow('15:00', 60, '12:00', 360)).toBe(true);
+    expect(spanInsideShiftWindow('17:00', 60, '12:00', 360)).toBe(true);
+  });
+  it('NEG an end one minute past the shift end does not fit', () => {
+    expect(spanInsideShiftWindow('17:00', 61, '12:00', 360)).toBe(false);
+  });
+  it('NEG a start outside the shift never fits, whatever the span', () => {
+    expect(spanInsideShiftWindow('09:00', 30, '12:00', 360)).toBe(false);
+  });
+  it('overnight 8:00 PM + 10 h: across midnight fits, past 6:00 AM does not', () => {
+    expect(spanInsideShiftWindow('23:00', 120, '20:00', 600)).toBe(true);
+    expect(spanInsideShiftWindow('05:00', 60, '20:00', 600)).toBe(true);
+    expect(spanInsideShiftWindow('05:00', 90, '20:00', 600)).toBe(false);
   });
 });

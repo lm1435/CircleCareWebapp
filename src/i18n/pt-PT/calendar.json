@@ -94,7 +94,8 @@
     },
     "photoSizeError": "Esta fotografia é demasiado grande. Escolha uma com menos de 2 MB.",
     "validation": {
-      "alertDaysRange": "Introduza um número de 1 a 90."
+      "alertDaysRange": "Introduza um número de 1 a 90.",
+      "pickTime": "Escolha uma hora."
     },
     "titleSuggestions": {
       "appointment": {

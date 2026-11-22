@@ -55,10 +55,10 @@ async function createFirstCircle(page: Page, recipient: string): Promise<string>
 async function fillPastTimeMed(page: Page, name: string): Promise<void> {
   const form = page.getByRole('dialog').last();
   await form.getByLabel(/Medication name/i).fill(name);
-  // First run v2: 8:00 AM Morning is preselected on the first-run form; untick it so the typed time
-  // is the ONE dose (a second time would be an extra dose, by design). The add-menu form has none.
+  // owner 2026-11-21: no preselected time on a new medication (first run or add menu): no chip is lit, so the
+  // typed time is the ONE dose.
   const morning = form.getByRole('checkbox', { name: /Morning$/ });
-  if (await morning.isChecked()) await morning.click();
+  await expect(morning).not.toBeChecked();
   // "Other…" is the time picker over the hidden #scheduled_time (build 11): the value goes straight in.
   await form.locator('#scheduled_time').fill('00:01');
   await expect(form.getByTestId('dose-past-time-note')).toBeVisible();
@@ -95,8 +95,10 @@ test.describe('onboarding first med: the schedule means the circle clock (BC-8)'
     const circleId = await createFirstCircle(page, uniq('ObTz'));
     const form = page.getByRole('dialog').last();
     await form.getByLabel(/Medication name/i).fill('Metformin');
-    // First run v2: Morning (the circle's 8:00 AM) is already picked.
+    // owner 2026-11-21: no preselected time on a new medication; the person picks Morning (the circle's 8:00 AM).
     const morning = form.getByRole('checkbox', { name: /Morning$/ });
+    await expect(morning).not.toBeChecked();
+    await morning.click();
     await expect(morning).toBeChecked();
     await form.getByRole('button', { name: 'Add medication' }).click();
     await expect(wizard(page).getByTestId('first-run-all-set')).toBeVisible({ timeout: 20_000 });

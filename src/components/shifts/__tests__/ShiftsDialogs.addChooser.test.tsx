@@ -204,6 +204,8 @@ describe('Add to this shift: the button and the chooser', () => {
     const editor = await screen.findByRole('dialog', { name: 'New task' });
     expect(within(editor).getByTestId('shift-task-chip')).toBeInTheDocument();
     await user.type(within(editor).getByRole('textbox', { name: /^Title/ }), 'Help with lunch');
+    // Owner 2026-11-22: the form opens with NO time; the person picks one.
+    fireEvent.change(within(editor).getByLabelText('From', { selector: 'input' }), { target: { value: '14:00' } });
     await user.click(within(editor).getByTestId('add-event-save'));
     await screen.findByRole('dialog', { name: 'Afternoons' });
     expect(createShiftTask).toHaveBeenCalledTimes(1);
@@ -212,14 +214,14 @@ describe('Add to this shift: the button and the chooser', () => {
     expect(Analytics.shiftItemAdded).toHaveBeenCalledWith({ type: 'task', shiftRepeating: true });
   });
 
-  it('POS Appointment opens the appointment form in window mode (locked day, default time inside the window); closing returns to the detail', async () => {
+  it('POS Appointment opens the appointment form in window mode (locked day, NO time selected: owner 2026-11-22); closing returns to the detail', async () => {
     const { user } = await openDetail();
     await openChooser(user);
     await user.click(screen.getByTestId('shift-add-appointment'));
     const form = await screen.findByRole('dialog', { name: 'New appointment' });
     expect(screen.queryByRole('dialog', { name: 'Add to this shift' })).toBeNull();
     expect(within(form).getByTestId('shift-window-locked-day')).toHaveTextContent('Tue, Nov 10');
-    expect(within(form).getByLabelText('From', { selector: 'input' })).toHaveValue('14:00');
+    expect(within(form).getByLabelText('From', { selector: 'input' })).toHaveValue('');
     await user.click(within(form).getByRole('button', { name: 'Cancel' }));
     expect(await screen.findByRole('dialog', { name: 'Afternoons' })).toBeInTheDocument();
     expect(createEvent).not.toHaveBeenCalled();
@@ -240,6 +242,8 @@ describe('Add to this shift: the button and the chooser', () => {
     await user.click(screen.getByTestId('shift-add-appointment'));
     const form = await screen.findByRole('dialog', { name: 'New appointment' });
     await user.type(within(form).getByRole('textbox', { name: /^Title/ }), 'Dr visit');
+    // Owner 2026-11-22: the form opens with NO time; the person picks one.
+    fireEvent.change(within(form).getByLabelText('From', { selector: 'input' }), { target: { value: '14:00' } });
     await user.click(within(form).getByTestId('add-event-save'));
     await screen.findByRole('dialog', { name: 'Afternoons' });
     expect(createEvent).toHaveBeenCalledTimes(1);
@@ -264,6 +268,8 @@ describe('Add to this shift: the button and the chooser', () => {
     await user.click(screen.getByTestId('shift-add-appointment'));
     const form = await screen.findByRole('dialog', { name: 'New appointment' });
     await user.type(within(form).getByRole('textbox', { name: /^Title/ }), 'Dr visit');
+    // Owner 2026-11-22: the form opens with NO time; the person picks one.
+    fireEvent.change(within(form).getByLabelText('From', { selector: 'input' }), { target: { value: '14:00' } });
     await user.click(within(form).getByTestId('add-event-save'));
     await screen.findByRole('dialog', { name: 'Afternoons' });
     const also = await screen.findByTestId('shift-also-list');
@@ -278,7 +284,7 @@ describe('Add to this shift: the button and the chooser', () => {
     await user.type(within(form).getByRole('textbox', { name: /^Title/ }), 'Dr visit');
     fireEvent.change(within(form).getByLabelText('From', { selector: 'input' }), { target: { value: '21:00' } });
     await user.click(within(form).getByTestId('add-event-save'));
-    expect(await within(form).findByText('Pick a time inside this shift.')).toBeInTheDocument();
+    expect(await within(form).findByText('Outside this shift: 9:00 PM. Pick a time inside the shift hours.')).toBeInTheDocument();
     expect(createEvent).not.toHaveBeenCalled();
     expect(Analytics.shiftItemAdded).not.toHaveBeenCalled();
     expect(screen.queryByRole('dialog', { name: 'Afternoons' })).toBeNull();
@@ -318,6 +324,8 @@ describe('Add to this shift: the button and the chooser', () => {
     const form = await screen.findByRole('dialog', { name: 'New appointment' });
     expect(gate.promptLapsed).not.toHaveBeenCalled();
     await user.type(within(form).getByRole('textbox', { name: /^Title/ }), 'Dr visit');
+    // Owner 2026-11-22: the form opens with NO time; the person picks one.
+    fireEvent.change(within(form).getByLabelText('From', { selector: 'input' }), { target: { value: '14:00' } });
     await user.click(within(form).getByTestId('add-event-save'));
     await waitFor(() => expect(gate.promptLapsed).toHaveBeenCalledTimes(1));
     expect(Analytics.shiftItemAdded).not.toHaveBeenCalled();

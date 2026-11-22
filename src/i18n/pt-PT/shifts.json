@@ -155,7 +155,7 @@
     "taskHint": "Algo para fazer durante o turno",
     "medicationHint": "Um novo medicamento com uma dose neste turno",
     "appointmentHint": "Uma visita ou chamada durante o turno",
-    "lockedHint": "Fixado no turno",
+    "lockedHint": "Só para este dia. A data vem do turno.",
     "emptyHint": "Adicione uma tarefa, um medicamento ou uma consulta para quem ficar com este turno.",
     "errorPast": "Escolha uma hora que ainda não tenha passado."
   },
@@ -174,6 +174,12 @@
       "sameSideOfMidnight": "Esta tarefa tem de ficar do mesmo lado da meia-noite. Elimine-a e adicione-a de novo para a mudar.",
       "deleteTask": "Eliminar tarefa",
       "deleted": "Tarefa eliminada"
+    },
+    "form": {
+      "timeHint": "Horário do turno: {{start}} – {{end}}",
+      "timeHintZone": "Horário do turno: {{start}} – {{end}} (hora de {{zone}})",
+      "onlyDate": "Só para este dia. Não se repete com o turno.",
+      "errorOutsideTimes": "Fora deste turno: {{times}}. Escolha uma hora dentro do turno."
     }
   }
 }

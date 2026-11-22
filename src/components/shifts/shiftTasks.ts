@@ -287,6 +287,35 @@ export function timeInsideShiftWindow(time: string, start: string, durationMinut
 }
 
 /**
+ * The picked clocks (`HH:MM`, the circle's) that fall outside the window: unique, ascending. Names WHICH time is
+ * wrong for "Outside this shift: 9:00 PM". Empty when every one fits (or none was picked). Mobile twin: `shiftTasks.ts`.
+ */
+export function outsideShiftClocks(times: string[], start: string, durationMinutes: number): string[] {
+  return [
+    ...new Set(
+      times.filter((time) => !!time && !timeInsideShiftWindow(time, start, durationMinutes)).map((time) => time.slice(0, 5))
+    ),
+  ].sort();
+}
+
+/**
+ * An item that STARTS at `time` and lasts `spanMinutes` also ENDS inside the window (the end may sit exactly on the
+ * shift end). False when the start itself is outside. Guards an appointment added from a shift, whose "To" time
+ * was never checked (owner 2026-11-21).
+ */
+export function spanInsideShiftWindow(
+  time: string,
+  spanMinutes: number,
+  start: string,
+  durationMinutes: number
+): boolean {
+  if (!timeInsideShiftWindow(time, start, durationMinutes)) return false;
+  const t = toMinutes(time);
+  const s = toMinutes(start);
+  return (t < s ? 1440 : 0) + t + spanMinutes <= s + durationMinutes;
+}
+
+/**
  * Overnight edit rule: the window crosses midnight and `next` lands on the other side of it than
  * `stored` (before the shift start = after midnight). Changing sides would need a date move the PATCH
  * does not do. False for a window inside one day.

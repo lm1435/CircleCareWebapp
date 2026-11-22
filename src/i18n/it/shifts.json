@@ -282,7 +282,7 @@
     "appointment": "Appuntamento",
     "appointmentHint": "Una visita o una chiamata durante il turno",
     "cancel": "Annulla",
-    "lockedHint": "Legato al turno",
+    "lockedHint": "Solo per questo giorno. La data viene dal turno.",
     "emptyHint": "Aggiungi un incarico, un farmaco o un appuntamento per chi prende questo turno.",
     "errorPast": "Scegli un orario che non sia ancora passato."
   },
@@ -291,9 +291,11 @@
     "added": "Attività aggiunta",
     "form": {
       "title": "Aggiungi un'attività",
-      "timeHint": "Tra le {{start}} e le {{end}}",
-      "onlyDate": "Solo {{date}}",
+      "timeHint": "Orario del turno: {{start}} – {{end}}",
+      "timeHintZone": "Orario del turno: {{start}} – {{end}} (ora di {{zone}})",
+      "onlyDate": "Solo per questo giorno. Non si ripete con il turno.",
       "errorOutside": "Scegli un'ora dentro questo turno.",
+      "errorOutsideTimes": "Fuori da questo turno: {{times}}. Scegli un'ora dentro l'orario del turno.",
       "errorUnsupported": "Un turno mensile o annuale non può ripetere un'attività dopo mezzanotte. Scegli un'altra ora o seleziona «Solo {{date}}».",
       "explainOnce": "Va a chi è di turno.",
       "errorEnded": "Questo turno è finito, quindi non si possono più aggiungere attività.",
@@ -337,7 +339,7 @@
     "deleteImpact_other": "Questo elimina anche le sue {{count}} attività in programma. Le attività completate restano nello storico.",
     "editor": {
       "lockedDay": "{{date}} · durante {{shift}}",
-      "onShift": "Su {{shift}} · {{window}}",
+      "onShift": "Su {{shift}}",
       "repeatEvery": "Ogni volta che questo turno si ripete",
       "repeatLocked": "Si ripete con {{shift}}",
       "owner": "Chi è di turno",

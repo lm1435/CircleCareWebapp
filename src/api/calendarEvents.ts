@@ -700,6 +700,7 @@ export async function getMedicationPhotoUrl(
  * (retry review N1). Dropped on success and on a definite refusal.
  */
 const createKeys = new WeakMap<object, string>();
+const updateKeys = new WeakMap<object, { key: string; eventId: string }>();
 
 export async function createEvent(
   circleId: string,
@@ -737,12 +738,26 @@ export async function updateEvent(
   eventId: string,
   data: UpdateEventRequest
 ): Promise<CalendarEvent> {
-  const response = (await sendIdempotentWrite('event_update', (config) =>
-    config
-      ? apiClient.patch(`/circles/${circleId}/events/${eventId}`, data, config)
-      : apiClient.patch(`/circles/${circleId}/events/${eventId}`, data)
-  )) as unknown as SingleEventEnvelope;
-  return response.data.event;
+  // Same rule as createEvent: a key per request OBJECT (and target), kept while the answer is
+  // ambiguous so a repeated Save of an unchanged form replays instead of writing twice.
+  const held = updateKeys.get(data);
+  const key = held && held.eventId === `${circleId}/${eventId}` ? held.key : newIdempotencyKey();
+  updateKeys.set(data, { key, eventId: `${circleId}/${eventId}` });
+  try {
+    const response = (await sendIdempotentWrite(
+      'event_update',
+      (config) =>
+        config
+          ? apiClient.patch(`/circles/${circleId}/events/${eventId}`, data, config)
+          : apiClient.patch(`/circles/${circleId}/events/${eventId}`, data),
+      key
+    )) as unknown as SingleEventEnvelope;
+    updateKeys.delete(data);
+    return response.data.event;
+  } catch (err) {
+    if (!isRetryableWriteFailure(err)) updateKeys.delete(data);
+    throw err;
+  }
 }
 
 /** What a delete tells the client beyond "it worked" (PK3). */

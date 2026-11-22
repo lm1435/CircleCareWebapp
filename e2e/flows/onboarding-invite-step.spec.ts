@@ -40,10 +40,11 @@ async function createFirstCircle(page: Page, recipient: string): Promise<string>
   return circleId;
 }
 
-/** First run v2: the first-item form opens on Medication with 8:00 AM Morning picked. */
+/** The first-item form opens on Medication with NO time lit (owner 2026-11-21); the person picks Morning. */
 async function saveFirstMed(page: Page): Promise<void> {
   const form = page.getByRole('dialog').last();
   await form.getByLabel(/Medication name/i).fill('Lisinopril');
+  await form.getByRole('checkbox', { name: /Morning$/ }).click();
   await form.getByRole('button', { name: 'Add medication' }).click();
   await expect(wizard(page).getByTestId('first-run-all-set')).toBeVisible({ timeout: 20_000 });
 }

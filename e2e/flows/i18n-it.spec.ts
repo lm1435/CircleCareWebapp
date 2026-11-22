@@ -157,9 +157,10 @@ test('join-circle modal is fully translated', async ({ page }) => {
   // Modal chrome + the two-step entry copy, all Italian (source of truth:
   // src/i18n/it/circles.json -> "joinModal").
   await expect(
-    page.getByText('Inserisci il codice di 6 caratteri del tuo invito.')
+    page.getByText('Inserisci il codice del tuo invito.')
   ).toBeVisible({ timeout: NAV_TIMEOUT });
-  await expect(page.getByText('Codice di invito', { exact: true })).toBeVisible();
+  // The label names the field (it is not a bare text node any more): assert the labelled textbox.
+  await expect(page.getByRole('textbox', { name: 'Codice di invito', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Trova la cerchia' })).toBeVisible();
   // No English fallbacks bled into the modal.
   await expect(page.getByText('Invite code', { exact: true })).toHaveCount(0);

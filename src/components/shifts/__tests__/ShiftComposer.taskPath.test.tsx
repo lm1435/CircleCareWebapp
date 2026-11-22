@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -109,6 +109,8 @@ describe('saved dialog -> full task editor (shift mode)', () => {
     await user.click(screen.getByTestId('shift-saved-add-task'));
     const editor = await screen.findByRole('dialog', { name: 'New task' });
     await user.type(within(editor).getByRole('textbox', { name: /^Title/ }), 'Give lunch');
+    // Owner 2026-11-22: the editor opens with NO time; the person picks one.
+    fireEvent.change(within(editor).getByLabelText('From', { selector: 'input' }), { target: { value: '14:00' } });
     await user.click(within(editor).getByTestId('add-event-save'));
     expect(await screen.findByTestId('shift-saved-add-task')).toBeInTheDocument();
     expect(createShiftTask).toHaveBeenCalledTimes(1);

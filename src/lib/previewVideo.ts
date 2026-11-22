@@ -36,7 +36,8 @@ export interface PreviewVideoSource {
  * previewVideoSource returns an address for every language. A load failure in any other language is probably a file
  * not uploaded yet (callers fall back to the carousel and skip preview_video_failed, see previewVideoMayBeMissing).
  */
-export const PREVIEW_VIDEO_LANGUAGES: readonly SupportedLanguage[] = ['en', 'es'];
+export const PREVIEW_VIDEO_LANGUAGES: readonly SupportedLanguage[] = ['en', 'es', 'fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT'];
+// All 8 files (4x5 and 16x9, mp4 + jpg) verified live in production storage on 2026-11-21.
 
 const BUCKET_PATH = '/storage/v1/object/public/help-videos/';
 
@@ -64,7 +65,7 @@ export function previewVideoSource(
   return { src: `${name}.mp4`, poster: `${name}.jpg`, language: lang };
 }
 
-/** True when a load failure before any frame is most likely a file not uploaded yet (not en/es): do not report it. */
+/** True when a load failure before any frame is most likely a file not uploaded yet (a language not in PREVIEW_VIDEO_LANGUAGES): do not report it. */
 export function previewVideoMayBeMissing(language: string): boolean {
   return !(PREVIEW_VIDEO_LANGUAGES as readonly string[]).includes(language);
 }

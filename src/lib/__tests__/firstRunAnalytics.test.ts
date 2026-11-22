@@ -32,7 +32,8 @@ async function fireAll(): Promise<Array<[string, Record<string, unknown>]>> {
     dosageFilled: true,
     doseCount: 1,
     firstItemType: 'medication',
-    timeDefaultKept: true,
+    // owner 2026-11-21: no preselected time on a new medication, so a medication never keeps a default.
+    timeDefaultKept: false,
     hasTime: true,
   });
   Analytics.firstRunAllSetViewed({ circleId: CIRCLE, path: 'owner', remindersOn: false, firstItemType: 'medication' });
@@ -64,8 +65,26 @@ describe('first run v2 analytics', () => {
       'first_run_back_tapped',
       'first_run_abandoned',
     ]);
-    expect(calls[5][1]).toMatchObject({ first_item_type: 'medication', time_default_kept: true, has_time: true });
+    // owner 2026-11-21: no preselected time on a new medication: the flag is still sent, as false.
+    expect(calls[5][1]).toMatchObject({ first_item_type: 'medication', time_default_kept: false, has_time: true });
+    expect(calls[5][1]).toHaveProperty('time_default_kept', false);
     expect(calls[9][1]).toMatchObject({ step: 'all_set', path: 'email' });
+  });
+
+  it('POSITIVE: an appointment / task that keeps its 9:00 AM default still reports time_default_kept true', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    capture.mockClear();
+    Analytics.firstRunMedicationSaved({
+      circleId: CIRCLE,
+      preset: 'other',
+      recurrence: 'none',
+      dosageFilled: false,
+      doseCount: 1,
+      firstItemType: 'appointment',
+      timeDefaultKept: true,
+      hasTime: true,
+    });
+    expect(capture.mock.calls[0][1]).toMatchObject({ first_item_type: 'appointment', time_default_kept: true });
   });
 
   it('POSITIVE: consented (identified pipeline) keeps circle_id', async () => {

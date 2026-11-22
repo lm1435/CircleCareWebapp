@@ -138,7 +138,7 @@
     "taskHint": "Une chose à faire pendant le quart",
     "medicationHint": "Un nouveau médicament avec une prise pendant ce quart",
     "appointmentHint": "Une visite ou un appel pendant le quart",
-    "lockedHint": "Lié au quart",
+    "lockedHint": "Pour ce jour seulement. La date vient du quart.",
     "emptyHint": "Ajoutez une tâche, un médicament ou un rendez-vous pour la personne qui a ce quart."
   },
   "tasks": {
@@ -151,6 +151,12 @@
       "repeatEvery": "À chaque fois que ce quart a lieu",
       "owner": "La personne qui a ce quart",
       "ownerOpen": "Personne n’a encore ce quart"
+    },
+    "form": {
+      "timeHint": "Heures du quart : {{start}} – {{end}}",
+      "timeHintZone": "Heures du quart : {{start}} – {{end}} (heure de {{zone}})",
+      "onlyDate": "Pour ce jour seulement. Ne se répète pas avec le quart.",
+      "errorOutsideTimes": "En dehors de ce quart : {{times}}. Choisissez une heure pendant le quart."
     }
   }
 }

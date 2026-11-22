@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -121,10 +121,13 @@ function setup(type: 'medication' | 'appointment', s: CalendarEvent = shift()) {
 }
 
 const fromInput = () => screen.getByLabelText('From', { selector: 'input' }) as HTMLInputElement;
+const toInput = () => screen.getByLabelText('To', { selector: 'input' }) as HTMLInputElement;
 const titleBox = () => screen.getByRole('textbox', { name: /^Title/ });
 const medName = () => screen.getByLabelText(/^Medication name/);
 const save = () => screen.getByTestId('add-event-save');
 const posted = () => mutateCreateEvent.mock.calls[0][0] as Record<string, unknown>;
+/** Owner 2026-11-22: a new shift appointment opens with NO time; the person picks one (recipient clock). */
+const pickFrom = (value: string) => fireEvent.change(fromInput(), { target: { value } });
 const otherTimeInput = () => screen.getByLabelText('Other time', { selector: 'input' }) as HTMLInputElement;
 
 const SPIED = ['entryFormOpened', 'entryFormStepCompleted', 'entrySaveTapped', 'entryValidationBlocked', 'shiftItemAdded', 'shiftTaskAdded', 'shiftItemAddAbandoned'] as const;
@@ -142,13 +145,32 @@ afterEach(() => {
 });
 
 describe('window mode: appointment', () => {
-  it('POS opens the full appointment form: locked day + hint, no date picker, default time = shift start, "Between" hint', () => {
+  // Owner 2026-11-21: "Between 1:00 AM and 8:00 PM" had no subject and no zone.
+  it('POS same zone: the hint is exactly "Shift hours: 2:00 PM – 8:00 PM", no zone named', () => {
+    setup('appointment');
+    expect(screen.getByTestId('shift-window-time-hint').textContent).toBe('Shift hours: 2:00 PM – 8:00 PM');
+  });
+
+  it('NEG viewer in another zone: the hint names the circle zone, never the bare hours', () => {
+    useCircleResult.timezone = 'Asia/Kolkata';
+    try {
+      setup('appointment');
+      const text = screen.getByTestId('shift-window-time-hint').textContent ?? '';
+      expect(text).toMatch(/^Shift hours: .+ – .+ \(.+ time\)$/);
+      expect(text).not.toBe('Shift hours: 2:00 PM – 8:00 PM');
+    } finally {
+      useCircleResult.timezone = RECIPIENT_TZ;
+    }
+  });
+
+  it('POS opens the full appointment form: locked day + hint, no date picker, NO time and no end (owner 2026-11-22), "Shift hours" hint', () => {
     setup('appointment');
     expect(screen.getByRole('dialog', { name: 'New appointment' })).toBeInTheDocument();
     expect(screen.getByTestId('shift-window-locked-day')).toHaveTextContent('Tue, Nov 10 · during Afternoons');
-    expect(screen.getByTestId('shift-window-locked-hint')).toHaveTextContent('Locked to shift');
-    expect(fromInput().value).toBe('14:00');
-    expect(screen.getByTestId('shift-window-time-hint')).toHaveTextContent('Between 2:00 PM and 8:00 PM');
+    expect(screen.getByTestId('shift-window-locked-hint')).toHaveTextContent('For this day only. The date comes from the shift.');
+    expect(fromInput().value).toBe('');
+    expect(toInput().value).toBe('');
+    expect(screen.getByTestId('shift-window-time-hint')).toHaveTextContent('Shift hours: 2:00 PM – 8:00 PM');
     // The type switcher is not there and the full form's own fields are.
     expect(screen.queryByRole('radio', { name: 'Task' })).toBeNull();
     // One-time only: no repeat controls.
@@ -200,7 +222,7 @@ describe('window mode: appointment', () => {
     await user.type(titleBox(), 'Dr visit');
     fireEvent.change(fromInput(), { target: { value: '09:00' } });
     await user.click(save());
-    expect(await screen.findByText('Pick a time inside this shift.')).toBeInTheDocument();
+    expect(await screen.findByText(outsideAt('9:00 AM'))).toBeInTheDocument();
     expect(mutateCreateEvent).not.toHaveBeenCalled();
     expect(onSaved).not.toHaveBeenCalled();
     expect(Analytics.shiftItemAdded).not.toHaveBeenCalled();
@@ -215,6 +237,7 @@ describe('window mode: appointment', () => {
     mutateCreateEvent.mockRejectedValueOnce(new Error('network'));
     const { user, onSaved } = setup('appointment');
     await user.type(titleBox(), 'Dr visit');
+    pickFrom('16:30');
     await user.click(save());
     await waitFor(() => expect(mutateCreateEvent).toHaveBeenCalledTimes(1));
     expect(onSaved).not.toHaveBeenCalled();
@@ -237,8 +260,56 @@ describe('window mode: appointment', () => {
     await user.type(titleBox(), 'Early call');
     fireEvent.change(fromInput(), { target: { value: '08:00' } });
     await user.click(save());
-    expect(await screen.findByText('Pick a time inside this shift.')).toBeInTheDocument();
+    expect(await screen.findByText(outsideAt('8:00 AM'))).toBeInTheDocument();
     expect(mutateCreateEvent).not.toHaveBeenCalled();
+  });
+
+  // The END is checked too (owner 2026-11-21): the shift is 2:00 PM - 8:00 PM.
+  it('NEG an end past the shift end is refused at the "To" field, naming the end time: nothing created', async () => {
+    const { user, onSaved } = setup('appointment');
+    await user.type(titleBox(), 'Dr visit');
+    fireEvent.change(fromInput(), { target: { value: '19:00' } });
+    fireEvent.change(toInput(), { target: { value: '21:00' } });
+    await user.click(save());
+    expect(await screen.findByText(outsideAt('9:00 PM'))).toBeInTheDocument();
+    // Said at the "To" field (its own error slot), not at "From".
+    expect(document.getElementById('endTime-error')).toHaveTextContent('9:00 PM');
+    expect(document.querySelector('[aria-describedby="endTime-error"]')).toHaveAttribute('aria-invalid', 'true');
+    expect(document.getElementById('scheduled_time-error')).toBeNull();
+    expect(mutateCreateEvent).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(Analytics.shiftItemAdded).not.toHaveBeenCalled();
+  });
+
+  it('POS an end exactly on the shift end saves; fixing a refused end then saves', async () => {
+    const { user } = setup('appointment');
+    await user.type(titleBox(), 'Dr visit');
+    fireEvent.change(fromInput(), { target: { value: '19:00' } });
+    fireEvent.change(toInput(), { target: { value: '20:30' } });
+    await user.click(save());
+    expect(await screen.findByText(outsideAt('8:30 PM'))).toBeInTheDocument();
+    expect(mutateCreateEvent).not.toHaveBeenCalled();
+    fireEvent.change(toInput(), { target: { value: '20:00' } });
+    expect(screen.queryByText(outsideAt('8:30 PM'))).toBeNull();
+    await user.click(save());
+    await waitFor(() => expect(mutateCreateEvent).toHaveBeenCalledTimes(1));
+    expect(posted()).toMatchObject({ scheduled_time: '19:00', duration_minutes: 60 });
+  });
+
+  it('overnight: an end after midnight inside the shift saves; one past the 6:00 AM end is refused', async () => {
+    const night = shift({ scheduled_time: '20:00:00', duration_minutes: 600 });
+    const { user } = setup('appointment', night);
+    await user.type(titleBox(), 'Late call');
+    fireEvent.change(fromInput(), { target: { value: '05:00' } });
+    fireEvent.change(toInput(), { target: { value: '06:30' } });
+    await user.click(save());
+    expect(await screen.findByText(outsideAt('6:30 AM'))).toBeInTheDocument();
+    expect(mutateCreateEvent).not.toHaveBeenCalled();
+    fireEvent.change(fromInput(), { target: { value: '23:00' } });
+    fireEvent.change(toInput(), { target: { value: '01:00' } });
+    await user.click(save());
+    await waitFor(() => expect(mutateCreateEvent).toHaveBeenCalledTimes(1));
+    expect(posted()).toMatchObject({ scheduled_date: '2026-11-10', scheduled_time: '23:00', duration_minutes: 120 });
   });
 
   it('NEG a normal appointment (no window) keeps its date picker, "Any time" and fires no shift_item_added', async () => {
@@ -263,13 +334,17 @@ describe('window mode: appointment', () => {
 });
 
 describe('window mode: medication', () => {
-  it('POS opens the full medication form: locked start day + hint, first dose prefilled at the shift start, no "When needed"', () => {
+  it('P1 POS opens the full medication form: locked start day + hint, NO time checked (owner 2026-11-21), no "When needed"', () => {
     setup('medication');
     expect(screen.getByRole('dialog', { name: 'New medication' })).toBeInTheDocument();
     expect(screen.getByTestId('shift-window-locked-day')).toHaveTextContent('Tue, Nov 10 · during Afternoons');
-    expect(screen.getByTestId('shift-window-locked-hint')).toHaveTextContent('Locked to shift');
-    expect(screen.getByTestId('shift-window-time-hint')).toHaveTextContent('Between 2:00 PM and 8:00 PM');
-    expect(screen.getByTestId('time-chip-custom')).toHaveAccessibleName(/^2:00 PM\s*Other$/);
+    expect(screen.getByTestId('shift-window-locked-hint')).toHaveTextContent('For this day only. The date comes from the shift.');
+    expect(screen.getByTestId('shift-window-time-hint')).toHaveTextContent('Shift hours: 2:00 PM – 8:00 PM');
+    // No chip checked, no dose row, nothing in the Other field: the form opens empty.
+    expect(screen.queryAllByRole('checkbox', { checked: true })).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: /^Remove .* dose$/ })).toBeNull();
+    expect(screen.queryByTestId('time-chip-custom')).toBeNull();
+    expect(document.getElementById('scheduled_time')).toHaveValue('');
     expect(screen.queryByRole('radio', { name: 'When needed' })).toBeNull();
     // One-time only: no how-often controls and no "Repeats until" tile.
     expect(screen.queryByRole('radio', { name: 'Every day' })).toBeNull();
@@ -283,42 +358,63 @@ describe('window mode: medication', () => {
     expect(document.getElementById('scheduled_date')).toBeNull();
   });
 
-  it('POS in-window save: one normal create at the first dose on the shift day, shift_item_added once', async () => {
+  it('P2 POS one in-window chip (6:00 PM Evening): exactly ONE create on the shift day at that time, shift_item_added once', async () => {
     const { user } = setup('medication');
     await user.type(medName(), 'Metformin');
+    await user.click(screen.getByRole('checkbox', { name: /^6:00 PM/ }));
     await user.click(save());
     await waitFor(() => expect(mutateCreateEvent).toHaveBeenCalledTimes(1));
     expect(posted()).toMatchObject({
       event_type: 'medication',
       title: 'Metformin',
       scheduled_date: '2026-11-10',
-      scheduled_time: '14:00',
+      scheduled_time: '18:00',
     });
     await waitFor(() => expect(Analytics.shiftItemAdded).toHaveBeenCalledTimes(1));
     expect(Analytics.shiftItemAdded).toHaveBeenCalledWith({ type: 'medication', shiftRepeating: true });
+    expect(mutateCreateEvent).toHaveBeenCalledTimes(1);
   });
 
-  it('NEG a first dose outside the window (the 8:00 AM Morning chip) is refused inline: no create, no analytics', async () => {
+  it('P3 POS "Other..." custom in-window time: exactly ONE create (the production-bug shape), no second dose', async () => {
     const { user } = setup('medication');
     await user.type(medName(), 'Metformin');
-    // Replace the prefilled first dose with a chip outside the shift.
-    await user.click(screen.getByRole('button', { name: 'Remove 2:00 PM dose' }));
+    fireEvent.change(otherTimeInput(), { target: { value: '17:15' } });
+    await user.click(save());
+    await waitFor(() => expect(mutateCreateEvent).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mutateCreateEvent).toHaveBeenCalledTimes(1);
+    expect(posted()).toMatchObject({ scheduled_date: '2026-11-10', scheduled_time: '17:15' });
+  });
+
+  it('N1 NEG Save with no time: the time-required validation shows, nothing is created, no shift_item_added', async () => {
+    const { user, onSaved } = setup('medication');
+    await user.type(medName(), 'Metformin');
+    await user.click(save());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mutateCreateEvent).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(Analytics.shiftItemAdded).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'New medication' })).toBeInTheDocument();
+  });
+
+  it('N2 NEG a first dose outside the window (the 8:00 AM Morning chip) is refused inline: no create, no analytics', async () => {
+    const { user } = setup('medication');
+    await user.type(medName(), 'Metformin');
     await user.click(screen.getByRole('checkbox', { name: /^8:00 AM\s*Morning$/ }));
     await user.click(save());
-    expect(await screen.findByText('Pick a time inside this shift.')).toBeInTheDocument();
+    expect(await screen.findByText(outsideAt('8:00 AM'))).toBeInTheDocument();
     expect(mutateCreateEvent).not.toHaveBeenCalled();
     expect(Analytics.shiftItemAdded).not.toHaveBeenCalled();
   });
 
-  it('overnight: a first dose after midnight starts on shift date + 1', async () => {
+  it('P4 overnight: a lone after-midnight dose starts on shift date + 1 (one create)', async () => {
     const night = shift({ scheduled_time: '20:00:00', duration_minutes: 600 });
     const { user } = setup('medication', night);
     await user.type(medName(), 'Metformin');
-    // Un-pick the prefilled first dose, then name the after-midnight time.
-    await user.click(screen.getByRole('button', { name: 'Remove 8:00 PM dose' }));
     fireEvent.change(otherTimeInput(), { target: { value: '02:00' } });
     await user.click(save());
     await waitFor(() => expect(mutateCreateEvent).toHaveBeenCalledTimes(1));
+    expect(mutateCreateEvent).toHaveBeenCalledTimes(1);
     expect(posted()).toMatchObject({ scheduled_date: '2026-11-11', scheduled_time: '02:00' });
   });
 
@@ -335,6 +431,33 @@ describe('window mode: medication', () => {
     expect(screen.getByTestId('starts-tile')).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'When needed' })).toBeInTheDocument();
     expect(Analytics.shiftItemAdded).not.toHaveBeenCalled();
+    // N6: and it opens with no time checked.
+    expect(screen.queryAllByRole('checkbox', { checked: true })).toHaveLength(0);
+  });
+
+  it('N5 NEG editing an existing medication opens on its stored time (edit is untouched)', () => {
+    const med = {
+      id: 'm1',
+      circle_id: 'c',
+      event_type: 'medication',
+      title: 'Metformin',
+      scheduled_date: '2026-11-10',
+      scheduled_time: '18:00:00',
+      recurrence_rule: 'daily',
+      created_at: '',
+      updated_at: '',
+    } as CalendarEvent;
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <MemoryRouter>
+            <AddEventModal circleId="c" initialType="medication" event={med} onClose={vi.fn()} />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+    const group = within(document.getElementById('time-chips') as HTMLElement);
+    expect(group.getByRole('radio', { name: /^6:00 PM/ })).toBeChecked();
   });
 });
 
@@ -342,7 +465,7 @@ const RECURRENCE_KEYS = ['recurrence_rule', 'recurrence_days', 'recurrence_end_d
 const noRecurrence = (body: Record<string, unknown>) => {
   for (const key of RECURRENCE_KEYS) expect(body[key] ?? null, key).toBeNull();
 };
-const errorOutside = 'Pick a time inside this shift.';
+const outsideAt = (time: string) => `Outside this shift: ${time}. Pick a time inside the shift hours.`;
 const errorPast = "Pick a time that hasn't passed yet.";
 // Tue Nov 10, 4:00 PM in Chicago: the shift (2-8 PM) is under way.
 const MID_SHIFT = new Date('2026-11-10T22:00:00Z');
@@ -354,6 +477,7 @@ describe('window mode: one-time only (owner decision 2026-11-19)', () => {
     expect(screen.queryByRole('radio', { name: 'Once' })).toBeNull();
     expect(screen.queryByTestId('repeats-until-tile')).toBeNull();
     await user.type(titleBox(), 'Dr visit');
+    pickFrom('16:30');
     await user.click(save());
     await waitFor(() => expect(mutateCreateEvent).toHaveBeenCalledTimes(1));
     noRecurrence(posted());
@@ -362,7 +486,8 @@ describe('window mode: one-time only (owner decision 2026-11-19)', () => {
   it('POS a medication with two doses saves as one-time rows on the shift day: no recurrence, no occurrence the day after', async () => {
     const { user } = setup('medication');
     await user.type(medName(), 'Metformin');
-    // A second dose inside the window (6:00 PM Evening chip).
+    // Multi-dose stays: two chips inside the window (2:00 PM via Other, 6:00 PM Evening chip).
+    fireEvent.change(otherTimeInput(), { target: { value: '14:00' } });
     await user.click(screen.getByRole('checkbox', { name: /^6:00 PM/ }));
     await user.click(save());
     await waitFor(() => expect(mutateCreateEvent).toHaveBeenCalledTimes(2));
@@ -377,12 +502,13 @@ describe('window mode: one-time only (owner decision 2026-11-19)', () => {
     const night = shift({ scheduled_time: '20:00:00', duration_minutes: 600 });
     const { user } = setup('medication', night);
     await user.type(medName(), 'Metformin');
-    // The prefilled 8:00 PM first dose stays; add a 2:00 AM dose through Other.
+    // Two doses: the Bedtime chip, then a 2:00 AM dose through Other.
+    await user.click(screen.getByRole('checkbox', { name: /Bedtime$/ }));
     fireEvent.change(otherTimeInput(), { target: { value: '02:00' } });
     await user.click(save());
     await waitFor(() => expect(mutateCreateEvent).toHaveBeenCalledTimes(2));
     const rows = (mutateCreateEvent.mock.calls as Array<[Record<string, unknown>]>).map(([b]) => b);
-    expect(rows.map((b) => `${b.scheduled_date}T${b.scheduled_time}`).sort()).toEqual(['2026-11-10T20:00', '2026-11-11T02:00']);
+    expect(rows.map((b) => `${b.scheduled_date}T${b.scheduled_time}`).sort()).toEqual(['2026-11-10T21:00', '2026-11-11T02:00']);
     for (const b of rows) noRecurrence(b);
   });
 });
@@ -393,9 +519,33 @@ describe('window mode: every dose inside the window', () => {
     await user.type(medName(), 'Metformin');
     await user.click(screen.getByRole('checkbox', { name: /^8:00 AM\s*Morning$/ }));
     await user.click(save());
-    expect(await screen.findByText(errorOutside)).toBeInTheDocument();
+    expect(await screen.findByText(outsideAt('8:00 AM'))).toBeInTheDocument();
     expect(mutateCreateEvent).not.toHaveBeenCalled();
     expect(Analytics.shiftItemAdded).not.toHaveBeenCalled();
+  });
+});
+
+describe('window mode: the refusal names the outside times (FIX 4)', () => {
+  it('POS two doses outside are listed ascending with the circle clock; the 2:00 PM dose inside is never listed', async () => {
+    const { user } = setup('medication');
+    await user.type(medName(), 'Metformin');
+    fireEvent.change(otherTimeInput(), { target: { value: '21:00' } }); // 9:00 PM, outside
+    await user.click(screen.getByRole('checkbox', { name: /^8:00 AM\s*Morning$/ })); // outside
+    await user.click(save());
+    const msg = await screen.findByText(outsideAt('8:00 AM, 9:00 PM'));
+    expect(msg).toBeInTheDocument();
+    expect(msg.textContent).not.toContain('2:00 PM');
+    expect(mutateCreateEvent).not.toHaveBeenCalled();
+  });
+
+  it('NEG every dose inside the shift: no outside message and the save goes through', async () => {
+    const { user } = setup('medication');
+    await user.type(medName(), 'Metformin');
+    fireEvent.change(otherTimeInput(), { target: { value: '14:00' } }); // inside
+    await user.click(screen.getByRole('checkbox', { name: /^6:00 PM/ })); // inside
+    await user.click(save());
+    await waitFor(() => expect(mutateCreateEvent).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(/^Outside this shift/)).toBeNull();
   });
 });
 
@@ -404,13 +554,33 @@ describe('window mode: no past times (owner decision 2026-11-19)', () => {
     vi.setSystemTime(MID_SHIFT);
   });
 
-  it('POS the default time is still ahead (next half hour) and saves', async () => {
-    const { user } = setup('appointment');
-    expect(fromInput().value).toBe('16:30');
+  it('POS (owner 2026-11-22) mid-shift the form still opens with NO time; one picked time = ONE create at that time, end = start + 30', async () => {
+    const { user, onSaved } = setup('appointment');
+    expect(fromInput().value).toBe('');
+    expect(toInput().value).toBe('');
     await user.type(titleBox(), 'Dr visit');
+    pickFrom('16:30');
+    expect(toInput().value).toBe('17:00');
     await user.click(save());
     await waitFor(() => expect(mutateCreateEvent).toHaveBeenCalledTimes(1));
-    expect(posted()).toMatchObject({ scheduled_date: '2026-11-10', scheduled_time: '16:30' });
+    expect(posted()).toMatchObject({ scheduled_date: '2026-11-10', scheduled_time: '16:30', duration_minutes: 30 });
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(Analytics.shiftItemAdded).toHaveBeenCalledTimes(1);
+  });
+
+  it('NEG (owner 2026-11-22) Save with a title but no time: "Pick a time." at the time tile, focus there, nothing created; a submit is refused too', async () => {
+    const { user, onSaved } = setup('appointment');
+    await user.type(titleBox(), 'Dr visit');
+    await user.click(save());
+    expect(await screen.findByText('Pick a time.')).toBeInTheDocument();
+    expect(screen.queryByText('Medications need a scheduled time.')).toBeNull();
+    await waitFor(() => expect(document.getElementById('scheduled_time-tile')).toHaveFocus());
+    fireEvent.submit(document.getElementById('add-event-form') as HTMLFormElement);
+    expect(await screen.findAllByText('Pick a time.')).not.toHaveLength(0);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(mutateCreateEvent).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(Analytics.shiftItemAdded).not.toHaveBeenCalled();
   });
 
   it('NEG an in-window appointment time that already passed is refused inline with the past message: nothing created', async () => {
@@ -419,7 +589,7 @@ describe('window mode: no past times (owner decision 2026-11-19)', () => {
     fireEvent.change(fromInput(), { target: { value: '15:00' } });
     await user.click(save());
     expect(await screen.findByText(errorPast)).toBeInTheDocument();
-    expect(screen.queryByText(errorOutside)).toBeNull();
+    expect(screen.queryByText(/^Outside this shift/)).toBeNull();
     expect(mutateCreateEvent).not.toHaveBeenCalled();
     expect(Analytics.shiftItemAdded).not.toHaveBeenCalled();
   });
@@ -438,7 +608,7 @@ describe('window mode: no past times (owner decision 2026-11-19)', () => {
     await user.type(titleBox(), 'Dr visit');
     fireEvent.change(fromInput(), { target: { value: '09:00' } });
     await user.click(save());
-    expect(await screen.findByText(errorOutside)).toBeInTheDocument();
+    expect(await screen.findByText(outsideAt('9:00 AM'))).toBeInTheDocument();
     expect(screen.queryByText(errorPast)).toBeNull();
     expect(mutateCreateEvent).not.toHaveBeenCalled();
   });
@@ -493,13 +663,25 @@ describe('window mode: shift_item_add_abandoned', () => {
   it('POS a medication closed with a refused (outside) time still on screen reports "refused_time"; a one-off shift reports shift_repeating false', async () => {
     const { user } = setup('medication', shift({ recurrence_rule: null, parent_event_id: null as never }));
     await user.type(medName(), 'Metformin');
-    await user.click(screen.getByRole('button', { name: 'Remove 2:00 PM dose' }));
     await user.click(screen.getByRole('checkbox', { name: /^8:00 AM\s*Morning$/ }));
     await user.click(save());
-    expect(await screen.findByText('Pick a time inside this shift.')).toBeInTheDocument();
+    expect(await screen.findByText(outsideAt('8:00 AM'))).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(Analytics.shiftItemAddAbandoned).toHaveBeenCalledTimes(1);
     expect(Analytics.shiftItemAddAbandoned).toHaveBeenCalledWith({ type: 'medication', shiftRepeating: false, reason: 'refused_time' });
+  });
+
+  it('POS an appointment closed with a refused END time on screen reports "refused_time"', async () => {
+    const { user } = setup('appointment');
+    await user.type(titleBox(), 'Dr visit');
+    fireEvent.change(fromInput(), { target: { value: '19:00' } });
+    fireEvent.change(toInput(), { target: { value: '21:00' } });
+    await user.click(save());
+    await screen.findByText(outsideAt('9:00 PM'));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(Analytics.shiftItemAddAbandoned).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'appointment', reason: 'refused_time' })
+    );
   });
 
   it('NEG a refusal that was then fixed is not a refused_time close', async () => {
@@ -507,7 +689,7 @@ describe('window mode: shift_item_add_abandoned', () => {
     await user.type(titleBox(), 'Dr visit');
     fireEvent.change(fromInput(), { target: { value: '09:00' } });
     await user.click(save());
-    expect(await screen.findByText('Pick a time inside this shift.')).toBeInTheDocument();
+    expect(await screen.findByText(outsideAt('9:00 AM'))).toBeInTheDocument();
     fireEvent.change(fromInput(), { target: { value: '16:00' } });
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(Analytics.shiftItemAddAbandoned).toHaveBeenCalledWith(expect.objectContaining({ reason: 'cancel' }));
@@ -516,6 +698,7 @@ describe('window mode: shift_item_add_abandoned', () => {
   it('NEG never after a successful save', async () => {
     const { user } = setup('appointment');
     await user.type(titleBox(), 'Dr visit');
+    pickFrom('16:30');
     await user.click(save());
     await waitFor(() => expect(Analytics.shiftItemAdded).toHaveBeenCalledTimes(1));
     expect(Analytics.shiftItemAddAbandoned).not.toHaveBeenCalled();

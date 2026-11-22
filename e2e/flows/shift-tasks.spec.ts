@@ -226,14 +226,14 @@ test.describe('shift tasks', () => {
     // 1.4.3: "Add a task to this shift" opens the FULL task editor in shift mode (the two-field form is gone).
     await addTask.click();
     const taskForm = page.getByRole('dialog', { name: 'New task' });
-    await expect(taskForm.getByTestId('shift-task-chip')).toHaveText(/^On Afternoons · /);
-    await expect(taskForm.getByTestId('shift-task-locked-day')).toContainText(`${shortDate(s.today)} · during Afternoons`);
+    await expect(taskForm.getByTestId('shift-task-chip')).toHaveText('On Afternoons');
+    await expect(taskForm.getByTestId('shift-task-locked-day')).toContainText(shortDate(s.today));
     await expect(taskForm.getByTestId('shift-task-owner')).toHaveText('Whoever is on this shift');
     // An add is "this day only" (owner 2026-11-19): no repeat choice, just the caption.
     await expect(taskForm.getByRole('radio', { name: 'Every time this shift happens' })).toHaveCount(0);
-    await expect(taskForm.getByTestId('shift-task-only-day')).toHaveText(`Only ${shortDate(s.today)}`);
+    await expect(taskForm.getByTestId('shift-task-only-day')).toHaveText("For this day only. It won't repeat with the shift.");
     await expect(taskForm.getByRole('radio', { name: 'Any time' })).toHaveCount(0);
-    await expect(taskForm.getByTestId('shift-task-time-hint')).toHaveText('Between 12:00 AM and 12:00 AM');
+    await expect(taskForm.getByTestId('shift-task-time-hint')).toHaveText('Shift hours: 12:00 AM – 12:00 AM');
     // An empty title is refused inline (Save points at the field).
     await taskForm.getByTestId('add-event-save').click();
     await expect(taskForm.getByText('Please enter a title.')).toBeVisible();
@@ -631,11 +631,11 @@ test.describe('shift tasks', () => {
     await detail.getByRole('button', { name: 'Add to this shift', exact: true }).click();
     await page.getByTestId('shift-add-task').click();
     const add = page.getByRole('dialog', { name: 'New task' });
-    await expect(add.getByTestId('shift-task-time-hint')).toHaveText('Between 10:00 AM and 2:00 PM');
+    await expect(add.getByTestId('shift-task-time-hint')).toHaveText('Shift hours: 10:00 AM – 2:00 PM');
     await add.getByRole('textbox', { name: /^Title/ }).fill('Too early');
     await fillSimpleTime(add, '08:00');
     await add.getByTestId('add-event-save').click();
-    await expect(add.getByText('Pick a time inside this shift.')).toBeVisible();
+    await expect(add.getByText('Outside this shift: 8:00 AM. Pick a time inside the shift hours.')).toBeVisible();
     await add.getByRole('button', { name: 'Cancel' }).click();
 
     // edit
@@ -644,7 +644,7 @@ test.describe('shift tasks', () => {
     const edit = page.getByRole('dialog', { name: 'Edit task' });
     await fillSimpleTime(edit, '15:00');
     await edit.getByTestId('add-event-save').click();
-    await expect(edit.getByText('Pick a time inside this shift.')).toBeVisible();
+    await expect(edit.getByText('Outside this shift: 3:00 PM. Pick a time inside the shift hours.')).toBeVisible();
     expect(writes).toEqual([]);
   });
 

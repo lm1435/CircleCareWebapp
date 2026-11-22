@@ -97,10 +97,10 @@ describe('first-run wizard: a custom time is the circle clock', () => {
     render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" firstRun onClose={vi.fn()} onSaved={vi.fn()} />);
     const u = userEvent.setup();
     await u.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
-    // First run v2: 8:00 AM Morning is preselected; untick it so the typed time is the dose.
+    // owner 2026-11-21: no preselected time on a new medication: the typed time is the only dose.
     const morning = screen.getByRole('checkbox', { name: /Morning/ });
-    await waitFor(() => expect(morning).toBeChecked());
-    await u.click(morning);
+    await waitFor(() => expect(morning).toBeInTheDocument());
+    expect(morning).not.toBeChecked();
     await u.click(screen.getByTestId('time-chip-other'));
     fireEvent.change(screen.getByLabelText('Other time', { selector: 'input' }), { target: { value: c.typed } });
     await u.click(screen.getByTestId('add-event-save'));

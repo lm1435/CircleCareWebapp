@@ -48,7 +48,11 @@ for (const [faultName, fault] of [
   ['HTTP 500', { status: 500, code: 'SERVER_ERROR', message: 'Internal server error' }],
   ['network abort', { abort: true as const }],
 ] as const) {
-  test(`${faultName} on the first upload keeps the dialog, label and file, writes nothing, and a retry writes exactly one`, async ({
+  const outcome =
+    'abort' in fault
+      ? 'is retried automatically: no error, one tap, exactly one row and one object'
+      : 'keeps the dialog, label and file, writes nothing, and a retry writes exactly one';
+  test(`${faultName} on the first upload ${outcome}`, async ({
     page,
     request,
     context,
@@ -63,6 +67,17 @@ for (const [faultName, fault] of [
 
     await upload.click();
     await injected.expectHits(1);
+    if ('abort' in fault) {
+      // "Every write retries" (keyed POST auto-retry, lib/api.ts): a dropped connection on the first attempt is
+      // retried by the client with the SAME idempotency key, so the person sees no error and taps once.
+      await expect(dialog).toBeHidden({ timeout: 30_000 });
+      await expect(errorToast(page, SAVE_FAILED)).toHaveCount(0);
+      await sent.expectCount(2);
+      expect(dbCount(docRows(circleId, label)), 'exactly one row after the automatic retry').toBe(1);
+      expect(objectCount(circleId)).toBe(objectsBefore + 1);
+      sent.dispose();
+      return;
+    }
     await expect(errorToast(page, SAVE_FAILED)).toBeVisible({ timeout: 15_000 });
     await expect(errorToast(page, SAVE_FAILED)).toHaveCount(1);
     await expect(dialog).toBeVisible();

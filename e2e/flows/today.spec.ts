@@ -106,9 +106,11 @@ test.describe('Today: header, nav and Next up', () => {
     );
 
     // The old Overview blocks are gone.
-    for (const gone of ['Get started', "Today's medications", 'Open tasks', 'Care team', 'Adherence']) {
+    for (const gone of ['Get started', "Today's medications", 'Open tasks', 'Adherence']) {
       await expect(page.getByRole('heading', { name: gone })).toHaveCount(0);
     }
+    // The care team is back ON Today since 1.4.3 (39ebe5a, mobile parity): one region with its heading.
+    await expect(page.getByRole('region', { name: 'Care team' }).getByRole('heading', { name: 'Care team' })).toHaveCount(1);
 
     // The series started yesterday, so yesterday's unanswered 00:01 dose is listed too (late);
     // today's is the last of the two.

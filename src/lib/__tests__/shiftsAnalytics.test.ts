@@ -185,6 +185,9 @@ describe('shifts analytics', () => {
       'shift_task_add_opened',
       { source: 'saved_sheet', shift_repeats: true, coverer: 'me', time_default: 'next_half_hour' },
     ]);
+    // Owner 2026-11-22: a new shift task opens with no time, reported as 'none'.
+    A.shiftTaskAddOpened({ source: 'shift_detail', shiftRepeats: true, coverer: 'other', timeDefault: 'none' });
+    expect(last()[1]).toEqual({ source: 'shift_detail', shift_repeats: true, coverer: 'other', time_default: 'none' });
     A.shiftTaskAddOpened({ source: 'bogus', shiftRepeats: false, coverer: 'bogus', timeDefault: 'bogus' });
     expect(last()[1]).toEqual({ source: 'shift_detail', shift_repeats: false, coverer: 'open', time_default: 'shift_start' });
   });

@@ -33,6 +33,8 @@ interface CircleDetail {
   can_edit: boolean;
   view_only: boolean;
   is_premium_circle: boolean;
+  /** A circle that still holds live shift rows (drives the read-only Shifts view on a free circle). */
+  has_shifts?: boolean;
 }
 
 export function definePersonaProof(persona: PersonaName): void {
@@ -193,12 +195,20 @@ export function definePersonaProof(persona: PersonaName): void {
       const api = await apiSession(request, h);
       const res = await api.get(`/api/circles/${h.circleId}`);
       const d = ((await res.json()) as { data: { circle: CircleDetail } }).data.circle;
-      const entry = resolveShiftsEntry({
+      const flags = {
         viewOnly: d.view_only,
         isPremiumCircle: d.is_premium_circle,
         isOwner: d.owner_id === h.userId,
-      });
-      expect(entry, 'the client rule over the server flags').toBe(exp.shiftsEntry);
+      };
+      // The rule over the tier flags alone (a circle with no shifts) must land on the constant.
+      expect(resolveShiftsEntry(flags), 'the client rule over the server flags').toBe(exp.shiftsEntry);
+      // What the PAGE shows also depends on `has_shifts`: a non-premium circle that still holds shifts (another
+      // spec seeded one into this worker's circle, or Premium lapsed) opens them READ-ONLY instead of the teaser
+      // or nothing (shiftsAccess.ts, 1.4.0). Premium is 'available' either way.
+      const entry = resolveShiftsEntry({ ...flags, hasShifts: d.has_shifts === true });
+      if (d.is_premium_circle) expect(entry).toBe('available');
+      else if (d.has_shifts === true) expect(entry).toBe('readonly');
+      else expect(entry).toBe(exp.shiftsEntry);
 
       await page.goto(`/circles/${h.circleId}/calendar`);
       await expect(page.getByRole('tablist', { name: 'Calendar view' })).toBeVisible({ timeout: 20_000 });
@@ -212,6 +222,11 @@ export function definePersonaProof(persona: PersonaName): void {
       if (entry === 'teaser') {
         await expect(page.getByRole('dialog', { name: 'Share the care, shift by shift' })).toBeVisible();
         await expect(modes.getByRole('tab', { name: 'Schedule' })).toHaveAttribute('aria-selected', 'true');
+      } else if (entry === 'readonly') {
+        // Read-only: the Shifts view opens with its notice; never the teaser dialog.
+        await expect(modes.getByRole('tab', { name: /^Shifts/ })).toHaveAttribute('aria-selected', 'true');
+        await expect(page.getByTestId('shifts-readonly-notice')).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByRole('dialog', { name: 'Share the care, shift by shift' })).toHaveCount(0);
       } else {
         await expect(modes.getByRole('tab', { name: /^Shifts/ })).toHaveAttribute('aria-selected', 'true');
         // The Shifts view itself: the empty state (no shifts seeded) or the week of cards.

@@ -557,7 +557,8 @@ const SHIFT_TASK_EDITOR_SOURCES = ['shift_detail', 'saved_sheet'] as const;
 const SHIFT_TASK_EDIT_SOURCES = ['shift_detail', 'tasks', 'calendar'] as const;
 const SHIFT_TASK_SAVED_SOURCES = ['shift_detail', 'saved_sheet', 'tasks', 'calendar'] as const;
 const SHIFT_TASK_COVERERS = ['me', 'other', 'open'] as const;
-const SHIFT_TASK_TIME_DEFAULTS = ['next_half_hour', 'shift_start'] as const;
+// 'none' (owner 2026-11-22): a new shift task opens with NO time; the older values stay for old events.
+const SHIFT_TASK_TIME_DEFAULTS = ['next_half_hour', 'shift_start', 'none'] as const;
 const SHIFT_TASK_SAVE_MODES = ['add', 'edit'] as const;
 const SHIFT_TASK_EDIT_STATES = ['open', 'completed'] as const;
 const SHIFT_TASK_DELETE_SURFACES = ['shift_detail', 'editor'] as const;
@@ -1855,7 +1856,7 @@ export const Analytics = {
     recurrence: 'daily' | 'every_other_day' | 'weekly' | 'none' | 'days_of_week' | 'as_needed';
     dosageFilled: boolean;
     doseCount: number;
-    /** First run v2 (1.4.3): which tab was saved, whether the opening time was kept, and whether it has a time. */
+    /** First run v2 (1.4.3): which tab was saved, whether the opening time was kept, and whether it has a time. `timeDefaultKept` is ALWAYS false since 2026-11-22 (no type opens with a time any more); kept so the event shape stays stable, same as mobile. */
     firstItemType?: FirstRunItemType;
     timeDefaultKept?: boolean;
     hasTime?: boolean;

@@ -114,16 +114,44 @@ async function fillAndSave(u: ReturnType<typeof userEvent.setup>, name = 'Metfor
   await u.click(screen.getByTestId('add-event-save'));
 }
 
-/** First run v2: 8:00 AM Morning is ALREADY picked, so the name is all a first-run save needs. */
+/** owner 2026-11-21: no preselected time on a new medication, so a first-run save picks Morning itself. */
 async function fillAndSaveFirstRun(u: ReturnType<typeof userEvent.setup>, name = 'Metformin') {
   await u.type(screen.getByRole('combobox', { name: /^Medication name/ }), name);
+  await u.click(screen.getByRole('checkbox', { name: /Morning/ }));
   await u.click(screen.getByTestId('add-event-save'));
 }
 
 describe('first-run mode', () => {
-  it('POSITIVE (first run v2): opens with 8:00 AM Morning already picked', async () => {
+  it('POSITIVE (owner 2026-11-21: no preselected time on a new medication): opens with NO time chip lit, even once the circle zone is known', async () => {
     renderForm({ firstRun: true });
-    await waitFor(() => expect(screen.getByRole('checkbox', { name: /Morning/ })).toBeChecked());
+    // Let the zone-resolved effects run: a preselect would appear here.
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: /Morning/ })).toBeInTheDocument());
+    await new Promise((r) => setTimeout(r, 50));
+    for (const chip of screen.getAllByRole('checkbox')) expect(chip).not.toBeChecked();
+    expect(screen.getByLabelText('Other time', { selector: 'input' })).toHaveValue('');
+  });
+
+  it('NEGATIVE (owner 2026-11-21: no preselected time on a new medication): Save with no time writes nothing and says "Medications need a scheduled time."', async () => {
+    renderForm({ firstRun: true });
+    const u = user();
+    await u.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
+    await u.click(screen.getByTestId('add-event-save'));
+    expect(await screen.findByText('Medications need a scheduled time.')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Morning/ })).toHaveFocus();
+    expect(mutateCreate).not.toHaveBeenCalled();
+    expect(firstRunSaved).not.toHaveBeenCalled();
+  });
+
+  it('NEGATIVE (owner 2026-11-21): a custom time on its own saves ONE dose (a second pick no longer adds to a default)', async () => {
+    renderForm({ firstRun: true });
+    const u = user();
+    await u.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
+    await u.click(screen.getByTestId('time-chip-other'));
+    fireEvent.change(screen.getByLabelText('Other time', { selector: 'input' }), { target: { value: '07:00' } });
+    await u.click(screen.getByTestId('add-event-save'));
+    await waitFor(() => expect(firstRunSaved).toHaveBeenCalled());
+    expect(mutateCreate).toHaveBeenCalledTimes(1);
+    expect(firstRunSaved.mock.calls[0][0]).toMatchObject({ preset: 'other', doseCount: 1, timeDefaultKept: false });
   });
 
   it('NEGATIVE (first run v2): outside first run the medication form opens with NO time picked', () => {
@@ -201,7 +229,8 @@ describe('first-run mode', () => {
       dosageFilled: true,
       doseCount: 1,
       firstItemType: 'medication',
-      timeDefaultKept: true,
+      // owner 2026-11-21: no preselected time on a new medication, so a default is never "kept".
+      timeDefaultKept: false,
       hasTime: true,
     });
     expect(created).toHaveBeenCalledWith(CIRCLE_ID, true, 'wizard', true);
@@ -211,8 +240,7 @@ describe('first-run mode', () => {
     renderForm({ firstRun: true });
     const u = user();
     await u.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
-    // First run v2: Morning is preselected; untick it so the typed time is the only one.
-    await u.click(screen.getByRole('checkbox', { name: /Morning/ }));
+    // owner 2026-11-21: no preselected time on a new medication: the typed time is the only one.
     // "Other…" is the time picker itself (a PickerTile over the hidden input named "Other time").
     await u.click(screen.getByTestId('time-chip-other'));
     fireEvent.change(screen.getByLabelText('Other time', { selector: 'input' }), { target: { value: '09:30' } });

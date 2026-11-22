@@ -7,9 +7,9 @@ import { queryClient } from '@/lib/queryClient';
 import { searchDrugs } from '@/api/drugs';
 import { AddEventModal } from '../AddEventModal';
 
-// First run v2 (1.4.3): the first-item TYPE SWITCH (Medication · Appointment · Task) and the locked
-// time defaults: 8:00 AM Morning on the medication tab; 9:00 AM on appointment / task, TOMORROW once
-// 9:00 has passed on the RECIPIENT's clock. Positive and negative cases, named.
+// First run v2 (1.4.3): the first-item TYPE SWITCH (Medication · Appointment · Task) and its times.
+// Owner 2026-11-22: NO new item opens with a time selected (medication since 2026-11-21; the appointment /
+// task 9:00 AM default is gone). The user always picks the time. Positive and negative cases, named.
 
 const ORIGINAL_TZ = process.env.TZ;
 beforeAll(() => {
@@ -21,13 +21,12 @@ afterAll(() => {
 
 const RECIPIENT_TZ = 'America/New_York';
 const CIRCLE_ID = 'circle-1';
-/** 16:00 in New York on 2026-09-01: 9:00 AM has passed there. */
+/** 16:00 in New York on 2026-09-01 (the old 9:00 default had passed: it used to roll to TOMORROW). */
 const AFTERNOON = new Date('2026-09-01T20:00:00Z');
-/** 07:00 in New York on 2026-09-01: 9:00 AM is still ahead. */
+/** 07:00 in New York on 2026-09-01. */
 const MORNING = new Date('2026-09-01T11:00:00Z');
 const NOW = AFTERNOON;
 const TODAY = '2026-09-01';
-const TOMORROW = '2026-09-02';
 
 const mutateCreate = vi.fn();
 vi.mock('../DoseQuietHoursNote', () => ({ DoseQuietHoursNote: () => null }));
@@ -159,51 +158,113 @@ describe('first run v2: the type switch', () => {
 });
 
 describe('first run v2: time defaults', { timeout: 20_000 }, () => {
-  it('POSITIVE: the medication saves at 8:00 AM when the time is not touched', async () => {
+  it('POSITIVE (owner 2026-11-21: no preselected time on a new medication): the medication opens with NO chip lit and saves at 8:00 AM once the person picks Morning', async () => {
     const onFirstRunItemSaved = vi.fn();
     renderForm({ firstRun: true, firstRunTypeSwitch: true, onFirstRunItemSaved });
-    await waitFor(() => expect(screen.getByRole('checkbox', { name: /Morning/ })).toBeChecked());
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: /Morning/ })).toBeInTheDocument());
+    for (const chip of screen.getAllByRole('checkbox')) expect(chip).not.toBeChecked();
     await user().type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
+    await user().click(screen.getByRole('checkbox', { name: /Morning/ }));
     await user().click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalled(), { timeout: 5000 });
+    expect(mutateCreate).toHaveBeenCalledTimes(1);
     expect(mutateCreate.mock.calls[0][0]).toMatchObject({ scheduled_time: '08:00' });
     await waitFor(() => expect(onFirstRunItemSaved).toHaveBeenCalled());
     expect(onFirstRunItemSaved.mock.calls[0][0]).toMatchObject({ type: 'medication', recipientTime: '08:00' });
+    // No default exists on a medication, so it is never "kept".
+    expect(firstRunSaved).toHaveBeenCalledWith(expect.objectContaining({ firstItemType: 'medication', timeDefaultKept: false, hasTime: true }));
   });
 
-  it('POSITIVE: an appointment opens on "Pick a time" at 9:00 AM TODAY while 9:00 is still ahead', async () => {
+  it('NEGATIVE (owner 2026-11-21): a medication with no time picked saves nothing and says a time is needed', async () => {
+    renderForm({ firstRun: true, firstRunTypeSwitch: true });
+    await user().type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
+    await user().click(screen.getByTestId('add-event-save'));
+    expect(await screen.findByText('Medications need a scheduled time.')).toBeInTheDocument();
+    expect(mutateCreate).not.toHaveBeenCalled();
+    expect(firstRunSaved).not.toHaveBeenCalled();
+  });
+
+  /** The From / At tile's hidden native time input (recipient clock), as the picker sheet fills it. */
+  function pickTime(value: string): void {
+    fireEvent.change(document.getElementById('scheduled_time') as HTMLInputElement, { target: { value } });
+  }
+
+  it('NEGATIVE (owner 2026-11-22): the type switch never seeds a time: medication -> appointment -> task -> medication, nothing is ever picked', async () => {
     vi.setSystemTime(MORNING);
     renderForm({ firstRun: true, firstRunTypeSwitch: true });
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: /Morning/ })).not.toBeChecked());
     await switchTo('Appointment');
-    expect(await screen.findByRole('radio', { name: 'Pick a time' })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByTestId('appt-from-tile')).toHaveTextContent('9:00 AM');
-    await user().type(document.getElementById('title') as HTMLElement, 'Doctor visit');
-    await user().click(screen.getByTestId('add-event-save'));
-    await waitFor(() => expect(mutateCreate).toHaveBeenCalled(), { timeout: 5000 });
-    expect(mutateCreate.mock.calls[0][0]).toMatchObject({
-      event_type: 'appointment',
-      scheduled_date: TODAY,
-      scheduled_time: '09:00',
-    });
-    expect(firstRunSaved).toHaveBeenCalledWith(
-      expect.objectContaining({ firstItemType: 'appointment', timeDefaultKept: true, hasTime: true })
-    );
+    expect(await screen.findByTestId('appt-from-tile')).toHaveTextContent('Choose a time');
+    expect(document.getElementById('scheduled_time')).toHaveValue('');
+    // A time picked on the appointment tab is NOT carried to the task tab (each tab is a fresh form).
+    pickTime('10:30');
+    expect(screen.getByTestId('appt-from-tile')).toHaveTextContent('10:30 AM');
+    await switchTo('Task');
+    expect(await screen.findByTestId('task-from-tile')).toHaveTextContent('Choose a time');
+    expect(document.getElementById('scheduled_time')).toHaveValue('');
+    await switchTo('Medication');
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: /Morning/ })).toBeInTheDocument());
+    for (const chip of screen.getAllByRole('checkbox')) expect(chip).not.toBeChecked();
+    expect(screen.getByLabelText('Other time', { selector: 'input' })).toHaveValue('');
+    expect(mutateCreate).not.toHaveBeenCalled();
   });
 
-  it('NEGATIVE: once 9:00 AM has passed on the recipient\'s clock, a task opens on 9:00 AM TOMORROW, never a past time', async () => {
-    vi.setSystemTime(AFTERNOON);
-    renderForm({ firstRun: true, firstRunTypeSwitch: true });
-    await switchTo('Task');
-    expect(await screen.findByTestId('task-from-tile')).toHaveTextContent('9:00 AM');
-    await user().type(document.getElementById('title') as HTMLElement, 'Call pharmacy');
-    await user().click(screen.getByTestId('add-event-save'));
-    await waitFor(() => expect(mutateCreate).toHaveBeenCalled(), { timeout: 5000 });
-    expect(mutateCreate.mock.calls[0][0]).toMatchObject({
-      event_type: 'task',
-      scheduled_date: TOMORROW,
-      scheduled_time: '09:00',
+  for (const kind of ['Appointment', 'Task'] as const) {
+    const prefix = kind === 'Appointment' ? 'appt' : 'task';
+    for (const [when, now] of [['morning', MORNING], ['afternoon', AFTERNOON]] as const) {
+      it(`POSITIVE (owner 2026-11-22): a first-run ${kind.toLowerCase()} opens on "Pick a time" with NO time and TODAY (recipient zone), ${when}`, async () => {
+        vi.setSystemTime(now);
+        renderForm({ firstRun: true, firstRunTypeSwitch: true });
+        await switchTo(kind);
+        expect(await screen.findByRole('radio', { name: 'Pick a time' })).toHaveAttribute('aria-checked', 'true');
+        expect(screen.getByTestId(`${prefix}-from-tile`)).toHaveTextContent('Choose a time');
+        expect(screen.getByTestId(`${prefix}-from-tile`)).not.toHaveTextContent('9:00');
+        expect(document.getElementById('scheduled_time')).toHaveValue('');
+        // The day is the form's normal default: the recipient's today (never rolled to tomorrow).
+        expect(document.getElementById('scheduled_date')).toHaveValue(TODAY);
+      });
+    }
+
+    it(`POSITIVE: a first-run ${kind.toLowerCase()} with ONE picked time saves exactly ONE item at that time, today`, async () => {
+      vi.setSystemTime(AFTERNOON);
+      const onFirstRunItemSaved = vi.fn();
+      renderForm({ firstRun: true, firstRunTypeSwitch: true, onFirstRunItemSaved });
+      await switchTo(kind);
+      await screen.findByTestId(`${prefix}-from-tile`);
+      await user().type(document.getElementById('title') as HTMLElement, 'Call pharmacy');
+      pickTime('17:30');
+      await user().click(screen.getByTestId('add-event-save'));
+      await waitFor(() => expect(mutateCreate).toHaveBeenCalled(), { timeout: 5000 });
+      await waitFor(() => expect(firstRunSaved).toHaveBeenCalled());
+      expect(mutateCreate).toHaveBeenCalledTimes(1);
+      expect(mutateCreate.mock.calls[0][0]).toMatchObject({
+        event_type: kind.toLowerCase(),
+        scheduled_date: TODAY,
+        scheduled_time: '17:30',
+      });
+      // No default exists any more: never "kept"; the shape stays stable (mobile parity).
+      expect(firstRunSaved).toHaveBeenCalledWith(
+        expect.objectContaining({ firstItemType: kind.toLowerCase(), timeDefaultKept: false, hasTime: true })
+      );
+      expect(onFirstRunItemSaved.mock.calls[0][0]).toMatchObject({ type: kind.toLowerCase(), recipientTime: '17:30' });
     });
-  });
+
+    it(`NEGATIVE: a first-run ${kind.toLowerCase()} saved with "Pick a time" and no time creates nothing and shows the time error`, async () => {
+      renderForm({ firstRun: true, firstRunTypeSwitch: true });
+      await switchTo(kind);
+      await screen.findByTestId(`${prefix}-from-tile`);
+      await user().type(document.getElementById('title') as HTMLElement, 'Call pharmacy');
+      await user().click(screen.getByTestId('add-event-save'));
+      // Neutral copy (owner 2026-11-22), never the medication sentence.
+      expect(await screen.findByText('Pick a time.')).toBeInTheDocument();
+      expect(screen.queryByText('Medications need a scheduled time.')).toBeNull();
+      // Enter in the title submits the form directly: the payload check refuses it too.
+      fireEvent.submit(document.getElementById('add-event-form') as HTMLFormElement);
+      await new Promise((r) => setTimeout(r, 50));
+      expect(mutateCreate).not.toHaveBeenCalled();
+      expect(firstRunSaved).not.toHaveBeenCalled();
+    });
+  }
 
   it('NEGATIVE: an appointment switched to "Any time" saves with no time and reports has_time false', async () => {
     const onFirstRunItemSaved = vi.fn();
@@ -226,6 +287,7 @@ describe('first run v2: time defaults', { timeout: 20_000 }, () => {
   it('NEGATIVE: the item name never reaches the first-run analytics event', async () => {
     renderForm({ firstRun: true, firstRunTypeSwitch: true });
     await user().type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
+    await user().click(screen.getByRole('checkbox', { name: /Morning/ }));
     await user().click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(firstRunSaved).toHaveBeenCalled());
     expect(JSON.stringify(firstRunSaved.mock.calls[0][0])).not.toContain('Metformin');

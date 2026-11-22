@@ -36,6 +36,14 @@ const CONSENT_BASE_URL = process.env.PW_CONSENT_BASE_URL || 'http://pw-consent-b
 // without a consent server leaves it out rather than going red.
 const INCLUDE_CONSENT = includeConsentProject();
 
+// THE SUITE'S ZONE. The specs assume the browser (and the runner's own clock) are on America/Denver, the zone the
+// isolated circles are created in: a laptop in another zone (Central on the road, 2026-11-21) otherwise fails the
+// profile-timezone, appointment-edit and care-shifts specs with a one-hour drift and "(Denver)" labels. Pinned here
+// so the result does not depend on where the machine is. A spec that needs another zone still sets its own
+// `timezoneId` (test.use), and an explicit TZ in the environment is respected.
+const SUITE_TZ = 'America/Denver';
+process.env.TZ ||= SUITE_TZ;
+
 export default defineConfig({
   testDir: './e2e',
   // Run-scoped so a concurrent run's start-of-run cleanup of its output folder
@@ -72,6 +80,7 @@ export default defineConfig({
 
   use: {
     baseURL: BASE_URL,
+    timezoneId: SUITE_TZ,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

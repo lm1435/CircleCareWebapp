@@ -254,6 +254,7 @@
       "medicationRequired": "Saisissez le nom du médicament.",
       "dateRequired": "Choisissez une date.",
       "timeRequired": "Les médicaments nécessitent une heure de prise.",
+      "pickTime": "Choisissez une heure.",
       "endTimeRequired": "Ajoutez une heure de fin.",
       "endTimeAfterStart": "L’heure de fin doit être après l’heure de début.",
       "invalid": "Vérifiez cette valeur.",

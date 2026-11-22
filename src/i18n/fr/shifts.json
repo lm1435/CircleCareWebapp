@@ -282,7 +282,7 @@
     "appointment": "Rendez-vous",
     "appointmentHint": "Une visite ou un appel pendant la garde",
     "cancel": "Annuler",
-    "lockedHint": "Lié à la garde",
+    "lockedHint": "Pour ce jour seulement. La date vient de la garde.",
     "emptyHint": "Ajoutez une tâche, un médicament ou un rendez-vous pour la personne de garde.",
     "errorPast": "Choisissez une heure qui n’est pas encore passée."
   },
@@ -291,9 +291,11 @@
     "added": "Tâche ajoutée",
     "form": {
       "title": "Ajouter une tâche",
-      "timeHint": "Entre {{start}} et {{end}}",
-      "onlyDate": "Seulement le {{date}}",
+      "timeHint": "Horaires de la garde : {{start}} – {{end}}",
+      "timeHintZone": "Horaires de la garde : {{start}} – {{end}} (heure de {{zone}})",
+      "onlyDate": "Pour ce jour seulement. Ne se répète pas avec la garde.",
       "errorOutside": "Choisissez une heure pendant cette garde.",
+      "errorOutsideTimes": "En dehors de cette garde : {{times}}. Choisissez une heure pendant la garde.",
       "errorUnsupported": "Une garde mensuelle ou annuelle ne peut pas répéter une tâche après minuit. Choisissez une autre heure ou cochez « Seulement le {{date}} ».",
       "explainOnce": "Elle revient à la personne de garde.",
       "errorEnded": "Cette garde est terminée, on ne peut donc plus y ajouter de tâches.",
@@ -337,7 +339,7 @@
     "deleteImpact_other": "Cela supprime aussi ses {{count}} tâches à venir. Les tâches terminées restent dans l’historique.",
     "editor": {
       "lockedDay": "{{date}} · pendant {{shift}}",
-      "onShift": "Sur {{shift}} · {{window}}",
+      "onShift": "Sur {{shift}}",
       "repeatEvery": "À chaque fois que cette garde a lieu",
       "repeatLocked": "Se répète avec {{shift}}",
       "owner": "La personne de garde",

@@ -108,8 +108,12 @@ test.describe('first run v2 (web)', () => {
 
     await expect(page.getByText(`${recipient}'s circle is ready.`)).toBeVisible({ timeout: 30_000 });
     await waitForFirstItemForm(page);
-    // The form opens on Medication with 8:00 AM Morning picked.
+    // owner 2026-11-21: no preselected time on a new medication. The form opens on Medication with NO chip lit;
+    // the person picks Morning (8:00 AM) themselves.
     await expect(page.getByRole('tab', { name: 'Medication' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('checkbox', { name: /Morning/ })).not.toBeChecked();
+    await expect(page.getByRole('checkbox', { checked: true })).toHaveCount(0);
+    await page.getByRole('checkbox', { name: /Morning/ }).click();
     await expect(page.getByRole('checkbox', { name: /Morning/ })).toBeChecked();
     await expect(page.getByRole('tab', { name: /Shift/ })).toHaveCount(0);
     await page.getByRole('combobox', { name: /^Medication name/ }).fill('Metformin');
@@ -139,7 +143,7 @@ test.describe('first run v2 (web)', () => {
   });
 
   for (const kind of ['Appointment', 'Task'] as const) {
-    test(`POSITIVE ${kind.toLowerCase()} first: opens on 9:00 AM (tomorrow once 9:00 has passed), saves, All set names it`, async ({
+    test(`POSITIVE ${kind.toLowerCase()} first: opens with NO time (owner 2026-11-22), Save without one writes nothing, a picked time saves ONCE, All set names it`, async ({
       page,
       context,
       baseURL,
@@ -157,8 +161,24 @@ test.describe('first run v2 (web)', () => {
       await page.getByRole('tab', { name: kind }).click();
       const prefix = kind === 'Appointment' ? 'appt' : 'task';
       await expect(page.getByRole('radio', { name: 'Pick a time' })).toHaveAttribute('aria-checked', 'true');
-      await expect(page.getByTestId(`${prefix}-from-tile`)).toContainText('9:00 AM');
+      // Owner 2026-11-22: NO time preselected (the 9:00 AM default is gone); the user picks it.
+      await expect(page.getByTestId(`${prefix}-from-tile`)).toContainText('Choose a time');
+      await expect(page.getByTestId(`${prefix}-from-tile`)).not.toContainText('9:00');
+      await expect(page.locator('#scheduled_time')).toHaveValue('');
       await page.locator('#title').fill(kind === 'Appointment' ? 'Doctor visit' : 'Call pharmacy');
+      // NEGATIVE: Save with no time writes nothing and shows the form's time error.
+      await page.getByTestId('add-event-save').click();
+      await expect(page.getByText('Pick a time.', { exact: true }).first()).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByText('Medications need a scheduled time.')).toHaveCount(0);
+      await page.waitForTimeout(800);
+      const pending = ownedCircles(account.userId);
+      expect(
+        dbCount(`select 1 from calendar_events where circle_id = ${sqlStr(pending[0].id)}::uuid`),
+        'no time picked: nothing written'
+      ).toBe(0);
+      // POSITIVE: the person picks ONE time; it saves once at that time.
+      await page.locator('#scheduled_time').fill('09:00');
+      await expect(page.getByTestId(`${prefix}-from-tile`)).toContainText('9:00 AM');
       await page.getByTestId('add-event-save').click();
 
       await expect(page.getByTestId('first-run-all-set-title')).toHaveText(
@@ -166,10 +186,9 @@ test.describe('first run v2 (web)', () => {
         { timeout: 20_000 }
       );
       const circleId = ownedCircles(account.userId)[0].id;
-      const rows = dbQuery<{ scheduled_time: string; future: boolean }>(
+      const rows = dbQuery<{ scheduled_time: string; today: boolean }>(
         `select ce.scheduled_time::text as scheduled_time,
-                ((ce.scheduled_date + ce.scheduled_time)
-                   at time zone coalesce(cc.timezone, u.timezone, 'America/New_York')) > now() as future
+                ce.scheduled_date = (now() at time zone coalesce(cc.timezone, u.timezone, 'America/New_York'))::date as today
            from calendar_events ce
            join care_circles cc on cc.id = ce.circle_id
            join users u on u.id = cc.owner_id
@@ -177,9 +196,9 @@ test.describe('first run v2 (web)', () => {
             and ce.parent_event_id is null`
       );
       expect(rows).toHaveLength(1);
-      expect(rows[0].scheduled_time).toBe('09:00:00');
-      // NEGATIVE: never a 9:00 AM that is already late the moment it is saved.
-      expect(rows[0].future, '9:00 AM today if still ahead, else 9:00 AM tomorrow').toBe(true);
+      expect(rows[0].scheduled_time, 'the picked time').toBe('09:00:00');
+      // The day is the form's normal default: the recipient's today (no "tomorrow once 9:00 passed" roll).
+      expect(rows[0].today, 'saved on the recipient\'s today').toBe(true);
     });
   }
 
@@ -220,6 +239,8 @@ test.describe('first run v2 (web)', () => {
     await answerWho(page, uniq('Rosa').slice(0, 30));
     await waitForFirstItemForm(page);
     await page.getByRole('combobox', { name: /^Medication name/ }).fill('Metformin');
+    // owner 2026-11-21: no preselected time on a new medication; the person picks Morning before Save.
+    await page.getByRole('checkbox', { name: /Morning/ }).click();
     await page.getByTestId('add-event-save').click();
     await expect(page.getByTestId('first-run-all-set')).toBeVisible({ timeout: 20_000 });
 
@@ -301,6 +322,8 @@ test.describe('first run v2 (web)', () => {
     await expect(page.locator('.cc-fr-ring, .cc-fr-pop')).toHaveCount(0);
     await waitForFirstItemForm(page);
     await page.getByRole('combobox', { name: /^Medication name/ }).fill('Metformin');
+    // owner 2026-11-21: no preselected time on a new medication; the person picks Morning before Save.
+    await page.getByRole('checkbox', { name: /Morning/ }).click();
     await page.getByTestId('add-event-save').click();
     await expect(page.getByTestId('first-run-all-set')).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('[data-testid="first-run-all-set"] .cc-fr-rise, [data-testid="first-run-all-set"] .cc-fr-pop')).toHaveCount(0);
@@ -370,6 +393,8 @@ test.describe('first run v2: review fixes', () => {
       await page.setViewportSize({ width: 390, height: 844 });
       await startForScoped(page, context, baseURL, `fr2-fold-${lang}`, lang);
       await page.getByRole('combobox').first().fill('Metformin');
+      // owner 2026-11-21: no preselected time on a new medication; the person picks Morning before Save.
+      await page.getByRole('checkbox', { name: /Morning|Mañana/ }).click();
       await page.getByTestId('add-event-save').click();
       const card = page.locator('[aria-labelledby="first-run-invite-heading"]');
       await expect(card).toBeVisible({ timeout: 20_000 });

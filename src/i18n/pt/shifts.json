@@ -282,7 +282,7 @@
     "appointment": "Consulta",
     "appointmentHint": "Uma visita ou ligação durante o plantão",
     "cancel": "Cancelar",
-    "lockedHint": "Fixado no plantão",
+    "lockedHint": "Só para este dia. A data vem do plantão.",
     "emptyHint": "Adicione uma tarefa, um medicamento ou uma consulta para quem assumir este plantão.",
     "errorPast": "Escolha um horário que ainda não passou."
   },
@@ -291,9 +291,11 @@
     "added": "Tarefa adicionada",
     "form": {
       "title": "Adicionar uma tarefa",
-      "timeHint": "Entre {{start}} e {{end}}",
-      "onlyDate": "Só {{date}}",
+      "timeHint": "Horário do plantão: {{start}} – {{end}}",
+      "timeHintZone": "Horário do plantão: {{start}} – {{end}} (horário de {{zone}})",
+      "onlyDate": "Só para este dia. Não se repete com o plantão.",
       "errorOutside": "Escolha um horário dentro deste plantão.",
+      "errorOutsideTimes": "Fora deste plantão: {{times}}. Escolha um horário dentro do plantão.",
       "errorUnsupported": "Um plantão mensal ou anual não pode repetir uma tarefa depois da meia-noite. Escolha outro horário ou marque \"Só {{date}}\".",
       "explainOnce": "Fica com quem estiver neste plantão.",
       "errorEnded": "Este plantão já terminou, então não é possível adicionar tarefas a ele.",
@@ -337,7 +339,7 @@
     "deleteImpact_other": "Isso também exclui {{count}} tarefas futuras deste plantão. As tarefas concluídas ficam no histórico.",
     "editor": {
       "lockedDay": "{{date}} · durante {{shift}}",
-      "onShift": "Em {{shift}} · {{window}}",
+      "onShift": "Em {{shift}}",
       "repeatEvery": "Toda vez que este plantão acontecer",
       "repeatLocked": "Repete com {{shift}}",
       "owner": "Quem estiver neste plantão",

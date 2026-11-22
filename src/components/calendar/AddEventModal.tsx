@@ -51,17 +51,18 @@ import { classifyShiftFailure } from '@/lib/shiftErrors';
 import { ShiftInlineError } from '@/components/shifts/ShiftInlineError';
 import {
   crossesMidnightSide,
-  defaultShiftTaskTime,
   shiftContextFromLink,
   windowDayForTime,
   type ShiftWindowContext,
+  outsideShiftClocks,
+  spanInsideShiftWindow,
   timeInsideShiftWindow,
   type ShiftTaskContext,
-  type ShiftTimeDefault,
 } from '@/components/shifts/shiftTasks';
 import { shiftEnd } from '@/components/shifts/shiftUtils';
 import { DeleteEventDialog } from './DeleteEventDialog';
 import { writeFirstMedNote } from '@/lib/firstMedNote';
+import { createSaveIntentKeys } from '@/lib/saveIntentKeys';
 import { markItEligible, toWireTime, type SavedMedicationInfo } from '@/utils/firstMedSaved';
 import { useProviders } from '@/hooks/useProviders';
 import type { Provider } from '@/api/providers';
@@ -81,7 +82,6 @@ import {
   type TimeChipId,
 } from '@/lib/analytics';
 import { chipForTime } from '@/lib/medTimeOfDay';
-import { FIRST_RUN_MED_TIME, firstRunItemDefault } from '@/lib/firstRunDefaults';
 import { useAuthStore } from '@/store/authStore';
 import { useLargeTextLayoutEvent } from '@/lib/largeText';
 import { TimeChips } from './TimeChips';
@@ -1241,7 +1241,9 @@ function AddEventForm({
   );
   // The task / appointment forms' "Pick a time" (reveals the time tiles) and every simple form's "Custom…"
   // (reveals the rarer repeat rules). One form is mounted at a time, so they share the state.
-  const [pickTimeOpen, setPickTimeOpen] = useState(false);
+  // First run v2 (owner 2026-11-22): a NEW appointment / task opens on "Pick a time" with no time in it, so the
+  // user picks one (see `firstRunNeedsTime`). Everywhere else the form opens on "Any time", as before.
+  const [pickTimeOpen, setPickTimeOpen] = useState(firstRunMode && !isMedication);
   const [taskCustomOpen, setTaskCustomOpen] = useState(false);
   // "+ Another dose" (NEW medication only): extra dose times, viewer-frame HH:MM. Each one is saved
   // as its OWN medication row after the primary (the same sequence as mobile's AddEventScreen and
@@ -1512,75 +1514,43 @@ function AddEventForm({
   const litChip = chipForTime(recipientClock);
 
   /**
-   * FIRST RUN v2 defaults (owner, locked 2026-11-17): the medication tab opens on 8:00 AM Morning, an
-   * appointment / task on 9:00 AM ("Pick a time"), moved to 9:00 AM TOMORROW once 9:00 has passed on the
-   * recipient's clock (`firstRunItemDefault`). Applied once, when the circle's zone is known, and only on
-   * an untouched form; it then owns the fields like a pick would (`datesTouched`), so the zone resync above
-   * cannot wipe it. Outside first run nothing changes: the forms keep opening on "Any time".
+   * FIRST RUN v2 (owner 2026-11-22): NO new item opens with a time selected. The medication tab opens on no
+   * chip (2026-11-21); an appointment / task opens on "Pick a time" with an EMPTY time tile ("Choose time"),
+   * on the form's normal day (today on the recipient's clock), and the user picks the time. While "Pick a
+   * time" is on and no time is set, Save shows the form's existing "time required" error and writes nothing;
+   * "Any time" stays an explicit choice. Switching type never seeds a time (each tab is a fresh form).
    */
-  const firstRunDefaultRef = useRef<{ date: string; time: string } | null>(null);
-  useEffect(() => {
-    if (!firstRunMode || !timezone || firstRunDefaultRef.current || datesTouched.current) return;
-    const slot = isMedication
-      ? { date: defaultNewEventDate(timezone), time: FIRST_RUN_MED_TIME }
-      : firstRunItemDefault(timezone);
-    const viewer = eventDatesFromApi({ scheduledDate: slot.date, scheduledTime: slot.time, timezone });
-    if (!viewer.timeStr) return;
-    firstRunDefaultRef.current = slot;
-    datesTouched.current = true;
-    setDateStr(viewer.dateStr);
-    setTimeStr(viewer.timeStr);
-    setChipInstant(viewer.instant ?? null);
-    if (!isMedication) setEndTimeStr(presetEndFor(viewer.timeStr, DEFAULT_DURATION_MINUTES));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the zone is known
-  }, [firstRunMode, timezone, isMedication]);
+  const firstRunNeedsTime = firstRunMode && !isMedication && pickTimeOpen && timeStr === '';
   /**
-   * SHIFT ADD (1.4.3): the time opens on the next half hour inside the shift's window when the shift is today
-   * (recipient zone) and now is inside it, else on the shift start. Applied once, when the zone is known, on an
-   * untouched form; it then owns the fields like a pick would (`datesTouched`). No end time is preset: the To
-   * tile starts on "No end", and an end is sent only when the user sets one.
+   * SHIFT ADD (1.4.3; owner 2026-11-22: NO new item opens with a time selected): a new shift task opens on the
+   * shift's day with NO time and no end. The time is required (no "Any time"); Save without one shows `pickTime`
+   * at the time tile and writes nothing. The picker is limited to the shift's window as before.
    */
-  const shiftDefaultRef = useRef<{ time: string; source: ShiftTimeDefault } | null>(null);
+  const shiftOpenedRef = useRef(false);
   useEffect(() => {
-    if (!shiftMode || isEditing || !timezone || shiftDefaultRef.current || datesTouched.current) return;
-    const slot = defaultShiftTaskTime(shiftMode, timezone);
-    const viewer = eventDatesFromApi({ scheduledDate: shiftMode.scheduledDate, scheduledTime: slot.time, timezone });
-    if (!viewer.timeStr) return;
-    shiftDefaultRef.current = slot;
-    datesTouched.current = true;
-    setDateStr(viewer.dateStr);
-    setTimeStr(viewer.timeStr);
-    setChipInstant(viewer.instant ?? null);
+    if (!shiftMode || isEditing || !timezone || shiftOpenedRef.current) return;
+    shiftOpenedRef.current = true;
     Analytics.shiftTaskAddOpened({
       source: shiftMode.source,
       shiftRepeats: shiftMode.repeating,
       coverer: shiftMode.coverer,
-      timeDefault: slot.source,
+      // No time is seeded any more: the event keeps its shape, with 'none' (mobile sends the same).
+      timeDefault: 'none',
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the zone is known
   }, [shiftMode, timezone, isEditing]);
   /**
-   * WINDOW MODE (1.4.3): the same opening time as a shift task (next half hour inside the window when the shift is
-   * now, else the shift start), on the shift day (the NEXT day for an after-midnight time). An appointment also
-   * opens with its end (the form's usual 30 minutes); a medication has none.
+   * WINDOW MODE (1.4.3; owner 2026-11-22): a medication or appointment added to a shift opens on the shift's day
+   * with NO time and no end (an appointment's end follows as start + 30 minutes once a start is picked). The time
+   * is required and must be inside the window.
    */
   const windowDefaultRef = useRef(false);
   const windowAbandonedRef = useRef(false);
   useEffect(() => {
     if (!windowMode || !timezone || windowDefaultRef.current || datesTouched.current) return;
-    const slot = defaultShiftTaskTime(windowMode, timezone);
-    const viewer = eventDatesFromApi({
-      scheduledDate: windowDayForTime(windowMode, slot.time),
-      scheduledTime: slot.time,
-      timezone,
-    });
-    if (!viewer.timeStr) return;
     windowDefaultRef.current = true;
     datesTouched.current = true;
-    setDateStr(viewer.dateStr);
-    setTimeStr(viewer.timeStr);
-    setChipInstant(viewer.instant ?? null);
-    if (!isMedication) setEndTimeStr(presetEndFor(viewer.timeStr, DEFAULT_DURATION_MINUTES));
+    setDateStr(windowMode.scheduledDate);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the zone is known
   }, [windowMode, timezone]);
   // A linked task opened from the Tasks / Calendar pages (its context came off its own `shift` link). The shift
@@ -1819,6 +1789,11 @@ function AddEventForm({
     }
     if (isMedication && !timeStr && !isAsNeeded) {
       fieldErrors.scheduled_time = t('addEvent.validation.timeRequired');
+    }
+    // First run: "Pick a time" with no time picked is not a silent "Any time" save; a shift appointment always
+    // needs a time (owner 2026-11-22). Neutral copy, not the medication sentence.
+    if (firstRunNeedsTime || (windowMode && !isMedication && !timeStr)) {
+      fieldErrors.scheduled_time = t('addEvent.validation.pickTime');
     }
     if (recurrence === 'days_of_week' && selectedDays.length === 0) {
       fieldErrors[RECURRENCE_DAYS_ID] = t('addEvent.daysOfWeek.noneSelected');
@@ -2205,7 +2180,12 @@ function AddEventForm({
       : t('addEvent.alerts.photoRemoveFailed');
   }
 
-  async function persist(data: CreateEventRequest, withExtraDoses = false): Promise<void> {
+  // One save intent per form: an unchanged payload keeps its request object (so its Idempotency-Key)
+  // across Save presses; any edit is a new object, hence a new key (lib/saveIntentKeys.ts).
+  const saveIntentRef = useRef(createSaveIntentKeys());
+
+  async function persist(built: CreateEventRequest, withExtraDoses = false): Promise<void> {
+    const data = saveIntentRef.current.stable(isEditing ? `edit:${targetEventId}` : 'primary', built);
     let savedInfo: SavedMedicationInfo | undefined;
     let windowItemId: string | null = null;
     try {
@@ -2279,7 +2259,8 @@ function AddEventForm({
           });
         }
         if (withExtraDoses && data.event_type === 'medication' && timezone) {
-          for (const sibling of buildSiblingRequests(data, timezone, created?.id)) {
+          for (const builtSibling of buildSiblingRequests(data, timezone, created?.id)) {
+            const sibling = saveIntentRef.current.stable(`dose:${builtSibling.scheduled_time}`, builtSibling);
             try {
               await createEvent.mutateAsync(sibling);
               savedDoses.push({
@@ -2352,8 +2333,9 @@ function AddEventForm({
             dosageFilled: isMed && dosage.trim().length > 0,
             doseCount: isMed ? Math.max(1, savedDoses.length) : 1,
             firstItemType: eventType,
-            timeDefaultKept:
-              firstRunDefaultRef.current !== null && savedClock === firstRunDefaultRef.current.time,
+            // Owner 2026-11-22: first run never preselects a time, so there is no default to keep. Always
+            // false, kept so the event's shape stays stable for the funnel (mobile sends the same).
+            timeDefaultKept: false,
             hasTime: savedClock !== null,
           });
           if (timezone) {
@@ -2456,9 +2438,9 @@ function AddEventForm({
       reason = 'name_missing';
     }
     if (!clock) {
-      found.scheduled_time = t('addEvent.validation.timeRequired');
+      found.scheduled_time = t('addEvent.validation.pickTime');
     } else if (!timeInsideShiftWindow(clock, mode.startTime, mode.durationMinutes)) {
-      found.scheduled_time = t('shifts:tasks.form.errorOutside');
+      found.scheduled_time = outsideShiftMessage([clock]);
       reason = reason ?? 'outside_window';
     } else if (isEditing && crossesMidnightSide(storedClock, clock, mode.startTime, mode.durationMinutes)) {
       found.scheduled_time = t('shifts:tasks.editor.sameSideOfMidnight');
@@ -2635,16 +2617,30 @@ function AddEventForm({
       !windowOutside &&
       windowClocks.some((clock) => isEventPastDue(windowDayForTime(windowMode, clock), clock, timezone));
     const windowError = windowOutside
-      ? t('shifts:tasks.form.errorOutside')
+      ? outsideShiftMessage(windowClocks.filter((clock) => !timeInsideShiftWindow(clock, windowMode.startTime, windowMode.durationMinutes)))
       : windowPast
         ? t('shifts:add.errorPast')
         : null;
+    // The appointment's END must be inside the shift too (owner 2026-11-21: only the start was checked, so "To" could
+    // run past the shift end unnoticed). Said at the "To" field, naming the end time; only when the start itself fits.
+    const windowSpan = windowMode && !isMedication && timeStr && endTimeStr ? spanMinutes(timeStr, endTimeStr) : null;
+    const windowEndError =
+      !!windowMode &&
+      !windowError &&
+      windowSpan !== null &&
+      !!recipientClock &&
+      !spanInsideShiftWindow(recipientClock, windowSpan, windowMode.startTime, windowMode.durationMinutes)
+        ? outsideShiftMessage([recipientEndClock])
+        : null;
+    const windowErrors: FieldErrors = {
+      ...(windowError ? { scheduled_time: windowError } : {}),
+      ...(windowEndError ? { endTime: windowEndError } : {}),
+    };
+    const hasWindowErrors = Object.keys(windowErrors).length > 0;
     const blockedErrors: FieldErrors | null = !built.ok
-      ? windowError
-        ? { ...built.errors, scheduled_time: windowError }
-        : built.errors
-      : windowError
-        ? { scheduled_time: windowError }
+      ? { ...built.errors, ...windowErrors }
+      : hasWindowErrors
+        ? windowErrors
         : null;
     if (!built.ok || blockedErrors) {
       const errs: FieldErrors = blockedErrors ?? {};
@@ -2718,9 +2714,16 @@ function AddEventForm({
         type: eventType,
         shiftRepeating: windowMode.repeating,
         reason:
-          shown && (shown === t('shifts:tasks.form.errorOutside') || shown === t('shifts:add.errorPast'))
+          shown &&
+          (shown === t('shifts:tasks.form.errorOutside') ||
+            shown === outsideShiftMessage(
+              outsideShiftClocks(doseRecipientTimes, windowMode.startTime, windowMode.durationMinutes)
+            ) ||
+            shown === t('shifts:add.errorPast'))
             ? 'refused_time'
-            : 'cancel',
+            : !!errors.endTime && !!recipientEndClock && errors.endTime === outsideShiftMessage([recipientEndClock])
+              ? 'refused_time'
+              : 'cancel',
       });
     }
     if (!isEditing && !savedRef.current && !abandonReportedRef.current) {
@@ -2783,7 +2786,9 @@ function AddEventForm({
     // Shift mode: the time is required (no "Any time").
     (!shiftMode || timeStr !== '') &&
     // Window mode: an appointment's start time is required too (no "Any time").
-    (!windowMode || timeStr !== '');
+    (!windowMode || timeStr !== '') &&
+    // First run: "Pick a time" is on, so a time is required (owner 2026-11-22: the user always picks it).
+    !firstRunNeedsTime;
   // The first required field still empty, in the order the form lists them.
   const missingField: 'title' | 'date' | 'time' | null = requiredFilled
     ? null
@@ -2808,7 +2813,7 @@ function AddEventForm({
         ? t(isMedication ? 'addEvent.validation.medicationRequired' : 'addEvent.validation.titleRequired')
         : missingField === 'date'
           ? t('addEvent.validation.dateRequired')
-          : t('addEvent.validation.timeRequired');
+          : t(isMedication ? 'addEvent.validation.timeRequired' : 'addEvent.validation.pickTime');
   const missingErrorFor = (field: 'title' | 'date' | 'time'): string | undefined =>
     pressedMissing === field && missingField === field ? missingMessage : undefined;
 
@@ -3539,6 +3544,16 @@ function AddEventForm({
 
   /** An HH:MM as the viewer reads it (12 / 24 hour). */
   const clockText = (hhmm: string): string => clockTextFor(hhmm, hourCycle);
+  /**
+   * The refusal for times outside the shift: names WHICH ones ("Outside this shift: 9:00 PM, 10:00 PM. ..."), unique
+   * and ascending on the circle's clock; the bare "Pick a time inside this shift." only when none is known.
+   */
+  function outsideShiftMessage(clocks: string[]): string {
+    const unique = [...new Set(clocks.filter(Boolean).map((clock) => clock.slice(0, 5)))].sort();
+    return unique.length > 0
+      ? t('shifts:tasks.form.errorOutsideTimes', { times: unique.map(clockText).join(', ') })
+      : t('shifts:tasks.form.errorOutside');
+  }
   /** "11:00 – 11:30 AM": the shared AM / PM said once when both ends have it (else both in full). */
   const clockRangeText = (from: string, to: string): string => clockRangeTextFor(from, to, hourCycle);
   /** "a, b and c" with the locale's joiner. */
@@ -3629,9 +3644,21 @@ function AddEventForm({
       return null;
     }
   }
+  /**
+   * The dose caption lists the doses in the SAME order as the summary (ascending circle clock), not in tap order:
+   * each dose keeps its own viewer clock, only the order follows the circle's.
+   */
+  function medCaptionTimes(): string {
+    const byClock = new Map<string, string>();
+    [timeStr, ...extraTimes].forEach((viewerTime, slot) => {
+      const clock = (doseRecipientTimes[slot] ?? '').slice(0, 5);
+      if (viewerTime && clock && !byClock.has(clock)) byClock.set(clock, clockText(viewerTime));
+    });
+    return listText([...byClock.keys()].sort().map((clock) => byClock.get(clock) as string));
+  }
   const zoneCaptionTimes =
     simpleKind === 'medication'
-      ? listText([timeStr, ...extraTimes].filter(Boolean).map(clockText))
+      ? medCaptionTimes()
       : timeStr
         ? endTimeStr
           ? (viewerCaptionRange() ?? clockRangeText(timeStr, endTimeStr))
@@ -3645,6 +3672,12 @@ function AddEventForm({
           yourZone: getTimezoneLabel(deviceTimezone) || deviceTimezone,
         })
       : null;
+  // "Shift hours: 1:00 AM – 8:00 PM", naming the circle's zone when the viewer is in another one (owner 2026-11-21:
+  // a bare "Between 1:00 AM and 8:00 PM" under a two-zone caption had no subject and no zone).
+  const shiftHoursHint = (start: string, end: string) =>
+    showDualTimezone && timezone
+      ? t('shifts:tasks.form.timeHintZone', { start, end, zone: recipientZone || timezone })
+      : t('shifts:tasks.form.timeHint', { start, end });
   const zoneCaptionLine = zoneCaption ? (
     <Text variant="caption" as="p" id="time-zone-caption" data-testid="time-zone-caption">
       {zoneCaption}
@@ -3782,13 +3815,10 @@ function AddEventForm({
   const windowEndClock = windowMode
     ? shiftEnd(windowMode.scheduledDate, windowMode.startTime, windowMode.durationMinutes).time
     : '';
-  // WINDOW MODE: "Between 9:00 AM and 5:00 PM", as under a shift task's time.
+  // WINDOW MODE: "Shift hours: 9:00 AM – 5:00 PM", as under a shift task's time.
   const windowTimeHint = windowMode ? (
     <Text variant="caption" data-testid="shift-window-time-hint">
-      {t('shifts:tasks.form.timeHint', {
-        start: clockText(windowMode.startTime),
-        end: clockText(windowEndClock),
-      })}
+      {shiftHoursHint(clockText(windowMode.startTime), clockText(windowEndClock))}
     </Text>
   ) : null;
   const whenDateTiles = (
@@ -4545,7 +4575,6 @@ function AddEventForm({
   let shiftTaskFields: ReactElement | null = null;
   if (shiftMode) {
     const windowEnd = shiftEnd(shiftMode.scheduledDate, shiftMode.startTime, shiftMode.durationMinutes);
-    const windowText = clockRangeText(shiftMode.startTime, windowEnd.time);
     const shiftDayText = dayText(shiftMode.scheduledDate);
     const owner =
       shiftMode.coverer === 'open'
@@ -4561,7 +4590,7 @@ function AddEventForm({
           className="m-0 break-words rounded-xl bg-bg-2 px-3 py-2 text-base font-medium text-ink"
           data-testid="shift-task-chip"
         >
-          {t('shifts:tasks.editor.onShift', { shift: shiftMode.title, window: windowText })}
+          {t('shifts:tasks.editor.onShift', { shift: shiftMode.title })}
         </p>
         <section
           aria-labelledby="sf-what"
@@ -4609,9 +4638,8 @@ function AddEventForm({
             data-testid="shift-task-locked-day"
           >
             <span className={VALUE_TILE_LABEL}>{t('addEvent.simple.starts')}</span>
-            <span className="text-base font-medium text-ink">
-              {t('shifts:tasks.editor.lockedDay', { date: shiftDayText, shift: shiftMode.title })}
-            </span>
+            {/* Just the date: the chip above names the shift. */}
+            <span className="text-base font-medium text-ink">{shiftDayText}</span>
           </div>
           {isEditing ? (
             <Text variant="caption" data-testid="shift-task-repeat-locked">
@@ -4635,10 +4663,7 @@ function AddEventForm({
           {sectionHeading('sf-what-time', t('addEvent.simple.whatTime'), true)}
           {fromToTiles('task')}
           <Text variant="caption" data-testid="shift-task-time-hint">
-            {t('shifts:tasks.form.timeHint', {
-              start: clockText(shiftMode.startTime),
-              end: clockText(windowEnd.time),
-            })}
+            {shiftHoursHint(clockText(shiftMode.startTime), clockText(windowEnd.time))}
           </Text>
           {zoneCaptionLine}
         </section>

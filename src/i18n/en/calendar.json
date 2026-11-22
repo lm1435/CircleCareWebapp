@@ -254,6 +254,7 @@
       "medicationRequired": "Please enter a medication name.",
       "dateRequired": "Please choose a date.",
       "timeRequired": "Medications need a scheduled time.",
+      "pickTime": "Pick a time.",
       "endTimeRequired": "Please add an end time.",
       "endTimeAfterStart": "End time must be after the start time.",
       "invalid": "Please check this value.",

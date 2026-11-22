@@ -150,14 +150,17 @@ describe('HowItWorksPage video', () => {
     }
   );
 
-  it('N: a missing fr file (video error before any frame) shows the carousel and fires NO preview_video_failed', async () => {
+  // Every language's file is uploaded (2026-11-21), so a load failure in fr is a REAL failure: carousel + the event.
+  // The "file not uploaded yet, do not report" path is pinned in lib/__tests__/previewVideo.test.ts.
+  it('N: an fr video error before any frame shows the carousel, never a dead frame, and IS reported', async () => {
     await i18n.changeLanguage('fr');
     renderPage();
     act(() => {
       fireEvent.error(video());
     });
     expect(screen.queryByTestId('preview-video')).toBeNull();
-    expect(Analytics.previewVideoFailed).not.toHaveBeenCalled();
+    expect(Analytics.previewVideoFailed).toHaveBeenCalledTimes(1);
+    expect(Analytics.previewVideoFailed).toHaveBeenCalledWith('fr', 'web');
   });
 
   it('P: a real failure in fr after playback started still reports', async () => {

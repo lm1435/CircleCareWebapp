@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Page } from '@playwright/test';
+import { loadEnv } from 'vite';
 import { test, expect } from '@playwright/test';
 import { checkA11y } from '../helpers';
 
@@ -26,6 +27,16 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const SAMPLE = readFileSync(resolve(HERE, '../media/preview-sample.webm'));
 const POSTER = readFileSync(resolve(HERE, '../media/preview-sample.jpg'));
 const BUCKET = '/storage/v1/object/public/help-videos/';
+// The video exists only in a build whose VITE_SUPABASE_URL is https (lib/previewVideo.ts, 2f6daf3): a local http
+// Supabase (the default dev / e2e server) shows the carousel instead. The same env Vite serves is read here, so the
+// video cases run where the build has a video and skip (N4 runs instead) where it cannot. To run them locally:
+//   VITE_SUPABASE_URL=https://e2e-video.invalid npx vite --port 5199 --strictPort
+//   VITE_SUPABASE_URL=https://e2e-video.invalid PW_BASE_URL=http://localhost:5199 \
+//     npx playwright test e2e/flows/how-it-works-video.spec.ts --project=chromium --no-deps
+// (every bucket request is stubbed, so the host is never contacted).
+const HAS_VIDEO = /^https:\/\//.test(loadEnv('development', process.cwd(), 'VITE_').VITE_SUPABASE_URL ?? '');
+const NO_VIDEO_REASON = 'this build has a non-https VITE_SUPABASE_URL: /how-it-works shows the carousel (see N4)';
+
 const FILE_RE = /^https:\/\/[^/]+\/storage\/v1\/object\/public\/help-videos\/preview-demo-/;
 
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -47,6 +58,7 @@ const videoEl = (page: Page) => page.getByTestId('preview-video').locator('video
 test('P1: the fixed en 16:9 file plays muted and looping, pauses, and Get started opens Sign up', async ({
   page,
 }, testInfo) => {
+  test.skip(!HAS_VIDEO, NO_VIDEO_REASON);
   const requested = await serveVideo(page, { broken: FALSIFY.has('how-it-works-video') });
   await page.goto('/how-it-works', { waitUntil: 'domcontentloaded' });
 
@@ -73,6 +85,7 @@ test('P1: the fixed en 16:9 file plays muted and looping, pauses, and Get starte
 });
 
 test('N1: prefers-reduced-motion never autoplays; Play starts it', async ({ page }) => {
+  test.skip(!HAS_VIDEO, NO_VIDEO_REASON);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await serveVideo(page);
   await page.goto('/how-it-works', { waitUntil: 'domcontentloaded' });
@@ -99,6 +112,7 @@ test('N2: a file that fails to load hands over to the carousel', async ({ page }
 test.describe('P2: a Spanish browser (es-MX)', () => {
   test.use({ locale: 'es-MX' });
   test('gets preview-demo-es-16x9', async ({ page }) => {
+    test.skip(!HAS_VIDEO, NO_VIDEO_REASON);
     await serveVideo(page);
     await page.goto('/how-it-works', { waitUntil: 'domcontentloaded' });
     await expect(videoEl(page)).toHaveAttribute('src', new RegExp(`${FILE_RE.source}es-16x9\\.mp4$`), {
@@ -109,6 +123,7 @@ test.describe('P2: a Spanish browser (es-MX)', () => {
 });
 
 test('N3: no app-config request, never an http: URL, no URL in analytics', async ({ page }) => {
+  test.skip(!HAS_VIDEO, NO_VIDEO_REASON);
   const apiCalls: string[] = [];
   const posthogBodies: string[] = [];
   page.on('request', (req) => {
@@ -127,4 +142,19 @@ test('N3: no app-config request, never an http: URL, no URL in analytics', async
   expect(poster).toMatch(/^https:\/\//);
   expect(apiCalls.filter((p) => p.startsWith('/api/app-config'))).toEqual([]);
   for (const body of posthogBodies) expect(body).not.toContain('help-videos');
+});
+
+test('N4: a build with a non-https storage base shows the carousel and never asks the bucket for a video', async ({
+  page,
+}) => {
+  test.skip(HAS_VIDEO, 'this build has an https storage base: the video cases above run instead');
+  const requested = await serveVideo(page);
+  await page.goto('/how-it-works', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { level: 1, name: 'Medication schedule' })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByRole('button', { name: 'Next' })).toBeVisible();
+  await expect(page.getByTestId('preview-video')).toHaveCount(0);
+  await expect(page.locator('video')).toHaveCount(0);
+  expect(requested, 'no request to the help-videos bucket').toEqual([]);
 });

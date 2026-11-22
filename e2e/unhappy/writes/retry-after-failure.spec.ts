@@ -499,7 +499,12 @@ for (const surface of SURFACES) {
         await surface.succeeded(ctx);
         await sent.expectCount(perSave + 1);
         // Circle create (8026e13) deliberately reuses its key for the user's retry after a no-answer failure.
-        if (perSave > 1 && idempotencyKeys()[0] && !(fault.abort && surface.name.startsWith('create circle'))) {
+        // AddEventModal too (owner 2026-11-21, "Option A"): an UNCHANGED form keeps its save's key, so a second press after a
+        // lost answer replays instead of writing twice (a 5xx releases the key server-side, so the retry still saves once).
+        const keepsKey = surface.name.includes('(AddEventModal)');
+        if (perSave > 1 && idempotencyKeys()[0] && keepsKey) {
+          expect(idempotencyKeys()[perSave], 'AddEventModal: the user\'s retry of an unchanged form reuses the save\'s key').toBe(idempotencyKeys()[0]);
+        } else if (perSave > 1 && idempotencyKeys()[0] && !(fault.abort && surface.name.startsWith('create circle'))) {
           expect(idempotencyKeys()[perSave], 'the user\'s retry is a NEW save with a new key').not.toBe(idempotencyKeys()[0]);
         }
         expect(dbCount(surface.rows(ctx)), 'exactly one row after the retry').toBe(1);

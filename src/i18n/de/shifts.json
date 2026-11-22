@@ -282,7 +282,7 @@
     "appointment": "Termin",
     "appointmentHint": "Ein Besuch oder Anruf während der Schicht",
     "cancel": "Abbrechen",
-    "lockedHint": "An die Schicht gebunden",
+    "lockedHint": "Nur für diesen Tag. Das Datum kommt von der Schicht.",
     "emptyHint": "Fügen Sie eine Aufgabe, ein Medikament oder einen Termin für die Person hinzu, die diese Schicht übernimmt.",
     "errorPast": "Wählen Sie eine Uhrzeit, die noch nicht vorbei ist."
   },
@@ -291,9 +291,11 @@
     "added": "Aufgabe hinzugefügt",
     "form": {
       "title": "Aufgabe hinzufügen",
-      "timeHint": "Zwischen {{start}} und {{end}}",
-      "onlyDate": "Nur am {{date}}",
+      "timeHint": "Schichtzeiten: {{start}} – {{end}}",
+      "timeHintZone": "Schichtzeiten: {{start}} – {{end}} (Zeit in {{zone}})",
+      "onlyDate": "Nur für diesen Tag. Wiederholt sich nicht mit der Schicht.",
       "errorOutside": "Wählen Sie eine Uhrzeit innerhalb dieser Schicht.",
+      "errorOutsideTimes": "Außerhalb dieser Schicht: {{times}}. Wählen Sie eine Uhrzeit innerhalb der Schichtzeiten.",
       "errorUnsupported": "Eine monatliche oder jährliche Schicht kann keine Aufgabe nach Mitternacht wiederholen. Wählen Sie eine andere Uhrzeit oder „Nur am {{date}}“.",
       "explainOnce": "Sie geht an die Person, die diese Schicht hat.",
       "errorEnded": "Diese Schicht ist beendet, deshalb können keine Aufgaben mehr hinzugefügt werden.",
@@ -337,7 +339,7 @@
     "deleteImpact_other": "Dadurch werden auch die {{count}} bevorstehenden Aufgaben gelöscht. Erledigte Aufgaben bleiben im Verlauf.",
     "editor": {
       "lockedDay": "{{date}} · während {{shift}}",
-      "onShift": "Bei {{shift}} · {{window}}",
+      "onShift": "Bei {{shift}}",
       "repeatEvery": "Jedes Mal, wenn diese Schicht stattfindet",
       "repeatLocked": "Wiederholt sich mit {{shift}}",
       "owner": "Wer diese Schicht hat",

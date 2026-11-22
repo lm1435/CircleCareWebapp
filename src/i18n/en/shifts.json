@@ -282,7 +282,7 @@
     "appointment": "Appointment",
     "appointmentHint": "A visit or call during the shift",
     "cancel": "Cancel",
-    "lockedHint": "Locked to shift",
+    "lockedHint": "For this day only. The date comes from the shift.",
     "emptyHint": "Add a task, a medication or an appointment for whoever takes this shift.",
     "errorPast": "Pick a time that hasn't passed yet."
   },
@@ -291,9 +291,11 @@
     "added": "Task added",
     "form": {
       "title": "Add a task",
-      "timeHint": "Between {{start}} and {{end}}",
-      "onlyDate": "Only {{date}}",
+      "timeHint": "Shift hours: {{start}} – {{end}}",
+      "timeHintZone": "Shift hours: {{start}} – {{end}} ({{zone}} time)",
+      "onlyDate": "For this day only. It won't repeat with the shift.",
       "errorOutside": "Pick a time inside this shift.",
+      "errorOutsideTimes": "Outside this shift: {{times}}. Pick a time inside the shift hours.",
       "errorUnsupported": "A monthly or yearly shift can't repeat a task after midnight. Pick a later time, or choose \"Only {{date}}\".",
       "explainOnce": "It goes to whoever is on this shift.",
       "errorEnded": "This shift has ended, so tasks can't be added to it.",
@@ -337,7 +339,7 @@
     "deleteImpact_other": "This also removes its {{count}} upcoming tasks. Completed tasks stay in history.",
     "editor": {
       "lockedDay": "{{date}} · during {{shift}}",
-      "onShift": "On {{shift}} · {{window}}",
+      "onShift": "On {{shift}}",
       "repeatEvery": "Every time this shift happens",
       "repeatLocked": "Repeats with {{shift}}",
       "owner": "Whoever is on this shift",

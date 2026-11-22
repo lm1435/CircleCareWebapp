@@ -282,7 +282,7 @@
     "appointment": "Cita",
     "appointmentHint": "Una visita o llamada durante el turno",
     "cancel": "Cancelar",
-    "lockedHint": "Fijado al turno",
+    "lockedHint": "Solo para este día. La fecha viene del turno.",
     "emptyHint": "Agrega una tarea, un medicamento o una cita para quien cubra este turno.",
     "errorPast": "Elige una hora que todavía no haya pasado."
   },
@@ -291,9 +291,11 @@
     "added": "Tarea agregada",
     "form": {
       "title": "Agregar una tarea",
-      "timeHint": "Entre {{start}} y {{end}}",
-      "onlyDate": "Solo {{date}}",
+      "timeHint": "Horario del turno: {{start}} – {{end}}",
+      "timeHintZone": "Horario del turno: {{start}} – {{end}} (hora de {{zone}})",
+      "onlyDate": "Solo para este día. No se repite con el turno.",
       "errorOutside": "Elige una hora dentro de este turno.",
+      "errorOutsideTimes": "Fuera de este turno: {{times}}. Elige una hora dentro del horario del turno.",
       "errorUnsupported": "Un turno mensual o anual no puede repetir una tarea después de la medianoche. Elige otra hora o marca \"Solo {{date}}\".",
       "explainOnce": "Le toca a quien esté en este turno.",
       "errorEnded": "Este turno ya terminó, así que no se le pueden agregar tareas.",
@@ -337,7 +339,7 @@
     "deleteImpact_other": "Esto también elimina sus {{count}} tareas próximas. Las tareas completadas se quedan en el historial.",
     "editor": {
       "lockedDay": "{{date}} · durante {{shift}}",
-      "onShift": "En {{shift}} · {{window}}",
+      "onShift": "En {{shift}}",
       "repeatEvery": "Cada vez que ocurra este turno",
       "repeatLocked": "Se repite con {{shift}}",
       "owner": "Quien cubra este turno",

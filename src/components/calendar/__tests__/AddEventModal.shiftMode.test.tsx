@@ -152,6 +152,8 @@ const toInput = () => screen.getByLabelText('To', { selector: 'input' }) as HTML
 const titleBox = () => screen.getByRole('textbox', { name: /^Title/ });
 const save = () => screen.getByTestId('add-event-save');
 const lastPost = () => vi.mocked(createShiftTask).mock.calls[0][2];
+/** Owner 2026-11-22: a new shift task opens with NO time; the person picks one (the From tile's input, recipient clock). */
+const pickFrom = (value: string) => fireEvent.change(fromInput(), { target: { value } });
 
 const SPIED = [
   'entryFormOpened',
@@ -184,20 +186,26 @@ describe('shift mode: add', () => {
   it('P1 opens the full editor: chip, locked day, repeat choice, time + end, who, reminders, details', async () => {
     const { user } = setup();
     expect(screen.getByRole('dialog', { name: 'New task' })).toBeInTheDocument();
-    expect(screen.getByTestId('shift-task-chip')).toHaveTextContent('On Afternoons · 2:00 – 8:00 PM');
-    expect(screen.getByTestId('shift-task-locked-day')).toHaveTextContent('Tue, Nov 10 · during Afternoons');
+    // FIX 3: the chip names only the shift (hours without a zone were the trap); the line under it is the date alone.
+    expect(screen.getByTestId('shift-task-chip').textContent).toBe('On Afternoons');
+    const lockedDay = screen.getByTestId('shift-task-locked-day');
+    expect(lockedDay).toHaveTextContent(/^Starts\s*Tue, Nov 10$/);
+    expect(lockedDay.textContent).not.toContain('during');
     // A locked day is not a picker.
     expect(screen.queryByLabelText(/^Starts/)).toBeNull();
     // An add is "this day only": no repeat choice, just the caption (owner decision, 1.4.3).
     expect(screen.queryByRole('radio', { name: 'Every time this shift happens' })).toBeNull();
     expect(screen.queryByRole('radio', { name: 'Only Tue, Nov 10' })).toBeNull();
     expect(screen.queryByTestId('shift-task-repeat')).toBeNull();
-    expect(screen.getByTestId('shift-task-only-day')).toHaveTextContent('Only Tue, Nov 10');
-    expect(fromInput().value).toBe('14:00');
+    expect(screen.getByTestId('shift-task-only-day')).toHaveTextContent("For this day only. It won't repeat with the shift.");
+    // Owner 2026-11-22: no time is selected on open.
+    expect(fromInput().value).toBe('');
     expect(screen.getByTestId('task-to-tile')).toHaveTextContent(/To\s*No end/);
-    expect(screen.getByTestId('shift-task-time-hint')).toHaveTextContent('Between 2:00 PM and 8:00 PM');
+    expect(screen.getByTestId('shift-task-time-hint')).toHaveTextContent('Shift hours: 2:00 PM – 8:00 PM');
     expect(screen.getByTestId('shift-task-owner')).toHaveTextContent('Whoever is on this shift');
     expect(screen.getByTestId('shift-task-owner-now')).toHaveTextContent('Right now: Lucia');
+    // Reminders appear once a time is picked.
+    pickFrom('14:00');
     expect(screen.getByRole('button', { name: /^Reminders/ })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^More details/ }));
     expect(screen.getByLabelText(/^Details/)).toBeInTheDocument();
@@ -211,32 +219,48 @@ describe('shift mode: add', () => {
     expect(screen.getByTestId('shift-task-owner-now')).toHaveTextContent('No one is on this shift yet');
   });
 
-  it('P2 default time: the shift start while the shift is not running; the next half hour once it is (clamped to the end)', () => {
-    // Tue 3:10 PM in Chicago, inside 2-8 PM: next half hour = 3:30 PM.
-    vi.setSystemTime(new Date('2026-11-10T21:10:00Z'));
-    setup();
-    expect(fromInput().value).toBe('15:30');
-    expect(Analytics.shiftTaskAddOpened).toHaveBeenCalledWith({
-      source: 'shift_detail',
-      shiftRepeats: true,
-      coverer: 'other',
-      timeDefault: 'next_half_hour',
-    });
-    cleanup();
-    // 7:50 PM: the next half hour (8:00 PM) is the window end, inclusive.
-    vi.setSystemTime(new Date('2026-11-11T01:50:00Z'));
-    setup();
-    expect(fromInput().value).toBe('20:00');
-    cleanup();
-    // After the end (8:40 PM) and the day before: the shift start.
-    vi.setSystemTime(new Date('2026-11-11T02:40:00Z'));
-    setup();
-    expect(fromInput().value).toBe('14:00');
+  it('P2 (owner 2026-11-22) NO time is selected on open, before, during or after the shift; add_opened reports time_default none', () => {
+    for (const at of ['2026-11-10T21:10:00Z', '2026-11-11T01:50:00Z', '2026-11-11T02:40:00Z', '2026-11-09T21:00:00Z']) {
+      vi.setSystemTime(new Date(at));
+      setup();
+      expect(fromInput().value, at).toBe('');
+      expect(Analytics.shiftTaskAddOpened).toHaveBeenLastCalledWith({
+        source: 'shift_detail',
+        shiftRepeats: true,
+        coverer: 'other',
+        timeDefault: 'none',
+      });
+      cleanup();
+    }
+  });
+
+  it('P2b one picked time = ONE POST at exactly that time', async () => {
+    const { user, onShiftTaskSaved } = setup();
+    await user.type(titleBox(), 'Give lunch');
+    pickFrom('16:30');
+    await user.click(save());
+    await waitFor(() => expect(onShiftTaskSaved).toHaveBeenCalledTimes(1));
+    expect(createShiftTask).toHaveBeenCalledTimes(1);
+    expect(lastPost()).toMatchObject({ scheduledDate: '2026-11-10', scheduled_time: '16:30' });
+  });
+
+  it('N-NOTIME (owner 2026-11-22) Save with a name but no time: nothing is sent, "Pick a time." at the time tile, focus there; a submit is refused too', async () => {
+    const { user, onShiftTaskSaved } = setup();
+    await user.type(titleBox(), 'Lunch');
+    await user.click(save());
+    expect(await screen.findByText('Pick a time.')).toBeInTheDocument();
+    expect(screen.queryByText('Medications need a scheduled time.')).toBeNull();
+    await waitFor(() => expect(document.getElementById('scheduled_time-tile')).toHaveFocus());
+    fireEvent.submit(document.getElementById('add-event-form') as HTMLFormElement);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(createShiftTask).not.toHaveBeenCalled();
+    expect(onShiftTaskSaved).not.toHaveBeenCalled();
   });
 
   it('P3 name + time only = ONE POST with exactly the old body, and no update call', async () => {
     const { user, onShiftTaskSaved } = setup();
     await user.type(titleBox(), '  Give lunch ');
+    pickFrom('14:00');
     await user.click(save());
     await waitFor(() => expect(onShiftTaskSaved).toHaveBeenCalledTimes(1));
     expect(createShiftTask).toHaveBeenCalledTimes(1);
@@ -290,8 +314,9 @@ describe('shift mode: add', () => {
     try {
       const ny = shift({ scheduled_time: '09:00:00', duration_minutes: 240 });
       const { user } = setup({ shiftContext: contextFor(ny) });
-      expect(fromInput().value).toBe('09:00');
+      expect(fromInput().value).toBe('');
       await user.type(titleBox(), 'Zone check');
+      pickFrom('09:00');
       await user.click(save());
       await waitFor(() => expect(createShiftTask).toHaveBeenCalledTimes(1));
       expect(lastPost()).toMatchObject({ scheduledDate: '2026-11-10', scheduled_time: '09:00' });
@@ -307,9 +332,10 @@ describe('shift mode: add', () => {
       source: 'shift_detail',
       shiftRepeats: true,
       coverer: 'other',
-      timeDefault: 'shift_start',
+      timeDefault: 'none',
     });
     await user.type(titleBox(), 'Lunch');
+    pickFrom('14:00');
     await user.click(save());
     await waitFor(() => expect(Analytics.shiftTaskSaved).toHaveBeenCalledTimes(1));
     expect(Analytics.shiftTaskSaved).toHaveBeenCalledWith({
@@ -333,6 +359,7 @@ describe('shift mode: add', () => {
   it('N12 no shift analytics payload carries a circle id, a title or details text', async () => {
     const { user } = setup();
     await user.type(titleBox(), 'Secret title');
+    pickFrom('14:00');
     await user.click(screen.getByRole('button', { name: /^More details/ }));
     await user.type(screen.getByLabelText(/^Details/), 'Private detail');
     await user.click(save());
@@ -353,10 +380,37 @@ describe('shift mode: refusals and failures (negative)', () => {
     expect(screen.queryByRole('radio', { name: 'Anyone' })).toBeNull();
     expect(screen.queryByRole('radio', { name: 'Lucia' })).toBeNull();
     await user.type(titleBox(), 'Lunch');
+    pickFrom('14:00');
     await user.click(save());
     await waitFor(() => expect(createShiftTask).toHaveBeenCalled());
     const body = JSON.stringify(lastPost());
     for (const key of ['assigned_to', 'recurrence', 'event_type']) expect(body).not.toContain(key);
+  });
+
+  it('NEG FIX3 no clock time sits in the When? block (the hours, with their zone, are the "Shift hours" line only)', () => {
+    setup();
+    for (const id of ['shift-task-chip', 'shift-task-locked-day', 'shift-task-only-day']) {
+      expect(screen.getByTestId(id).textContent ?? '', id).not.toMatch(/\d{1,2}:\d{2}/);
+    }
+    expect(screen.getByTestId('shift-task-time-hint')).toHaveTextContent('Shift hours: 2:00 PM – 8:00 PM');
+  });
+
+  it('NEG FIX2 a one-off shift has no "only this day" caption, just the explain line', () => {
+    setup({ shiftContext: contextFor(shift({ recurrence_rule: null, parent_event_id: null as never })) });
+    expect(screen.queryByTestId('shift-task-only-day')).toBeNull();
+    expect(screen.getByTestId('shift-task-form-explain')).toHaveTextContent('It goes to whoever is on this shift.');
+  });
+
+  it('NEG FIX4 a time inside the shift shows no outside message; fixing an outside time clears it', async () => {
+    const { user } = setup();
+    await user.type(titleBox(), 'Lunch');
+    fireEvent.change(fromInput(), { target: { value: '09:00' } });
+    await user.click(save());
+    expect(await screen.findByText('Outside this shift: 9:00 AM. Pick a time inside the shift hours.')).toBeInTheDocument();
+    fireEvent.change(fromInput(), { target: { value: '15:00' } });
+    await user.click(save());
+    await waitFor(() => expect(createShiftTask).toHaveBeenCalled());
+    expect(screen.queryByText(/^Outside this shift/)).toBeNull();
   });
 
   it('N2 a time outside the window is refused inline and nothing is sent', async () => {
@@ -364,7 +418,8 @@ describe('shift mode: refusals and failures (negative)', () => {
     await user.type(titleBox(), 'Lunch');
     fireEvent.change(fromInput(), { target: { value: '09:00' } });
     await user.click(save());
-    expect(await screen.findByText('Pick a time inside this shift.')).toBeInTheDocument();
+    // FIX 4: it names the time that is wrong.
+    expect(await screen.findByText('Outside this shift: 9:00 AM. Pick a time inside the shift hours.')).toBeInTheDocument();
     expect(createShiftTask).not.toHaveBeenCalled();
     expect(mutateUpdate).not.toHaveBeenCalled();
     expect(onShiftTaskSaved).not.toHaveBeenCalled();
@@ -380,6 +435,7 @@ describe('shift mode: refusals and failures (negative)', () => {
     expect(screen.queryByRole('radio', { name: 'Any time' })).toBeNull();
     expect(screen.queryByRole('radio', { name: 'Pick a time' })).toBeNull();
     await user.type(titleBox(), 'Lunch');
+    pickFrom('14:00');
     await user.click(save());
     await waitFor(() => expect(createShiftTask).toHaveBeenCalled());
     expect(lastPost().scheduled_time).toMatch(/^\d\d:\d\d$/);
@@ -389,6 +445,7 @@ describe('shift mode: refusals and failures (negative)', () => {
     vi.mocked(createShiftTask).mockRejectedValueOnce(new Error('network'));
     const { user, onClose, onShiftTaskSaved } = setup();
     await user.type(titleBox(), 'Lunch');
+    pickFrom('14:00');
     await user.click(save());
     expect(await screen.findByTestId('shift-inline-error')).toHaveTextContent("Couldn't add the task. Please try again.");
     expect(createShiftTask).toHaveBeenCalledTimes(1);
@@ -404,6 +461,7 @@ describe('shift mode: refusals and failures (negative)', () => {
     vi.mocked(createShiftTask).mockReturnValue(new Promise((r) => (resolve = r)));
     const { user } = setup();
     await user.type(titleBox(), 'Lunch');
+    pickFrom('14:00');
     const form = document.getElementById('add-event-form') as HTMLFormElement;
     fireEvent.submit(form);
     fireEvent.submit(form);
@@ -420,6 +478,7 @@ describe('shift mode: refusals and failures (negative)', () => {
     vi.mocked(createShiftTask).mockRejectedValueOnce({ error: { code } });
     const { user, onClose, onShiftTaskSaved } = setup();
     await user.type(titleBox(), 'Lunch');
+    pickFrom('14:00');
     await user.click(save());
     expect(await screen.findByText(words)).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
@@ -436,6 +495,7 @@ describe('shift mode: refusals and failures (negative)', () => {
     vi.mocked(createShiftTask).mockRejectedValueOnce({ error: { code } });
     const { user, onClose } = setup();
     await user.type(titleBox(), 'Lunch');
+    pickFrom('14:00');
     await user.click(save());
     expect(await screen.findByTestId('shift-inline-error')).toHaveTextContent(words);
     expect(onClose).not.toHaveBeenCalled();
@@ -446,6 +506,7 @@ describe('shift mode: refusals and failures (negative)', () => {
     vi.mocked(createShiftTask).mockRejectedValueOnce({ error: { code } });
     const { user, onClose } = setup();
     await user.type(titleBox(), 'Lunch');
+    pickFrom('14:00');
     await user.click(save());
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(Analytics.shiftTaskAdded).not.toHaveBeenCalled();
@@ -525,7 +586,7 @@ describe('shift mode: edit (a linked task)', () => {
     const { user } = setup({ event: linkedTask(), initialType: undefined, shiftContext: contextFor() });
     fireEvent.change(fromInput(), { target: { value: '21:00' } });
     await user.click(save());
-    expect(await screen.findByText('Pick a time inside this shift.')).toBeInTheDocument();
+    expect(await screen.findByText('Outside this shift: 9:00 PM. Pick a time inside the shift hours.')).toBeInTheDocument();
     expect(mutateUpdate).not.toHaveBeenCalled();
     expect(Analytics.shiftTaskSaveFailed).toHaveBeenCalledWith({ mode: 'edit', reason: 'outside_window' });
   });
@@ -667,6 +728,7 @@ describe('1.4.3 review fixes (web)', () => {
   it('A-1 negative: Save with a title does not fire name_missing', async () => {
     const { user } = setup();
     await user.type(titleBox(), 'Lunch');
+    pickFrom('14:00');
     await user.click(save());
     await waitFor(() => expect(createShiftTask).toHaveBeenCalled());
     expect(Analytics.shiftTaskSaveFailed).not.toHaveBeenCalledWith(expect.objectContaining({ reason: 'name_missing' }));
@@ -708,7 +770,7 @@ describe('1.4.3 review fixes (web)', () => {
     setup({ event: one, initialType: undefined, shiftContext: contextFor(undefined, 'tasks') });
     const line = screen.getByTestId('shift-task-repeat-locked');
     expect(line).not.toHaveTextContent('Repeats with');
-    expect(line).toHaveTextContent(/^Only /);
+    expect(line).toHaveTextContent(/^For this day only\. It won't repeat with the shift\.$/);
     expect(Analytics.shiftTaskEditOpened).toHaveBeenCalledWith(expect.objectContaining({ state: 'open', recurring: false }));
   });
 });

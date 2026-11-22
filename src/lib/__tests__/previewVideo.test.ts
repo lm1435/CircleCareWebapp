@@ -17,10 +17,16 @@ describe('previewVideoSource', () => {
     });
   });
 
-  it('P: only non-en/es languages may be missing (analytics skip), and nothing is gated', () => {
-    expect(previewVideoMayBeMissing('en')).toBe(false);
-    expect(previewVideoMayBeMissing('es')).toBe(false);
-    expect(previewVideoMayBeMissing('fr')).toBe(true);
+  it.each(['en', 'es', 'fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT'])(
+    'P: %s is uploaded, so a load failure IS reported (not skipped as "file missing")',
+    (lang) => {
+      expect(previewVideoMayBeMissing(lang)).toBe(false);
+    },
+  );
+
+  it('N: a language with no uploaded file (a future one) may be missing: its failure is not reported', () => {
+    expect(previewVideoMayBeMissing('ja')).toBe(true);
+    expect(previewVideoMayBeMissing('')).toBe(true);
   });
 
   it('P: the cut is part of the name (4x5 on the phone, 16x9 on the web)', () => {

@@ -751,6 +751,39 @@ describe('new medication: more than one time (mobile AddEventScreen / first-run 
   });
 });
 
+// FIX 5 (owner 2026-11-21, mobile parity): the two-zone caption listed the doses in TAP order ("4:00 PM and 6:00 AM")
+// while the summary above it reads in time order ("8:00 AM, 6:00 PM"). Both follow the circle's clock, ascending.
+describe('new medication: the zone caption lists the doses in the summary order (FIX 5)', () => {
+  const caption = () => screen.getByTestId('time-zone-caption').textContent ?? '';
+  const pick = async (order: RegExp[]) => {
+    const user = userEvent.setup();
+    renderMed();
+    await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
+    for (const name of order) await user.click(chip(name));
+  };
+  // Circle New York, viewer Denver: 8:00 AM / 6:00 PM on the circle's clock read 6:00 AM / 4:00 PM on the viewer's.
+  const SUMMARY = '8:00 AM, 6:00 PM';
+  const CAPTION = 'New York time · 6:00 AM and 4:00 PM your time (Denver)';
+
+  it('P morning then evening: summary and caption both read earliest first', async () => {
+    await pick([/Morning/, /Evening/]);
+    expect(screen.getByText(/2 doses a day/).textContent).toContain(SUMMARY);
+    expect(caption()).toBe(CAPTION);
+  });
+
+  it('N evening then morning (reverse tap order): the caption is identical, never "4:00 PM and 6:00 AM"', async () => {
+    await pick([/Evening/, /Morning/]);
+    expect(screen.getByText(/2 doses a day/).textContent).toContain(SUMMARY);
+    expect(caption()).toBe(CAPTION);
+    expect(caption()).not.toContain('4:00 PM and 6:00 AM');
+  });
+
+  it('N one dose: a single time, no "and"', async () => {
+    await pick([/Evening/]);
+    expect(caption()).toBe('New York time · 4:00 PM your time (Denver)');
+  });
+});
+
 describe('new medication: analytics', () => {
   it('entry_form_opened fires once with the type and how it was opened', () => {
     const { rerender } = renderMed({ entry: 'add_menu' });
