@@ -165,6 +165,27 @@ describe('first run v2: the type switch', () => {
   });
 });
 
+/**
+ * Type the title and make sure it STUCK. The type switch remounts the form under the test (see the a11y test above), and
+ * on a loaded machine (the 34-zone sweep, load ~24) that remount can land after `user.type` started, so the keystrokes
+ * go into the old, detached input and the save is then blocked by "Please enter a title." (seen once in ~15 runs,
+ * America/Los_Angeles). Retyping into the CURRENT input is what a person would see and do; the app is unchanged.
+ */
+async function typeTitle(text: string): Promise<void> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const el = document.getElementById('title') as HTMLInputElement;
+    await user().clear(el);
+    await user().type(el, text);
+    try {
+      await waitFor(() => expect(document.getElementById('title')).toHaveValue(text), { timeout: 500 });
+      return;
+    } catch {
+      // remounted mid-type: retry on the new input
+    }
+  }
+  expect(document.getElementById('title')).toHaveValue(text);
+}
+
 describe('first run v2: time defaults', { timeout: 20_000 }, () => {
   it('POSITIVE (owner 2026-11-21: no preselected time on a new medication): the medication opens with NO chip lit and saves at 8:00 AM once the person picks Morning', async () => {
     const onFirstRunItemSaved = vi.fn();
@@ -239,7 +260,7 @@ describe('first run v2: time defaults', { timeout: 20_000 }, () => {
       renderForm({ firstRun: true, firstRunTypeSwitch: true, onFirstRunItemSaved });
       await switchTo(kind);
       await screen.findByTestId(`${prefix}-from-tile`);
-      await user().type(document.getElementById('title') as HTMLElement, 'Call pharmacy');
+      await typeTitle('Call pharmacy');
       pickTime('17:30');
       await user().click(screen.getByTestId('add-event-save'));
       await waitFor(() => expect(mutateCreate).toHaveBeenCalled(), { timeout: 5000 });
@@ -264,7 +285,7 @@ describe('first run v2: time defaults', { timeout: 20_000 }, () => {
       renderForm({ firstRun: true, firstRunTypeSwitch: true });
       await switchTo(kind);
       await screen.findByTestId(`${prefix}-from-tile`);
-      await user().type(document.getElementById('title') as HTMLElement, 'Call pharmacy');
+      await typeTitle('Call pharmacy');
       await user().click(screen.getByTestId('add-event-save'));
       // Neutral copy (owner 2026-11-22), never the medication sentence.
       expect(await screen.findByText('Pick a time.')).toBeInTheDocument();
@@ -291,7 +312,7 @@ describe('first run v2: time defaults', { timeout: 20_000 }, () => {
       renderForm({ firstRun: true, firstRunTypeSwitch: true, onFirstRunItemSaved });
       await switchTo(kind);
       await screen.findByTestId(`${prefix}-from-tile`);
-      await user().type(document.getElementById('title') as HTMLElement, 'Call pharmacy');
+      await typeTitle('Call pharmacy');
       pickTime('17:30');
       await user().click(screen.getByTestId('add-event-save'));
       await waitFor(() => expect(stepFailed).toHaveBeenCalledWith('first_item', 'server', 'email'));
@@ -305,7 +326,7 @@ describe('first run v2: time defaults', { timeout: 20_000 }, () => {
     renderForm({ firstRun: true, firstRunTypeSwitch: true, onFirstRunItemSaved });
     await switchTo('Appointment');
     await user().click(await screen.findByRole('radio', { name: 'Any time' }));
-    await user().type(document.getElementById('title') as HTMLElement, 'Doctor visit');
+    await typeTitle('Doctor visit');
     await user().click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalled(), { timeout: 5000 });
     expect(mutateCreate.mock.calls[0][0].scheduled_time ?? null).toBeNull();

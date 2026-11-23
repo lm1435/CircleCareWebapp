@@ -531,7 +531,9 @@ describe('the zone caption: only when the viewer zone differs, the circle time f
   });
 });
 
-describe('the task From | To: To is optional ("No end")', () => {
+// The picker sheet opens slower than findBy's 1 s default on a loaded machine (the 34-zone sweep, load ~20: this block
+// failed in Casablanca, Moscow and Apia, then passed 9/9 alone): wait up to 5 s for it, inside a 20 s test budget.
+describe('the task From | To: To is optional ("No end")', { timeout: 20_000 }, () => {
   it('Pick a time shows From | To; To starts at From + 30 (as today); its × clears it to "No end"; Any time clears both', async () => {
     const user = userEvent.setup();
     renderNew('task');
@@ -554,7 +556,7 @@ describe('the task From | To: To is optional ("No end")', () => {
     expect(screen.getByLabelText('To', { selector: 'input' })).toHaveValue('16:45');
     // The To's own "×" (Fix13: clear in the tile) clears it to "No end"; the picker has no clear of its own.
     await user.click(screen.getByTestId('task-to-tile'));
-    await screen.findByRole('listbox', { name: 'Minute' });
+    await screen.findByRole('listbox', { name: 'Minute' }, { timeout: 5000 });
     expect(screen.queryByRole('button', { name: 'No end' })).toBeNull();
     await user.keyboard('{Escape}');
     const clear = screen.getByRole('button', { name: 'Clear end time' });
@@ -579,7 +581,7 @@ describe('the task From | To: To is optional ("No end")', () => {
     expect(screen.queryByRole('button', { name: 'Clear end time' })).toBeNull();
     expect(screen.queryByTestId('appt-to-tile-box')).toBeNull();
     await user.click(screen.getByTestId('appt-to-tile'));
-    await screen.findByRole('listbox', { name: 'Minute' });
+    await screen.findByRole('listbox', { name: 'Minute' }, { timeout: 5000 });
     expect(screen.queryByRole('button', { name: 'No end' })).toBeNull();
   });
 });

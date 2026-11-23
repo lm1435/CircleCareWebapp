@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -48,6 +48,21 @@ import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { Analytics } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
 import UpgradePage from '@/pages/UpgradePage';
+
+/**
+ * The country gate's SECOND signal (the browser zone), read straight off `Intl`. Pinned to a US zone so the paywall
+ * renders the web checkout under every zone of `npm run test:timezones` (unpinned, Europe/Berlin and the other non-US
+ * zones get the app-store card and every assertion here fails). The gate itself is covered in `UpgradePage.test.tsx`.
+ */
+const realResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
+beforeEach(() => {
+  Intl.DateTimeFormat.prototype.resolvedOptions = function resolvedOptions(this: Intl.DateTimeFormat) {
+    return { ...realResolvedOptions.call(this), timeZone: 'America/New_York' };
+  };
+});
+afterEach(() => {
+  Intl.DateTimeFormat.prototype.resolvedOptions = realResolvedOptions;
+});
 
 const mutate = vi.fn();
 const annualWithTrial = {
