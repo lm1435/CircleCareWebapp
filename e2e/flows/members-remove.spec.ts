@@ -70,7 +70,7 @@ async function apiMembers(
 
 test('remove a non-owner circle member', async ({ page, circleId, baseURL, account }) => {
   await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 15_000 });
   // Wait for the roster to actually render before counting — otherwise the
   // count below would read an empty pre-load DOM.
   await expect(page.locator('ul li').first()).toBeVisible({ timeout: 15_000 });

@@ -209,12 +209,14 @@ export default function EmergencyInfoPage(): ReactElement {
     circle: circleSummary,
     viewOnly,
     readOnly,
+    canEditOwnRecipientDetails,
     timezone: careRecipientTimezone,
   } = useCircle(circleId);
   const isOffline = useIsOffline();
   // DATE OF BIRTH PROMPT (owner 2026-11-22): onboarding no longer asks for it, and this page and the care
   // summary are where an EMT identifies the patient by name + DOB. Offered only to whoever may edit the
-  // circle (the same rule as Edit circle: the owner, not view-only), only while none is on file. Mobile
+  // circle (the same rule as Edit circle: the owner, or the care recipient themself (1.4.4, server flag
+  // `viewer_can_edit_recipient_details`; PATCH with only recipient_dob), not view-only), only while none is on file. Mobile
   // parity (2026-11-22): never on a LAPSED / read-only circle, never a view-only seat, never offline.
   const currentUserId = useAuthStore((s) => s.user?.id);
   const canEditCircle =
@@ -224,7 +226,7 @@ export default function EmergencyInfoPage(): ReactElement {
     !isOffline &&
     !!currentUserId &&
     !!circleSummary &&
-    circleSummary.owner_id === currentUserId;
+    (circleSummary.owner_id === currentUserId || canEditOwnRecipientDetails);
   const dobMissing = !!circleDetail && !circleDetail.recipient_dob;
   const offerDob = canEditCircle && dobMissing;
   const [dobDialog, setDobDialog] = useState<'emergency_prompt' | 'export_prompt' | null>(null);

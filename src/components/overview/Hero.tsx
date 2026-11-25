@@ -2,6 +2,7 @@ import { type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageMasthead } from '@/components/layout/PageMasthead';
 import { getDateInTimezone } from '@/utils/timezone';
+import { Analytics } from '@/lib/analytics';
 
 // The Today header (docs/plans/simple-ui-1-3-1.md; hi-fi HiToday): a
 // "WEDNESDAY, OCTOBER 28" eyebrow over "Today for {{name}}". It replaces the
@@ -37,10 +38,31 @@ export interface HeroProps {
   isSelfCare?: boolean;
   /** The care recipient's IANA zone; the date eyebrow waits for it. */
   recipientTimezone: string | null;
+  /**
+   * The circle's id. When given, the header carries the two round controls below xl (1.4.4,
+   * mobile's Today header): account Settings (/profile) and, when `canEditCircleSettings`, circle settings (the gear).
+   * At xl the sidebar already lists Members and the account menu offers Settings, so none render.
+   */
+  circleId?: string;
+  /**
+   * GEAR = CIRCLE SETTINGS (owner 2026-11-25, mobile parity): only the owner of an editable circle, or the care recipient
+   * (own name + date of birth only, 1.4.4), gets the gear, and it opens Edit circle (/circles/:id/settings). The Care team is the Care team row, for everyone.
+   */
+  canEditCircleSettings?: boolean;
+  /** Who is pressing the gear (analytics enum `viewer`). Default owner. */
+  circleSettingsViewer?: 'owner' | 'care_recipient';
 }
 
-export function Hero({ recipientName, isSelfCare = false, recipientTimezone }: HeroProps): ReactElement {
+export function Hero({
+  recipientName,
+  isSelfCare = false,
+  recipientTimezone,
+  circleId,
+  canEditCircleSettings = false,
+  circleSettingsViewer = 'owner',
+}: HeroProps): ReactElement {
   const { t, i18n } = useTranslation('overview');
+  const { t: tCommon } = useTranslation('common');
   const eyebrow = formatTodayEyebrow(recipientTimezone, i18n.language);
   const title = isSelfCare || !recipientName ? t('today.titleSelf') : t('today.title', { name: recipientName });
 
@@ -48,7 +70,35 @@ export function Hero({ recipientName, isSelfCare = false, recipientTimezone }: H
     // The same masthead every page wears: muted date eyebrow over the 32/600 title.
     // NEVER truncated: a long name wraps onto a second line.
     <div data-testid="overview-hero">
-      <PageMasthead section={eyebrow ?? ''} tone="ink-3" title={title} />
+      <PageMasthead
+        section={eyebrow ?? ''}
+        tone="ink-3"
+        title={title}
+        chromeLinks={
+          circleId
+            ? [
+                {
+                  name: 'person-circle-outline',
+                  label: tCommon('nav.profile'),
+                  to: '/profile',
+                  onClick: () => Analytics.accountSettingsOpened('today_header'),
+                  testId: 'today-account-settings',
+                },
+                ...(canEditCircleSettings
+                  ? [
+                      {
+                        name: 'settings-outline' as const,
+                        label: t('today.circleSettings'),
+                        to: `/circles/${circleId}/settings`,
+                        onClick: () => Analytics.circleSettingsOpened('today_header', circleSettingsViewer),
+                        testId: 'today-circle-settings',
+                      },
+                    ]
+                  : []),
+              ]
+            : undefined
+        }
+      />
     </div>
   );
 }

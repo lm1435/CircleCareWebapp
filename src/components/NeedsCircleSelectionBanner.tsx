@@ -24,9 +24,13 @@ export function NeedsCircleSelectionBanner(): ReactElement | null {
         variant="filled"
         padding="sm"
         role="status"
-        className="bg-coral-soft! flex flex-wrap items-center justify-between gap-3 text-coral-deep"
+        className="bg-coral-soft! flex flex-wrap items-center justify-between gap-3"
       >
-        <span className="text-sm">{t('circleSelection.banner')}</span>
+        {/* Same shape as mobile (2026-11-25): a short title, one line of what to do, then the button. */}
+        <div className="min-w-0 flex-1 basis-64">
+          <p className="font-semibold text-coral-deep">{t('circleSelection.bannerTitle')}</p>
+          <p className="text-sm text-ink-2">{t('circleSelection.bannerBody')}</p>
+        </div>
         <Button variant="primary" size="sm" onClick={() => setOpen(true)}>
           {t('circleSelection.choose')}
         </Button>

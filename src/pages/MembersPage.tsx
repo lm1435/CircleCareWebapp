@@ -7,8 +7,11 @@ import {
   Button,
   Card,
   EmptyState,
+  Icon,
+  IconTile,
   SectionHeader,
   Sheet,
+  SheetRowPressable,
   Skeleton,
 } from '@/components/ui';
 import { PageMasthead } from '@/components/layout/PageMasthead';
@@ -28,6 +31,13 @@ function MemberRowSkeleton(): ReactElement {
 }
 
 /**
+ * The Care team page (1.4.4; mobile `CareTeamScreen`). It was "Members"; Today's own members list,
+ * Manage rows and Leave circle moved here, so every care-team action lives on this ONE page:
+ *
+ *   eyebrow = the recipient's name, title "Care team" ("My care team" for the recipient),
+ *   member-count pill; members; pending + declined invites; Invite member; Manage
+ *   (Edit circle, Delete circle) for the owner; Leave circle for everyone else.
+ *
  * Members page (plan Tasks 35-36 + Stage 5 Task 5.4; mobile-parity Task 22).
  *
  * Read-only roster for everyone, plus management for those allowed it:
@@ -44,13 +54,17 @@ function MemberRowSkeleton(): ReactElement {
  * independently — UI gating is cosmetic.
  */
 export default function MembersPage(): ReactElement {
-  const { t } = useTranslation('members');
+  const { t } = useTranslation(['members', 'overview']);
   const navigate = useNavigate();
   const { circleId = '' } = useParams<{ circleId: string }>();
 
-  const { circle, members, isLoading, isError, refetch } = useCircle(circleId);
+  const { circle, members, isLoading, isError, refetch, canEdit } = useCircle(circleId);
   // Every action and confirm lives in `useCareTeamManager`, shared with the care team on Today.
   const team = useCareTeamManager(circleId);
+  const base = `/circles/${circleId}`;
+  const title = team.isCurrentUserRecipient
+    ? t('overview:today.careTeam.titleMine')
+    : t('overview:today.careTeam.title');
   const { isOwner, canManageMembers, pendingInvites, declinedInvites, liveInvites, careTeamEmpty } =
     team;
 
@@ -64,7 +78,7 @@ export default function MembersPage(): ReactElement {
   const { openInvite } = team;
   useEffect(() => {
     if (!openInviteRequested || circle == null) return;
-    if (canManageMembers) openInvite();
+    if (canManageMembers && circle.can_edit !== false) openInvite();
     navigate(location.pathname, { replace: true, state: null });
   }, [openInviteRequested, circle, canManageMembers, navigate, location.pathname, openInvite]);
   let content: ReactElement;
@@ -112,9 +126,9 @@ export default function MembersPage(): ReactElement {
   return (
     <section className="mx-auto w-full max-w-5xl pb-8">
       <PageMasthead
-        section={t('common:nav.members')}
+        section={circle?.recipient_name ?? ''}
         tone="moss"
-        title={t('list.heading')}
+        title={title}
         subtitle={
           isOwner
             ? t('manage.subheading')
@@ -122,7 +136,7 @@ export default function MembersPage(): ReactElement {
               ? t('manage.subheadingManager')
               : t('list.subheadingReadOnly')
         }
-        backTo={`/circles/${circleId}`}
+        backTo={base}
         rightAction={
           canManageMembers
             ? {
@@ -130,10 +144,27 @@ export default function MembersPage(): ReactElement {
                 label: t('invite.cta'),
                 onClick: team.openInvite,
                 offlineKind: 'change',
+                // A read-only (lapsed) circle: shown, never usable (mobile: "View only access").
+                ...(circle?.can_edit !== false ? {} : { disabled: true, title: t('overview:today.careTeam.viewOnly') }),
               }
             : undefined
         }
-      />
+      >
+        {!isLoading && !isError && circle != null ? (
+          <div className="px-5 pb-4">
+            {/* card-shell-ok: the member-count pill (mobile memberCountPill), a word-sized label. */}
+            <span
+              className="inline-flex items-center rounded-full border border-line-2 bg-bg-2 px-3 py-1 text-sm font-medium text-ink-2"
+              data-testid="care-team-count"
+            >
+              {/* Mobile's rule exactly: the singular for one member, the plural otherwise. */}
+              {members.length === 1
+                ? t('overview:today.careTeam.countOne', { count: 1 })
+                : t('overview:today.careTeam.countOther', { count: members.length })}
+            </span>
+          </div>
+        ) : null}
+      </PageMasthead>
 
       {/* Help only while the care team is still empty: nobody but you, nothing pending
           (owner 2026-11-08, mobile parity). */}
@@ -149,7 +180,7 @@ export default function MembersPage(): ReactElement {
           only when the owner is the lone member and there is no LIVE pending
           invite — an expired one has stopped being an invitation, so it no
           longer counts. Non-destructive, reuses the Invite trigger. */}
-      {isOwner && members.length === 1 && liveInvites.length === 0 ? (
+      {isOwner && circle?.can_edit !== false && members.length === 1 && liveInvites.length === 0 ? (
         <Card padding="lg" className="mx-5 mt-6 text-center">
           <h2 className="m-0 text-lg font-semibold text-ink">{t('list.soloTitle')}</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">{t('list.soloBody')}</p>
@@ -185,6 +216,51 @@ export default function MembersPage(): ReactElement {
             {declinedInvites.map(team.renderDeclinedInvite)}
           </Sheet>
         </div>
+      ) : null}
+
+      {/* Manage (owner): Edit circle (read-only circle: shown, never a link) and Delete circle,
+          which opens the settings page's type-to-confirm (`#danger`): one destructive confirm. */}
+      {circle != null && isOwner ? (
+        <section aria-labelledby="care-team-manage-heading" data-testid="care-team-manage" className="mt-10">
+          <SectionHeader
+            id="care-team-manage-heading"
+            title={t('overview:today.manage.title')}
+            className="mx-5"
+          />
+          <Sheet padding="none" className="mx-5 overflow-hidden">
+            {canEdit ? (
+              <SheetRowPressable to={`${base}/settings`} className="min-h-[52px] gap-3 px-[18px]">
+                <IconTile size={36} tone="moss" name="create-outline" />
+                <span className="min-w-0 flex-1 text-md font-medium text-ink">
+                  {t('overview:today.manage.editCircle')}
+                </span>
+                <Icon name="chevron-forward" size="inline" className="text-ink-3" />
+              </SheetRowPressable>
+            ) : (
+              <div
+                aria-disabled="true"
+                data-testid="care-team-edit-circle-disabled"
+                className="flex min-h-[52px] items-center gap-3 border-b border-line-2 px-[18px] opacity-50"
+              >
+                <IconTile size={36} tone="neutral" name="create-outline" />
+                <span className="min-w-0 flex-1 text-md font-medium text-ink-2">
+                  {t('overview:today.manage.editCircle')}
+                </span>
+              </div>
+            )}
+            <SheetRowPressable
+              to={`${base}/settings#danger`}
+              className="min-h-[52px] gap-3 px-[18px]"
+              data-testid="care-team-delete-circle"
+            >
+              <IconTile size={36} tone="terracotta" name="trash-outline" />
+              <span className="min-w-0 flex-1 text-md font-medium text-ink">
+                {t('overview:today.manage.deleteCircle')}
+              </span>
+              <Icon name="chevron-forward" size="inline" className="text-ink-3" />
+            </SheetRowPressable>
+          </Sheet>
+        </section>
       ) : null}
 
       {/* Non-owner: leave circle. */}

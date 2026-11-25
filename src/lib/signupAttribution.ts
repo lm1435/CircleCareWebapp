@@ -34,6 +34,30 @@ const MAX_LEN = 128;
 const HOSTNAME_RE = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
 /** Hosts that serve this app: a referrer from them is internal navigation, not a source. */
 const OWN_HOSTS: readonly string[] = ['my.circlecare.app'];
+/**
+ * OAuth / auth-broker hosts. After a redirect back from them the referrer is the provider, never a
+ * marketing source. The Supabase project host comes from the env (not hard-coded); any
+ * `*.supabase.co` host is also treated as ours.
+ */
+const AUTH_HOSTS: readonly string[] = ['accounts.google.com', 'appleid.apple.com'];
+
+function supabaseHost(): string | null {
+  try {
+    const raw = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    return raw ? asHostname(new URL(raw).hostname) : null;
+  } catch {
+    return null;
+  }
+}
+
+function isOwnOrAuthHost(host: string): boolean {
+  return (
+    OWN_HOSTS.includes(host) ||
+    AUTH_HOSTS.includes(host) ||
+    host.endsWith('.supabase.co') ||
+    host === supabaseHost()
+  );
+}
 
 type StoredField = 'utm_source' | 'utm_medium' | 'utm_campaign' | 'src' | 'ref';
 const FIELDS: readonly StoredField[] = ['utm_source', 'utm_medium', 'utm_campaign', 'src', 'ref'];
@@ -84,7 +108,7 @@ function referrerHost(referrer: string): string | null {
     } catch {
       // no window.location — fine
     }
-    if (OWN_HOSTS.includes(host) || host === here) return null;
+    if (isOwnOrAuthHost(host) || host === here) return null;
     return host;
   } catch {
     return null;
@@ -134,7 +158,8 @@ export function captureSignupAttribution(
     }
     // No usable `ref` param on this landing (and none stored): fall back to
     // the referrer's hostname. Only the host is ever read from document.referrer.
-    if (stored.ref === undefined) {
+    // Not on the OAuth return (/auth/callback): there the referrer is the provider, not a source.
+    if (stored.ref === undefined && !pathname.startsWith('/auth/callback')) {
       const host = referrerHost(referrer);
       if (host) {
         stored.ref = host;

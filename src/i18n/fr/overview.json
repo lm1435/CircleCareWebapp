@@ -8,6 +8,8 @@
     "tasksNote_one": "{{count}} en cours",
     "tasksNote_other": "{{count}} en cours",
     "vitals": "Constantes",
+    "vitalsNote": "Tension, poids",
+    "emergencyNote": "Médecins et contacts",
     "notesWrote": "{{who}} a écrit {{ago}}",
     "someone": "Quelqu’un",
     "notesEmpty": "Comment s’est passée la journée",
@@ -19,7 +21,7 @@
     "medsDefault": "Horaire et renouvellements",
     "medsEmpty": "Rien pour l’instant",
     "shifts": "Gardes",
-    "healthInfo": "Infos de santé",
+    "healthInfo": "Infos d’urgence",
     "activity": "Activité"
   },
   "appointments": {
@@ -100,15 +102,20 @@
       "titleMine": "Mon équipe d’aidants",
       "countOne": "{{count}} membre",
       "countOther": "{{count}} membres",
-      "invite": "Inviter un membre",
-      "viewOnly": "Accès en lecture seule",
-      "pending": "Invitations en attente",
-      "declined": "Invitations refusées"
+      "viewOnly": "Accès en lecture seule"
+    },
+    "careTeamRow": {
+      "you": "Vous",
+      "namesAnd": "{{names}} et {{last}}",
+      "namesMore": "{{names}} et {{count}} autres",
+      "pending_one": "{{count}} en attente",
+      "pending_other": "{{count}} en attente"
     },
     "manage": {
       "title": "Gérer",
       "editCircle": "Modifier le cercle",
       "deleteCircle": "Supprimer le cercle"
-    }
+    },
+    "circleSettings": "Paramètres du cercle"
   }
 }

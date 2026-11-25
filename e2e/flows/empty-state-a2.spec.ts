@@ -30,7 +30,7 @@ test.describe('Circles empty state (A2)', () => {
     await cookieLogin(context, person, baseURL);
     await page.goto('/circles', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByRole('heading', { level: 1, name: 'One place for their care' })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1, name: 'One place for care' })).toBeVisible({
       timeout: 30_000,
     });
     const card = page.getByRole('figure', { name: 'Example: Today for Rosa' });
@@ -38,7 +38,7 @@ test.describe('Circles empty state (A2)', () => {
     await expect(card.getByText('Example', { exact: true })).toBeVisible();
     await expect(card.getByText('You choose who gets reminders')).toBeVisible();
     await expect(card.getByText('Allergies, doctors and insurance in seconds', { exact: true })).toBeVisible();
-    await expect(page.getByText('Free to start. Medications and reminders are never paywalled.')).toBeVisible();
+    await expect(page.getByText('Free to start. Medications and reminders are always free.')).toBeVisible();
     await expect(page.getByText('Private & secure')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Check your invitations' })).toHaveAttribute('href', '/invites');
     await expect(page.getByRole('link', { name: 'Learn more' })).toHaveAttribute('href', '/help');
@@ -86,7 +86,7 @@ test.describe('Circles empty state (A2)', () => {
 
     await cookieLogin(context, invitee, baseURL);
     await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { level: 1, name: 'One place for their care' })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1, name: 'One place for care' })).toBeVisible({
       timeout: 30_000,
     });
     await expect(page.getByText('You have 1 pending invitation')).toBeVisible({ timeout: 15_000 });
@@ -99,7 +99,7 @@ test.describe('Circles empty state (A2)', () => {
     await cookieLogin(context, person, baseURL);
     await page.goto('/circles', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('html')).toHaveAttribute('lang', /^es/, { timeout: 20_000 });
-    await expect(page.getByRole('heading', { level: 1, name: 'Un solo lugar para su cuidado' })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1, name: 'Un solo lugar para el cuidado' })).toBeVisible({
       timeout: 30_000,
     });
     await expect(page.getByRole('figure', { name: 'Ejemplo: Hoy para Rosa' })).toBeVisible();
@@ -118,7 +118,7 @@ test.describe('Circles empty state (A2)', () => {
     await page.goto('/circles', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/circles\/[0-9a-f-]+/, { timeout: 30_000 });
     await expect(page.getByRole('figure', { name: /Example/ })).toHaveCount(0);
-    await expect(page.getByText('One place for their care')).toHaveCount(0);
+    await expect(page.getByText('One place for care')).toHaveCount(0);
     await expect(page.getByText('Today for Rosa')).toHaveCount(0);
   });
 });

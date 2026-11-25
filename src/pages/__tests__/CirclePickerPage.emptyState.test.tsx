@@ -110,7 +110,7 @@ describe('CirclePickerPage empty state (A2)', () => {
     it('greets by name in the eyebrow and the empty state owns the only h1', async () => {
       mockGetCircles.mockResolvedValue([]);
       renderPicker();
-      expect(await screen.findByRole('heading', { level: 1, name: 'One place for their care' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { level: 1, name: 'One place for care' })).toBeInTheDocument();
       expect(screen.getByText(/^Good (morning|afternoon|evening), Maria$/)).toBeInTheDocument();
       expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
       // The page header's editorial name steps aside for the empty state.
@@ -171,7 +171,7 @@ describe('CirclePickerPage empty state (A2)', () => {
       expect(screen.queryByTestId('empty-example-card')).not.toBeInTheDocument();
       expect(screen.queryByText('Example')).not.toBeInTheDocument();
       expect(screen.queryByText(/Rosa/)).not.toBeInTheDocument();
-      expect(screen.queryByText('One place for their care')).not.toBeInTheDocument();
+      expect(screen.queryByText('One place for care')).not.toBeInTheDocument();
       expect(viewed).not.toHaveBeenCalled();
     });
 
@@ -188,7 +188,7 @@ describe('CirclePickerPage empty state (A2)', () => {
     it('no banner when there is no pending invite', async () => {
       mockGetCircles.mockResolvedValue([]);
       renderPicker();
-      await screen.findByRole('heading', { level: 1, name: 'One place for their care' });
+      await screen.findByRole('heading', { level: 1, name: 'One place for care' });
       await vi.waitFor(() => expect(mockGetPendingInvites).toHaveBeenCalled());
       expect(screen.queryByText(/pending invitation/)).not.toBeInTheDocument();
     });

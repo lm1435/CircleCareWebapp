@@ -8,6 +8,8 @@
     "tasksNote_one": "{{count}} open",
     "tasksNote_other": "{{count}} open",
     "vitals": "Vitals",
+    "vitalsNote": "Blood pressure, weight",
+    "emergencyNote": "Doctors and contacts",
     "notesWrote": "{{who}} wrote {{ago}}",
     "someone": "Someone",
     "notesEmpty": "How today went",
@@ -19,7 +21,7 @@
     "medsDefault": "Schedule and refills",
     "medsEmpty": "Nothing yet",
     "shifts": "Shifts",
-    "healthInfo": "Health info",
+    "healthInfo": "Emergency info",
     "activity": "Activity"
   },
   "appointments": {
@@ -100,15 +102,20 @@
       "titleMine": "My care team",
       "countOne": "{{count}} member",
       "countOther": "{{count}} members",
-      "invite": "Invite member",
-      "viewOnly": "View only access",
-      "pending": "Pending invitations",
-      "declined": "Declined invites"
+      "viewOnly": "View only access"
+    },
+    "careTeamRow": {
+      "you": "You",
+      "namesAnd": "{{names}} and {{last}}",
+      "namesMore": "{{names}} and {{count}} more",
+      "pending_one": "{{count}} pending",
+      "pending_other": "{{count}} pending"
     },
     "manage": {
       "title": "Manage",
       "editCircle": "Edit circle",
       "deleteCircle": "Delete circle"
-    }
+    },
+    "circleSettings": "Circle settings"
   }
 }

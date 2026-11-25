@@ -61,7 +61,7 @@ const FR_NAV = [
   'Tâches',
   'Activité',
   'Documents',
-  'Membres',
+  'Équipe d’aidants',
   'Constantes',
   'Paramètres du cercle',
 ];
@@ -70,7 +70,7 @@ const EN_NAV = [
   'Calendar',
   'Tasks',
   'Activity',
-  'Members',
+  'Care team',
   'Vitals',
   'Settings',
 ];
@@ -105,7 +105,7 @@ const CIRCLE_PAGES: { path: string; heading: string | RegExp | null }[] = [
   { path: '/emergency', heading: 'Infos d’urgence' },
   { path: '/documents', heading: 'Documents' },
   { path: '/vitals', heading: 'Constantes' },
-  { path: '/members', heading: 'Membres' },
+  { path: '/members', heading: 'Équipe d’aidants' },
   // The loaded settings page heading names the recipient ("Modifier {{name}}");
   // the old "Paramètres du cercle" title is only the loading skeleton's.
   { path: '/settings', heading: /^Modifier / },

@@ -15,8 +15,8 @@ import { queryKeys } from '@/lib/queryKeys';
  * `updateCircleSchema` and sent as-is through the same PATCH (`useUpdateCircle`). Never built from a
  * `Date`, so no browser zone can shift it.
  *
- * Save writes, waits for the circle detail to refetch (so the page and an export right after read the
- * new DOB), fires `dob_added {surface}`, then `onSaved`. Cancel writes nothing.
+ * Save writes, starts a circle detail refetch WITHOUT awaiting it (offline it pauses; the page and an
+ * export read the new DOB once it lands), fires `dob_added {surface}`, then `onSaved`. Cancel writes nothing.
  */
 export interface RecipientDobDialogProps {
   circleId: string;
@@ -55,7 +55,10 @@ export function RecipientDobDialog({
       } catch {
         // Analytics never costs the person the save.
       }
-      await queryClient.invalidateQueries({ queryKey: queryKeys.circleDetail(circleId) });
+      // Fire, never await: offline the refetch pauses forever, and the PATCH already succeeded.
+      void queryClient
+        .invalidateQueries({ queryKey: queryKeys.circleDetail(circleId) })
+        .catch(() => {});
       onSaved();
     } catch {
       // The hook already toasts the reason; the dialog stays open for a retry.

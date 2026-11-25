@@ -25,8 +25,8 @@
       "invitedHintPrefix": "Already invited by email?",
       "invitedHintLink": "Check your invitations",
       "companion": "Prefer your phone? Get the companion app.",
-      "a2Title": "One place for their care",
-      "a2Subtitle": "A care circle keeps one person’s medications, appointments, tasks, notes and documents together, shared with the family, friends or paid caregiver you invite.",
+      "a2Title": "One place for care",
+      "a2Subtitle": "Keep one person’s care in one place, shared with the family, friends or paid caregiver you invite.",
       "example": "Example",
       "exampleTitle": "Today for Rosa",
       "exampleDose": "Rosa took her 8:00 AM dose",
@@ -39,7 +39,7 @@
       "exampleEmergencySub": "Allergies, doctors and insurance in seconds",
       "start": "Start a care circle",
       "inviteCode": "I have an invite code",
-      "freeNote": "Free to start. Medications and reminders are never paywalled.",
+      "freeNote": "Free to start. Medications and reminders are always free.",
       "secure": "Private & secure"
     }
   },
@@ -69,7 +69,6 @@
     "notificationsOffExplainNoName": "This member hasn't turned on notifications in the CircleCare app, so reminders won't reach their phone."
   },
   "list": {
-    "heading": "Members",
     "subheadingReadOnly": "Everyone helping coordinate care in this circle.",
     "joined": "Joined {{date}}",
     "you": "(you)",

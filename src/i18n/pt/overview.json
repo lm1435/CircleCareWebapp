@@ -8,6 +8,8 @@
     "tasksNote_one": "{{count}} em aberto",
     "tasksNote_other": "{{count}} em aberto",
     "vitals": "Sinais vitais",
+    "vitalsNote": "Pressão arterial, peso",
+    "emergencyNote": "Médicos e contatos",
     "notesWrote": "{{who}} escreveu {{ago}}",
     "someone": "Alguém",
     "notesEmpty": "Como foi o dia",
@@ -20,7 +22,7 @@
     "medsDefault": "Horários e reposições",
     "medsEmpty": "Nada ainda",
     "shifts": "Plantões",
-    "healthInfo": "Informações de saúde",
+    "healthInfo": "Info de emergência",
     "activity": "Atividade"
   },
   "appointments": {
@@ -103,15 +105,20 @@
       "titleMine": "Minha equipe de cuidado",
       "countOne": "{{count}} membro",
       "countOther": "{{count}} membros",
-      "invite": "Convidar membro",
-      "viewOnly": "Acesso somente de visualização",
-      "pending": "Convites pendentes",
-      "declined": "Convites recusados"
+      "viewOnly": "Acesso somente de visualização"
+    },
+    "careTeamRow": {
+      "you": "Você",
+      "namesAnd": "{{names}} e {{last}}",
+      "namesMore": "{{names}} e mais {{count}}",
+      "pending_one": "{{count}} em espera",
+      "pending_other": "{{count}} em espera"
     },
     "manage": {
       "title": "Gerenciar",
       "editCircle": "Editar círculo",
       "deleteCircle": "Excluir círculo"
-    }
+    },
+    "circleSettings": "Configurações do círculo"
   }
 }

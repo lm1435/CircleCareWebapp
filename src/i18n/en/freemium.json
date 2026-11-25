@@ -9,7 +9,8 @@
     "memberBanner": "This circle is view-only right now because the owner's subscription ended. Everything is still here to see, and editing comes back if the owner re-subscribes."
   },
   "circleSelection": {
-    "banner": "Your subscription ended. Choose which circle to keep with free access.",
+    "bannerTitle": "Your subscription ended",
+    "bannerBody": "Choose which circle to keep with free access. Your other circles will become read-only.",
     "choose": "Choose circle",
     "title": "Pick one circle to keep",
     "pickLabel": "Choose a circle to keep",

@@ -999,6 +999,29 @@ export const Analytics = {
   // web's deliberately does not.)
   /** A Quick Access row was opened. `destination` is the row id (e.g. 'calendar'). */
   quickAccessTapped: (destination: string) => capture('quick_access_tapped', { destination }),
+  /**
+   * The Care team page was opened from Today (1.4.4 navigation fixes; same name and enum as
+   * mobile). `header` = the gear in the Today header, `today_row` = the Care team row.
+   * Enum only, no circle_id.
+   */
+  careTeamOpened: (source: 'header' | 'today_row') => capture('care_team_opened', { source }),
+  /** Circle settings (Edit circle) opened from the owner's gear on Today (mobile parity, 2026-11-25). */
+  circleSettingsOpened: (source: 'today_header', viewer: 'owner' | 'care_recipient' = 'owner') =>
+    capture('circle_settings_opened', { source, viewer }),
+  /** Edit circle SAVED (same name and enums as mobile). Enums and booleans only: no ids, no values. */
+  circleDetailsSaved: (p: {
+    viewer: 'owner' | 'care_recipient';
+    name_changed: boolean;
+    dob_changed: boolean;
+  }) =>
+    capture('circle_details_saved', {
+      viewer: p.viewer === 'care_recipient' ? 'care_recipient' : 'owner',
+      name_changed: p.name_changed === true,
+      dob_changed: p.dob_changed === true,
+    }),
+  /** Account Settings (/profile) was opened from the Today header. Enum only, no ids. */
+  accountSettingsOpened: (source: 'today_header') =>
+    capture('account_settings_opened', { source }),
 
   // --- Today (simple UI 1.3.1; docs/plans/simple-ui-1-3-1.md "Analytics contract") ---
   // Same names and props as mobile. Enums, counts and booleans only; NO circle_id.

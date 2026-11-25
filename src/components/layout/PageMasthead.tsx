@@ -60,6 +60,16 @@ function useActionGuard(): (action: MastheadAction) => {
       : { onClick: action.onClick };
 }
 
+/** A round link control that exists only in the chrome strip below xl (no labelled xl twin). */
+export interface MastheadChromeLink {
+  name: IconName;
+  /** The control's accessible name (the glyph is decorative). */
+  label: string;
+  to: string;
+  onClick?: () => void;
+  testId?: string;
+}
+
 export interface PageMastheadProps {
   /** Translated section name for the eyebrow (e.g. "Care", "Health"). Empty renders no eyebrow. */
   section: string;
@@ -76,6 +86,12 @@ export interface PageMastheadProps {
    * a `rightAction` — a lone secondary action is just the right action.
    */
   secondaryAction?: MastheadAction;
+  /**
+   * Round link controls for the chrome strip BELOW xl only, left to right (Today: account Settings,
+   * Care team). At xl the sidebar is the way to those pages, so nothing renders there. Combines
+   * with `rightAction` (its slot widens to fit them all).
+   */
+  chromeLinks?: readonly MastheadChromeLink[];
   /** Calendar header density: reserves the subtitle's lines so swapping text never moves the controls. */
   tight?: boolean;
   /**
@@ -100,6 +116,9 @@ const SPACER = 'flex h-11 w-11 shrink-0 items-center justify-center';
  */
 const SPACER_WIDE = 'flex h-11 w-[96px] shrink-0 items-center gap-2';
 
+/** Three round controls: 3 x 44 + 2 x 8. */
+const SPACER_WIDER = 'flex h-11 w-[148px] shrink-0 items-center gap-2';
+
 /**
  * The page header every interior page wears (spec §5.4; mobile `Shell`'s top
  * bar plus its editorial header).
@@ -121,13 +140,17 @@ export function PageMasthead({
   backTo,
   rightAction,
   secondaryAction: secondaryActionProp,
+  chromeLinks,
   tight = false,
   leading,
   children,
 }: PageMastheadProps): ReactElement {
   const { t } = useTranslation('common');
   const secondaryAction = rightAction ? secondaryActionProp : undefined;
-  const endSlot = secondaryAction ? SPACER_WIDE : SPACER;
+  const chromeCount = chromeLinks?.length ?? 0;
+  const controlCount = chromeCount + (rightAction ? 1 : 0) + (secondaryAction ? 1 : 0);
+  const endSlot =
+    controlCount > 2 ? SPACER_WIDER : controlCount === 2 ? SPACER_WIDE : SPACER;
   const guard = useActionGuard();
 
   return (
@@ -163,9 +186,24 @@ export function PageMasthead({
             sheet (spec §6.6) — print.css hides the whole header anyway, the
             attribute makes the intent explicit and testable. */}
         <span
-          className={`${endSlot} ${secondaryAction ? 'justify-end' : ''}`}
+          className={`${endSlot} ${controlCount > 1 ? 'justify-end' : ''} ${
+            // Only chrome links (all xl:hidden) and no right/secondary action: nothing shows at
+            // xl, so drop the reserved slot instead of leaving an empty 44-148px gap.
+            chromeCount > 0 && !rightAction && !secondaryAction ? 'xl:hidden' : ''
+          }`}
           data-print-hide
         >
+          {chromeLinks?.map((link) => (
+            <CircleButton
+              key={link.to + link.name}
+              name={link.name}
+              label={link.label}
+              to={link.to}
+              onClick={link.onClick}
+              data-testid={link.testId}
+              className="xl:hidden"
+            />
+          ))}
           {secondaryAction && (
             <CircleButton
               name={secondaryAction.name}

@@ -7,6 +7,7 @@ import {
   viewerCanManageMembers,
   viewerCircleRole,
   viewerOwnsCircle,
+  viewerCanEditOwnRecipientDetails,
 } from '@/lib/premiumOwnership';
 import { useAuthStore } from '@/store/authStore';
 import type { Circle, CircleAccessLevel } from '@/api/circles';
@@ -84,6 +85,8 @@ export interface UseCircleResult {
   hasShifts: boolean;
   /** The signed-in user owns this circle (settings, billing, med reminders). */
   isOwner: boolean;
+  /** The signed-in CARE RECIPIENT (not the owner) may edit their own name + date of birth (1.4.4). */
+  canEditOwnRecipientDetails: boolean;
   /**
    * The signed-in user may invite, manage invites and remove members — the
    * owner, or a Manager. From `viewer_permissions`; owner fallback on an older
@@ -132,6 +135,7 @@ export function useCircle(circleId: string): UseCircleResult {
     viewOnly: circle?.view_only ?? false,
     hasShifts: circle?.has_shifts ?? false,
     isOwner: viewerOwnsCircle(circle, currentUserId),
+    canEditOwnRecipientDetails: viewerCanEditOwnRecipientDetails(circle, currentUserId),
     canManageMembers: viewerCanManageMembers(circle, currentUserId),
     canAssignManager: viewerCanAssignManager(circle, currentUserId),
     viewerRole: viewerCircleRole(circle, currentUserId),

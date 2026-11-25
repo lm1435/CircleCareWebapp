@@ -305,7 +305,7 @@ export default function CirclePickerPage(): ReactElement {
           </Button>
         }
         joinAction={
-          <Button size="lg" variant="outline" onClick={() => setShowJoin(true)} offlineKind="change">
+          <Button size="sm" variant="outline" onClick={() => setShowJoin(true)} offlineKind="change">
             {t('picker.empty.inviteCode')}
           </Button>
         }

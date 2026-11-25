@@ -9,7 +9,8 @@
     "memberBanner": "Este círculo está en solo lectura porque terminó la suscripción de la persona titular. Todo sigue aquí para consultarlo, y la edición volverá si la persona titular se vuelve a suscribir."
   },
   "circleSelection": {
-    "banner": "Tu suscripción terminó. Elige qué círculo conservar con acceso gratuito.",
+    "bannerTitle": "Tu suscripción terminó",
+    "bannerBody": "Elige qué círculo conservar con acceso gratuito. Tus otros círculos serán de solo lectura.",
     "choose": "Elegir círculo",
     "title": "Elige un círculo para conservar",
     "pickLabel": "Selecciona el círculo que quieres conservar",

@@ -19,6 +19,7 @@ import type { PendingInvite } from '@/api/invites';
 import { formatInviteExpiryDate } from '@/lib/inviteExpiry';
 import { Analytics } from '@/lib/analytics';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
+import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 
 // Task 5.5 — list the current user's pending invites with Accept.
 //
@@ -178,6 +179,7 @@ export default function PendingInvitesPage(): ReactElement {
           icon="mail-outline"
           title={t('pending.emptyTitle')}
           description={t('pending.emptyBody')}
+          actions={<HowDoesThisWork slug="join-a-circle" />}
         />
       </div>
     );

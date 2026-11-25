@@ -101,7 +101,7 @@ describe('labels / keys: 1.4.2 types', () => {
     expect(NEW_ACTIONS.map((a) => replyActionLabel(t, a))).toEqual([
       'Open Activity',
       'Open Medications',
-      'Open Health info',
+      'Open Emergency info',
       'Open Vitals',
       'See Care team',
       'Add a medication',

@@ -25,8 +25,8 @@
       "invitedHintPrefix": "Une invitation reçue par e-mail ?",
       "invitedHintLink": "Consultez vos invitations",
       "companion": "Vous préférez votre téléphone ? Téléchargez l’application mobile.",
-      "a2Title": "Un seul endroit pour ses soins",
-      "a2Subtitle": "Un cercle de soins réunit les médicaments, rendez-vous, tâches, notes et documents d’une personne, partagés avec la famille, les amis ou l’aidant rémunéré que vous invitez.",
+      "a2Title": "Un seul endroit pour les soins",
+      "a2Subtitle": "Réunissez les soins d’une personne au même endroit, partagés avec la famille, les amis ou l’aidant rémunéré que vous invitez.",
       "example": "Exemple",
       "exampleTitle": "Aujourd’hui pour Rosa",
       "exampleDose": "Rosa a pris sa dose de 8 h 00",
@@ -39,7 +39,7 @@
       "exampleEmergencySub": "Allergies, médecins et assurance en quelques secondes",
       "start": "Créer un cercle de soins",
       "inviteCode": "J’ai un code d’invitation",
-      "freeNote": "Gratuit pour commencer. Les médicaments et les rappels ne sont jamais payants.",
+      "freeNote": "Gratuit pour commencer. Les médicaments et les rappels sont toujours gratuits.",
       "secure": "Privé et sécurisé"
     }
   },
@@ -69,7 +69,6 @@
     "notificationsOffExplainNoName": "Ce membre n’a pas activé les notifications dans l’application CircleCare : les rappels n’arriveront donc pas sur son téléphone."
   },
   "list": {
-    "heading": "Membres",
     "subheadingReadOnly": "Toutes les personnes qui aident à coordonner les soins dans ce cercle.",
     "joined": "Dans le cercle depuis le {{date}}",
     "you": "(vous)",

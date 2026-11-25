@@ -145,8 +145,8 @@ export function FloatingNavBar({
       <TabCell
         to={`${base}/calendar`}
         active={CARE_SECTIONS.includes(section)}
-        icon="calendar-outline"
-        iconActive="calendar"
+        icon="clipboard-outline"
+        iconActive="clipboard"
         label={t('nav.careShort')}
       />
 

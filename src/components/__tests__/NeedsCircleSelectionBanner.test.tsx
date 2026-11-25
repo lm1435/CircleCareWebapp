@@ -13,7 +13,8 @@ import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBan
 
 const mockedGet = apiClient.get as unknown as Mock;
 
-const BANNER_TEXT = 'Your subscription ended. Choose which circle to keep with free access.';
+const BANNER_TEXT = 'Your subscription ended';
+const BANNER_BODY = 'Choose which circle to keep with free access. Your other circles will become read-only.';
 
 function renderBanner(): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -36,6 +37,7 @@ describe('NeedsCircleSelectionBanner', () => {
     renderBanner();
 
     expect(await screen.findByText(BANNER_TEXT)).toBeInTheDocument();
+    expect(screen.getByText(BANNER_BODY)).toBeInTheDocument();
     expect(mockedGet).toHaveBeenCalledWith('/subscription-status');
     expect(screen.getByRole('button', { name: 'Choose circle' })).toBeInTheDocument();
   });
@@ -46,6 +48,7 @@ describe('NeedsCircleSelectionBanner', () => {
 
     await waitFor(() => expect(mockedGet).toHaveBeenCalledWith('/subscription-status'));
     expect(screen.queryByText(BANNER_TEXT)).not.toBeInTheDocument();
+    expect(screen.queryByText(BANNER_BODY)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Choose circle' })).not.toBeInTheDocument();
   });
 

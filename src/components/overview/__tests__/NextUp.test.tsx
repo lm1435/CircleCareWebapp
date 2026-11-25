@@ -342,6 +342,21 @@ describe('NextUp', () => {
       expect(screen.queryByRole('link', { name: /All of today/ })).not.toBeInTheDocument();
     });
 
+    it('empty: sits under the same "Next up" section header, and the line is body ink, not the secondary grey', () => {
+      renderNextUp();
+      const heading = screen.getByText('Next up');
+      expect(heading.closest('section')).toContainElement(screen.getByText('Nothing else scheduled for Mom today.'));
+      const line = screen.getByText('Nothing else scheduled for Mom today.');
+      expect(line.className).toContain('text-ink');
+      expect(line.className).not.toContain('text-ink-2');
+    });
+
+    it('with items: no empty line, header unchanged', () => {
+      renderNextUp({ items: [dose('1')] });
+      expect(screen.getByText('Next up')).toBeInTheDocument();
+      expect(screen.queryByText(/Nothing else scheduled/)).not.toBeInTheDocument();
+    });
+
     it('empty, self-care: no name', () => {
       renderNextUp({ isSelfCare: true });
       expect(screen.getByText('Nothing else scheduled for you today.')).toBeInTheDocument();

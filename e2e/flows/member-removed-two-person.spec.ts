@@ -86,7 +86,7 @@ async function scene(request: APIRequestContext): Promise<Scene> {
 /** The owner removes the member through the real Members page (menu → Remove → confirm). */
 async function ownerRemovesViaUi(ownerPage: Page, s: Scene): Promise<void> {
   await ownerPage.goto(`/circles/${s.circleId}/members`, { waitUntil: 'domcontentloaded' });
-  await expect(ownerPage.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
+  await expect(ownerPage.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 20_000 });
   await ownerPage.getByRole('button', { name: `Actions for ${s.memberName}`, exact: true }).click();
   await ownerPage.getByRole('menuitem', { name: 'Remove', exact: true }).click();
   const dialog = ownerPage.getByRole('dialog');

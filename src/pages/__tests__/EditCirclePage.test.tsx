@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import EditCirclePage from '../EditCirclePage';
 import type { CircleDetail } from '@/api/circleMembers';
+import { Analytics } from '@/lib/analytics';
 
 // Plan Stage 8, Task 8.5 — EditCirclePage slice. Mocks useCircle, the admin
 // mutations, and the auth store so the test focuses on page behavior:
@@ -394,5 +395,90 @@ describe('EditCirclePage dob_added', () => {
     await waitFor(() => expect(updateMutate).toHaveBeenCalled());
     expect(added).not.toHaveBeenCalled();
     added.mockRestore();
+  });
+});
+
+
+// 1.4.4: CARE RECIPIENT MODE. The recipient (not the owner) edits ONLY name + date of birth; the server
+// flag opens it, fails closed, and never on a read-only / view-only circle.
+describe('EditCirclePage: care recipient mode (1.4.4)', () => {
+  // Earlier suites install an onSuccess-calling mutate; these tests drive the callbacks by hand.
+  beforeEach(() => {
+    updateMutate.mockReset();
+  });
+
+  const recipientCircle = () => makeCircle({ owner_id: 'someone-else', viewer_can_edit_recipient_details: true });
+  const recipientResult = (extra: Record<string, unknown> = {}) =>
+    mockCircleResult(recipientCircle(), {
+      canEditOwnRecipientDetails: true,
+      canEdit: true,
+      viewOnly: false,
+      ...extra,
+    });
+
+  it('POSITIVE: the flagged recipient gets name + DOB, and NO time zone card and NO delete / danger zone', () => {
+    recipientResult();
+    renderPage();
+    expect(screen.getByLabelText(/Care recipient name/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Date of birth')).toBeInTheDocument();
+    expect(screen.queryByText('Only the circle owner can edit this')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete circle' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Danger zone')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Time zone/i)).not.toBeInTheDocument();
+  });
+
+  it('POSITIVE: a DOB change sends only {recipient_name, recipient_dob?} and fires circle_details_saved{care_recipient, dob only}', async () => {
+    const user = userEvent.setup();
+    const saved = vi.spyOn(Analytics, 'circleDetailsSaved').mockImplementation(() => {});
+    recipientResult();
+    renderPage();
+    const dob = screen.getByLabelText('Date of birth');
+    await user.clear(dob);
+    await user.type(dob, '1950-06-15');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(updateMutate).toHaveBeenCalledTimes(1));
+    expect(updateMutate.mock.calls[0][0]).toEqual({ recipient_name: 'Rose Meza', recipient_dob: '1950-06-15' });
+    // The mutation has not answered yet: no event until it succeeds.
+    expect(saved).not.toHaveBeenCalled();
+    (updateMutate.mock.calls[0][1] as { onSuccess: () => void }).onSuccess();
+    expect(saved.mock.calls).toEqual([[{ viewer: 'care_recipient', name_changed: false, dob_changed: true }]]);
+    saved.mockRestore();
+  });
+
+  it('POSITIVE: the owner saving a rename fires circle_details_saved{owner, name only}', async () => {
+    const user = userEvent.setup();
+    const saved = vi.spyOn(Analytics, 'circleDetailsSaved').mockImplementation(() => {});
+    mockCircleResult(makeCircle());
+    renderPage();
+    await user.type(screen.getByLabelText(/Care recipient name/), ' Jr.');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(updateMutate).toHaveBeenCalledTimes(1));
+    (updateMutate.mock.calls[0][1] as { onSuccess: () => void }).onSuccess();
+    expect(saved.mock.calls).toEqual([[{ viewer: 'owner', name_changed: true, dob_changed: false }]]);
+    saved.mockRestore();
+  });
+
+  it('NEGATIVE: a failed save fires no circle_details_saved', async () => {
+    const user = userEvent.setup();
+    const saved = vi.spyOn(Analytics, 'circleDetailsSaved').mockImplementation(() => {});
+    recipientResult();
+    renderPage();
+    await user.type(screen.getByLabelText(/Care recipient name/), ' Jr.');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(updateMutate).toHaveBeenCalledTimes(1));
+    // onError / onSettled only: onSuccess is never invoked.
+    expect(saved).not.toHaveBeenCalled();
+    saved.mockRestore();
+  });
+
+  it.each([
+    ['the flag is false / absent', { canEditOwnRecipientDetails: false }],
+    ['the circle cannot be edited (frozen / lapsed)', { canEdit: false }],
+    ['the seat is view-only', { viewOnly: true }],
+  ])('NEGATIVE: %s -> the read-only notice, no form', (_label, extra) => {
+    recipientResult(extra);
+    renderPage();
+    expect(screen.getByText('Only the circle owner can edit this')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Care recipient name/)).not.toBeInTheDocument();
   });
 });

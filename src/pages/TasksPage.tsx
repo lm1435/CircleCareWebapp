@@ -15,6 +15,7 @@ import {
   type MoreMenuItem,
 } from '@/components/ui';
 import { PageMasthead } from '@/components/layout/PageMasthead';
+import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { HOLD, tasksSummary } from '@/lib/pageSummaries';
 import { CareTabs } from '@/components/layout/CareTabs';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
@@ -174,6 +175,10 @@ export default function TasksPage(): ReactElement {
             )
           }
         />
+        {/* Every other Care empty page links its help article; Tasks too (owner 2026-11-25: consistency). */}
+        <div className="flex justify-center">
+          <HowDoesThisWork slug="tasks" />
+        </div>
       </div>
     );
   } else {
@@ -268,6 +273,8 @@ export default function TasksPage(): ReactElement {
             </button>
           )}
         />
+        {/* No sort pill once the list has answered empty: there is nothing to order (mobile parity, 2026-11-25). */}
+        {!(tasksQuery.data && tasks.length === 0) && (
         <MoreMenu
           items={sortItems}
           align="left"
@@ -284,6 +291,7 @@ export default function TasksPage(): ReactElement {
             </button>
           )}
         />
+        )}
       </div>
 
       {body}

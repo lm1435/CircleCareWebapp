@@ -9,7 +9,8 @@
     "memberBanner": "Ce cercle est en lecture seule pour le moment, car l’abonnement du propriétaire a pris fin. Tout est toujours consultable, et les modifications reviendront si le propriétaire se réabonne."
   },
   "circleSelection": {
-    "banner": "Votre abonnement a pris fin. Choisissez le cercle à conserver avec l’accès gratuit.",
+    "bannerTitle": "Votre abonnement est terminé",
+    "bannerBody": "Choisissez le cercle à conserver avec l’accès gratuit. Vos autres cercles passeront en lecture seule.",
     "choose": "Choisir un cercle",
     "title": "Choisissez un cercle à conserver",
     "pickLabel": "Choisir un cercle à conserver",

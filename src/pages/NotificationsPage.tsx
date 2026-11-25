@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, Eyebrow, Icon, Skeleton, Text, useToast } from '@/components/ui';
+import { Button, Card, EmptyState, Eyebrow, Icon, Skeleton, Text, useToast } from '@/components/ui';
+import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { RemovedState } from '@/components/RemovedState';
 import { useCircles } from '@/hooks/useCircles';
 import { useHourCycle } from '@/hooks/useHourCycle';
@@ -248,9 +249,13 @@ export function InboxPage({ circleId }: InboxPageProps = {}): ReactElement {
   } else if (visible.length === 0) {
     content = (
       <Card variant="outlined" padding="md" data-testid="inbox-empty">
-        <Text variant="body" className="text-ink-2!">
-          {t('inbox.empty')}
-        </Text>
+        <EmptyState
+          icon="notifications-outline"
+          tone="moss"
+          title={t('inbox.emptyTitle')}
+          description={t('inbox.empty')}
+          actions={<HowDoesThisWork slug="reminders-and-alerts" />}
+        />
       </Card>
     );
   } else {

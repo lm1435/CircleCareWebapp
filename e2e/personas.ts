@@ -61,6 +61,7 @@ export const PERSONAS = [
   'frozenCircleOwner',
   'archivedCircleOwner',
   'premiumManager',
+  'careRecipientMember',
 ] as const;
 
 export type PersonaName = (typeof PERSONAS)[number];
@@ -208,6 +209,22 @@ export const PERSONA_EXPECTATIONS: Record<PersonaName, PersonaExpectation> = {
   // rows are a plain member. AI suggestions are not probed (an allowed caller
   // would reach the model).
   premiumManager: {
+    detail: { access_level: 'full', can_edit: true, view_only: false, is_premium_circle: true },
+    listed: true,
+    read_only: false,
+    aiEntry: 'available',
+    aiSuggestions: null,
+    writeGate: null,
+    shiftsEntry: 'available',
+    needsCircleSelection: false,
+    isOwner: false,
+    archived: false,
+  },
+  // CARE RECIPIENT who joined by invite (1.4.4): a non-owner member of a PREMIUM host's
+  // circle whose membership row has is_care_recipient = true. Flags are a premium
+  // non-owner's; what makes the persona special is `viewer_can_edit_recipient_details`
+  // (the recipient may edit ONLY the recipient name + date of birth).
+  careRecipientMember: {
     detail: { access_level: 'full', can_edit: true, view_only: false, is_premium_circle: true },
     listed: true,
     read_only: false,
@@ -403,6 +420,7 @@ const PERSONA_TOKEN: Record<Exclude<PersonaName, 'premiumOwner'>, string> = {
   frozenCircleOwner: 'frozenowner',
   archivedCircleOwner: 'archivedowner',
   premiumManager: 'manager',
+  careRecipientMember: 'recipient',
 };
 
 function personaEmail(slot: string, token: string): string {
@@ -494,6 +512,31 @@ async function provision(slot: string, persona: Exclude<PersonaName, 'premiumOwn
         update public.users set first_name = 'Pia', last_name = 'Peer' where id = ${sqlStr(peerId)}::uuid;
         update public.users set first_name = 'Cal', last_name = 'Plain' where id = ${sqlStr(plainId)}::uuid;
         update public.users set first_name = 'Hana', last_name = 'Host' where id = ${sqlStr(hostId)}::uuid;
+      `);
+      const seeded = await seedMissingRecords(circleId, hostId);
+      return {
+        ...base, userId, circleId, circleIds: [circleId], ownerUserId: hostId, ownerEmail: hostEmail,
+        liveCircleIds: [circleId], archivedCircleIds: [], seeded,
+      };
+    }
+    case 'careRecipientMember': {
+      // Premium host; the persona joins as the circle's ONLY care recipient. A partial
+      // unique index allows one recipient per circle and the clone copies the template's
+      // memberships, so every other recipient flag is cleared first. Name and DOB are
+      // pinned so specs can assert exact values.
+      const hostEmail = personaEmail(slot, `${token}-host`);
+      const hostId = await account(hostEmail, 'premium');
+      const circleId = clone(template, 0, hostId);
+      const userId = await account(email, 'free');
+      sqlExec(`
+        update circle_memberships set is_care_recipient = false where circle_id = ${sqlStr(circleId)}::uuid;
+      `);
+      addCaregiver(circleId, userId, 'last');
+      sqlExec(`
+        update circle_memberships set is_care_recipient = true
+         where circle_id = ${sqlStr(circleId)}::uuid and user_id = ${sqlStr(userId)}::uuid;
+        update care_circles set recipient_name = 'Rita Recipient', recipient_dob = '1950-03-15'
+         where id = ${sqlStr(circleId)}::uuid;
       `);
       const seeded = await seedMissingRecords(circleId, hostId);
       return {

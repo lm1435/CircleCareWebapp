@@ -178,6 +178,8 @@ function renderPage() {
 const mockedPatch = vi.mocked(apiClient.patch);
 let detailDob: string | null = null;
 let ownerId = 'owner-1';
+/** The server's 1.4.4 `viewer_can_edit_recipient_details` (undefined = absent, an older backend). */
+let recipientFlag: boolean | undefined;
 /** The list's `read_only` (a lapsed, non-selected free-tier circle). */
 let listReadOnly = false;
 /** The recipient's name on both the list and the detail ('' = not set: the circle name is the fallback). */
@@ -206,6 +208,7 @@ function mockDobApi(canEdit: boolean): void {
             owner_id: ownerId,
             recipient_name: recipientNameValue,
             recipient_dob: detailDob,
+            ...(recipientFlag === undefined ? {} : { viewer_can_edit_recipient_details: recipientFlag }),
             can_edit: canEdit,
             view_only: !canEdit,
             access_level: canEdit ? 'edit' : 'view',
@@ -235,6 +238,7 @@ beforeEach(() => {
   });
   detailDob = null;
   ownerId = 'owner-1';
+  recipientFlag = undefined;
   listReadOnly = false;
   recipientNameValue = 'Rose';
   onlineManager.setOnline(true);
@@ -320,6 +324,38 @@ describe('Emergency info: Add date of birth', () => {
     renderPage();
     await screen.findByText('Peanuts');
     expect(screen.queryByTestId('recipient-add-dob')).not.toBeInTheDocument();
+  });
+});
+
+describe('Emergency info: Add date of birth, care recipient (1.4.4)', () => {
+  it('POSITIVE: the flagged care recipient (not the owner) sees the row and saves with a recipient_dob-only PATCH', async () => {
+    ownerId = 'someone-else';
+    recipientFlag = true;
+    mockDobApi(true);
+    renderPage();
+    await addDob('1950-06-15');
+    await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1));
+    expect(mockedPatch).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}`, { recipient_dob: '1950-06-15' });
+    expect(dobAdded).toHaveBeenCalledWith('emergency_prompt');
+  });
+
+  it('NEGATIVE: a plain member (flag false) sees no row', async () => {
+    ownerId = 'someone-else';
+    recipientFlag = false;
+    mockDobApi(true);
+    renderPage();
+    await screen.findByText('Peanuts');
+    expect(screen.queryByTestId('recipient-add-dob')).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: the flagged recipient on a view-only / read-only circle sees no row', async () => {
+    ownerId = 'someone-else';
+    recipientFlag = true;
+    mockDobApi(false);
+    renderPage();
+    await screen.findByText('Peanuts');
+    expect(screen.queryByTestId('recipient-add-dob')).not.toBeInTheDocument();
+    expect(promptViewed).not.toHaveBeenCalled();
   });
 });
 

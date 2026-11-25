@@ -9,8 +9,9 @@
     "memberBanner": "Dieser Kreis ist derzeit nur lesbar, weil das Abo des Kreis-Inhabers beendet ist. Alles ist weiterhin einsehbar, und das Bearbeiten ist wieder möglich, sobald der Kreis-Inhaber das Abo erneuert."
   },
   "circleSelection": {
-    "banner": "Ihr Abo ist beendet. Wählen Sie, welchen Kreis Sie kostenlos behalten möchten.",
-    "choose": "Kreis wählen",
+    "bannerTitle": "Ihr Abo ist beendet",
+    "bannerBody": "Wählen Sie, welchen Kreis Sie kostenlos behalten möchten. Ihre anderen Kreise werden schreibgeschützt.",
+    "choose": "Kreis auswählen",
     "title": "Einen Kreis zum Behalten wählen",
     "pickLabel": "Kreis zum Behalten wählen",
     "subtitle": "Ihr Abo ist beendet. Wählen Sie, welchen Kreis Sie kostenlos behalten möchten. Ihre anderen Kreise sind nur noch lesbar, bis Sie das Abo erneuern.",

@@ -16,7 +16,7 @@ import { apiSession, dbCount, dbQuery, errorCodeOf, pathMatcher, sqlStr, type Ht
 export const VIEW_ONLY_BANNER = 'View-only — you can see everything, but changes are off.';
 export const UPGRADE_GATE_MESSAGE =
   "That feature isn't included in the free plan. Upgrade to Premium to unlock it for your whole circle.";
-export const CIRCLE_SELECTION_BANNER = 'Your subscription ended. Choose which circle to keep with free access.';
+export const CIRCLE_SELECTION_BANNER = 'Your subscription ended'; // 1.4.4: banner title (body is a separate line)
 
 /** A timed medication dose seeded for yesterday: confirmable at any hour (see ensurePastDoseYesterday). */
 export const PAST_DOSE_NAME = 'E2E Past Dose';
@@ -123,7 +123,7 @@ export function aiEntrySurface(page: Page): { kind: string; navSignal: Locator; 
   return {
     kind: 'mobile pill',
     navSignal: sidebarNew(page),
-    aiEntry: page.getByRole('button', { name: 'AI', exact: true }),
+    aiEntry: page.getByRole('button', { name: 'Ask', exact: true }),
   };
 }
 

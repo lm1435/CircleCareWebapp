@@ -9,7 +9,8 @@
     "memberBanner": "Al momento questa cerchia è in sola lettura perché l'abbonamento del titolare è terminato. È ancora tutto qui da vedere e la modifica torna disponibile se il titolare si riabbona."
   },
   "circleSelection": {
-    "banner": "Il tuo abbonamento è terminato. Scegli quale cerchia mantenere con l'accesso gratuito.",
+    "bannerTitle": "Il tuo abbonamento è terminato",
+    "bannerBody": "Scegli quale cerchia mantenere con l'accesso gratuito. Le altre cerchie passeranno in sola lettura.",
     "choose": "Scegli la cerchia",
     "title": "Scegli una cerchia da mantenere",
     "pickLabel": "Scegli una cerchia da mantenere",

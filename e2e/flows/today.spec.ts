@@ -15,7 +15,7 @@ import {
 //   header "Today for {name}"  ->  ONE coaching element at most
 //   (next-step card > shifts nudge > first-dose hint)  ->  Next up (first 3 rows,
 //   one primary action each, then "All of today · N items")  ->  Quick access
-//   (2x2 tiles with live status lines + quiet links Shifts / Vitals / Health info
+//   (2x3 tiles with status lines + quiet links Shifts / Activity
 //   / Activity).
 //
 // Every test builds its own account + circle (so the coaching state, the dose and
@@ -109,8 +109,9 @@ test.describe('Today: header, nav and Next up', () => {
     for (const gone of ['Get started', "Today's medications", 'Open tasks', 'Adherence']) {
       await expect(page.getByRole('heading', { name: gone })).toHaveCount(0);
     }
-    // The care team is back ON Today since 1.4.3 (39ebe5a, mobile parity): one region with its heading.
-    await expect(page.getByRole('region', { name: 'Care team' }).getByRole('heading', { name: 'Care team' })).toHaveCount(1);
+    // Navigation fixes (1.4.4): Today carries ONE Care team row (a region holding a link to the Care team page),
+    // not the roster. The roster, invites and Manage live on /members.
+    await expect(page.getByRole('region', { name: 'Care team' }).getByTestId('today-care-team-link')).toHaveCount(1);
 
     // The series started yesterday, so yesterday's unanswered 00:01 dose is listed too (late);
     // today's is the last of the two.
@@ -255,7 +256,7 @@ test.describe('Today: header, nav and Next up', () => {
 });
 
 test.describe('Today: Quick access', () => {
-  test('four live tiles in order, the quiet links, and every one goes where it says', async ({
+  test('six tiles in order, the quiet links, and every one goes where it says', async ({
     page,
     context,
     request,
@@ -269,13 +270,15 @@ test.describe('Today: Quick access', () => {
     await expect(grid).toBeVisible();
     await expect(grid).toHaveAttribute('data-columns', '2');
     const tiles = grid.getByRole('link');
-    await expect(tiles).toHaveCount(4);
+    await expect(tiles).toHaveCount(6);
     const base = `/circles/${a.circleId}`;
     const expected: Array<[string, string, string]> = [
       ['Notes', 'How today went', `${base}/notes`],
       ['Tasks', 'Shared to-dos', `${base}/tasks`],
       ['Calendar', 'Nothing yet', `${base}/calendar`],
       ['Meds', 'Nothing yet', `${base}/meds`],
+      ['Vitals', 'Blood pressure, weight', `${base}/vitals`],
+      ['Emergency info', 'Doctors and contacts', `${base}/emergency`],
     ];
     for (const [i, [label, status, href]] of expected.entries()) {
       await expect(tiles.nth(i)).toContainText(label);
@@ -285,10 +288,8 @@ test.describe('Today: Quick access', () => {
 
     // Quiet links below the card.
     const quiet = page.locator('section[aria-labelledby="quick-access-heading"] > ul');
-    await expect(quiet.getByRole('link')).toHaveText(['Shifts', 'Vitals', 'Health info', 'Activity']);
+    await expect(quiet.getByRole('link')).toHaveText(['Shifts', 'Activity']);
     await expect(quiet.getByRole('link', { name: 'Shifts' })).toHaveAttribute('href', `${base}/calendar?mode=shifts`);
-    await expect(quiet.getByRole('link', { name: 'Vitals' })).toHaveAttribute('href', `${base}/vitals`);
-    await expect(quiet.getByRole('link', { name: 'Health info' })).toHaveAttribute('href', `${base}/emergency`);
     await expect(quiet.getByRole('link', { name: 'Activity' })).toHaveAttribute('href', `${base}/activity`);
 
     // Click-through on one tile and one link, then come back.
@@ -296,7 +297,7 @@ test.describe('Today: Quick access', () => {
     await expect(page).toHaveURL(new RegExp(`${base}/tasks`));
     await page.goBack();
     await expect(page.getByTestId('quick-access-grid')).toBeVisible();
-    await page.locator('section[aria-labelledby="quick-access-heading"] > ul').getByRole('link', { name: 'Vitals' }).click();
+    await grid.getByRole('link', { name: /^Vitals/ }).click();
     await expect(page).toHaveURL(new RegExp(`${base}/vitals`));
   });
 

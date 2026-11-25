@@ -62,9 +62,9 @@ test('browser Back from every Quick access tile and link returns to Today', asyn
     { name: /^Tasks/, inGrid: true, path: 'tasks' },
     { name: /^Calendar/, inGrid: true, path: 'calendar' },
     { name: /^Meds/, inGrid: true, path: 'meds' },
+    { name: /^Vitals/, inGrid: true, path: 'vitals' },
+    { name: /^Emergency info/, inGrid: true, path: 'emergency' },
     { name: /^Shifts$/, inGrid: false, path: 'calendar' },
-    { name: /^Vitals$/, inGrid: false, path: 'vitals' },
-    { name: /^Health info$/, inGrid: false, path: 'emergency' },
     { name: /^Activity$/, inGrid: false, path: 'activity' },
   ];
   for (const entry of entries) {

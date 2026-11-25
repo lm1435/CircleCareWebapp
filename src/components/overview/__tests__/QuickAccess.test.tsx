@@ -80,8 +80,15 @@ describe('QuickAccess (Today)', () => {
     setMedPresence(false);
   });
 
-  it('is a 2x2 card of Notes, Tasks, Calendar, Meds in that order', () => {
-    expect(QUICK_ACCESS_TILES.map((r) => r.id)).toEqual(['notes', 'tasks', 'calendar', 'medications']);
+  it('is a 2x3 card of Notes, Tasks, Calendar, Meds, Vitals, Emergency info in that order', () => {
+    expect(QUICK_ACCESS_TILES.map((r) => r.id)).toEqual([
+      'notes',
+      'tasks',
+      'calendar',
+      'medications',
+      'vitals',
+      'careInfo',
+    ]);
     renderQuickAccess();
     const grid = screen.getByTestId('quick-access-grid');
     expect(grid).toHaveAttribute('data-columns', '2');
@@ -90,24 +97,39 @@ describe('QuickAccess (Today)', () => {
       '/circles/c1/tasks',
       '/circles/c1/calendar',
       '/circles/c1/meds',
+      '/circles/c1/vitals',
+      '/circles/c1/emergency',
     ]);
+    // Six cells, each with its label first (Vitals and Emergency info are doors, not quiet links).
+    expect(within(grid).getAllByRole('link').map((a) => a.firstElementChild?.textContent)).toEqual([
+      'Notes',
+      'Tasks',
+      'Calendar',
+      'Meds',
+      'Vitals',
+      'Emergency info',
+    ]);
+    expect(tile('Vitals')).toHaveTextContent('Blood pressure, weight');
+    expect(tile('Emergency info')).toHaveTextContent('Doctors and contacts');
   });
 
-  it('quiet links Shifts · Vitals · Health info · Activity follow the card', () => {
+  it('quiet links Shifts · Activity follow the card; Vitals and Emergency info are not among them', () => {
     renderQuickAccess();
     const all = screen.getAllByRole('link');
-    expect(all.slice(4).map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+    expect(all.slice(6).map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
       ['Shifts', '/circles/c1/calendar?mode=shifts'],
-      ['Vitals', '/circles/c1/vitals'],
-      ['Health info', '/circles/c1/emergency'],
       ['Activity', '/circles/c1/activity'],
     ]);
+    // N: the old name is gone everywhere.
+    expect(screen.queryByText('Health info')).not.toBeInTheDocument();
   });
 
   it('drops the Shifts link where shifts do not exist for the viewer', () => {
     renderQuickAccess({ showShiftsLink: false });
     expect(screen.queryByRole('link', { name: 'Shifts' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Vitals' })).toBeInTheDocument();
+    // The grid still has all six cells; only the quiet Shifts link goes.
+    expect(screen.getByTestId('quick-access-grid').querySelectorAll('a')).toHaveLength(6);
+    expect(screen.getByRole('link', { name: 'Activity' })).toBeInTheDocument();
   });
 
   it('has no Daily update row, no icon tiles, no old "Health" / "Activity feed" labels', () => {
@@ -295,7 +317,7 @@ describe('QuickAccess (Today)', () => {
       ['Meds', 'medications'],
       ['Shifts', 'shifts'],
       ['Vitals', 'vitals'],
-      ['Health info', 'careInfo'],
+      ['Emergency info', 'careInfo'],
       ['Activity', 'activityFeed'],
     ])('pressing %s fires quick_access_tapped(%s)', async (name, id) => {
       const user = userEvent.setup();

@@ -169,10 +169,10 @@ describe('UpgradePage', () => {
   // (spec P1-P11 / N1-N10); this block keeps the plan-card mechanics.
 
   // The free-plan line must match the free plan everywhere else: owner + 1
-  // caregiver (it once said "two caregivers"), and reminders are never paywalled.
-  it('states the free plan truthfully: you + 1 caregiver, reminders and alerts stay free', () => {
+  // caregiver (it once said "two caregivers"), and reminders are always free.
+  it('states the free plan truthfully: you + 1 caregiver, reminders and alerts are always free', () => {
     expect(i18n.t('upgrade:onboarding.continueFreeSub')).toBe(
-      '1 care circle, you + 1 caregiver. Reminders and alerts stay free.'
+      '1 care circle, you + 1 caregiver. Reminders and alerts are always free.'
     );
     expect(i18n.t('upgrade:onboarding.continueFreeSub')).not.toMatch(/two caregivers|2 caregivers/);
   });
@@ -622,3 +622,20 @@ describe('UpgradePage — country gate', () => {
 
 // Type guard so the file is treated as a module under isolatedModules.
 export type _ = ReactElement;
+
+// Owner wording: free reminders are "always free", never "paywalled" (en/es, web copy).
+describe('web copy: no "paywalled" claim about reminders', () => {
+  it('NEGATIVE: no en/es web locale string says reminders are paywalled / nunca requieren pago', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    for (const lng of ['en', 'es']) {
+      const dir = path.resolve(__dirname, '../../i18n', lng);
+      for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.json'))) {
+        const txt = fs.readFileSync(path.join(dir, f), 'utf8');
+        expect([lng, f, /paywalled/i.test(txt)]).toEqual([lng, f, false]);
+        expect([lng, f, /recordatorios nunca requieren pago/i.test(txt)]).toEqual([lng, f, false]);
+        expect([lng, f, /alerts stay free|alertas siguen gratis/i.test(txt)]).toEqual([lng, f, false]);
+      }
+    }
+  });
+});

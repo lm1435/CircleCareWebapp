@@ -19,7 +19,7 @@ test('members list renders, invite-email validation shows inline error, then can
   await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
 
   // --- List renders: at least one member row visible ---
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 20_000 });
   const memberRows = page.locator('ul li');
   await expect(memberRows.first()).toBeVisible({ timeout: 20_000 });
 
@@ -60,7 +60,7 @@ test('send an email invite (real), copy its link, then cancel the pending invite
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 20_000 });
 
   // A unique throwaway address so the new pending row is uniquely targetable and
   // cannot collide with any pre-existing invite.

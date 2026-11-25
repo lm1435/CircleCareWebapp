@@ -62,7 +62,7 @@ const DE_NAV = [
   'Aufgaben',
   'Aktivität',
   'Dokumente',
-  'Mitglieder',
+  'Pflegeteam',
   'Vitalwerte',
   'Kreiseinstellungen',
 ];
@@ -72,7 +72,7 @@ const EN_NAV = [
   'Tasks',
   'Activity',
   'Documents',
-  'Members',
+  'Care team',
   'Vitals',
   'Settings',
 ];
@@ -107,7 +107,7 @@ const CIRCLE_PAGES: { path: string; heading: string | RegExp | null }[] = [
   { path: '/emergency', heading: 'Notfallinfos' },
   { path: '/documents', heading: 'Dokumente' },
   { path: '/vitals', heading: 'Vitalwerte' },
-  { path: '/members', heading: 'Mitglieder' },
+  { path: '/members', heading: 'Pflegeteam' },
   // The loaded settings page heading names the recipient ("{{name}} bearbeiten");
   // the old "Kreiseinstellungen" title is only the loading skeleton's.
   { path: '/settings', heading: / bearbeiten$/ },

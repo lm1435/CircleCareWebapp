@@ -33,7 +33,11 @@
     "manage": {
       "title": "Gerir",
       "deleteCircle": "Eliminar círculo"
-    }
+    },
+    "careTeamRow": {
+      "you": "Eu"
+    },
+    "circleSettings": "Definições do círculo"
   },
   "quickAccess": {
     "shifts": "Turnos"

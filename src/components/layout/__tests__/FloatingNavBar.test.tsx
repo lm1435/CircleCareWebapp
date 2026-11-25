@@ -47,7 +47,7 @@ afterEach(() => {
 });
 
 describe('FloatingNavBar', () => {
-  it('renders five cells in mobile order: HOME · CARE · NEW · HEALTH · AI', () => {
+  it('renders five cells in mobile order: HOME · CARE · NEW · HEALTH · ASK', () => {
     renderNav('/circles/c1');
 
     expect(Array.from(pill().children).map((c) => c.textContent)).toEqual([
@@ -55,7 +55,7 @@ describe('FloatingNavBar', () => {
       'Care',
       'New',
       'Health',
-      'AI',
+      'Ask',
     ]);
   });
 
@@ -168,7 +168,7 @@ describe('FloatingNavBar', () => {
     const user = userEvent.setup();
     const { rerender } = renderNav('/circles/c1', { onOpenAssistant });
 
-    const ai = within(pill()).getByRole('button', { name: 'AI' });
+    const ai = within(pill()).getByRole('button', { name: 'Ask' });
     expect(ai).toHaveAttribute('aria-expanded', 'false');
     expect(hasActiveDot(ai)).toBe(false);
 
@@ -199,7 +199,7 @@ describe('FloatingNavBar', () => {
       </MemoryRouter>
     );
 
-    const open = within(pill()).getByRole('button', { name: 'AI' });
+    const open = within(pill()).getByRole('button', { name: 'Ask' });
     expect(open).toHaveAttribute('aria-expanded', 'true');
     expect(hasActiveDot(open)).toBe(true);
   });
@@ -207,7 +207,7 @@ describe('FloatingNavBar', () => {
   it('AI shows the filled glyph and the dot while the modal is open', () => {
     renderNav('/circles/c1', { assistantOpen: true });
 
-    const ai = within(pill()).getByRole('button', { name: 'AI' });
+    const ai = within(pill()).getByRole('button', { name: 'Ask' });
     expect(ai).toHaveAttribute('aria-expanded', 'true');
     expect(hasActiveDot(ai)).toBe(true);
   });
@@ -218,7 +218,7 @@ describe('FloatingNavBar', () => {
     const onOpenAssistant = vi.fn();
     renderNav('/circles/c1', { assistantAccess: 'hidden', onOpenAssistant });
 
-    const ai = within(pill()).getByRole('button', { name: 'AI' });
+    const ai = within(pill()).getByRole('button', { name: 'Ask' });
     expect(ai).toBeVisible();
     expect(ai).toBeDisabled();
     expect(ai).toHaveAttribute('aria-disabled', 'true');
@@ -230,7 +230,7 @@ describe('FloatingNavBar', () => {
       'Care',
       'New',
       'Health',
-      'AI',
+      'Ask',
     ]);
 
     await userEvent.click(ai);
@@ -241,7 +241,7 @@ describe('FloatingNavBar', () => {
     const onOpenAssistant = vi.fn();
     const user = userEvent.setup();
     renderNav('/circles/c1', { assistantAccess: 'hidden', onOpenAssistant });
-    const ai = within(pill()).getByRole('button', { name: 'AI' });
+    const ai = within(pill()).getByRole('button', { name: 'Ask' });
 
     for (let i = 0; i < 8; i += 1) await user.tab();
     expect(ai).not.toHaveFocus();
@@ -253,12 +253,12 @@ describe('FloatingNavBar', () => {
 
   it('hidden and pending are visually identical (no shift when pending resolves to hidden)', () => {
     renderNav('/circles/c1', { assistantAccess: 'pending' });
-    const pendingCell = within(pill()).getByRole('button', { name: 'AI' });
+    const pendingCell = within(pill()).getByRole('button', { name: 'Ask' });
     const pendingClass = pendingCell.className;
     const pendingIcon = pendingCell.innerHTML;
     document.body.innerHTML = '';
     renderNav('/circles/c1', { assistantAccess: 'hidden' });
-    const hiddenCell = within(pill()).getByRole('button', { name: 'AI' });
+    const hiddenCell = within(pill()).getByRole('button', { name: 'Ask' });
     expect(hiddenCell.className).toBe(pendingClass);
     expect(hiddenCell.innerHTML).toBe(pendingIcon);
   });
@@ -268,7 +268,7 @@ describe('FloatingNavBar', () => {
     const onOpenAssistant = vi.fn();
     renderNav('/circles/c1', { assistantAccess: 'pending', onOpenAssistant });
 
-    const ai = within(pill()).getByRole('button', { name: 'AI' });
+    const ai = within(pill()).getByRole('button', { name: 'Ask' });
     expect(ai).toBeVisible();
     expect(ai).toBeDisabled();
     expect(ai).toHaveAttribute('aria-disabled', 'true');
@@ -277,14 +277,14 @@ describe('FloatingNavBar', () => {
 
     await userEvent.click(ai);
     expect(onOpenAssistant).not.toHaveBeenCalled();
-    expect(Array.from(pill().children).map((c) => c.textContent)).toContain('AI');
+    expect(Array.from(pill().children).map((c) => c.textContent)).toContain('Ask');
   });
 
   it('allowed: the AI cell is enabled and opens the assistant', async () => {
     const onOpenAssistant = vi.fn();
     renderNav('/circles/c1', { assistantAccess: 'allowed', onOpenAssistant });
 
-    const ai = within(pill()).getByRole('button', { name: 'AI' });
+    const ai = within(pill()).getByRole('button', { name: 'Ask' });
     expect(ai).toBeEnabled();
     expect(ai).toHaveAttribute('aria-disabled', 'false');
     expect(ai).not.toHaveClass('opacity-50');
@@ -305,7 +305,7 @@ describe('FloatingNavBar', () => {
       </MemoryRouter>
     );
 
-    const ai = within(pill()).getByRole('button', { name: 'AI' });
+    const ai = within(pill()).getByRole('button', { name: 'Ask' });
     expect(ai).toBeDisabled();
     await userEvent.click(ai);
     expect(onOpenAssistant).not.toHaveBeenCalled();

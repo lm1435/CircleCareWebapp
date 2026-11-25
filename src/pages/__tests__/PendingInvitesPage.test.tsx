@@ -82,6 +82,7 @@ describe('PendingInvitesPage', () => {
     usePendingInvitesResult.data = [];
     renderPage();
     expect(screen.getByText('No pending invitations')).toBeInTheDocument();
+    expect(screen.getByTestId('how-does-this-work-join-a-circle')).toBeInTheDocument();
   });
 
   it('lists invites with the inviter and recipient', () => {
@@ -91,6 +92,8 @@ describe('PendingInvitesPage', () => {
       screen.getByText('Luis Meza invited you to help care for Rose')
     ).toBeInTheDocument();
     expect(screen.getByText("Mom's Care")).toBeInTheDocument();
+    // The help link belongs to the empty state only.
+    expect(screen.queryByTestId('how-does-this-work-join-a-circle')).toBeNull();
   });
 
   // Care-recipient identity is coral, never terracotta (terracotta reads as danger).

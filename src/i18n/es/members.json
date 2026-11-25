@@ -25,8 +25,8 @@
       "invitedHintPrefix": "¿Ya te invitaron por correo?",
       "invitedHintLink": "Revisa tus invitaciones",
       "companion": "¿Prefieres el teléfono? Descarga la app complementaria.",
-      "a2Title": "Un solo lugar para su cuidado",
-      "a2Subtitle": "Un círculo de cuidado reúne los medicamentos, citas, tareas, notas y documentos de una persona, compartidos con los familiares, amigos o el cuidador contratado que invites.",
+      "a2Title": "Un solo lugar para el cuidado",
+      "a2Subtitle": "Reúne el cuidado de una persona en un solo lugar, compartido con los familiares, amigos o el cuidador contratado que invites.",
       "example": "Ejemplo",
       "exampleTitle": "Hoy para Rosa",
       "exampleDose": "Rosa tomó su dosis de las 8:00 a. m.",
@@ -39,7 +39,7 @@
       "exampleEmergencySub": "Alergias, médicos y seguro en segundos",
       "start": "Crear un círculo de cuidado",
       "inviteCode": "Tengo un código de invitación",
-      "freeNote": "Gratis para empezar. Los medicamentos y recordatorios nunca son de pago.",
+      "freeNote": "Gratis para empezar. Los medicamentos y recordatorios siempre son gratis.",
       "secure": "Privado y seguro"
     }
   },
@@ -69,7 +69,6 @@
     "notificationsOffExplainNoName": "Este miembro no activó las notificaciones en la app de CircleCare, así que los recordatorios no llegarán a su teléfono."
   },
   "list": {
-    "heading": "Miembros",
     "subheadingReadOnly": "Todos los que ayudan a coordinar el cuidado en este círculo.",
     "joined": "Se unió el {{date}}",
     "you": "(tú)",

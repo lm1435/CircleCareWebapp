@@ -37,7 +37,7 @@ describe('Sidebar', () => {
       ['Documents', '/circles/c1/documents'],
       ['Activity', '/circles/c1/activity'],
       ['Vitals', '/circles/c1/vitals'],
-      ['Members', '/circles/c1/members'],
+      ['Care team', '/circles/c1/members'],
       ['Circle Settings', '/circles/c1/settings'],
     ];
     for (const [name, href] of hrefs) {
@@ -50,7 +50,7 @@ describe('Sidebar', () => {
 
     expect(screen.getByRole('list', { name: 'Care' })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Health' })).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'AI' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Ask' })).toBeInTheDocument();
 
     const care = screen.getByRole('list', { name: 'Care' });
     expect(within(care).getAllByRole('link').map((el) => el.textContent)).toEqual([
@@ -66,13 +66,13 @@ describe('Sidebar', () => {
       'Documents',
     ]);
 
-    // Activity / Vitals / Members / Settings are the one unlabelled group.
+    // Activity / Vitals / Care team / Settings are the one unlabelled group.
     const unlabelled = screen.getAllByRole('list').filter((ul) => !ul.hasAttribute('aria-label'));
     expect(unlabelled).toHaveLength(1);
     expect(within(unlabelled[0]).getAllByRole('link').map((el) => el.textContent)).toEqual([
       'Activity',
       'Vitals',
-      'Members',
+      'Care team',
       'Circle Settings',
     ]);
 
@@ -91,7 +91,7 @@ describe('Sidebar', () => {
     ['/circles/c1/documents', 'Documents'],
     ['/circles/c1', 'Today'],
     ['/circles/c1/vitals', 'Vitals'],
-    ['/circles/c1/members', 'Members'],
+    ['/circles/c1/members', 'Care team'],
     ['/circles/c1/settings', 'Circle Settings'],
   ])('%s paints %s with the one neutral active treatment', (path, name) => {
     renderSidebar(path);
@@ -101,7 +101,7 @@ describe('Sidebar', () => {
     expect(link.className).toContain('bg-bg-2 text-ink');
     expect(link.className).not.toMatch(/-soft text-(dusk|moss|clay|terracotta)-deep/);
     // Every other link keeps the inactive treatment.
-    expect(screen.getByRole('link', { name: name === 'Vitals' ? 'Members' : 'Vitals' }).className).toContain('text-ink-2');
+    expect(screen.getByRole('link', { name: name === 'Vitals' ? 'Care team' : 'Vitals' }).className).toContain('text-ink-2');
   });
 
   // Notes by doctor: a doctor's Visits & notes page is part of Medical Info, so that

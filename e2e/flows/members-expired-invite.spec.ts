@@ -32,7 +32,7 @@ test('an expired invite shows the Expired badge and can be resent', async ({ pag
   const email = `e2e-lapsed-${Date.now()}@example.com`;
 
   await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 20_000 });
 
   // --- Create a real invite ---
   await page.getByRole('button', { name: 'Invite member' }).first().click();
@@ -102,7 +102,7 @@ test('an expired invite shows the Expired badge and can be resent', async ({ pag
     );
     await page.reload({ waitUntil: 'domcontentloaded' });
     await circleLoaded;
-    await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 20_000 });
     // Fail loudly here rather than letting a silently-unmatched route surface as
     // a confusing "badge not visible" further down.
     expect(stubbed, 'the circle-detail stub never matched the created invite').toBeGreaterThan(0);

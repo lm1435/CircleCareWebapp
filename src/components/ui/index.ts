@@ -6,6 +6,7 @@ export {
   type UseAccordionGroupOptions,
 } from './Accordion';
 export { Avatar, avatarGradientFor, avatarGradientForKey, AVATAR_COLOR_KEYS, AVATAR_GRADIENTS, type AvatarProps, type AvatarSize } from './Avatar';
+export { AvatarStack, type AvatarStackProps, type AvatarStackPerson } from './AvatarStack';
 export { EmptyState, type EmptyStateProps, type EmptyStateTone } from './EmptyState';
 export { Button, type ButtonProps, type ButtonVariant } from './Button';
 export {

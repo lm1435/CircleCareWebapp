@@ -5,6 +5,8 @@ import iconTodayOutline from '../../../node_modules/ionicons/dist/svg/today-outl
 import iconToday from '../../../node_modules/ionicons/dist/svg/today.svg?raw';
 import iconCalendarOutline from '../../../node_modules/ionicons/dist/svg/calendar-outline.svg?raw';
 import iconCalendar from '../../../node_modules/ionicons/dist/svg/calendar.svg?raw';
+import iconClipboardOutline from '../../../node_modules/ionicons/dist/svg/clipboard-outline.svg?raw';
+import iconClipboard from '../../../node_modules/ionicons/dist/svg/clipboard.svg?raw';
 import iconMedicalOutline from '../../../node_modules/ionicons/dist/svg/medical-outline.svg?raw';
 import iconMedical from '../../../node_modules/ionicons/dist/svg/medical.svg?raw';
 import iconSparklesOutline from '../../../node_modules/ionicons/dist/svg/sparkles-outline.svg?raw';
@@ -80,6 +82,8 @@ export const ICON_NAMES = [
   'today',
   'calendar-outline',
   'calendar',
+  'clipboard-outline',
+  'clipboard',
   'medical-outline',
   'medical',
   'sparkles-outline',
@@ -156,6 +160,8 @@ export const ICON_FILES: Record<IconName, string> = {
   today: iconToday,
   'calendar-outline': iconCalendarOutline,
   calendar: iconCalendar,
+  'clipboard-outline': iconClipboardOutline,
+  clipboard: iconClipboard,
   'medical-outline': iconMedicalOutline,
   medical: iconMedical,
   'sparkles-outline': iconSparklesOutline,

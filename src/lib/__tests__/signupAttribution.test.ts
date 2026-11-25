@@ -150,3 +150,31 @@ describe('referrer host (ref)', () => {
     expect(getSignupAttribution().signup_source_detail.ref).toBe('example.org');
   });
 });
+
+describe('referrer fallback never records the auth round trip', () => {
+  it('N: skipped entirely on /auth/callback', () => {
+    captureSignupAttribution('', '/auth/callback', 'https://www.google.com/search?q=x');
+    expect(getSignupAttribution().signup_source_detail.ref).toBeUndefined();
+  });
+
+  it.each([
+    'https://accounts.google.com/o/oauth2/v2/auth',
+    'https://appleid.apple.com/auth/authorize',
+    'https://abcdefgh.supabase.co/auth/v1/authorize',
+  ])('N: auth host referrer %s is ignored', (ref) => {
+    captureSignupAttribution('', '/login', ref);
+    expect(getSignupAttribution().signup_source_detail.ref).toBeUndefined();
+  });
+
+  it('N: the env Supabase host (custom domain) is ignored', () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://auth.example-project.test');
+    captureSignupAttribution('', '/login', 'https://auth.example-project.test/auth/v1/authorize');
+    expect(getSignupAttribution().signup_source_detail.ref).toBeUndefined();
+    vi.unstubAllEnvs();
+  });
+
+  it('P: a real external referrer on a normal landing is still recorded', () => {
+    captureSignupAttribution('', '/login', 'https://www.google.com/search?q=x');
+    expect(getSignupAttribution().signup_source_detail.ref).toBe('www.google.com');
+  });
+});

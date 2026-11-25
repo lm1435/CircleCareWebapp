@@ -13,8 +13,9 @@ import type { CalendarEvent } from '@/api/calendarEvents';
 import type { CareNote } from '@/api/careNotes';
 
 // Quick access on Today (docs/plans/simple-ui-1-3-1.md; hi-fi HiToday): the
-// top four destinations by real usage in ONE card, a 2x2 grid with live status
-// lines, then quiet text links - Shifts, Vitals, Health info, Activity.
+// six destinations in ONE card, a 2x3 grid (two columns, three rows) with a status line under
+// each label (1.4.4: Vitals and Emergency info joined the grid), then quiet text links - Shifts
+// (when shown) and Activity.
 // Large text (200% zoom / large root font): the grid is one column.
 //
 // The Daily update row is gone from here on purpose: the update card appears on
@@ -31,20 +32,23 @@ export const REFILL_SOON_DAYS = 14;
 
 interface Tile {
   /** Analytics/series id: unchanged from the old rows. */
-  id: 'notes' | 'tasks' | 'calendar' | 'medications';
+  /** `vitals` and `careInfo` (Emergency info) keep the ids their quiet links always had. */
+  id: 'notes' | 'tasks' | 'calendar' | 'medications' | 'vitals' | 'careInfo';
   segment: string;
 }
 
-/** Exported so the order is assertable. Notes, Tasks, Calendar, Meds (hi-fi order). */
+/** Exported so the order is assertable. Notes, Tasks, Calendar, Meds, Vitals, Emergency info. */
 export const QUICK_ACCESS_TILES: readonly Tile[] = [
   { id: 'notes', segment: 'notes' },
   { id: 'tasks', segment: 'tasks' },
   { id: 'calendar', segment: 'calendar' },
   { id: 'medications', segment: 'meds' },
+  { id: 'vitals', segment: 'vitals' },
+  { id: 'careInfo', segment: 'emergency' },
 ] as const;
 
 interface QuietLink {
-  id: 'shifts' | 'vitals' | 'careInfo' | 'activityFeed';
+  id: 'shifts' | 'activityFeed';
   segment: string;
   /** Query string for the target, if any. */
   search?: string;
@@ -52,8 +56,6 @@ interface QuietLink {
 
 const QUIET_LINKS: readonly QuietLink[] = [
   { id: 'shifts', segment: 'calendar', search: '?mode=shifts' },
-  { id: 'vitals', segment: 'vitals' },
-  { id: 'careInfo', segment: 'emergency' },
   { id: 'activityFeed', segment: 'activity' },
 ];
 
@@ -195,6 +197,9 @@ export function QuickAccess({
       ? t('quickAccess.calendarNext', { day: dayLabel(nextEvent.scheduled_date) })
       : t('quickAccess.calendarEmpty'),
     medications: medicationsStatus(presence.data?.medication, refillCount, t),
+    // Static lines: what is behind the door (mobile's quickAccess.vitalsNote / emergencyNote).
+    vitals: t('quickAccess.vitalsNote'),
+    careInfo: t('quickAccess.emergencyNote'),
   };
 
   // Literal keys (no interpolation) so the translation-key audit sees them.
@@ -203,11 +208,11 @@ export function QuickAccess({
     tasks: t('quickAccess.tasks'),
     calendar: t('quickAccess.calendar'),
     medications: t('quickAccess.medications'),
+    vitals: t('quickAccess.vitals'),
+    careInfo: t('quickAccess.healthInfo'),
   };
   const linkLabel: Record<QuietLink['id'], string> = {
     shifts: t('quickAccess.shifts'),
-    vitals: t('quickAccess.vitals'),
-    careInfo: t('quickAccess.healthInfo'),
     activityFeed: t('quickAccess.activity'),
   };
   const links = QUIET_LINKS.filter((l) => l.id !== 'shifts' || showShiftsLink);

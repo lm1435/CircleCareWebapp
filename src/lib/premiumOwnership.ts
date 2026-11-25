@@ -31,6 +31,19 @@ export interface CircleOwnershipFields {
  * `userId != null` FIRST: an absent `owner_id` and a signed-out viewer are two
  * nullish values that must never be read as a match.
  */
+/**
+ * A care RECIPIENT (never the owner) may edit their own name + date of birth
+ * (1.4.4). Fails closed: only the server flag opens it.
+ */
+export function viewerCanEditOwnRecipientDetails(
+  circle: (CircleOwnershipFields & { viewer_can_edit_recipient_details?: boolean }) | null | undefined,
+  userId: string | null | undefined
+): boolean {
+  if (circle == null) return false;
+  if (viewerOwnsCircle(circle, userId)) return false;
+  return circle.viewer_can_edit_recipient_details === true;
+}
+
 export function viewerOwnsCircle(
   circle: CircleOwnershipFields | null | undefined,
   userId: string | null | undefined

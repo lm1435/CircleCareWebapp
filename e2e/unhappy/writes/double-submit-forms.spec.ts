@@ -128,7 +128,7 @@ test('invite member: double send while the POST is pending creates one invite', 
   const invites = `select 1 from invites where circle_id = ${sqlStr(circleId)}::uuid and invited_email = ${sqlStr(email)}`;
   try {
     await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 20_000 });
     await page.getByRole('button', { name: 'Invite member' }).first().click();
     const dialog = page.getByRole('dialog', { name: 'Invite a member' });
     await expect(dialog).toBeVisible({ timeout: 20_000 });

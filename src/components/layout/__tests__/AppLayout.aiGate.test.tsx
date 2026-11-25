@@ -166,7 +166,7 @@ function sidebarAssistant(): HTMLElement | null {
 
 /** The pill's AI cell — rendered only when the entry is allowed. */
 function pillAssistant(): HTMLElement | null {
-  return within(pill()).queryByRole('button', { name: 'AI' });
+  return within(pill()).queryByRole('button', { name: 'Ask' });
 }
 
 /**

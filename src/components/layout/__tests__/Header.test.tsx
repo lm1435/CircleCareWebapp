@@ -193,14 +193,14 @@ describe('Header', () => {
       expect(screen.getByTestId('location-state')).toHaveTextContent('"fromSwitcher":true');
     });
 
-    it('offers Vitals, Members and Circle Settings for the current circle, hidden at xl (spec §5.3)', async () => {
+    it('offers Vitals, Care team and Circle Settings for the current circle, hidden at xl (spec §5.3)', async () => {
       const user = userEvent.setup();
       renderHeader('/circles/c1/calendar');
       await user.click(screen.getByRole('button', { name: /Mom's Care/ }));
 
       for (const [name, href] of [
         ['Vitals', '/circles/c1/vitals'],
-        ['Members', '/circles/c1/members'],
+        ['Care team', '/circles/c1/members'],
         ['Circle Settings', '/circles/c1/settings'],
       ] as const) {
         const item = screen.getByRole('menuitem', { name });
@@ -213,7 +213,7 @@ describe('Header', () => {
 
     it.each([
       ['Vitals', '/circles/c1/vitals'],
-      ['Members', '/circles/c1/members'],
+      ['Care team', '/circles/c1/members'],
       ['Circle Settings', '/circles/c1/settings'],
     ])('the %s item navigates to %s', async (name, href) => {
       const user = userEvent.setup();

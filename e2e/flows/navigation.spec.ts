@@ -42,7 +42,7 @@ test('sidebar links navigate', async ({ page, circleId }) => {
     { name: 'Emergency Info', segment: 'emergency' },
     { name: 'Documents', segment: 'documents' },
     { name: 'Vitals', segment: 'vitals' },
-    { name: 'Members', segment: 'members' },
+    { name: 'Care team', segment: 'members' },
     { name: 'Circle Settings', segment: 'settings' },
   ];
 

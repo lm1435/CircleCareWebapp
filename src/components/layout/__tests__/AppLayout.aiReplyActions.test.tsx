@@ -192,7 +192,7 @@ function renderAt(): void {
 async function openAssistantAndTap(label: string): Promise<void> {
   const user = userEvent.setup();
   renderAt();
-  await user.click(within(screen.getByTestId('floating-nav')).getByRole('button', { name: 'AI' }));
+  await user.click(within(screen.getByTestId('floating-nav')).getByRole('button', { name: 'Ask' }));
   expect(screen.getByTestId('ai-chat-modal')).toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: label }));
 }

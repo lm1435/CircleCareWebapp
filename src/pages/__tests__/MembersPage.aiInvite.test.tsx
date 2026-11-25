@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import i18n from 'i18next';
 import '@/i18n';
@@ -58,12 +58,14 @@ const useCircleResult: {
   members: CircleMember[];
   isLoading: boolean;
   isError: boolean;
+  canEdit: boolean;
   refetch: () => void;
 } = {
   circle: undefined,
   members: [],
   isLoading: false,
   isError: false,
+  canEdit: true,
   refetch: vi.fn(),
 };
 vi.mock('@/hooks/useDailyUpdate', () => ({ useDailyUpdateEnabled: () => false }));
@@ -118,6 +120,7 @@ function setCircle(
   const detail = makeDetail(members, overrides);
   useCircleResult.circle = detail;
   useCircleResult.members = members;
+  useCircleResult.canEdit = detail.can_edit !== false;
 }
 
 function renderWithState(state: unknown): void {
@@ -157,5 +160,27 @@ describe('MembersPage — open the invite dialog from the assistant', () => {
     renderWithState(null);
     expect(screen.queryByRole('dialog', { name: inviteTitle() })).not.toBeInTheDocument();
     expect(navigate).not.toHaveBeenCalled();
+  });
+});
+
+describe('MembersPage — read-only (lapsed) circle never opens the invite dialog', () => {
+  it('N: the assistant flag does not open the dialog on a read-only circle', () => {
+    setCircle([makeMember({ id: 'u-owner', role: 'owner' }), makeMember()], { can_edit: false });
+    renderWithState({ openInvite: true });
+    expect(screen.queryByRole('dialog', { name: inviteTitle() })).not.toBeInTheDocument();
+    expect(navigate).toHaveBeenCalledWith('/circles/c1/members', { replace: true, state: null });
+  });
+
+  it('N: the solo-owner "invite your first caregiver" card is not offered when read-only', () => {
+    setCircle([makeMember({ id: 'u-owner', role: 'owner' })], { can_edit: false });
+    renderWithState(null);
+    expect(screen.queryByText(i18n.t('members:list.soloCta'))).not.toBeInTheDocument();
+  });
+
+  it('P: the solo-owner card opens the dialog on an editable circle', async () => {
+    setCircle([makeMember({ id: 'u-owner', role: 'owner' })]);
+    renderWithState(null);
+    fireEvent.click(screen.getByText(i18n.t('members:list.soloCta')));
+    expect(await screen.findByRole('dialog', { name: inviteTitle() })).toBeInTheDocument();
   });
 });

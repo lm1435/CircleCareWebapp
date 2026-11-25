@@ -9,7 +9,8 @@
     "memberBanner": "Este círculo está apenas para visualização neste momento porque a subscrição do proprietário terminou. Tudo continua aqui para consulta, e a edição volta se o proprietário subscrever novamente."
   },
   "circleSelection": {
-    "banner": "A sua subscrição terminou. Escolha qual círculo manter com acesso gratuito.",
+    "bannerTitle": "A sua subscrição terminou",
+    "bannerBody": "Escolha qual círculo manter com acesso gratuito. Os seus outros círculos ficarão apenas para leitura.",
     "subtitle": "A sua subscrição terminou. Escolha qual círculo manter com acesso gratuito. Os seus outros círculos ficarão apenas para leitura até subscrever novamente.",
     "confirmMessage": "Só pode fazer esta escolha uma vez: não será possível trocar o círculo que continua gratuito. Nada é eliminado: os seus outros círculos ficam seguros, apenas para leitura, e subscrever novamente a qualquer momento restaura o acesso completo a todos eles.",
     "error": "Ocorreu um erro. Tente novamente."

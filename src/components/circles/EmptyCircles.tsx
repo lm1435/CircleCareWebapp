@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Avatar, Card, Eyebrow, Icon, Text, type IconName } from '@/components/ui';
+import { AvatarStack, Card, Eyebrow, Icon, Text, type IconName } from '@/components/ui';
 import { StoreBadges } from '@/components/layout/StoreBadges';
 
 export interface EmptyCirclesProps {
@@ -74,14 +74,14 @@ export function EmptyCircles({ action, joinAction, greeting, firstName }: EmptyC
         {/* Words and the two doors */}
         <div className="min-w-0 flex-1">
           {greeting ? <Eyebrow as="p">{greeting}</Eyebrow> : null}
-          <Text variant="pageTitle" as="h1" className="mt-3 max-w-[460px]">
+          <Text variant="pageTitle" as="h1" className="mt-2 max-w-[460px]">
             {t('picker.empty.a2Title')}
           </Text>
-          <Text variant="body" as="p" className="mt-4 max-w-[470px] text-ink-2!">
+          <Text variant="pageSubtitle" as="p" className="mt-2 max-w-[470px]">
             {t('picker.empty.a2Subtitle')}
           </Text>
           {action || joinAction ? (
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-wrap items-center gap-3" data-testid="empty-actions">
               {action}
               {joinAction}
             </div>
@@ -110,10 +110,14 @@ export function EmptyCircles({ action, joinAction, greeting, firstName }: EmptyC
                 {t('picker.empty.exampleTitle')}
               </span>
             </span>
-            <span aria-hidden="true" className="flex">
-              {firstName ? <Avatar name={firstName} size="xs" className="h-8 w-8" /> : null}
-              <Avatar name="Ana" size="xs" className={firstName ? '-ml-1 h-8 w-8' : 'h-8 w-8'} />
-            </span>
+            <AvatarStack
+              size={32}
+              testId="empty-example-avatars"
+              people={[
+                ...(firstName ? [{ id: 'you', name: firstName }] : []),
+                { id: 'ana', name: 'Ana' },
+              ]}
+            />
           </figcaption>
           <ul className="m-0 list-none border-t border-line-2 p-0">
             {rows.map((row, i) => (

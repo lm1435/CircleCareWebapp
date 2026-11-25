@@ -258,7 +258,7 @@ const SURFACES: Surface[] = [
     async prepare(ctx) {
       ctx.state.email = `e2e-rt-invite-${Date.now()}-${Math.floor(Math.random() * 1e4)}@example.com`;
       await ctx.page.goto(`/circles/${ctx.circleId}/members`, { waitUntil: 'domcontentloaded' });
-      await expect(ctx.page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
+      await expect(ctx.page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 20_000 });
       await ctx.page.getByRole('button', { name: 'Invite member' }).first().click();
       const dialog = ctx.page.getByRole('dialog', { name: 'Invite a member' });
       await expect(dialog).toBeVisible({ timeout: 20_000 });

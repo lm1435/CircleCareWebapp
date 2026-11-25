@@ -64,7 +64,8 @@ export default function EditCirclePage(): ReactElement {
   const { showToast } = useToast();
   const currentUserId = useAuthStore((s) => s.user?.id);
 
-  const { circle, isLoading, isError, refetch } = useCircle(circleId);
+  const { circle, isLoading, isError, refetch, canEditOwnRecipientDetails, canEdit, viewOnly } =
+    useCircle(circleId);
   const update = useUpdateCircle(circleId);
   const remove = useDeleteCircle(circleId);
   const form = useZodForm(updateCircleSchema, ['recipient_name', 'recipient_dob']);
@@ -80,6 +81,9 @@ export default function EditCirclePage(): ReactElement {
   const [confirmText, setConfirmText] = useState('');
 
   const isOwner = !!circle && !!currentUserId && circle.owner_id === currentUserId;
+  // CARE RECIPIENT MODE (1.4.4): the recipient who joined by invite edits ONLY their own name and date of
+  // birth. No time zone card, no danger zone. Server flag, fails closed; never on a read-only circle.
+  const isRecipientMode = !isOwner && canEditOwnRecipientDetails && canEdit && !viewOnly;
   const backTo = `/circles/${circleId}`;
 
   /**
@@ -148,7 +152,7 @@ export default function EditCirclePage(): ReactElement {
   }
 
   // Non-owners cannot edit/delete a circle — show a clear read-only notice.
-  if (!isOwner) {
+  if (!isOwner && !isRecipientMode) {
     return (
       <section className="mx-auto max-w-2xl pb-8">
         <PageMasthead
@@ -202,6 +206,12 @@ export default function EditCirclePage(): ReactElement {
             if (typeof data.recipient_dob === 'string' && data.recipient_dob) {
               Analytics.dobAdded('edit_circle');
             }
+            // `circle_details_saved`: who saved and which details changed. Enums and booleans only.
+            Analytics.circleDetailsSaved({
+              viewer: isOwner ? 'owner' : 'care_recipient',
+              name_changed: nameValue.trim() !== circle.recipient_name.trim(),
+              dob_changed: dobPatch !== undefined,
+            });
             showToast(t('edit.savedToast'), 'success');
           },
           onSettled: submitGuard.release,
@@ -302,13 +312,15 @@ export default function EditCirclePage(): ReactElement {
 
       {/* ── Time zone (circle-timezone spec). Its own Card, saved on pick —
           not part of the name/DOB form, so it never rides that Save. ── */}
-      <CircleTimezoneCard circleId={circleId} circle={circle} />
+      {isOwner && <CircleTimezoneCard circleId={circleId} circle={circle} />}
 
       {/* ── Danger zone (owner-only; type-to-confirm delete). Row styled like
           mobile's settings row (CircleDetailScreen ~L1618-1650): terracotta
           IconTile, terracotta-deep text, trailing chevron.
           `id="danger"` is the target of Home's settings-row deep link
           (`/circles/:id/settings#danger`) — see the scroll/focus effect above. ── */}
+      {isOwner && (
+        <>
       <SectionHeader title={t('edit.dangerZone')} className="mx-5" />
       <p className="mx-5 -mt-1 mb-3 text-sm text-ink-3">{t('edit.deleteDescription')}</p>
       <Card id="danger" variant="outlined" padding="none" className="mx-5 border-terracotta-deep/30">
@@ -323,6 +335,8 @@ export default function EditCirclePage(): ReactElement {
           <Icon name="chevron-forward" size="inline" className="text-ink-3" />
         </SheetRowPressable>
       </Card>
+        </>
+      )}
 
       {confirmDelete && (
         <ConfirmDialog

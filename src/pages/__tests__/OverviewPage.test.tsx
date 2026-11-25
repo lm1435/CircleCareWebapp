@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import '@/i18n';
@@ -78,10 +78,10 @@ vi.mock('@/components/overview/QuickAccess', () => ({
     />
   ),
 }));
-// The care team + Manage rows have their own suite (TodayCareTeam.test.tsx); here only its place.
-vi.mock('@/components/overview/TodayCareTeam', () => ({
-  TodayCareTeam: ({ circleId }: { circleId: string }) => (
-    <div data-testid="today-care-team" data-circle-id={circleId} />
+// The Care team row has its own suite (CareTeamRow.test.tsx); here only its place.
+vi.mock('@/components/overview/CareTeamRow', () => ({
+  CareTeamRow: ({ circleId }: { circleId: string }) => (
+    <div data-testid="today-care-team-row" data-circle-id={circleId} />
   ),
 }));
 
@@ -172,6 +172,8 @@ interface Options {
   isPremiumCircle?: boolean;
   hasShifts?: boolean;
   canEdit?: boolean;
+  viewOnly?: boolean;
+  canEditOwnRecipientDetails?: boolean;
   joinedAgoDays?: number;
 }
 
@@ -209,7 +211,8 @@ function setCircle(opts: Options = {}): void {
     timezone: 'America/New_York',
     isLoading: opts.isLoading ?? false,
     canEdit: opts.canEdit ?? true,
-    viewOnly: false,
+    viewOnly: opts.viewOnly ?? false,
+    canEditOwnRecipientDetails: opts.canEditOwnRecipientDetails ?? false,
     isPremiumCircle: opts.isPremiumCircle ?? true,
     hasShifts: opts.hasShifts ?? false,
     isOwner: owner === 'u1',
@@ -301,6 +304,51 @@ describe('Today (OverviewPage)', () => {
     expect(right.querySelector('[data-testid="quick-access"]')).not.toBeNull();
   });
 
+  // GEAR = CIRCLE SETTINGS: OverviewPage decides who gets it (the owner, or the care recipient's own-details flag),
+  // on an editable circle only. Asserted through the real Hero, not just Hero's boolean.
+  describe('header gear (circle settings)', () => {
+    const gear = () => screen.queryByTestId('today-circle-settings');
+
+    it('POSITIVE: the owner of an editable circle gets the gear, linking to Edit circle', () => {
+      setCircle({});
+      renderToday();
+      expect(gear()).not.toBeNull();
+      expect(gear()?.getAttribute('href')).toBe('/circles/c1/settings');
+    });
+
+    it('POSITIVE: the care recipient with the server flag gets the gear', () => {
+      setCircle({ ownerId: 'someone-else', canEditOwnRecipientDetails: true });
+      renderToday();
+      expect(gear()).not.toBeNull();
+    });
+
+    it('NEGATIVE: a plain member / manager (no flag, not owner) gets no gear', () => {
+      setCircle({ ownerId: 'someone-else' });
+      renderToday();
+      expect(gear()).toBeNull();
+    });
+
+    it('NEGATIVE: a frozen / non-editable circle hides the gear for the owner and the flagged recipient', () => {
+      setCircle({ canEdit: false });
+      renderToday();
+      expect(gear()).toBeNull();
+      cleanup();
+      setCircle({ ownerId: 'someone-else', canEditOwnRecipientDetails: true, canEdit: false });
+      renderToday();
+      expect(gear()).toBeNull();
+    });
+
+    it('NEGATIVE: a view-only seat hides the gear for the owner and the flagged recipient', () => {
+      setCircle({ viewOnly: true });
+      renderToday();
+      expect(gear()).toBeNull();
+      cleanup();
+      setCircle({ ownerId: 'someone-else', canEditOwnRecipientDetails: true, viewOnly: true });
+      renderToday();
+      expect(gear()).toBeNull();
+    });
+  });
+
   it('titles the page "Today for {name}" with a date eyebrow', () => {
     renderToday();
     expect(screen.getByRole('heading', { level: 1, name: 'Today for Rose' })).toBeInTheDocument();
@@ -315,14 +363,20 @@ describe('Today (OverviewPage)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Today' })).toBeInTheDocument();
   });
 
-  it('orders the blocks like mobile: header, daily update, Next up, Quick access, care team', () => {
+  it('orders the blocks like mobile: header, daily update, Next up, Quick access, ONE care team row', () => {
     renderToday();
-    const order = ['overview-hero', 'daily-update-card', 'next-up', 'quick-access', 'today-care-team'];
+    const order = ['overview-hero', 'daily-update-card', 'next-up', 'quick-access', 'today-care-team-row'];
     const ids = Array.from(document.querySelectorAll('[data-testid]'))
       .map((el) => el.getAttribute('data-testid'))
       .filter((id) => order.includes(id!));
     expect(ids).toEqual(order);
-    expect(screen.getByTestId('today-care-team')).toHaveAttribute('data-circle-id', 'c1');
+    expect(screen.getByTestId('today-care-team-row')).toHaveAttribute('data-circle-id', 'c1');
+    // N1: the members list, Manage and Leave circle left Today.
+    expect(screen.queryByTestId('today-care-team')).toBeNull();
+    expect(screen.queryByTestId('today-manage')).toBeNull();
+    expect(screen.queryByTestId('today-leave')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Leave circle' })).toBeNull();
+    expect(screen.queryByText('Manage')).toBeNull();
   });
 
   it('has none of the old Home blocks: no adherence, checklist, help card, meds/tasks/appointments cards', () => {

@@ -12,7 +12,7 @@ import { FirstRunWizardModal } from '@/components/circles/firstRun/FirstRunWizar
 import { Hero } from '@/components/overview/Hero';
 import { QuickAccess } from '@/components/overview/QuickAccess';
 import { DailyUpdateCard } from '@/components/overview/DailyUpdateCard';
-import { TodayCareTeam } from '@/components/overview/TodayCareTeam';
+import { CareTeamRow } from '@/components/overview/CareTeamRow';
 import { NextUp, NEXT_UP_VISIBLE, nextUpHasFilledAction } from '@/components/overview/NextUp';
 import { NextStepCard } from '@/components/overview/NextStepCard';
 import { FirstMedMarkIt } from '@/components/overview/FirstMedMarkIt';
@@ -72,8 +72,8 @@ type Coaching = 'dose_alerts' | 'next_step' | 'shifts' | 'dose_hint' | 'none';
  *   [daily update, in the evening]
  *   ONE coaching element at most: next-step card > shifts nudge > first-dose hint
  *   Next up (meds, appointments, tasks in time order; first 3 + "All of today")
- *   Quick access (2x2 + quiet links)
- *   Care team, then Manage (owner) or Leave circle (1.4.3, mobile parity: CircleDetailScreen)
+ *   Quick access (2x3: Notes, Tasks, Calendar, Meds, Vitals, Emergency info; quiet links Shifts, Activity)
+ *   ONE Care team row (names + avatars, opens the Care team page; 1.4.4)
  *
  * Wide screens put Next up and Quick access side by side (same order, more
  * room); at 200% zoom / large root font everything is one column and rows stack.
@@ -120,6 +120,7 @@ export default function OverviewPage(): ReactElement {
     isPremiumCircle,
     hasShifts,
     isOwner,
+    canEditOwnRecipientDetails,
   } = useCircle(circleId);
   const isRecipient = members.some((m) => m.is_care_recipient && m.id === currentUserId);
   const recipientName = circle?.recipient_name ?? '';
@@ -375,6 +376,9 @@ export default function OverviewPage(): ReactElement {
           recipientName={recipientName}
           isSelfCare={isSelfCare}
           recipientTimezone={timezone}
+          circleId={circleId}
+          canEditCircleSettings={(isOwner || canEditOwnRecipientDetails) && canEdit && !viewOnly}
+          circleSettingsViewer={isOwner ? 'owner' : 'care_recipient'}
         />
       )}
 
@@ -501,10 +505,10 @@ export default function OverviewPage(): ReactElement {
         <div className="min-w-0">{quickAccess}</div>
       </div>
 
-      {/* Care team + Manage / Leave circle, under Quick access as on mobile (1.4.3). The Members
-          and Settings pages keep their routes. */}
+      {/* One Care team row under Quick access (1.4.4). The members list, invites, Manage and
+          Leave circle live on the Care team page (/circles/:id/members). */}
       <div className="px-5 pb-8">
-        <TodayCareTeam circleId={circleId} />
+        <CareTeamRow circleId={circleId} />
       </div>
 
       {firstRun && (

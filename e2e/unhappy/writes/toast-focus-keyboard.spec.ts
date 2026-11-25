@@ -23,7 +23,7 @@ const PENDING_SEAT_COPY = `You've already used your invitation — the free spot
 
 async function openInvite(page: Page, circleId: string): Promise<{ dialog: Locator; save: Locator; email: Locator }> {
   await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 20_000 });
   await page.getByRole('button', { name: 'Invite member' }).first().click();
   const dialog = page.getByRole('dialog', { name: 'Invite a member' });
   await expect(dialog).toBeVisible({ timeout: 20_000 });
@@ -64,7 +64,7 @@ function focusState(page: Page) {
 
 test('the toast region is the SAME node before, during and after a dialog — never remounted', async ({ page, circleId }) => {
   await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 20_000 });
   const handle = await page.locator('[data-toast-region]').elementHandle();
   expect(handle, 'the region is mounted before any toast').not.toBeNull();
   const token = `region-${Date.now()}`;

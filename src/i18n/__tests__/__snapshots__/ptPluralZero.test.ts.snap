@@ -357,6 +357,11 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "1 em aberto",
     "2 em aberto",
   ],
+  "pt overview:today.careTeamRow.pending": [
+    "0 em espera",
+    "1 em espera",
+    "2 em espera",
+  ],
   "pt overview:today.nextUp.allOfToday": [
     "Tudo de hoje · itens: 0",
     "Tudo de hoje · itens: 1",
@@ -841,6 +846,11 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "0 em aberto",
     "1 em aberto",
     "2 em aberto",
+  ],
+  "pt-PT overview:today.careTeamRow.pending": [
+    "0 em espera",
+    "1 em espera",
+    "2 em espera",
   ],
   "pt-PT overview:today.nextUp.allOfToday": [
     "Tudo de hoje · itens: 0",

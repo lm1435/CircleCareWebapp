@@ -15,6 +15,7 @@ vi.mock('@/hooks/useCircles', () => ({
 }));
 
 import { useCircle } from '@/hooks/useCircle';
+import { useAuthStore } from '@/store/authStore';
 
 const CIRCLE_ID = 'circle-1';
 
@@ -94,6 +95,7 @@ function mockCircles(over: Record<string, unknown> = {}) {
 describe('useCircle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ user: { id: 'u1' } as never });
     mockMembers();
     mockCircles();
   });
@@ -108,6 +110,25 @@ describe('useCircle', () => {
     expect(result.current.viewOnly).toBe(false);
     expect(result.current.readOnly).toBe(false);
     expect(result.current.circleSummary?.id).toBe(CIRCLE_ID);
+  });
+
+  // ── 1.4.4: care recipient self-edit flag (fails closed) ──────────────────
+  it('canEditOwnRecipientDetails: true only for a non-owner with the server flag', () => {
+    mockMembers({ data: detail({ owner_id: 'someone-else', viewer_can_edit_recipient_details: true }) });
+    const { result } = renderHook(() => useCircle(CIRCLE_ID));
+    expect(result.current.canEditOwnRecipientDetails).toBe(true);
+  });
+
+  it('canEditOwnRecipientDetails: false when the flag is absent, false, or the viewer is the owner', () => {
+    for (const data of [
+      detail({ owner_id: 'someone-else' }),
+      detail({ owner_id: 'someone-else', viewer_can_edit_recipient_details: false }),
+      detail({ owner_id: 'u1', viewer_can_edit_recipient_details: true }),
+    ]) {
+      mockMembers({ data });
+      const { result } = renderHook(() => useCircle(CIRCLE_ID));
+      expect(result.current.canEditOwnRecipientDetails).toBe(false);
+    }
   });
 
   // ── timezone: LOADING and "no zone set" are different answers ────────────

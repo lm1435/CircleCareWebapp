@@ -123,7 +123,7 @@ function inviteRow(circleId: string, email: string): InviteRow {
 
 async function openMembers(page: Page, circleId: string): Promise<void> {
   await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 20_000 });
 }
 
 function inviteActions(page: Page, email: string): Locator {
@@ -199,7 +199,7 @@ test('cancel an invite through the Members page: invites.status = cancelled, and
   after((pending ?? []).map((i) => i.invited_email), 'pending_invites from GET /api/circles/:id').not.toContain(email);
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 20_000 });
   // Positive control first: the roster rendered (the owner is listed), so the absence
   // below is about the invite and not about a page that has not loaded yet.
   await expect(page.getByText(acct.email, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
@@ -288,7 +288,7 @@ test('resend an expired invite through the Members page: expires_at moves ~7 day
   after(listed!.is_expired, 'is_expired from GET /api/circles/:id').toBe(false);
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 20_000 });
   await expect(inviteActions(page, email)).toBeVisible({ timeout: 20_000 });
   await after(page.locator('li', { hasText: email }).getByText('Expired', { exact: true })).toHaveCount(0, {
     timeout: SETTLE,
@@ -448,7 +448,7 @@ test('keep one circle on downgrade through the picker banner: selected_on_downgr
   await page.goto('/circles', { waitUntil: 'domcontentloaded' });
   const banner = page
     .getByRole('status')
-    .filter({ hasText: 'Your subscription ended. Choose which circle to keep with free access.' });
+    .filter({ hasText: 'Your subscription ended' }); // 1.4.4: title + body (was one sentence)
   await expect(banner).toBeVisible({ timeout: 20_000 });
   for (const name of [keepName, otherName]) {
     await expect(

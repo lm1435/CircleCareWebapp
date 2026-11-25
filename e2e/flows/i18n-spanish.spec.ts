@@ -60,7 +60,7 @@ const ES_NAV = [
   'Tareas',
   'Actividad',
   'Documentos',
-  'Miembros',
+  'Equipo de cuidado',
   'Signos vitales',
   'Configuración del círculo',
 ];
@@ -70,7 +70,7 @@ const EN_NAV = [
   'Tasks',
   'Activity',
   'Documents',
-  'Members',
+  'Care team',
   'Vitals',
   'Settings',
 ];
@@ -105,7 +105,7 @@ const CIRCLE_PAGES: { path: string; heading: string | RegExp | null }[] = [
   { path: '/emergency', heading: 'Información de emergencia' },
   { path: '/documents', heading: 'Documentos' },
   { path: '/vitals', heading: 'Signos vitales' },
-  { path: '/members', heading: 'Miembros' },
+  { path: '/members', heading: 'Equipo de cuidado' },
   // The settings page heading names the recipient ("Editar a {{name}}").
   { path: '/settings', heading: /^Editar a / },
 ];

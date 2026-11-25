@@ -23,7 +23,7 @@ test('the AI pill cell is disabled while access resolves, then goes live', async
 
   await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
 
-  const ai = page.getByTestId('floating-nav').getByRole('button', { name: 'AI', exact: true });
+  const ai = page.getByTestId('floating-nav').getByRole('button', { name: 'Ask', exact: true });
   await expect(ai).toBeVisible({ timeout: 15_000 });
   await expect(ai).toBeDisabled();
   await expect(ai).toHaveAttribute('aria-disabled', 'true');

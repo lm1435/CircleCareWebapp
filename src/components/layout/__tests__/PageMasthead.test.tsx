@@ -147,4 +147,41 @@ describe('PageMasthead', () => {
     // Last thing in the header — after row 1 and the editorial block.
     expect(slot.parentElement?.lastElementChild).toBe(slot);
   });
+
+  describe('chromeLinks (Today header, 1.4.4)', () => {
+    const links = [
+      { name: 'person-circle-outline' as const, label: 'Settings', to: '/profile' },
+      { name: 'settings-outline' as const, label: 'Care team', to: '/circles/c1/members' },
+    ];
+
+    it('POSITIVE: renders each as a named 44px round link, below xl only, in order', () => {
+      renderMasthead({ chromeLinks: links });
+      const rendered = screen.getAllByRole('link');
+      expect(rendered.map((a) => a.getAttribute('aria-label'))).toEqual(['Settings', 'Care team']);
+      for (const a of rendered) {
+        expect(a).toHaveClass('w-11', 'h-11', 'xl:hidden');
+      }
+    });
+
+    it('NEGATIVE: draws no labelled xl button for them (the sidebar is the door at xl)', () => {
+      renderMasthead({ chromeLinks: links });
+      expect(screen.queryByRole('button')).toBeNull();
+      expect(document.querySelector('header .xl\\:inline-flex')).toBeNull();
+    });
+
+    it('POSITIVE: the chrome-only end slot is dropped at xl (no reserved gap)', () => {
+      renderMasthead({ chromeLinks: links });
+      expect(document.querySelector('header [data-print-hide]')).toHaveClass('xl:hidden');
+    });
+
+    it('NEGATIVE: a slot holding a right action is not hidden by the chrome rule', () => {
+      renderMasthead({ chromeLinks: links, rightAction: { name: 'settings-outline', label: 'Add', onClick: vi.fn() } });
+      expect(document.querySelector('header [data-print-hide]')).not.toHaveClass('xl:hidden');
+    });
+
+    it('NEGATIVE: without chromeLinks no round link appears', () => {
+      renderMasthead();
+      expect(screen.queryByRole('link')).toBeNull();
+    });
+  });
 });

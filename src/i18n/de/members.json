@@ -25,8 +25,8 @@
       "invitedHintPrefix": "Schon per E-Mail eingeladen?",
       "invitedHintLink": "Einladungen ansehen",
       "companion": "Lieber mit dem Smartphone? Laden Sie die Begleit-App.",
-      "a2Title": "Alles für ihre Pflege an einem Ort",
-      "a2Subtitle": "Ein Pflegekreis bündelt die Medikamente, Termine, Aufgaben, Notizen und Dokumente einer Person, geteilt mit der Familie, Freunden oder der bezahlten Pflegekraft, die Sie einladen.",
+      "a2Title": "Alles für die Pflege an einem Ort",
+      "a2Subtitle": "Halten Sie die Pflege einer Person an einem Ort zusammen, geteilt mit der Familie, Freunden oder der bezahlten Pflegekraft, die Sie einladen.",
       "example": "Beispiel",
       "exampleTitle": "Heute für Rosa",
       "exampleDose": "Rosa hat ihre Dosis um 8:00 Uhr genommen",
@@ -39,7 +39,7 @@
       "exampleEmergencySub": "Allergien, Ärzte und Versicherung in Sekunden",
       "start": "Pflegekreis erstellen",
       "inviteCode": "Ich habe einen Einladungscode",
-      "freeNote": "Kostenlos starten. Medikamente und Erinnerungen sind nie hinter einer Bezahlschranke.",
+      "freeNote": "Kostenlos starten. Medikamente und Erinnerungen sind immer kostenlos.",
       "secure": "Privat und sicher"
     }
   },
@@ -69,7 +69,6 @@
     "notificationsOffExplainNoName": "Dieses Mitglied hat Benachrichtigungen in der CircleCare-App nicht aktiviert, daher erreichen Erinnerungen das Telefon nicht."
   },
   "list": {
-    "heading": "Mitglieder",
     "subheadingReadOnly": "Alle, die in diesem Kreis bei der Koordination der Pflege helfen.",
     "joined": "Beigetreten am {{date}}",
     "you": "(Sie)",

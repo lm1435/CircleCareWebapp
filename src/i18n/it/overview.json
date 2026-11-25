@@ -8,6 +8,8 @@
     "tasksNote_one": "{{count}} aperto",
     "tasksNote_other": "{{count}} aperti",
     "vitals": "Parametri",
+    "vitalsNote": "Pressione, peso",
+    "emergencyNote": "Medici e contatti",
     "notesWrote": "{{who}} ha scritto {{ago}}",
     "someone": "Qualcuno",
     "notesEmpty": "Com’è andata la giornata",
@@ -19,7 +21,7 @@
     "medsDefault": "Orari e rinnovi",
     "medsEmpty": "Ancora niente",
     "shifts": "Turni",
-    "healthInfo": "Info sulla salute",
+    "healthInfo": "Info di emergenza",
     "activity": "Attività"
   },
   "appointments": {
@@ -100,15 +102,20 @@
       "titleMine": "Il mio team di cura",
       "countOne": "{{count}} membro",
       "countOther": "{{count}} membri",
-      "invite": "Invita un membro",
-      "viewOnly": "Accesso in sola lettura",
-      "pending": "Inviti in sospeso",
-      "declined": "Inviti rifiutati"
+      "viewOnly": "Accesso in sola lettura"
+    },
+    "careTeamRow": {
+      "you": "Tu",
+      "namesAnd": "{{names}} e {{last}}",
+      "namesMore": "{{names}} e altri {{count}}",
+      "pending_one": "{{count}} in attesa",
+      "pending_other": "{{count}} in attesa"
     },
     "manage": {
       "title": "Gestisci",
       "editCircle": "Modifica cerchia",
       "deleteCircle": "Elimina cerchia"
-    }
+    },
+    "circleSettings": "Impostazioni della cerchia"
   }
 }

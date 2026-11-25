@@ -20,7 +20,8 @@ const FILES = [
   'components/meds/TodaysMeds.tsx',
   'pages/DocumentsPage.tsx',
   'pages/UpgradePage.tsx',
-  'components/overview/TodayCareTeam.tsx',
+  'components/overview/CareTeamRow.tsx',
+  'pages/MembersPage.tsx',
   'pages/OverviewPage.tsx',
 ];
 const TERRACOTTA_TEXT = /\b(?:text|outline|decoration)-terracotta(?:-deep)?\b/g;

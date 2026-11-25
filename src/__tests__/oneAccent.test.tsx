@@ -239,7 +239,7 @@ describe('decoration goes neutral', () => {
         </Routes>
       </MemoryRouter>
     );
-    const ai = screen.getByRole('button', { name: /AI/ });
+    const ai = screen.getByRole('button', { name: /Ask/ });
     expect(ai.innerHTML).not.toMatch(/coral/);
   });
 });

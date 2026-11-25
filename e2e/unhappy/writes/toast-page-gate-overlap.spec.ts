@@ -161,7 +161,7 @@ for (const vp of VIEWPORTS) {
         await pageSettled(page);
         expect(await page.evaluate(() => scrollY), 'the page is at its natural (load) scroll').toBe(0);
 
-        const entry = page.getByRole('button', { name: vp.width >= 1024 ? 'Assistant' : 'AI', exact: true });
+        const entry = page.getByRole('button', { name: vp.width >= 1024 ? 'Assistant' : 'Ask', exact: true });
         await expect(entry).toHaveCount(1);
         await entry.dispatchEvent('click');
 

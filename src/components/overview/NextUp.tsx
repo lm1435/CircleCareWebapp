@@ -473,7 +473,7 @@ export function NextUp({
     );
   } else if (items.length === 0) {
     body = (
-      <p className="m-0 text-md text-ink-2">
+      <p className="m-0 text-md text-ink">
         {isSelfCare || !recipientName
           ? t('today.nextUp.emptySelf')
           : t('today.nextUp.empty', { name: recipientName })}

@@ -283,6 +283,24 @@ describe('TasksPage', () => {
     expect(screen.getAllByRole('button', { name: 'Add task' }).length).toBeGreaterThan(1);
   });
 
+  it('empty: links the Tasks help article, like the other Care empty pages (owner 2026-11-25)', () => {
+    mockUseTasks.mockReturnValue(tasksResult([]));
+    renderPage();
+    expect(screen.getByRole('link', { name: /How does this work\?/ })).toBeInTheDocument();
+  });
+
+  it('N: empty: no Sort pill (nothing to order); the status pill stays so the filter can be changed', () => {
+    mockUseTasks.mockReturnValue(tasksResult([]));
+    renderPage();
+    expect(screen.queryByRole('button', { name: /Sort: / })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Open/ })).toBeInTheDocument();
+  });
+
+  it('P: with tasks, the Sort pill is there', () => {
+    renderPage();
+    expect(screen.getByRole('button', { name: /Sort: Due date/ })).toBeInTheDocument();
+  });
+
   it('shows the read-only empty state (no CTA) when a view-only member has no open tasks', () => {
     mockUseCircle.mockReturnValue(circleResult({ canEdit: false, circle: { care_recipient_timezone: TZ, can_edit: false } }));
     mockUseTasks.mockReturnValue(tasksResult([]));

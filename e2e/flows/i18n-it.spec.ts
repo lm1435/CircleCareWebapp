@@ -63,7 +63,7 @@ const IT_NAV = [
   'Incarichi',
   'Attività',
   'Documenti',
-  'Membri',
+  'Team di cura',
   'Parametri vitali',
   'Impostazioni della cerchia',
 ];
@@ -73,7 +73,7 @@ const EN_NAV = [
   'Tasks',
   'Activity',
   'Documents',
-  'Members',
+  'Care team',
   'Vitals',
   'Settings',
 ];
@@ -108,7 +108,7 @@ const CIRCLE_PAGES: { path: string; heading: string | RegExp | null }[] = [
   { path: '/emergency', heading: 'Informazioni di emergenza' },
   { path: '/documents', heading: 'Documenti' },
   { path: '/vitals', heading: 'Parametri vitali' },
-  { path: '/members', heading: 'Membri' },
+  { path: '/members', heading: 'Team di cura' },
   // The loaded settings page heading names the recipient ("Modifica {{name}}");
   // the old "Impostazioni della cerchia" title is only the loading skeleton's.
   { path: '/settings', heading: /^Modifica / },

@@ -182,7 +182,7 @@ describe('AppLayout', () => {
       'Care',
       'New',
       'Health',
-      'AI',
+      'Ask',
     ]);
   });
 
@@ -261,7 +261,7 @@ describe('AppLayout', () => {
 
     expect(screen.queryByTestId('ai-chat-modal')).not.toBeInTheDocument();
 
-    await user.click(within(pill()).getByRole('button', { name: 'AI' }));
+    await user.click(within(pill()).getByRole('button', { name: 'Ask' }));
 
     expect(screen.getByTestId('ai-chat-modal')).toBeInTheDocument();
   });

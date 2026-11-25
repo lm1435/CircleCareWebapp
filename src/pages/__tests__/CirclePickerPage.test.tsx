@@ -334,10 +334,10 @@ describe('CirclePickerPage', () => {
     mockGetCircles.mockResolvedValue([]);
     renderPicker();
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'One place for their care' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'One place for care' })).toBeInTheDocument();
     expect(
       screen.getByText(
-        'A care circle keeps one person’s medications, appointments, tasks, notes and documents together, shared with the family, friends or paid caregiver you invite.'
+        'Keep one person’s care in one place, shared with the family, friends or paid caregiver you invite.'
       )
     ).toBeInTheDocument();
     expect(screen.getByText('Prefer your phone? Get the companion app.')).toBeInTheDocument();

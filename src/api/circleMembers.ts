@@ -191,6 +191,12 @@ export interface CircleDetail {
   viewer_role?: CircleRole;
   viewer_permissions?: ViewerPermission[];
   /**
+   * ADDITIVE (1.4.4): the viewer may edit the recipient's name + date of birth (the owner, or the
+   * care recipient themself) and the circle is writable for them. Absent on an older backend =
+   * false (fails closed).
+   */
+  viewer_can_edit_recipient_details?: boolean;
+  /**
    * ADDITIVE (care shifts, lapsed Premium): a FREE circle that still holds live shift
    * rows serves `true`. Omitted on a premium circle, a view-only seat and an older
    * backend: absent means false.

@@ -36,7 +36,7 @@ test('the pill shows five cells and the active one follows the route', async ({
   for (const name of ['Today', 'Care', 'Health']) {
     await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
   }
-  for (const name of ['New', 'AI']) {
+  for (const name of ['New', 'Ask']) {
     await expect(nav.getByRole('button', { name, exact: true })).toBeVisible();
   }
   // The pill holds nothing else.
@@ -95,7 +95,7 @@ test('AI opens the assistant modal', async ({ page, circleId }) => {
   const nav = pill(page);
   await expect(nav).toBeVisible({ timeout: 15_000 });
 
-  await nav.getByRole('button', { name: 'AI' }).click();
+  await nav.getByRole('button', { name: 'Ask' }).click();
 
   const modal = page.getByRole('dialog', { name: 'Care Assistant' });
   await expect(modal).toBeVisible({ timeout: 20_000 });

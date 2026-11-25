@@ -47,7 +47,7 @@ test('share invite link: no email, link + copy, "Shared link" row, own-link guar
 
   // --- SL-E1: create a link invite from the modal ---
   await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Invite member' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 20_000 });

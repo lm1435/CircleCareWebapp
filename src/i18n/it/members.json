@@ -25,8 +25,8 @@
       "invitedHintPrefix": "Hai già ricevuto un invito via email?",
       "invitedHintLink": "Controlla i tuoi inviti",
       "companion": "Preferisci il telefono? Scarica l'app di CircleCare.",
-      "a2Title": "Un solo posto per la sua cura",
-      "a2Subtitle": "Una cerchia di cura riunisce farmaci, appuntamenti, incarichi, note e documenti di una persona, condivisi con i familiari, gli amici o l’assistente a pagamento che inviti.",
+      "a2Title": "Un solo posto per la cura",
+      "a2Subtitle": "Riunisci la cura di una persona in un solo posto, condivisa con i familiari, gli amici o l’assistente a pagamento che inviti.",
       "example": "Esempio",
       "exampleTitle": "Oggi per Rosa",
       "exampleDose": "Rosa ha preso la dose delle 8:00",
@@ -39,7 +39,7 @@
       "exampleEmergencySub": "Allergie, medici e assicurazione in pochi secondi",
       "start": "Crea una cerchia di cura",
       "inviteCode": "Ho un codice d'invito",
-      "freeNote": "Si inizia gratis. Farmaci e promemoria non sono mai a pagamento.",
+      "freeNote": "Si inizia gratis. Farmaci e promemoria sono sempre gratuiti.",
       "secure": "Privato e sicuro"
     }
   },
@@ -69,7 +69,6 @@
     "notificationsOffExplainNoName": "Questo membro non ha attivato le notifiche nell'app CircleCare, quindi i promemoria non arriveranno sul suo telefono."
   },
   "list": {
-    "heading": "Membri",
     "subheadingReadOnly": "Tutte le persone che aiutano a coordinare la cura in questa cerchia.",
     "joined": "Nella cerchia dal {{date}}",
     "you": "(tu)",

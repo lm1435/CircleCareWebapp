@@ -91,7 +91,7 @@ async function apiLink(api: Awaited<ReturnType<typeof ownerApi>>, circleId: stri
 /** Owner presses "Share invite link" in the Members modal (the real UI). */
 async function uiLink(page: Page, circleId: string, shotPrefix: string): Promise<LinkInvite> {
   await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Invite member' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 20_000 });
@@ -223,7 +223,7 @@ test('P1 accepted: brand-new person from a LINK signs up, verifies, lands IN the
 
   // The owner's Members page: the member is there, the pending link row is gone.
   await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 30_000 });
   // (The name is not Ada Invitee: the blocked-domain signup is a fake 200 and GoTrue's admin
   // generate_link makes the user without the form's metadata, so the row shows the e-mail.)
   await expect(page.getByText(newEmail).first()).toBeVisible({ timeout: 20_000 });
@@ -261,7 +261,7 @@ test('P2 accepted: existing signed-in user opens the LINK and accepts', async ({
 
   await cookieLogin(context, owner, baseURL);
   await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText('Shared link', { exact: true })).toHaveCount(0);
   await shot(page, 'P2-03-owner-members-after-accept');
 });
@@ -518,7 +518,7 @@ test('N6 free owner: a pending LINK holds the free seat, a second link is refuse
 
   await cookieLogin(context, freeOwner, baseURL);
   await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Invite member' }).first().click();
   await expect(page.getByRole('dialog').getByText(/held by a shared invite link/).first()).toBeVisible({
     timeout: 30_000,

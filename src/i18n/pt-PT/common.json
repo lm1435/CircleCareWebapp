@@ -7,13 +7,16 @@
     "login": "Iniciar sessão",
     "signup": "Registar-se",
     "forgotPassword": "Esqueceu-se da palavra-passe",
-    "resetPassword": "Redefinir palavra-passe"
+    "resetPassword": "Redefinir palavra-passe",
+    "members": "Equipa de cuidado"
   },
   "errorBoundary": {
     "title": "Ocorreu um erro"
   },
   "nav": {
     "profile": "Definições",
+    "members": "Equipa de cuidado",
+    "aiShort": "Pergunta",
     "settings": "Definições do círculo"
   },
   "errors": {

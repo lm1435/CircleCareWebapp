@@ -9,7 +9,8 @@
     "memberBanner": "Este círculo está somente para visualização no momento porque a assinatura do proprietário terminou. Tudo continua aqui para consulta, e a edição volta se o proprietário assinar novamente."
   },
   "circleSelection": {
-    "banner": "Sua assinatura terminou. Escolha qual círculo manter com acesso gratuito.",
+    "bannerTitle": "Sua assinatura terminou",
+    "bannerBody": "Escolha qual círculo manter com acesso gratuito. Seus outros círculos ficarão somente para leitura.",
     "choose": "Escolher círculo",
     "title": "Escolha um círculo para manter",
     "pickLabel": "Escolha um círculo para manter",

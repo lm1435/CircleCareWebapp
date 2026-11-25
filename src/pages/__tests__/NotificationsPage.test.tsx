@@ -164,6 +164,8 @@ describe('NotificationsPage', () => {
     expect(await screen.findByText('E1')).toBeInTheDocument();
     expect(screen.getByText('E2')).toBeInTheDocument();
     expect(screen.queryByTestId('inbox-empty')).toBeNull();
+    expect(screen.queryByText("You're all caught up")).toBeNull();
+    expect(screen.queryByTestId('how-does-this-work-reminders-and-alerts')).toBeNull();
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toContain('Earlier');
   });
 
@@ -174,6 +176,9 @@ describe('NotificationsPage', () => {
       'Reminders and updates from your circles show up here for 3 days. Older ones live in Activity.'
     );
     expect(screen.queryByRole('button', { name: 'Mark all read' })).toBeNull();
+    // Shared EmptyState: heading title + the help link.
+    expect(screen.getByRole('heading', { level: 2, name: "You're all caught up" })).toBeInTheDocument();
+    expect(screen.getByTestId('how-does-this-work-reminders-and-alerts')).toBeInTheDocument();
   });
 
   // Dark e2e 2026-10-30 (axe landmark-unique at desktop width): the app sidebar is an <aside> too,
