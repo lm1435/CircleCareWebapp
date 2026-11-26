@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, Eyebrow } from '@/components/ui';
+import { StoreBadges } from '@/components/layout/StoreBadges';
 import { TEXT_CLASS } from '@/components/ui/Text';
 import { useAuth } from '@/hooks/useAuth';
 import { Analytics } from '@/lib/analytics';
@@ -59,6 +60,7 @@ export default function InviteeWelcomePage(): ReactElement {
     shownAt.current = Date.now();
     clearPendingInviteeWelcome(userId, circleId);
     Analytics.inviteeWelcomeViewed(welcome.role, items.length);
+    Analytics.getAppPromptViewed('invitee_welcome');
     if (inFirstRun) firstRunFunnel.viewed('invitee_welcome');
     headingRef.current?.focus({ preventScroll: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once per mount
@@ -117,6 +119,22 @@ export default function InviteeWelcomePage(): ReactElement {
         <Button size="lg" className="mt-1.5 w-full" onClick={handleContinue}>
           {t('welcome.goToToday')}
         </Button>
+        {/* The website cannot send push (prod 2026-11-26: 38 of 100 invites were accepted in a browser, and
+            those members were never told). Said once, here, where the join is confirmed; never a blocker. */}
+        <section
+          aria-labelledby="invitee-get-app"
+          data-testid="invitee-get-app"
+          className="mt-2 flex flex-col gap-2.5 border-t border-line-2 pt-4"
+        >
+          <h2 id="invitee-get-app" className="m-0 text-lg font-semibold text-ink">
+            {t('welcome.getAppTitle')}
+          </h2>
+          <p className="m-0 text-sm text-ink-2">{t('welcome.getAppBody')}</p>
+          <StoreBadges
+            layout="row"
+            onStoreClick={(store) => Analytics.getAppPromptTapped('invitee_welcome', store)}
+          />
+        </section>
       </Card>
     </div>
   );

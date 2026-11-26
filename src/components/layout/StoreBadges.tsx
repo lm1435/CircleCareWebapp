@@ -52,9 +52,11 @@ export interface StoreBadgesProps {
   /** stack — full-width column (sidebar card); row — inline pair. */
   layout?: 'stack' | 'row';
   className?: string;
+  /** A badge was pressed (the link still opens the store). Enum only, for the caller's analytics. */
+  onStoreClick?: (store: 'ios' | 'android') => void;
 }
 
-export function StoreBadges({ layout = 'stack', className = '' }: StoreBadgesProps): ReactElement {
+export function StoreBadges({ layout = 'stack', className = '', onStoreClick }: StoreBadgesProps): ReactElement {
   const { t } = useTranslation('common');
 
   // Spec §4.5 shape: r16, hairline on ink, 44 minimum target, spring lift.
@@ -70,6 +72,7 @@ export function StoreBadges({ layout = 'stack', className = '' }: StoreBadgesPro
         target="_blank"
         rel="noopener noreferrer"
         aria-label={t('downloadApp.appStore')}
+        onClick={onStoreClick ? () => onStoreClick('ios') : undefined}
         className={`${badgeClass} ${layout === 'stack' ? 'w-full' : ''}`}
       >
         <AppleGlyph />
@@ -90,6 +93,7 @@ export function StoreBadges({ layout = 'stack', className = '' }: StoreBadgesPro
         target="_blank"
         rel="noopener noreferrer"
         aria-label={t('downloadApp.googlePlay')}
+        onClick={onStoreClick ? () => onStoreClick('android') : undefined}
         className={`${badgeClass} ${layout === 'stack' ? 'w-full' : ''}`}
       >
         <GooglePlayGlyph />

@@ -1298,6 +1298,18 @@ export const Analytics = {
     capture('invitee_welcome_viewed', { role, items }),
   /** "Go to Today" pressed; `seconds` = whole seconds the screen was on view. */
   inviteeWelcomeContinued: (seconds: number) => capture('invitee_welcome_continued', { seconds }),
+  /**
+   * 1.4.4 (prod 2026-11-26: 38 of 100 invites were accepted in a browser, which cannot send push): the
+   * "Get alerts on your phone" block was shown / one of its store badges pressed. Enums only. Web only:
+   * the phone app has no such block (it IS the app).
+   */
+  getAppPromptViewed: (surface: 'invitee_welcome') =>
+    capture('get_app_prompt_viewed', { surface: surface === 'invitee_welcome' ? surface : 'invitee_welcome' }),
+  getAppPromptTapped: (surface: 'invitee_welcome', store: 'ios' | 'android') =>
+    capture('get_app_prompt_tapped', {
+      surface: surface === 'invitee_welcome' ? surface : 'invitee_welcome',
+      store: store === 'android' ? 'android' : 'ios',
+    }),
 
   // --- Medications ---
   /**

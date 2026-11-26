@@ -69,6 +69,8 @@
     "lede": "You're in {{name}}'s circle now. Here's what you can do:",
     "ledeSelf": "You're in your circle now. Here's what you can do:",
     "goToToday": "Go to Today",
+    "getAppTitle": "Get alerts on your phone",
+    "getAppBody": "This website can't send notifications. Install the CircleCare app and sign in with the same account to get reminders and alerts.",
     "caregiver": {
       "medsTitle": "See today's meds and mark a dose Taken",
       "medsSub": "Everyone sees it right away, so no one gives a second dose.",

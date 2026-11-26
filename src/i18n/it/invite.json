@@ -69,6 +69,8 @@
     "lede": "Ora sei nel cerchio di {{name}}. Ecco cosa puoi fare:",
     "ledeSelf": "Ora sei nel tuo cerchio. Ecco cosa puoi fare:",
     "goToToday": "Vai a Oggi",
+    "getAppTitle": "Ricevi gli avvisi sul telefono",
+    "getAppBody": "Questo sito web non può inviare notifiche. Installa l’app CircleCare e accedi con lo stesso account per ricevere promemoria e avvisi.",
     "caregiver": {
       "medsTitle": "Vedere i farmaci di oggi e segnare una dose come Presa",
       "medsSub": "Tutti lo vedono subito, così nessuno dà una seconda dose.",

@@ -69,6 +69,8 @@
     "lede": "Vous êtes maintenant dans le cercle de {{name}}. Voici ce que vous pouvez faire :",
     "ledeSelf": "Vous êtes maintenant dans votre cercle. Voici ce que vous pouvez faire :",
     "goToToday": "Aller à Aujourd’hui",
+    "getAppTitle": "Recevez les alertes sur votre téléphone",
+    "getAppBody": "Ce site web ne peut pas envoyer de notifications. Installez l’application CircleCare et connectez-vous avec le même compte pour recevoir les rappels et les alertes.",
     "caregiver": {
       "medsTitle": "Voir les médicaments du jour et marquer une prise comme Prise",
       "medsSub": "Tout le monde le voit tout de suite, donc personne ne donne une deuxième dose.",

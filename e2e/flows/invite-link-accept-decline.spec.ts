@@ -202,6 +202,12 @@ test('P1 accepted: brand-new person from a LINK signs up, verifies, lands IN the
       timeout: 25_000,
     });
     await expect(guest).toHaveURL(new RegExp(`/circles/${circleId}/welcome$`), { timeout: 20_000 });
+    // 1.4.4 (prod 2026-11-26): the website cannot send push, so the join confirmation says so once, with
+    // both store links; it never blocks "Go to Today".
+    const getApp = guest.getByRole('region', { name: 'Get alerts on your phone' });
+    await expect(getApp).toContainText("This website can't send notifications.");
+    await expect(getApp.getByRole('link', { name: 'Download on the App Store' })).toHaveAttribute('href', /apps\.apple\.com/);
+    await expect(getApp.getByRole('link', { name: 'Get it on Google Play' })).toHaveAttribute('href', /play\.google\.com/);
     await shot(guest, 'P1-05-post-verify-invitee-welcome-in-circle');
     await guest.getByRole('button', { name: 'Go to Today', exact: true }).click();
     await expect(guest).toHaveURL(new RegExp(`/circles/${circleId}$`), { timeout: 20_000 });

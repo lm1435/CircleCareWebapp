@@ -69,6 +69,8 @@
     "lede": "Sie sind jetzt im Kreis von {{name}}. Das können Sie tun:",
     "ledeSelf": "Sie sind jetzt in Ihrem Kreis. Das können Sie tun:",
     "goToToday": "Weiter zu Heute",
+    "getAppTitle": "Hinweise auf Ihrem Handy erhalten",
+    "getAppBody": "Diese Website kann keine Benachrichtigungen senden. Installieren Sie die CircleCare-App und melden Sie sich mit demselben Konto an, um Erinnerungen und Hinweise zu erhalten.",
     "caregiver": {
       "medsTitle": "Die heutigen Medikamente sehen und eine Dosis als Eingenommen markieren",
       "medsSub": "Alle sehen es sofort, so gibt niemand eine zweite Dosis.",

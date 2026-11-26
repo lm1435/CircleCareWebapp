@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import i18n from '@/i18n';
@@ -189,5 +189,64 @@ describe('InviteeWelcomePage — first run funnel', () => {
     setFirstRunPath('invited');
     renderPage();
     expect(stepViewed).not.toHaveBeenCalled();
+  });
+});
+
+// 1.4.4 (prod 2026-11-26): 38 of 100 invites were accepted in a browser, which cannot send push.
+describe('InviteeWelcomePage: "Get alerts on your phone"', () => {
+  let appViewed: ReturnType<typeof vi.spyOn>;
+  let appTapped: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    appViewed = vi.spyOn(Analytics, 'getAppPromptViewed').mockImplementation(() => undefined);
+    appTapped = vi.spyOn(Analytics, 'getAppPromptTapped').mockImplementation(() => undefined);
+  });
+
+  it('POSITIVE: a new member is told the website cannot notify, with both store links; viewed once', () => {
+    park({ inviterName: 'Sam', recipientName: 'Rose' });
+    renderPage();
+    const block = screen.getByRole('region', { name: 'Get alerts on your phone' });
+    expect(block).toHaveTextContent(
+      "This website can't send notifications. Install the CircleCare app and sign in with the same account to get reminders and alerts."
+    );
+    expect(within(block).getByRole('link', { name: 'Download on the App Store' })).toHaveAttribute('href', expect.stringContaining('apps.apple.com'));
+    expect(within(block).getByRole('link', { name: 'Get it on Google Play' })).toHaveAttribute('href', expect.stringContaining('play.google.com'));
+    expect(appViewed).toHaveBeenCalledTimes(1);
+    expect(appViewed).toHaveBeenCalledWith('invitee_welcome');
+    expect(appTapped).not.toHaveBeenCalled();
+  });
+
+  it('POSITIVE: each badge reports its own store (enum only) and stays a normal link', async () => {
+    park({ inviterName: 'Sam', recipientName: 'Rose', viewOnly: true });
+    renderPage();
+    const block = screen.getByRole('region', { name: 'Get alerts on your phone' });
+    const play = within(block).getByRole('link', { name: 'Get it on Google Play' });
+    play.addEventListener('click', (e) => e.preventDefault());
+    await userEvent.setup().click(play);
+    expect(appTapped.mock.calls).toEqual([['invitee_welcome', 'android']]);
+    const ios = within(block).getByRole('link', { name: 'Download on the App Store' });
+    ios.addEventListener('click', (e) => e.preventDefault());
+    await userEvent.setup().click(ios);
+    expect(appTapped.mock.calls).toEqual([['invitee_welcome', 'android'], ['invitee_welcome', 'ios']]);
+  });
+
+  it('NEGATIVE: it never blocks: "Go to Today" still continues without touching a badge', async () => {
+    park({ inviterName: 'Sam', recipientName: 'Rose' });
+    renderPage();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Go to Today' }));
+    expect(continued).toHaveBeenCalledTimes(1);
+    expect(appTapped).not.toHaveBeenCalled();
+  });
+
+  it('NEGATIVE: nothing pending (reload) shows no block and reports nothing', () => {
+    renderPage();
+    expect(screen.queryByTestId('invitee-get-app')).not.toBeInTheDocument();
+    expect(appViewed).not.toHaveBeenCalled();
+  });
+
+  it('POSITIVE (es): the block is translated', async () => {
+    await i18n.changeLanguage('es');
+    park({ inviterName: 'Sam', recipientName: 'Rose' });
+    renderPage();
+    expect(screen.getByRole('region', { name: 'Recibe alertas en tu teléfono' })).toBeInTheDocument();
   });
 });
