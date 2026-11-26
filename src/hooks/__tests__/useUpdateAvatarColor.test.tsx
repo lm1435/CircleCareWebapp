@@ -41,6 +41,31 @@ const colorOf = (qc: QueryClient) =>
 
 beforeEach(() => vi.clearAllMocks());
 
+describe('useUpdateAvatarColor analytics (enum only)', () => {
+  it('a hue save reports the enum custom_hue, never the raw hue', async () => {
+    mockUpdate.mockResolvedValue({ id: 'u1', avatar_color: 'hue:200' } as User);
+    const { result } = setup();
+    act(() => {
+      result.current.mutate('hue:200');
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockUpdate).toHaveBeenCalledWith({ avatar_color: 'hue:200' });
+    expect(avatarColorChanged).toHaveBeenCalledWith('custom_hue');
+    expect(avatarColorChanged).not.toHaveBeenCalledWith('hue:200');
+  });
+
+  it('a failed hue save rolls back, reports nothing', async () => {
+    mockUpdate.mockRejectedValue(new Error('boom'));
+    const { queryClient, result } = setup();
+    act(() => {
+      result.current.mutate('hue:200');
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(colorOf(queryClient)).toBe('moss');
+    expect(avatarColorChanged).not.toHaveBeenCalled();
+  });
+});
+
 describe('useUpdateAvatarColor', () => {
   it('paints the new colour before the request resolves, then reports and refreshes', async () => {
     let resolve!: (u: User) => void;

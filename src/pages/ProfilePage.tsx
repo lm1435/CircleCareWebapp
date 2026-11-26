@@ -12,6 +12,7 @@ import {
   type UpdateProfileRequest,
 } from '@/api/users';
 import { queryKeys } from '@/lib/queryKeys';
+import { parseHue } from '@/lib/avatarHue';
 import { browserDefaultUnits, resolveTemperatureUnit } from '@/lib/vitals';
 import { failureContext, isUnreportedFailure } from '@/lib/apiErrors';
 import { getAnalyticsConsent } from '@/lib/analyticsConsent';
@@ -585,6 +586,14 @@ export default function ProfilePage(): ReactElement {
     clay: t('avatarColor.names.clay'),
     forest: t('avatarColor.names.forest'),
     amber: t('avatarColor.names.amber'),
+    sea: t('avatarColor.names.sea'),
+    indigo: t('avatarColor.names.indigo'),
+    plum: t('avatarColor.names.plum'),
+    berry: t('avatarColor.names.berry'),
+    rust: t('avatarColor.names.rust'),
+    ochre: t('avatarColor.names.ochre'),
+    olive: t('avatarColor.names.olive'),
+    slate: t('avatarColor.names.slate'),
   };
   const alertsValue = (() => {
     const prefs = savedPrefs();
@@ -645,7 +654,10 @@ export default function ProfilePage(): ReactElement {
         {
           id: 'color',
           label: pageTitles.color,
-          value: user.avatar_color ? colorNames[user.avatar_color] : undefined,
+          value: user.avatar_color
+            ? (colorNames[user.avatar_color] ??
+              (parseHue(user.avatar_color) !== null ? t('avatarColor.custom') : undefined))
+            : undefined,
           to: settingsPath('color'),
         },
       ],
@@ -958,19 +970,17 @@ export default function ProfilePage(): ReactElement {
         {/* ── Your colour (member avatar) ──────────────────────────────── */}
         {section === 'color' ? (
           <SettingsCard description={t('avatarColor.hint')}>
-            <div className="flex items-center gap-4">
-              <Avatar size="lg" name={fullName || user.email} colorKey={user.avatar_color} />
-              <AvatarColorPicker
-                value={user.avatar_color}
-                onChange={(key) => {
-                  if (key === user.avatar_color) return;
-                  if (blockOfflineWrite('save')) return;
-                  setColorSaved(false);
-                  updateAvatarColor.mutate(key, { onSuccess: () => setColorSaved(true) });
-                }}
-                busy={updateAvatarColor.isPending}
-              />
-            </div>
+            <AvatarColorPicker
+              value={user.avatar_color}
+              name={fullName || user.email}
+              onChange={(value) => {
+                if (value === user.avatar_color) return;
+                if (blockOfflineWrite('save')) return;
+                setColorSaved(false);
+                updateAvatarColor.mutate(value, { onSuccess: () => setColorSaved(true) });
+              }}
+              busy={updateAvatarColor.isPending}
+            />
             <p
               role="status"
               data-testid="avatar-color-saved"

@@ -172,9 +172,21 @@
       "dusk": "Schieferblau",
       "clay": "Ton",
       "forest": "Waldgrün",
-      "amber": "Bernstein"
+      "amber": "Bernstein",
+      "sea": "Meergrün",
+      "indigo": "Indigo",
+      "plum": "Pflaume",
+      "berry": "Beere",
+      "rust": "Rost",
+      "ochre": "Ocker",
+      "olive": "Oliv",
+      "slate": "Schiefergrau"
     },
-    "selected": "ausgewählt"
+    "selected": "ausgewählt",
+    "custom": "Eigene",
+    "hueLabel": "Eigene Farbe",
+    "hueValue": "Farbton {{degrees}} Grad",
+    "preview": "So sehen Ihre Kreise Sie"
   },
   "appearance": {
     "title": "Darstellung",

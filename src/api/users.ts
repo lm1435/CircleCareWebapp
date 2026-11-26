@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { apiClient } from '@/lib/api';
 import { SUPPORTED_LOCALES } from '@/i18n/locales';
-import { AVATAR_COLOR_KEYS, type AvatarColorKey } from '@/components/ui/Avatar';
+import { isValidAvatarColor } from '@/components/ui/Avatar';
 
 // PORT of mobile/src/api/users.ts + mobile/src/hooks/useUnitPreferences.ts.
 // The apiClient response interceptor already unwraps to the
@@ -68,7 +68,7 @@ export interface User {
    * absent = no choice, so avatars keep the name-derived gradient. A backend
    * that predates the column omits it.
    */
-  avatar_color?: AvatarColorKey | null;
+  avatar_color?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -93,8 +93,12 @@ export const updateProfileSchema = z.object({
   last_name: z.string().max(50).optional(),
   timezone: z.string().optional(),
   language: z.enum(SUPPORTED_LOCALES).optional(),
-  // Palette key, never a hex (backend z.enum(AVATAR_COLOR_KEYS)); null resets.
-  avatar_color: z.enum(AVATAR_COLOR_KEYS).nullable().optional(),
+  // Palette key or `hue:0-359`, never a hex (backend avatarColorSchema); null resets.
+  avatar_color: z
+    .string()
+    .refine(isValidAvatarColor, 'invalid avatar colour')
+    .nullable()
+    .optional(),
 });
 export type UpdateProfileRequest = z.infer<typeof updateProfileSchema>;
 

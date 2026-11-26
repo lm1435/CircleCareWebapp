@@ -835,3 +835,56 @@
     color-scheme: light;
   }
 }
+
+/* Member colour, computed values (extra quick picks + custom hue, 1.4.4): Avatar / AvatarColorPicker set
+   --av-lf/--av-lt (light pair) and --av-df/--av-dt (dark pair) inline; this picks the pair for the theme.
+   Dark is screen-only (print stays light), like every other dark token. Palette-token avatars set none
+   of them and ignore these. */
+.avatar-dyn {
+  --av-f: var(--av-lf);
+  --av-t: var(--av-lt);
+}
+@media screen {
+  :root[data-theme='dark'] .avatar-dyn {
+    --av-f: var(--av-df);
+    --av-t: var(--av-dt);
+  }
+}
+
+/* Hue slider (member colour picker): a native range input over a rainbow track. The track and thumb
+   are custom-painted; the input keeps its native keyboard + screen-reader semantics. */
+.hue-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  margin: 0;
+}
+.hue-range::-webkit-slider-runnable-track {
+  height: 16px;
+  border-radius: 8px;
+  background: var(--hue-rainbow);
+}
+.hue-range::-moz-range-track {
+  height: 16px;
+  border-radius: 8px;
+  background: var(--hue-rainbow);
+}
+.hue-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  margin-top: -6px;
+  border-radius: 50%;
+  border: 3px solid var(--color-ink);
+  background: var(--color-bg);
+}
+.hue-range::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid var(--color-ink);
+  background: var(--color-bg);
+}

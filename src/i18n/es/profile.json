@@ -172,9 +172,21 @@
       "dusk": "Azul pizarra",
       "clay": "Arcilla",
       "forest": "Verde bosque",
-      "amber": "Ámbar"
+      "amber": "Ámbar",
+      "sea": "Verde mar",
+      "indigo": "Índigo",
+      "plum": "Ciruela",
+      "berry": "Mora",
+      "rust": "Óxido",
+      "ochre": "Ocre",
+      "olive": "Oliva",
+      "slate": "Gris pizarra"
     },
-    "selected": "seleccionado"
+    "selected": "seleccionado",
+    "custom": "Personalizado",
+    "hueLabel": "Color personalizado",
+    "hueValue": "Tono {{degrees}} grados",
+    "preview": "Así te ven tus círculos"
   },
   "appearance": {
     "title": "Apariencia",

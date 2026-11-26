@@ -48,9 +48,9 @@ test('pick a colour: preview, persistence, reload, and a second member sees it',
   const group = page.getByRole('radiogroup', { name: 'Choose your color' });
   await expect(group).toBeVisible({ timeout: 20_000 });
 
-  // Nothing chosen yet: six radios, none checked, each a >= 44px target.
+  // Nothing chosen yet: twelve quick-pick radios (1.4.4), none checked, each a >= 44px target.
   const radios = group.getByRole('radio');
-  await expect(radios).toHaveCount(6);
+  await expect(radios).toHaveCount(12);
   await expect(group.locator('[aria-checked="true"]')).toHaveCount(0);
   for (const radio of await radios.all()) {
     const box = await radio.boundingBox();
@@ -72,15 +72,15 @@ test('pick a colour: preview, persistence, reload, and a second member sees it',
   // Keyboard: arrows move focus only (no save per arrow), Space chooses.
   await coral.focus();
   await page.keyboard.press('ArrowRight');
-  await expect(group.getByRole('radio', { name: 'Slate blue' })).toBeFocused();
+  await expect(group.getByRole('radio', { name: 'Rust' })).toBeFocused();
   expect(colorOf(owner.userId)).toBe('coral');
   await page.keyboard.press('Space');
-  await expect(group.getByRole('radio', { name: 'Slate blue' })).toHaveAttribute(
+  await expect(group.getByRole('radio', { name: 'Rust' })).toHaveAttribute(
     'aria-checked',
     'true',
     { timeout: 20_000 }
   );
-  await expect.poll(() => colorOf(owner.userId), { timeout: 20_000 }).toBe('dusk');
+  await expect.poll(() => colorOf(owner.userId), { timeout: 20_000 }).toBe('rust');
   await group.getByRole('radio', { name: 'Coral' }).click();
   await expect.poll(() => colorOf(owner.userId), { timeout: 20_000 }).toBe('coral');
 
@@ -136,4 +136,39 @@ test('the picker survives a save failure: rolls back and says so', async ({
   });
   await expect(coral).toHaveAttribute('aria-checked', 'false');
   expect(colorOf(owner.userId)).toBeNull();
+});
+
+test('hue slider: previews, saves hue:N once on release, survives reload (1.4.4)', async ({
+  page,
+  context,
+  request,
+  baseURL,
+}, testInfo) => {
+  const owner = await createScopedAccount('color-hue');
+  await ownerApi(request, owner);
+  await cookieLogin(context, owner, baseURL);
+  let patches = 0;
+  await page.route('**/api/users/me', async (route) => {
+    if (route.request().method() === 'PATCH') patches += 1;
+    await route.continue();
+  });
+  await page.goto('/profile/color', { waitUntil: 'domcontentloaded' });
+  const slider = page.getByRole('slider', { name: 'Custom color' });
+  await expect(slider).toBeVisible({ timeout: 20_000 });
+  await expect(slider).toHaveAttribute('aria-valuetext', /Hue \d+ degrees/);
+  await checkA11y(page, '/profile/color', testInfo);
+
+  // fill() fires input/change events; the save waits for release (blur here), so one PATCH.
+  await slider.fill('100');
+  await slider.fill('200');
+  expect(patches).toBe(0);
+  await slider.blur();
+  await expect.poll(() => colorOf(owner.userId), { timeout: 20_000 }).toBe('hue:200');
+  expect(patches).toBe(1);
+  await expect(page.getByTestId('avatar-color-saved')).toHaveText('Color updated.', { timeout: 20_000 });
+  // No quick pick is checked for a custom hue.
+  await expect(page.getByRole('radiogroup').locator('[aria-checked="true"]')).toHaveCount(0);
+
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('slider', { name: 'Custom color' })).toHaveValue('200', { timeout: 20_000 });
 });

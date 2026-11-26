@@ -1,4 +1,11 @@
-import { useState, type ReactElement } from 'react';
+import { useState, type CSSProperties, type ReactElement } from 'react';
+import {
+  parseHue,
+  hueGradientLight,
+  hueGradientDark,
+  gradientFromHexLight,
+  gradientFromHexDark,
+} from '@/lib/avatarHue';
 
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
@@ -8,7 +15,7 @@ export interface AvatarProps {
   /** Already-signed photo URL (backend `getSignedPhotoUrl`). */
   photoUrl?: string | null;
   /**
-   * A member's chosen colour (`users.avatar_color`). A valid palette key wins
+   * A member's chosen colour (`users.avatar_color`). A valid palette key or `hue:N` wins
    * over the name hash; null / undefined / an unknown key falls back to it.
    * Pass it for MEMBER avatars only: care-recipient avatars stay name-hashed.
    */
@@ -87,15 +94,87 @@ export const AVATAR_GRADIENTS: readonly (readonly [string, string])[] = [
  * order == `AVATAR_GRADIENTS`, so a key and today's name hash agree.
  */
 export const AVATAR_COLOR_KEYS = ['moss', 'coral', 'dusk', 'clay', 'forest', 'amber'] as const;
-export type AvatarColorKey = (typeof AVATAR_COLOR_KEYS)[number];
+export type LegacyAvatarColorKey = (typeof AVATAR_COLOR_KEYS)[number];
+
+/**
+ * 1.4.4: eight more quick-pick keys (fixed hex, white initial >= 4.5:1; twin of mobile's
+ * AVATAR_EXTRA_COLORS). NOT part of the name-hash palette above, so nobody's hashed colour moves.
+ */
+export const AVATAR_EXTRA_COLORS = {
+  sea: '#2E6B66',
+  indigo: '#4B4F8F',
+  plum: '#6E4A80',
+  berry: '#8E3D60',
+  rust: '#B0562A',
+  ochre: '#7A6A1E',
+  olive: '#55702E',
+  slate: '#4A4742',
+} as const;
+export type ExtraAvatarColorKey = keyof typeof AVATAR_EXTRA_COLORS;
+export type AvatarColorKey = LegacyAvatarColorKey | ExtraAvatarColorKey;
+
+/** The 12 quick picks the picker OFFERS, in display order (same as mobile). forest / amber stay valid, not offered. */
+export const AVATAR_QUICK_PICKS: readonly AvatarColorKey[] = [
+  'moss',
+  'sea',
+  'dusk',
+  'indigo',
+  'plum',
+  'berry',
+  'coral',
+  'rust',
+  'clay',
+  'ochre',
+  'olive',
+  'slate',
+];
 
 export function isAvatarColorKey(value: unknown): value is AvatarColorKey {
-  return typeof value === 'string' && (AVATAR_COLOR_KEYS as readonly string[]).includes(value);
+  return (
+    typeof value === 'string' &&
+    ((AVATAR_COLOR_KEYS as readonly string[]).includes(value) ||
+      Object.prototype.hasOwnProperty.call(AVATAR_EXTRA_COLORS, value))
+  );
 }
 
-/** Gradient pair for a palette key. */
+/** A stored value the avatar can paint: a palette key or `hue:0-359`. Anything else falls back to the name hash. */
+export function isValidAvatarColor(value: unknown): boolean {
+  return isAvatarColorKey(value) || parseHue(value) !== null;
+}
+
+/**
+ * Computed colours (extra keys, custom hues) paint through CSS variables so dark mode can swap them
+ * (`.avatar-dyn` in globals.css picks the light or dark pair from `:root[data-theme]`).
+ */
+const DYN_FROM = 'var(--av-f)';
+const DYN_TO = 'var(--av-t)';
+
+/** The `--av-*` pairs an element needs for a computed colour; undefined for palette-token colours. */
+export function avatarDynVars(colorKey?: string | null): CSSProperties | undefined {
+  let light: readonly [string, string];
+  let dark: readonly [string, string];
+  if (typeof colorKey === 'string' && Object.prototype.hasOwnProperty.call(AVATAR_EXTRA_COLORS, colorKey)) {
+    const hex = AVATAR_EXTRA_COLORS[colorKey as ExtraAvatarColorKey];
+    light = gradientFromHexLight(hex);
+    dark = gradientFromHexDark(hex);
+  } else {
+    const hue = parseHue(colorKey);
+    if (hue === null) return undefined;
+    light = hueGradientLight(hue);
+    dark = hueGradientDark(hue);
+  }
+  return {
+    '--av-lf': light[0],
+    '--av-lt': light[1],
+    '--av-df': dark[0],
+    '--av-dt': dark[1],
+  } as CSSProperties;
+}
+
+/** Gradient pair for a palette key (computed keys return the `--av-*` variable pair; see avatarDynVars). */
 export function avatarGradientForKey(key: AvatarColorKey): readonly [string, string] {
-  return AVATAR_GRADIENTS[AVATAR_COLOR_KEYS.indexOf(key)]!;
+  const i = (AVATAR_COLOR_KEYS as readonly string[]).indexOf(key);
+  return i >= 0 ? AVATAR_GRADIENTS[i]! : [DYN_FROM, DYN_TO];
 }
 
 /**
@@ -113,6 +192,7 @@ export function avatarGradientFor(
   colorKey?: string | null
 ): readonly [string, string] {
   if (isAvatarColorKey(colorKey)) return avatarGradientForKey(colorKey);
+  if (parseHue(colorKey) !== null) return [DYN_FROM, DYN_TO];
   const trimmed = name?.trim();
   if (!trimmed) return AVATAR_GRADIENTS[0]!;
   let h = 5381;
@@ -172,8 +252,9 @@ export function Avatar({
   return (
     <span
       aria-hidden="true"
-      className={`${base} ${dimensions} font-semibold text-cream${className ? ` ${className}` : ''}`}
+      className={`${base} ${dimensions} avatar-dyn font-semibold text-cream${className ? ` ${className}` : ''}`}
       style={{
+        ...avatarDynVars(colorKey),
         backgroundImage: `linear-gradient(135deg, ${from}, ${to})`,
         fontSize: fontSizePx[size],
       }}

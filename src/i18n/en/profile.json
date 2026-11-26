@@ -172,9 +172,21 @@
       "dusk": "Slate blue",
       "clay": "Clay",
       "forest": "Forest green",
-      "amber": "Amber"
+      "amber": "Amber",
+      "sea": "Sea green",
+      "indigo": "Indigo",
+      "plum": "Plum",
+      "berry": "Berry",
+      "rust": "Rust",
+      "ochre": "Ochre",
+      "olive": "Olive",
+      "slate": "Slate gray"
     },
-    "selected": "selected"
+    "selected": "selected",
+    "custom": "Custom",
+    "hueLabel": "Custom color",
+    "hueValue": "Hue {{degrees}} degrees",
+    "preview": "How your circles see you"
   },
   "appearance": {
     "title": "Appearance",

@@ -172,9 +172,21 @@
       "dusk": "Blu ardesia",
       "clay": "Argilla",
       "forest": "Verde bosco",
-      "amber": "Ambra"
+      "amber": "Ambra",
+      "sea": "Verde mare",
+      "indigo": "Indaco",
+      "plum": "Prugna",
+      "berry": "Bacca",
+      "rust": "Ruggine",
+      "ochre": "Ocra",
+      "olive": "Oliva",
+      "slate": "Grigio ardesia"
     },
-    "selected": "selezionato"
+    "selected": "selezionato",
+    "custom": "Personalizzato",
+    "hueLabel": "Colore personalizzato",
+    "hueValue": "Tonalità {{degrees}} gradi",
+    "preview": "Come ti vedono le tue cerchie"
   },
   "appearance": {
     "title": "Aspetto",

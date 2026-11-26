@@ -22,7 +22,7 @@ import {
 import { queryKeys } from '@/lib/queryKeys';
 import { failureContext, isSubscriptionRequiredError, type FailureAction, isUnreportedFailure } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
-import type { AvatarColorKey } from '@/components/ui/Avatar';
+import { parseHue } from '@/lib/avatarHue';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import i18n from '@/i18n';
@@ -83,7 +83,7 @@ export function useUpdateProfile(): UseMutationResult<User, unknown, UpdateProfi
 export function useUpdateAvatarColor(): UseMutationResult<
   User,
   unknown,
-  AvatarColorKey,
+  string,
   { previous: User | undefined }
 > {
   const queryClient = useQueryClient();
@@ -91,7 +91,7 @@ export function useUpdateAvatarColor(): UseMutationResult<
   const { t } = useTranslation('profile');
 
   return useMutation({
-    mutationFn: (avatar_color: AvatarColorKey) => updateProfile({ avatar_color }),
+    mutationFn: (avatar_color: string) => updateProfile({ avatar_color }),
     onMutate: async (avatar_color) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.currentUser });
       const previous = queryClient.getQueryData<User>(queryKeys.currentUser);
@@ -101,7 +101,8 @@ export function useUpdateAvatarColor(): UseMutationResult<
       return { previous };
     },
     onSuccess: (_user, avatar_color) => {
-      Analytics.avatarColorChanged(avatar_color);
+      // Enum only: the quick-pick key, or 'custom_hue' (never the raw hue).
+      Analytics.avatarColorChanged(parseHue(avatar_color) !== null ? 'custom_hue' : avatar_color);
     },
     onError: (error, _vars, context) => {
       if (context?.previous) {

@@ -172,9 +172,21 @@
       "dusk": "Azul-ardósia",
       "clay": "Argila",
       "forest": "Verde-floresta",
-      "amber": "Âmbar"
+      "amber": "Âmbar",
+      "sea": "Verde-mar",
+      "indigo": "Índigo",
+      "plum": "Ameixa",
+      "berry": "Amora",
+      "rust": "Ferrugem",
+      "ochre": "Ocre",
+      "olive": "Oliva",
+      "slate": "Cinza-ardósia"
     },
-    "selected": "selecionada"
+    "selected": "selecionada",
+    "custom": "Personalizada",
+    "hueLabel": "Cor personalizada",
+    "hueValue": "Matiz {{degrees}} graus",
+    "preview": "Como seus círculos veem você"
   },
   "appearance": {
     "title": "Aparência",

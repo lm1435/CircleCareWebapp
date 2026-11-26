@@ -172,9 +172,21 @@
       "dusk": "Bleu ardoise",
       "clay": "Argile",
       "forest": "Vert forêt",
-      "amber": "Ambre"
+      "amber": "Ambre",
+      "sea": "Vert marin",
+      "indigo": "Indigo",
+      "plum": "Prune",
+      "berry": "Baie",
+      "rust": "Rouille",
+      "ochre": "Ocre",
+      "olive": "Olive",
+      "slate": "Gris ardoise"
     },
-    "selected": "sélectionnée"
+    "selected": "sélectionnée",
+    "custom": "Personnalisée",
+    "hueLabel": "Couleur personnalisée",
+    "hueValue": "Teinte {{degrees}} degrés",
+    "preview": "Comment vos cercles vous voient"
   },
   "appearance": {
     "title": "Apparence",

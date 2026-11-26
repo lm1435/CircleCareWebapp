@@ -35,9 +35,18 @@ describe('print and PDF stay light', () => {
     const first = css.indexOf(":root[data-theme='dark']");
     expect(first).toBeGreaterThan(-1);
     expect(css.lastIndexOf('@media screen', first)).toBeGreaterThan(-1);
-    // The only other mentions of the dark attribute are comments.
+    // The only other mentions of the dark attribute are comments, plus ONE allowed selector rule:
+    // `.avatar-dyn` (member colour, 1.4.4) swaps its computed light/dark pair, so it needs the attribute
+    // itself; it must sit inside @media screen too (print stays light).
     const code = css.replace(/\/\*[\s\S]*?\*\//g, '');
-    expect(code.match(/data-theme='dark'/g)).toHaveLength(1);
+    expect(code.match(/data-theme='dark'/g)).toHaveLength(2);
+    const dyn = code.indexOf(":root[data-theme='dark'] .avatar-dyn");
+    expect(dyn).toBeGreaterThan(-1);
+    expect(code.lastIndexOf('@media screen', dyn)).toBeGreaterThan(code.lastIndexOf('@media print', dyn));
+    expect(code.slice(code.lastIndexOf('@media screen', dyn), dyn)).not.toMatch(/\n\}/);
+    // Dark swaps in the DARK pair; the base rule is the light pair.
+    expect(code.slice(dyn, code.indexOf('}', dyn))).toMatch(/--av-f:\s*var\(--av-df\);[\s\S]*--av-t:\s*var\(--av-dt\)/);
+    expect(code).toMatch(/\.avatar-dyn\s*\{\s*--av-f:\s*var\(--av-lf\);\s*--av-t:\s*var\(--av-lt\);/);
   });
 
   it('printing resets the root colour-scheme to light', () => {
