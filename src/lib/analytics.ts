@@ -1004,7 +1004,8 @@ export const Analytics = {
    * mobile). `header` = the gear in the Today header, `today_row` = the Care team row.
    * Enum only, no circle_id.
    */
-  careTeamOpened: (source: 'header' | 'today_row') => capture('care_team_opened', { source }),
+  careTeamOpened: (source: 'header' | 'today_row' | 'helper_card') =>
+    capture('care_team_opened', { source: pickEnum(source, ['header', 'today_row', 'helper_card'] as const, 'today_row') }),
   /** Circle settings (Edit circle) opened from the owner's gear on Today (mobile parity, 2026-11-25). */
   circleSettingsOpened: (source: 'today_header', viewer: 'owner' | 'care_recipient' = 'owner') =>
     capture('circle_settings_opened', { source, viewer }),
@@ -1029,7 +1030,7 @@ export const Analytics = {
   todayViewed: (props: {
     has_items: boolean;
     next_up_count: number;
-    coaching: 'dose_alerts' | 'next_step' | 'shifts' | 'dose_hint' | 'none';
+    coaching: 'dose_alerts' | 'next_step' | 'helper_card' | 'shifts' | 'dose_hint' | 'none';
   }) => capture('today_viewed', props),
   /** A Next-up row's primary action (or the row itself, 'open') was pressed. */
   nextUpAction: (props: {
@@ -1045,8 +1046,28 @@ export const Analytics = {
     capture('next_step_tapped', { step }),
   nextStepDismissed: (step: 'first_med' | 'invite' | 'reminders') =>
     capture('next_step_dismissed', { step }),
-  nextStepCompleted: (step: 'first_med' | 'invite' | 'reminders') =>
-    capture('next_step_completed', { step }),
+  /** 1.4.4: the helper's calm Today card (a plain member; replaces the owner's checklist for them). */
+  helperTodayCardShown: (action: 'note' | 'care_team') =>
+    capture('helper_today_card_shown', { action: pickEnum(action, ['note', 'care_team'] as const, 'care_team') }),
+  helperTodayCardAction: (action: 'note' | 'care_team') =>
+    capture('helper_today_card_action', { action: pickEnum(action, ['note', 'care_team'] as const, 'care_team') }),
+  helperTodayCardDismissed: () => capture('helper_today_card_dismissed', {}),
+  nextStepCompleted: (
+    step: 'first_med' | 'invite' | 'reminders',
+    opts: { first_item_kind?: 'medication' | 'appointment' | 'task' | 'other' } = {}
+  ) =>
+    capture('next_step_completed', {
+      step,
+      ...(opts.first_item_kind !== undefined
+        ? {
+            first_item_kind: pickEnum(
+              opts.first_item_kind,
+              ['medication', 'appointment', 'task', 'other'] as const,
+              'other'
+            ),
+          }
+        : {}),
+    }),
   /** `showCount` (1..3): which showing of a capped hint this is (the shifts card, 1.4.2). */
   coachingHintShown: (
     hint: 'first_dose' | 'shifts_second_caregiver',

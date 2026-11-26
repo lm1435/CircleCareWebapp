@@ -76,6 +76,17 @@
         "cta": "Activer les rappels"
       }
     },
+    "helperCard": {
+      "eyebrow": "Vous aidez",
+      "title": "Vous aidez {{name}}",
+      "titleNoName": "Vous faites partie de l’équipe de soins",
+      "leaveNote": "Laisser une note",
+      "seeCareTeam": "Voir l’équipe de soins",
+      "dismiss": "Compris",
+      "bodyQuiet": "Rien ne vous attend pour le moment.",
+      "bodyBusy": "Voici ce qui est prévu aujourd’hui pour {{name}}.",
+      "bodyBusyNoName": "Voici ce qui est prévu aujourd’hui."
+    },
     "shiftsNudge": {
       "joined": "{{member}} a rejoint le cercle de {{name}}",
       "joinedSelf": "{{member}} a rejoint votre cercle",

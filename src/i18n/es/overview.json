@@ -76,6 +76,17 @@
         "cta": "Activar recordatorios"
       }
     },
+    "helperCard": {
+      "eyebrow": "Estás ayudando",
+      "title": "Estás ayudando con {{name}}",
+      "titleNoName": "Eres parte del equipo de cuidado",
+      "leaveNote": "Dejar una nota",
+      "seeCareTeam": "Ver el equipo de cuidado",
+      "dismiss": "Entendido",
+      "bodyQuiet": "Por ahora no hay nada que requiera tu atención.",
+      "bodyBusy": "Esto es lo que viene hoy para {{name}}.",
+      "bodyBusyNoName": "Esto es lo que viene hoy."
+    },
     "shiftsNudge": {
       "joined": "{{member}} se unió al círculo de {{name}}",
       "joinedSelf": "{{member}} se unió a tu círculo",

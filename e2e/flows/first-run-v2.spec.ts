@@ -199,6 +199,20 @@ test.describe('first run v2 (web)', () => {
       expect(rows[0].scheduled_time, 'the picked time').toBe('09:00:00');
       // The day is the form's normal default: the recipient's today (no "tomorrow once 9:00 passed" roll).
       expect(rows[0].today, 'saved on the recipient\'s today').toBe(true);
+
+      // 1.4.4: an appointment/task as the FIRST item completes the first-item step, so Today's next-step card
+      // asks for the invite (step 2), never "Add <name>'s first medication".
+      await page.getByTestId('first-run-go-to-today').click();
+      await expect(page).toHaveURL(/\/(upgrade|circles\/[0-9a-f-]{36})$/, { timeout: 20_000 });
+      if (/\/upgrade$/.test(page.url())) {
+        await page.getByRole('button', { name: /Continue with free plan/ }).click();
+      }
+      await page.waitForURL(new RegExp(`/circles/${circleId}$`), { timeout: 30_000 });
+      const nextStep = page.getByTestId('next-step-card');
+      await expect(nextStep).toHaveAttribute('data-step', 'invite', { timeout: 30_000 });
+      await expect(nextStep).toContainText(/Next step · 2 of \d/);
+      await expect(nextStep.getByRole('heading', { name: 'Invite someone to help' })).toBeVisible();
+      await expect(page.getByText(/first medication/i)).toHaveCount(0);
     });
   }
 

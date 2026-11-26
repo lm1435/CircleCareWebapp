@@ -15,12 +15,19 @@ vi.mock('@/api/users', () => ({ getCurrentUser: vi.fn() }));
 
 interface World {
   hasMed: boolean;
+  hasAppt?: boolean;
+  hasTask?: boolean;
+  /** presence still loading */
+  presencePending?: boolean;
   members: number;
   liveInvites: number;
   canManage: boolean;
   canEdit: boolean;
   viewOnly: boolean;
   medRemindersOff: boolean;
+  /** 1.4.4: who the viewer is. Default owner (the only role before). */
+  isOwner: boolean;
+  iAmRecipient: boolean;
 }
 let world: World;
 
@@ -34,15 +41,21 @@ function apply(): void {
         is_expired: false,
       })),
     },
-    members: Array.from({ length: world.members }, (_, i) => ({ id: `m${i}` })),
+    members: Array.from({ length: world.members }, (_, i) => ({
+      id: i === 0 ? 'u1' : `m${i}`,
+      is_care_recipient: i === 0 && world.iAmRecipient,
+    })),
+    isOwner: world.isOwner,
     canEdit: world.canEdit,
     canManageMembers: world.canManage,
     isLoading: false,
   } as unknown as ReturnType<typeof useCircle>);
   vi.mocked(useEventsPresence).mockReturnValue({
-    data: { medication: world.hasMed, appointment: false, task: false },
-    isSuccess: true,
-    isPending: false,
+    data: world.presencePending
+      ? undefined
+      : { medication: world.hasMed, appointment: world.hasAppt === true, task: world.hasTask === true },
+    isSuccess: !world.presencePending,
+    isPending: world.presencePending === true,
     isError: false,
     isFallback: false,
     refetch: vi.fn(),
@@ -81,6 +94,8 @@ describe('useNextStep', () => {
       canEdit: true,
       viewOnly: false,
       medRemindersOff: false,
+      isOwner: true,
+      iAmRecipient: false,
     };
     apply();
     vi.spyOn(Analytics, 'nextStepCompleted').mockImplementation(() => {});
@@ -133,12 +148,52 @@ describe('useNextStep', () => {
     expect((await mount()).result.current.status).toBe('none');
   });
 
-  it('a member who cannot invite gets a 2-step list and never the invite step', async () => {
+  it('a care recipient (cannot invite) gets a 2-step list and never the invite step', async () => {
     world.canManage = false;
+    world.isOwner = false;
+    world.iAmRecipient = true;
     world.hasMed = true;
     world.medRemindersOff = true;
     apply();
     expect((await mount()).result.current).toMatchObject({ step: 'reminders', position: 2, total: 2 });
+  });
+
+  describe('role-aware (1.4.4)', () => {
+    it('POSITIVE: a manager gets invite + reminders, never "add the first medication"', async () => {
+      world.isOwner = false;
+      world.canManage = true;
+      apply();
+      expect((await mount()).result.current).toMatchObject({ status: 'step', step: 'invite', position: 1, total: 2 });
+    });
+
+    it('S1 POSITIVE: a care recipient WITH manage rights gets all three steps (same as mobile)', async () => {
+      world.isOwner = false;
+      world.canManage = true;
+      world.iAmRecipient = true;
+      apply();
+      expect((await mount()).result.current).toMatchObject({ status: 'step', step: 'first_med', total: 3 });
+    });
+
+    it('POSITIVE: the care recipient keeps the first-medication step', async () => {
+      world.isOwner = false;
+      world.canManage = false;
+      world.iAmRecipient = true;
+      apply();
+      expect((await mount()).result.current).toMatchObject({ status: 'step', step: 'first_med', total: 2 });
+    });
+
+    it('NEGATIVE: a helper (editor, empty circle, reminders off) sees NO checklist step at all', async () => {
+      world.isOwner = false;
+      world.canManage = false;
+      world.medRemindersOff = true;
+      apply();
+      expect((await mount()).result.current.status).toBe('none');
+    });
+
+    it('NEGATIVE: the owner still sees the full 3-step checklist', async () => {
+      const { result } = await mount();
+      expect(result.current).toMatchObject({ status: 'step', step: 'first_med', total: 3 });
+    });
   });
 
   it('view-only and read-only seats get no card at all', async () => {
@@ -201,6 +256,72 @@ describe('useNextStep', () => {
     });
   });
 
+  describe('first item of ANY kind completes step 1 (1.4.4)', () => {
+    it.each([
+      ['appointment', { hasAppt: true }],
+      ['task', { hasTask: true }],
+      ['medication', { hasMed: true }],
+    ])('POSITIVE: owner with only a %s -> invite (2 of 3)', async (_k, over) => {
+      Object.assign(world, over);
+      apply();
+      const { result } = await mount();
+      expect(result.current).toMatchObject({ status: 'step', step: 'invite', position: 2, total: 3 });
+    });
+
+    it('NEGATIVE: an empty circle keeps step 1', async () => {
+      const { result } = await mount();
+      expect(result.current).toMatchObject({ status: 'step', step: 'first_med', position: 1, total: 3 });
+    });
+
+    it('NEGATIVE: a step-1 snooze does not suppress the invite step once an appointment completes step 1', async () => {
+      snoozeNextStep('c1', 'first_med');
+      world.hasAppt = true;
+      apply();
+      const { result } = await mount();
+      expect(result.current).toMatchObject({ status: 'step', step: 'invite' });
+    });
+
+    it('NEGATIVE: appointment first item + invited -> reminders, not invite', async () => {
+      world.hasAppt = true;
+      world.members = 2;
+      world.medRemindersOff = true;
+      apply();
+      const { result } = await mount();
+      expect(result.current).toMatchObject({ status: 'step', step: 'reminders', position: 3 });
+    });
+
+    it('NEGATIVE: a helper with an appointment-only circle still sees no checklist', async () => {
+      world.hasAppt = true;
+      world.isOwner = false;
+      world.canManage = false;
+      world.medRemindersOff = true;
+      apply();
+      expect((await mount()).result.current.status).toBe('none');
+    });
+
+    it('NEGATIVE: a manager is unchanged (invite first, 2 steps)', async () => {
+      world.isOwner = false;
+      apply();
+      const { result } = await mount();
+      expect(result.current).toMatchObject({ step: 'invite', position: 1, total: 2 });
+    });
+
+    it('NEGATIVE: presence still loading -> unknown, no step', () => {
+      world.presencePending = true;
+      apply();
+      const hook = renderHook(() => useNextStep('c1', 'America/Denver'), { wrapper });
+      expect(hook.result.current.status).toBe('unknown');
+    });
+
+    it('completed carries first_item_kind=appointment', async () => {
+      const { rerender } = await mount();
+      world.hasAppt = true;
+      apply();
+      rerender();
+      expect(Analytics.nextStepCompleted).toHaveBeenCalledWith('first_med', { first_item_kind: 'appointment' });
+    });
+  });
+
   describe('next_step_completed', () => {
     it('fires when an open step becomes done while on screen, once', async () => {
       const { result, rerender } = await mount();
@@ -209,7 +330,7 @@ describe('useNextStep', () => {
       world.hasMed = true;
       apply();
       rerender();
-      expect(Analytics.nextStepCompleted).toHaveBeenCalledWith('first_med');
+      expect(Analytics.nextStepCompleted).toHaveBeenCalledWith('first_med', { first_item_kind: 'medication' });
       rerender();
       expect(Analytics.nextStepCompleted).toHaveBeenCalledTimes(1);
     });

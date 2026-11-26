@@ -76,6 +76,17 @@
         "cta": "Turn on reminders"
       }
     },
+    "helperCard": {
+      "eyebrow": "You're helping",
+      "title": "You're helping with {{name}}",
+      "titleNoName": "You're on the care team",
+      "leaveNote": "Leave a note",
+      "seeCareTeam": "See the care team",
+      "dismiss": "Got it",
+      "bodyQuiet": "Nothing needs you right now.",
+      "bodyBusy": "Here is what is coming up for {{name}} today.",
+      "bodyBusyNoName": "Here is what is coming up today."
+    },
     "shiftsNudge": {
       "joined": "{{member}} joined {{name}}'s circle",
       "joinedSelf": "{{member}} joined your circle",

@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   NEXT_STEP_SNOOZE_MS,
+  applicableNextSteps,
+  dismissHelperCard,
+  hasDismissedHelperCard,
+  helperCardAction,
+  helperCardBody,
+  nextStepViewerRole,
   dismissShiftsNudge,
   hasDismissedShiftsNudge,
   hasSeenDoseHint,
@@ -124,5 +130,41 @@ describe('shifts nudge showing counter (1.4.2)', () => {
     });
     expect(m.getShiftsNudgeShowCount('cq')).toBe(0);
     spy.mockRestore();
+  });
+});
+
+describe('role-aware next steps and the helper card (1.4.4)', () => {
+  beforeEach(() => setUser('u1'));
+  const ORDER = ['first_med', 'invite', 'reminders'] as const;
+
+  it('POSITIVE: owner and recipient all three (the invite right is checked by the caller, as on mobile); manager invite + reminders', () => {
+    expect(applicableNextSteps('owner', ORDER)).toEqual(['first_med', 'invite', 'reminders']);
+    expect(applicableNextSteps('recipient', ORDER)).toEqual(['first_med', 'invite', 'reminders']);
+    expect(applicableNextSteps('manager', ORDER)).toEqual(['invite', 'reminders']);
+  });
+
+  it('NEGATIVE: a helper has no setup step', () => {
+    expect(applicableNextSteps('helper', ORDER)).toEqual([]);
+    expect(nextStepViewerRole({ isOwner: false, isRecipient: false, canManageMembers: false })).toBe('helper');
+    expect(nextStepViewerRole({ isOwner: true, isRecipient: true, canManageMembers: true })).toBe('owner');
+  });
+
+  it('helperCardBody: anything in Next up is "busy", an empty list is "quiet" (web never promises a push)', () => {
+    expect(helperCardBody(0)).toBe('quiet');
+    expect(helperCardBody(1)).toBe('busy');
+    expect(helperCardBody(7)).toBe('busy');
+  });
+
+  it('helperCardAction: write access -> note; view-only -> care_team', () => {
+    expect(helperCardAction(true)).toBe('note');
+    expect(helperCardAction(false)).toBe('care_team');
+  });
+
+  it('POSITIVE: a dismissal persists per circle; NEGATIVE: not for another circle', () => {
+    localStorage.clear();
+    expect(hasDismissedHelperCard('c1')).toBe(false);
+    dismissHelperCard('c1');
+    expect(hasDismissedHelperCard('c1')).toBe(true);
+    expect(hasDismissedHelperCard('c2')).toBe(false);
   });
 });

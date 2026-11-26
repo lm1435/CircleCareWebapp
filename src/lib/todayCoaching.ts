@@ -10,6 +10,23 @@ import { scopedKey } from '@/lib/storageScope';
 /** "Not now" on the next-step card hides the CURRENT step for 3 days. */
 export const NEXT_STEP_SNOOZE_MS = 3 * 24 * 60 * 60 * 1000;
 
+/**
+ * 1.4.4: step 1 ("first_med") is done once the circle has ANY first item setup lets an owner start with:
+ * a medication, an appointment or a task (what the presence read reports). Same rule as mobile's
+ * utils/nextStep. An empty circle keeps step 1.
+ */
+export type FirstItemKind = 'medication' | 'appointment' | 'task';
+
+export function firstItemKind(
+  presence: { medication?: boolean; appointment?: boolean; task?: boolean } | null | undefined
+): FirstItemKind | null {
+  if (!presence) return null;
+  if (presence.medication === true) return 'medication';
+  if (presence.appointment === true) return 'appointment';
+  if (presence.task === true) return 'task';
+  return null;
+}
+
 export type NextStepKey = 'first_med' | 'invite' | 'reminders';
 
 const NEXT_STEP_BASE = 'today_next_step_snoozed';
@@ -100,4 +117,67 @@ export function hasDismissedShiftsNudge(circleId: string): boolean {
 
 export function dismissShiftsNudge(circleId: string): void {
   write(scopedKey(`${SHIFTS_NUDGE_BASE}:${circleId}`), 'true');
+}
+
+// ── Role-aware next steps + the helper's card (1.4.4) ───────────────────────
+// Same rules as mobile's utils/nextStep.ts and utils/helperCard.ts. The next-step card is the OWNER's
+// setup checklist; a plain helper (not the owner, a manager or the care recipient) gets ONE calm,
+// dismissible card instead. Dismissal: localStorage, per user (scopedKey) AND circle.
+
+export type NextStepViewerRole = 'owner' | 'manager' | 'recipient' | 'helper';
+
+export function nextStepViewerRole(v: {
+  isOwner: boolean;
+  isRecipient: boolean;
+  canManageMembers: boolean;
+}): NextStepViewerRole {
+  if (v.isOwner) return 'owner';
+  if (v.isRecipient) return 'recipient';
+  if (v.canManageMembers) return 'manager';
+  return 'helper';
+}
+
+/**
+ * Steps this role can do (identical to mobile's applicableSteps; the invite step still needs the invite right,
+ * checked by the caller): owner and recipient all three (the recipient's copy is first person, and a recipient
+ * with manage rights is offered the invite step like on mobile); a manager invite + reminders ("add the first
+ * medication" is setup that belongs to the owner and the recipient); a helper none.
+ */
+export function applicableNextSteps(role: NextStepViewerRole, order: readonly NextStepKey[]): NextStepKey[] {
+  return order.filter((s) => {
+    if (role === 'helper') return false;
+    if (s === 'first_med') return role === 'owner' || role === 'recipient';
+    return true;
+  });
+}
+
+/** 'note' = "Leave a note"; 'care_team' = "See the care team" (view-only: no write action is offered). */
+export type HelperCardAction = 'note' | 'care_team';
+
+export function helperCardAction(canWrite: boolean): HelperCardAction {
+  return canWrite ? 'note' : 'care_team';
+}
+
+const HELPER_CARD_BASE = 'today_helper_card_dismissed';
+
+export function hasDismissedHelperCard(circleId: string): boolean {
+  return read(scopedKey(`${HELPER_CARD_BASE}:${circleId}`)) === 'true';
+}
+
+export function dismissHelperCard(circleId: string): void {
+  write(scopedKey(`${HELPER_CARD_BASE}:${circleId}`), 'true');
+}
+
+/**
+ * Which body line the helper card shows (identical to mobile's helperCardBody). It must never be false:
+ *  'busy'  Next up has anything for the viewer: "Here is what is coming up for {name} today."
+ *  The card is NOT rendered in a circle that uses shifts (circle.has_shifts): Overview loads no shift list, so
+ *  "Nothing needs you right now" could be false for a helper on shift (pages/OverviewPage).
+ *  'quiet' Next up is empty: "Nothing needs you right now." The web has no push, so it never adds
+ *          "You'll hear from us when something does" (mobile adds it only when push is granted).
+ */
+export type HelperCardBody = 'busy' | 'quiet';
+
+export function helperCardBody(nextUpCount: number): HelperCardBody {
+  return nextUpCount > 0 ? 'busy' : 'quiet';
 }

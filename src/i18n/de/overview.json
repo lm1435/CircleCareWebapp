@@ -76,6 +76,17 @@
         "cta": "Erinnerungen einschalten"
       }
     },
+    "helperCard": {
+      "eyebrow": "Sie helfen mit",
+      "title": "Sie helfen bei {{name}}",
+      "titleNoName": "Sie gehören zum Pflegeteam",
+      "leaveNote": "Notiz hinterlassen",
+      "seeCareTeam": "Pflegeteam ansehen",
+      "dismiss": "Verstanden",
+      "bodyQuiet": "Im Moment braucht Sie niemand.",
+      "bodyBusy": "Das steht heute für {{name}} an.",
+      "bodyBusyNoName": "Das steht heute an."
+    },
     "shiftsNudge": {
       "joined": "{{member}} ist dem Kreis von {{name}} beigetreten",
       "joinedSelf": "{{member}} ist Ihrem Kreis beigetreten",

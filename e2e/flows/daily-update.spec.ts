@@ -257,8 +257,9 @@ test.describe('daily update', () => {
     await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
     const quick = page.getByTestId('quick-access-grid');
     await expect(quick).toBeVisible({ timeout: NAV_TIMEOUT });
-    // The simple-UI Quick access: four tiles, no Daily updates row (it stays reachable from Activity).
-    await expect(quick.getByRole('link')).toHaveText([/^Notes/, /^Tasks/, /^Calendar/, /^Meds/]);
+    // Quick access is 2x3 since the 1.4.4 navigation pass (Vitals and Emergency info joined the grid);
+    // still no Daily updates row (it stays reachable from Activity).
+    await expect(quick.getByRole('link')).toHaveText([/^Notes/, /^Tasks/, /^Calendar/, /^Meds/, /^Vitals/, /^Emergency info/]);
     await expect(page.getByRole('link', { name: 'Daily updates' })).toHaveCount(0);
     await checkA11y(page, `/circles/${circleId} (Quick access)`, testInfo);
 

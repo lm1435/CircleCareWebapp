@@ -8,7 +8,15 @@ import { getCurrentUser } from '@/api/users';
 import { queryKeys } from '@/lib/queryKeys';
 import { Analytics } from '@/lib/analytics';
 import { groupOn, type NotificationPrefs } from '@/lib/notificationGroups';
-import { isNextStepSnoozed, snoozeNextStep, type NextStepKey } from '@/lib/todayCoaching';
+import {
+  applicableNextSteps,
+  firstItemKind,
+  isNextStepSnoozed,
+  nextStepViewerRole,
+  snoozeNextStep,
+  type NextStepKey,
+} from '@/lib/todayCoaching';
+import { useAuthStore } from '@/store/authStore';
 import { getDateInTimezone } from '@/utils/timezone';
 
 // The Today next-step card's state (docs/plans/simple-ui-1-3-1.md "Next-step
@@ -31,7 +39,8 @@ export type NextStepState =
   | { status: 'step'; step: NextStepKey; position: number; total: number; snooze: () => void };
 
 export function useNextStep(circleId: string, timezone: string | null): NextStepState {
-  const { circle, canEdit, canManageMembers, members, isLoading } = useCircle(circleId);
+  const { circle, canEdit, canManageMembers, members, isLoading, isOwner } = useCircle(circleId);
+  const currentUserId = useAuthStore((st) => st.user?.id);
   const userQuery = useQuery({ queryKey: queryKeys.currentUser, queryFn: getCurrentUser });
   const prefs: NotificationPrefs | undefined = userQuery.data?.notification_preferences as
     | NotificationPrefs
@@ -50,7 +59,8 @@ export function useNextStep(circleId: string, timezone: string | null): NextStep
 
   const liveInvites = (circle?.pending_invites ?? []).filter((i) => !isPendingInviteExpired(i)).length;
   const done: Record<NextStepKey, boolean> = {
-    first_med: presence.data?.medication === true,
+    // Any first item counts (medication, appointment or task): an owner may start with either (1.4.4).
+    first_med: firstItemKind(presence.data) !== null,
     invite: members.length > 1 || liveInvites > 0,
     // Unknown prefs (still loading / failed) count as done: never nag on a guess.
     // The old Medications group is two switches since 1.4.2; "on" keeps its old meaning: either is on.
@@ -59,8 +69,14 @@ export function useNextStep(circleId: string, timezone: string | null): NextStep
         ? true
         : groupOn(prefs, 'doses_taken') || groupOn(prefs, 'doses_not_marked'),
   };
-  // Steps THIS viewer can perform: inviting needs the invite right.
-  const applicable = NEXT_STEP_ORDER.filter((s) => (s === 'invite' ? canManageMembers : true));
+  // Steps THIS viewer can perform (1.4.4, role-aware; mirrors mobile's utils/nextStep): the checklist is the
+  // owner's, and the recipient's in the first person; a manager gets invite + reminders; a plain helper
+  // gets none (Today shows the helper card instead). Inviting also needs the invite right.
+  const isRecipient = members.some((m) => m.is_care_recipient && m.id === currentUserId);
+  const role = nextStepViewerRole({ isOwner, isRecipient, canManageMembers });
+  const applicable = applicableNextSteps(role, NEXT_STEP_ORDER).filter((s) =>
+    s === 'invite' ? canManageMembers : true
+  );
   const open = applicable.filter((s) => !done[s]);
 
   // next_step_completed: a step that was open and became done while on screen.
@@ -68,7 +84,10 @@ export function useNextStep(circleId: string, timezone: string | null): NextStep
   useEffect(() => {
     if (!known || blocked) return;
     for (const s of applicable) {
-      if (wasOpen.current[s] === true && done[s]) Analytics.nextStepCompleted(s);
+      if (wasOpen.current[s] === true && done[s]) Analytics.nextStepCompleted(
+          s,
+          s === 'first_med' ? { first_item_kind: firstItemKind(presence.data) ?? 'other' } : undefined
+        );
       wasOpen.current[s] = !done[s];
     }
   });

@@ -15,6 +15,7 @@ import { DailyUpdateCard } from '@/components/overview/DailyUpdateCard';
 import { CareTeamRow } from '@/components/overview/CareTeamRow';
 import { NextUp, NEXT_UP_VISIBLE, nextUpHasFilledAction } from '@/components/overview/NextUp';
 import { NextStepCard } from '@/components/overview/NextStepCard';
+import { HelperCard } from '@/components/overview/HelperCard';
 import { FirstMedMarkIt } from '@/components/overview/FirstMedMarkIt';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import {
@@ -52,6 +53,11 @@ import {
   hasDismissedShiftsNudge,
   hasSeenDoseHint,
   markDoseHintSeen,
+  nextStepViewerRole,
+  helperCardAction,
+  helperCardBody,
+  hasDismissedHelperCard,
+  dismissHelperCard,
 } from '@/lib/todayCoaching';
 import { Analytics } from '@/lib/analytics';
 import { isDoseConfirmable } from '@/utils/timezone';
@@ -61,7 +67,7 @@ interface FirstRunLocationState {
   firstRunRecipientName?: string;
 }
 
-type Coaching = 'dose_alerts' | 'next_step' | 'shifts' | 'dose_hint' | 'none';
+type Coaching = 'dose_alerts' | 'next_step' | 'helper_card' | 'shifts' | 'dose_hint' | 'none';
 
 /**
  * Today (`/circles/:id`), the landing page when you open a circle
@@ -120,11 +126,14 @@ export default function OverviewPage(): ReactElement {
     isPremiumCircle,
     hasShifts,
     isOwner,
+    canManageMembers,
     canEditOwnRecipientDetails,
   } = useCircle(circleId);
   const isRecipient = members.some((m) => m.is_care_recipient && m.id === currentUserId);
   const recipientName = circle?.recipient_name ?? '';
   const isSelfCare = circle?.is_self_care === true;
+  // The person cared for (the self-care owner or an invited recipient) reads Today in the first person.
+  const viewerIsRecipient = isSelfCare || isRecipient;
   const base = `/circles/${circleId}`;
 
   // The earned upsell: asked HERE (arriving on the circle is a natural pause),
@@ -248,6 +257,21 @@ export default function OverviewPage(): ReactElement {
 
   const nextStep = useNextStep(circleId, timezone);
 
+  // HELPER CARD (1.4.4): a plain member sees ONE calm, dismissible card instead of the owner's setup
+  // checklist. "Leave a note" needs write access; a view-only helper is offered the care team only.
+  const isHelperViewer =
+    !!circle && nextStepViewerRole({ isOwner, isRecipient, canManageMembers }) === 'helper';
+  const [helperDismissed, setHelperDismissed] = useState(() => hasDismissedHelperCard(circleId));
+  useEffect(() => {
+    setHelperDismissed(hasDismissedHelperCard(circleId));
+  }, [circleId]);
+  // Never before Next up has answered: the body line says whether something is on Today.
+  // Not in a circle that uses shifts: Overview loads no shift list, so "Nothing needs you right now" could be
+  // false for a helper on shift (same rule as mobile). `isHelperViewer` already waits for the circle.
+  const helperCardAvailable =
+    isHelperViewer && !hasShifts && !helperDismissed && nextUp.settled && !nextUp.isError;
+  const helperAction = helperCardAction(canEdit && !viewOnly);
+
   // QUIET-CIRCLE BACK-OFF (1.4.2): "Follow-up alerts are paused" is the ONE coaching element
   // when it shows. Coaching waits for this read too (a card is never swapped under the pointer);
   // a failed read is "not paused".
@@ -334,7 +358,9 @@ export default function OverviewPage(): ReactElement {
         ? 'shifts'
         : doseHintAvailable
           ? 'dose_hint'
-          : 'none';
+          : helperCardAvailable
+            ? 'helper_card'
+            : 'none';
 
   // One showing = one visit where the shifts card renders: counted once per circle per mount.
   const shiftsCountedFor = useRef<string | null>(null);
@@ -343,6 +369,14 @@ export default function OverviewPage(): ReactElement {
     shiftsCountedFor.current = circleId;
     recordShiftsNudgeShowing(circleId);
   }, [coaching, circleId]);
+
+  // helper_today_card_shown: once per circle per mount (like mobile).
+  const helperShownFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (coaching !== 'helper_card' || helperShownFor.current === circleId) return;
+    helperShownFor.current = circleId;
+    Analytics.helperTodayCardShown(helperAction);
+  }, [coaching, circleId, helperAction]);
 
   // today_viewed: once per circle visit, when everything that decides it has answered.
   const viewedFor = useRef<string | null>(null);
@@ -365,7 +399,14 @@ export default function OverviewPage(): ReactElement {
   };
 
   return (
-    <section className="mx-auto w-full max-w-5xl" data-large-text={largeText ? 'true' : undefined}>
+    <section
+      className="mx-auto w-full max-w-5xl"
+      data-large-text={largeText ? 'true' : undefined}
+      // Settled signal for e2e: Next up, the next step and the dose alerts have all answered, so the
+      // coaching element on screen is final.
+      data-today-ready={ready ? 'true' : undefined}
+      data-coaching={ready ? coaching : undefined}
+    >
       {isLoading && !circle ? (
         <div className="px-5 pt-5 pb-4" aria-hidden="true">
           <Skeleton className="mb-2 h-4 w-40" />
@@ -374,7 +415,7 @@ export default function OverviewPage(): ReactElement {
       ) : (
         <Hero
           recipientName={recipientName}
-          isSelfCare={isSelfCare}
+          isSelfCare={viewerIsRecipient}
           recipientTimezone={timezone}
           circleId={circleId}
           canEditCircleSettings={(isOwner || canEditOwnRecipientDetails) && canEdit && !viewOnly}
@@ -413,7 +454,7 @@ export default function OverviewPage(): ReactElement {
             position={nextStep.position}
             total={nextStep.total}
             recipientName={recipientName}
-            isSelfCare={isSelfCare}
+            isSelfCare={viewerIsRecipient}
             onNotNow={() => {
               nextStep.snooze();
               handOffFocusSoon();
@@ -428,12 +469,31 @@ export default function OverviewPage(): ReactElement {
         </div>
       )}
 
+      {coaching === 'helper_card' && (
+        <div className="px-5 pb-6">
+          <HelperCard
+            recipientName={recipientName}
+            action={helperAction}
+            bodyKind={helperCardBody(nextUp.items.length)}
+            onAction={() => {
+              if (helperAction === 'care_team') Analytics.careTeamOpened('helper_card');
+              navigate(helperAction === 'note' ? `${base}/notes` : `${base}/members`);
+            }}
+            onDismiss={() => {
+              dismissHelperCard(circleId);
+              setHelperDismissed(true);
+              handOffFocusSoon();
+            }}
+          />
+        </div>
+      )}
+
       {coaching === 'shifts' && shiftsMember && (
         <div className="px-5 pb-6">
           <ShiftsNudgeCard
             member={shiftsMember}
             recipientName={recipientName}
-            isSelfCare={isSelfCare}
+            isSelfCare={viewerIsRecipient}
             upsell={shiftsUpsell}
             primaryAllowed={!nextUpFilled}
             showCount={shiftsShownBefore + 1}
@@ -471,7 +531,7 @@ export default function OverviewPage(): ReactElement {
               circleId={circleId}
               timezone={timezone}
               recipientName={recipientName}
-              isSelfCare={isSelfCare}
+              isSelfCare={viewerIsRecipient}
               canEdit={canEdit}
               items={nextUp.items}
               loading={!nextUp.settled}
@@ -487,7 +547,7 @@ export default function OverviewPage(): ReactElement {
                 coaching === 'dose_hint' ? (
                   <DoseHint
                     recipientName={recipientName}
-                    isSelfCare={isSelfCare}
+                    isSelfCare={viewerIsRecipient}
                     onGotIt={gotItDoseHint}
                   />
                 ) : undefined

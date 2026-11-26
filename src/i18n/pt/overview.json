@@ -79,6 +79,17 @@
         "cta": "Ativar lembretes"
       }
     },
+    "helperCard": {
+      "eyebrow": "Você está ajudando",
+      "title": "Você está ajudando com {{name}}",
+      "titleNoName": "Você faz parte da equipe de cuidado",
+      "leaveNote": "Deixar uma nota",
+      "seeCareTeam": "Ver a equipe de cuidado",
+      "dismiss": "Entendi",
+      "bodyQuiet": "Nada precisa de você agora.",
+      "bodyBusy": "Veja o que está programado hoje para {{name}}.",
+      "bodyBusyNoName": "Veja o que está programado hoje."
+    },
     "shiftsNudge": {
       "joined": "{{member}} entrou no círculo de {{name}}",
       "joinedSelf": "{{member}} entrou no seu círculo",

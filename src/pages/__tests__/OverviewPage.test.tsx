@@ -107,14 +107,16 @@ vi.mock('@/components/overview/NextUp', async (importOriginal) => {
       hintAfterKey,
       onTakenPressed,
       stacked,
+      isSelfCare,
     }: {
+      isSelfCare?: boolean;
       items: NextUpItem[];
       hint?: React.ReactNode;
       hintAfterKey?: string | null;
       onTakenPressed?: () => void;
       stacked: boolean;
     }) => (
-      <div data-testid="next-up" data-count={items.length} data-stacked={String(stacked)}>
+      <div data-testid="next-up" data-count={items.length} data-stacked={String(stacked)} data-self={String(isSelfCare)}>
         {items.map((i) => (
           <div key={i.key}>
             <span>{i.title}</span>
@@ -175,6 +177,9 @@ interface Options {
   viewOnly?: boolean;
   canEditOwnRecipientDetails?: boolean;
   joinedAgoDays?: number;
+  /** 1.4.4: the viewer's role. Default: the owner. */
+  manager?: boolean;
+  recipientIsMe?: boolean;
 }
 
 function setCircle(opts: Options = {}): void {
@@ -197,7 +202,7 @@ function setCircle(opts: Options = {}): void {
               id: 'u1',
               first_name: 'Pat',
               email: 'pat@example.com',
-              is_care_recipient: false,
+              is_care_recipient: opts.recipientIsMe === true,
               joined_at: new Date(NOW - 60 * DAY).toISOString(),
             },
             {
@@ -216,6 +221,7 @@ function setCircle(opts: Options = {}): void {
     isPremiumCircle: opts.isPremiumCircle ?? true,
     hasShifts: opts.hasShifts ?? false,
     isOwner: owner === 'u1',
+    canManageMembers: owner === 'u1' || opts.manager === true,
   } as unknown as ReturnType<typeof useCircle>);
 }
 
@@ -265,6 +271,7 @@ function renderToday(state?: unknown): void {
         <Route path="/circles/:circleId" element={<OverviewPage />} />
         <Route path="/circles/:circleId/members" element={<div data-testid="members-page" />} />
         <Route path="/circles/:circleId/calendar" element={<div data-testid="calendar-page" />} />
+        <Route path="/circles/:circleId/notes" element={<div data-testid="notes-page" />} />
         <Route path="/profile" element={<div data-testid="profile-page" />} />
         <Route path="/upgrade" element={<UpgradeProbe />} />
       </Routes>
@@ -361,6 +368,57 @@ describe('Today (OverviewPage)', () => {
     setCircle({ selfCare: true });
     renderToday();
     expect(screen.getByRole('heading', { level: 1, name: 'Today' })).toBeInTheDocument();
+  });
+
+  describe('1.4.4: the person cared for reads Today in the first person', () => {
+    it('POSITIVE: an invited recipient sees "Today", never "Today for Rose", and Next up is told it is them', () => {
+      setCircle({ ownerId: 'x', recipientIsMe: true, recipientName: 'Rose' });
+      renderToday();
+      const h1 = screen.getByRole('heading', { level: 1 });
+      expect(h1).toHaveTextContent(/^Today$/);
+      expect(h1.textContent).not.toContain('Rose');
+      expect(screen.getByTestId('next-up')).toHaveAttribute('data-self', 'true');
+    });
+
+    it('POSITIVE: a self-care owner sees "Today" and Next up is told it is them', () => {
+      setCircle({ selfCare: true, recipientName: 'Rose' });
+      renderToday();
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^Today$/);
+      expect(screen.getByTestId('next-up')).toHaveAttribute('data-self', 'true');
+    });
+
+    it('POSITIVE: the first-dose hint says "when you take it" for an invited recipient, without their name', () => {
+      setCircle({ ownerId: 'someone-else', recipientIsMe: true, recipientName: 'Rose', isPremiumCircle: false });
+      setNextUp([dose('m1')]);
+      renderToday();
+      const hint = screen.getByTestId('dose-hint');
+      expect(hint).toHaveTextContent('Tap Taken when you take it.');
+      expect(hint.textContent).not.toContain('Rose');
+    });
+
+    it('NEGATIVE: an ordinary owner still reads "Today for Rose" and the named dose hint', () => {
+      setCircle({ recipientName: 'Rose', isPremiumCircle: false, joinedAgoDays: 60 });
+      setNextUp([dose('m1')]);
+      renderToday();
+      expect(screen.getByRole('heading', { level: 1, name: 'Today for Rose' })).toBeInTheDocument();
+      expect(screen.getByTestId('next-up')).toHaveAttribute('data-self', 'false');
+      expect(screen.getByTestId('dose-hint')).toHaveTextContent('Tap Taken when Rose takes it.');
+    });
+
+    it('NEGATIVE: a helper keeps the named title and the named dose hint, and never sees the self copy', () => {
+      setCircle({ ownerId: 'someone-else', manager: true, recipientName: 'Rose', isPremiumCircle: false });
+      setNextUp([dose('m1')]);
+      renderToday();
+      expect(screen.getByRole('heading', { level: 1, name: 'Today for Rose' })).toBeInTheDocument();
+      expect(screen.getByTestId('dose-hint')).toHaveTextContent('Tap Taken when Rose takes it.');
+      expect(screen.getByTestId('next-up')).toHaveAttribute('data-self', 'false');
+    });
+
+    it('NEGATIVE: a recipient never sees the helper card', () => {
+      setCircle({ ownerId: 'x', recipientIsMe: true, recipientName: 'Rose' });
+      renderToday();
+      expect(screen.queryByTestId('helper-card')).not.toBeInTheDocument();
+    });
   });
 
   it('orders the blocks like mobile: header, daily update, Next up, Quick access, ONE care team row', () => {
@@ -536,7 +594,8 @@ describe('Today (OverviewPage)', () => {
     });
 
     it('no coaching at all reports "none"', () => {
-      setCircle({ ownerId: 'someone-else', isPremiumCircle: false });
+      // A manager with nothing due (a plain helper would get the calm helper card, 1.4.4).
+      setCircle({ ownerId: 'someone-else', manager: true, isPremiumCircle: false });
       renderToday();
       expect(Analytics.todayViewed).toHaveBeenCalledWith({
         has_items: false,
@@ -594,6 +653,181 @@ describe('Today (OverviewPage)', () => {
           expect(shown).toHaveLength(1);
         }
       }
+    });
+  });
+
+  describe('helper card (1.4.4): a plain member gets a calm card, never the owner checklist', () => {
+    const none: NextStepState = { status: 'none' };
+    beforeEach(() => {
+      vi.spyOn(Analytics, 'helperTodayCardShown').mockImplementation(() => {});
+      vi.spyOn(Analytics, 'helperTodayCardAction').mockImplementation(() => {});
+      vi.spyOn(Analytics, 'helperTodayCardDismissed').mockImplementation(() => {});
+    });
+
+    it('POSITIVE: a helper sees the helper card (and not the checklist), reported as coaching helper_card', () => {
+      setCircle({ ownerId: 'someone-else', isPremiumCircle: false });
+      setNextStep(none);
+      renderToday();
+      expect(screen.getByTestId('helper-card')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: "You're helping with Rose" })).toBeInTheDocument();
+      // B2: web has no push, so the promise of a message is never made here.
+      expect(screen.getByText('Nothing needs you right now.')).toBeInTheDocument();
+      expect(screen.queryByText(/hear from us/)).not.toBeInTheDocument();
+      expect(screen.queryByTestId('next-step-card')).not.toBeInTheDocument();
+      expect(Analytics.helperTodayCardShown).toHaveBeenCalledWith('note');
+      expect(Analytics.todayViewed).toHaveBeenCalledWith(expect.objectContaining({ coaching: 'helper_card' }));
+    });
+
+    function item(type: 'task' | 'appointment', id: string): NextUpItem {
+      return {
+        key: `${type}:${id}`,
+        type,
+        id,
+        title: `${type} ${id}`,
+        detail: '',
+        time: null,
+        date: getDateInTimezone('America/New_York'),
+        late: false,
+        lateHours: null,
+      } as unknown as NextUpItem;
+    }
+
+    it.each([
+      ['a task assigned to them or open', () => setNextUp([item('task', 't1')])],
+      ['an appointment today', () => setNextUp([item('appointment', 'a1')])],
+      // A shift (theirs, or open) is a linked task on Today: the same list item as a task.
+    ])('B2 NEGATIVE: %s -> never "Nothing needs you right now"; the neutral line instead', (_n, seed) => {
+      setCircle({ ownerId: 'someone-else', isPremiumCircle: false });
+      seed();
+      renderToday();
+      expect(screen.getByTestId('helper-card')).toHaveTextContent('Here is what is coming up for Rose today.');
+      expect(screen.queryByText(/Nothing needs you/)).not.toBeInTheDocument();
+    });
+
+    it('B2 NEGATIVE: while Next up is still loading (or failed) the card is not rendered', () => {
+      setCircle({ ownerId: 'someone-else', isPremiumCircle: false });
+      setNextUp([], { settled: false });
+      renderToday();
+      expect(screen.queryByTestId('helper-card')).not.toBeInTheDocument();
+      cleanup();
+      setNextUp([], { isError: true });
+      renderToday();
+      expect(screen.queryByTestId('helper-card')).not.toBeInTheDocument();
+    });
+
+    it('settled signal: data-today-ready / data-coaching appear only once coaching is final', () => {
+      setCircle({ ownerId: 'someone-else', isPremiumCircle: false });
+      setNextUp([], { settled: false });
+      renderToday();
+      expect(document.querySelector('[data-today-ready]')).toBeNull();
+      cleanup();
+      setNextUp([]);
+      renderToday();
+      const el = document.querySelector('[data-today-ready="true"]');
+      expect(el).not.toBeNull();
+      expect(el).toHaveAttribute('data-coaching', 'helper_card');
+    });
+
+    it('P: helper_today_card_shown fires once per circle per mount (not again on a re-render)', () => {
+      setCircle({ ownerId: 'someone-else', isPremiumCircle: false });
+      renderToday();
+      expect(Analytics.helperTodayCardShown).toHaveBeenCalledTimes(1);
+      // Fired by the page (a ref per circle), not by the card: a card remount cannot count twice.
+      expect(Analytics.helperTodayCardShown).toHaveBeenCalledWith('note');
+    });
+
+    it('NIT P: the care-team action reports its own source (helper_card), not the Today row', async () => {
+      const spy = vi.spyOn(Analytics, 'careTeamOpened').mockImplementation(() => {});
+      setCircle({ ownerId: 'someone-else', viewOnly: true, canEdit: false, isPremiumCircle: false });
+      renderToday();
+      await userEvent.click(screen.getByRole('button', { name: 'See the care team' }));
+      expect(spy).toHaveBeenCalledWith('helper_card');
+      expect(spy).not.toHaveBeenCalledWith('today_row');
+    });
+
+    it('POSITIVE: "Leave a note" opens the notes page (and reports the action)', async () => {
+      setCircle({ ownerId: 'someone-else', isPremiumCircle: false });
+      renderToday();
+      await userEvent.click(screen.getByTestId('helper-card-action'));
+      expect(screen.getByTestId('notes-page')).toBeInTheDocument();
+      expect(Analytics.helperTodayCardAction).toHaveBeenCalledWith('note');
+    });
+
+    it('NEGATIVE: a view-only helper is offered the care team, never a write action', async () => {
+      setCircle({ ownerId: 'someone-else', viewOnly: true, canEdit: false, isPremiumCircle: false });
+      renderToday();
+      expect(screen.queryByRole('button', { name: 'Leave a note' })).not.toBeInTheDocument();
+      expect(Analytics.helperTodayCardShown).toHaveBeenCalledWith('care_team');
+      await userEvent.click(screen.getByRole('button', { name: 'See the care team' }));
+      expect(screen.getByTestId('members-page')).toBeInTheDocument();
+    });
+
+    it('POSITIVE: dismissing persists (a remount stays dismissed)', async () => {
+      setCircle({ ownerId: 'someone-else', isPremiumCircle: false });
+      renderToday();
+      await userEvent.click(screen.getByTestId('helper-card-dismiss'));
+      expect(screen.queryByTestId('helper-card')).not.toBeInTheDocument();
+      expect(Analytics.helperTodayCardDismissed).toHaveBeenCalledTimes(1);
+      cleanup();
+      renderToday();
+      expect(screen.queryByTestId('helper-card')).not.toBeInTheDocument();
+    });
+
+    it('NEGATIVE: the card never shows for the owner, a manager or the care recipient', () => {
+      for (const over of [{ isPremiumCircle: false }, { ownerId: 'x', manager: true, isPremiumCircle: false }, { ownerId: 'x', recipientIsMe: true, isPremiumCircle: false }]) {
+        setCircle(over);
+        renderToday();
+        expect(screen.queryByTestId('helper-card')).not.toBeInTheDocument();
+        cleanup();
+      }
+    });
+
+    it('NEGATIVE: a helper in a circle that USES SHIFTS gets no card (a shift is not in Next up), no owner checklist, and no shown event', () => {
+      setCircle({ ownerId: 'someone-else', isPremiumCircle: false, hasShifts: true });
+      setNextStep(none); // a helper's real next-step state (applicableNextSteps: a helper has none)
+      renderToday();
+      expect(screen.queryByTestId('helper-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('next-step-card')).not.toBeInTheDocument();
+      expect(Analytics.helperTodayCardShown).not.toHaveBeenCalled();
+    });
+
+    it('NEGATIVE: the circle is not loaded yet -> no helper card and no shown event (no flash)', () => {
+      setCircle({ circle: null, isLoading: true });
+      setNextStep(none);
+      renderToday();
+      expect(screen.queryByTestId('helper-card')).not.toBeInTheDocument();
+      expect(Analytics.helperTodayCardShown).not.toHaveBeenCalled();
+    });
+
+    it('NEGATIVE: the owner still sees the checklist exactly as before', () => {
+      setNextStep({ status: 'step', step: 'first_med', position: 1, total: 3, snooze: vi.fn() });
+      renderToday();
+      expect(screen.getByTestId('next-step-card')).toBeInTheDocument();
+      expect(screen.queryByTestId('helper-card')).not.toBeInTheDocument();
+    });
+
+    it('NEGATIVE: it never hides the first-dose hint or the shifts nudge (they teach something)', () => {
+      setCircle({ ownerId: 'someone-else', isPremiumCircle: false });
+      setNextUp([dose('m1')]);
+      renderToday();
+      expect(screen.getByTestId('dose-hint')).toBeInTheDocument();
+      expect(screen.queryByTestId('helper-card')).not.toBeInTheDocument();
+    });
+
+    it('POSITIVE: the care recipient hears the first-person copy', () => {
+      setCircle({ ownerId: 'x', recipientIsMe: true, recipientName: 'Pat' });
+      setNextStep({ status: 'step', step: 'first_med', position: 1, total: 2, snooze: vi.fn() });
+      renderToday();
+      expect(screen.getByRole('heading', { name: 'Add your first medication' })).toBeInTheDocument();
+      expect(screen.queryByText(/Add Pat's first medication/)).not.toBeInTheDocument();
+    });
+
+    it('POSITIVE: a helper gets the evening update mounted with their own flags (the gate is the server\'s, not the owner)', () => {
+      setCircle({ ownerId: 'someone-else', isPremiumCircle: false });
+      renderToday();
+      const card = screen.getByTestId('daily-update-card');
+      expect(card).toHaveAttribute('data-owner', 'false');
+      expect(card).toHaveAttribute('data-recipient', 'false');
     });
   });
 

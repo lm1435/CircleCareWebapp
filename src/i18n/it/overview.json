@@ -76,6 +76,17 @@
         "cta": "Attiva i promemoria"
       }
     },
+    "helperCard": {
+      "eyebrow": "Stai aiutando",
+      "title": "Stai aiutando con {{name}}",
+      "titleNoName": "Fai parte del team di assistenza",
+      "leaveNote": "Lascia una nota",
+      "seeCareTeam": "Vedi il team di assistenza",
+      "dismiss": "Ho capito",
+      "bodyQuiet": "Per ora non serve nulla da te.",
+      "bodyBusy": "Ecco cosa c’è oggi per {{name}}.",
+      "bodyBusyNoName": "Ecco cosa c’è oggi."
+    },
     "shiftsNudge": {
       "joined": "{{member}} è entrato nel cerchio di {{name}}",
       "joinedSelf": "{{member}} è entrato nel tuo cerchio",

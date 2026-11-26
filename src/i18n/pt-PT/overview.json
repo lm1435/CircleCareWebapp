@@ -37,7 +37,18 @@
     "careTeamRow": {
       "you": "Eu"
     },
-    "circleSettings": "Definições do círculo"
+    "circleSettings": "Definições do círculo",
+    "helperCard": {
+      "eyebrow": "Está a ajudar",
+      "title": "Está a ajudar com {{name}}",
+      "titleNoName": "Faz parte da equipa de cuidado",
+      "bodyQuiet": "Nada precisa de si agora.",
+      "bodyBusy": "Veja o que está agendado hoje para {{name}}.",
+      "bodyBusyNoName": "Veja o que está agendado hoje.",
+      "leaveNote": "Deixar uma nota",
+      "seeCareTeam": "Ver a equipa de cuidado",
+      "dismiss": "Percebi"
+    }
   },
   "quickAccess": {
     "shifts": "Turnos"
