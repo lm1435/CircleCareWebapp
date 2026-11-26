@@ -35,7 +35,7 @@ export function OfflineBanner(): ReactElement {
       {offline && (
         <div
           data-testid="offline-banner"
-          className="flex items-start gap-2 border-b border-line bg-dusk-soft px-4 py-2 sm:px-6 animate-[fade-in_200ms_ease-out] motion-reduce:animate-none"
+          className="flex items-start gap-2 border-b border-line bg-dusk-soft px-4 py-2 sm:px-6 animate-fade-in motion-reduce:animate-none"
         >
           <Icon name="cloud-offline-outline" size="inline" className="mt-0.5 text-dusk-deep" />
           <p className="min-w-0 text-sm leading-snug text-ink">

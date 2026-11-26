@@ -87,7 +87,13 @@ export function StandalonePageLayout(): ReactElement {
         {/* Page-level boundary so one page's error doesn't blank the app; keyed by
             path so navigation auto-clears a caught error. */}
         <ErrorBoundary boundary="standalone-page" key={location.pathname}>
-          <Outlet />
+          <div
+            key={location.pathname}
+            data-testid="page-fade"
+            className="animate-fade-in motion-reduce:animate-none"
+          >
+            <Outlet />
+          </div>
         </ErrorBoundary>
       </main>
     </div>

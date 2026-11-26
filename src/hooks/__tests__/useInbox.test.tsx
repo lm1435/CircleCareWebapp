@@ -9,6 +9,9 @@ vi.mock('@/api/inbox', () => ({
   markInboxRead: vi.fn(),
 }));
 
+const showToast = vi.hoisted(() => vi.fn());
+vi.mock('@/components/ui', () => ({ useToast: () => ({ showToast }) }));
+
 import { getInbox, getInboxUnread, markInboxRead, type InboxUnread } from '@/api/inbox';
 import {
   useInbox,

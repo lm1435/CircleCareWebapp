@@ -51,7 +51,13 @@ export function HelpRouteLayout(): ReactElement {
       </header>
       <main id="main" tabIndex={-1} className="min-w-0">
         <ErrorBoundary boundary="standalone-page" key={location.pathname}>
-          <Outlet />
+          <div
+            key={location.pathname}
+            data-testid="page-fade"
+            className="animate-fade-in motion-reduce:animate-none"
+          >
+            <Outlet />
+          </div>
         </ErrorBoundary>
       </main>
     </div>

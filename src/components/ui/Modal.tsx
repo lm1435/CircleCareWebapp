@@ -545,7 +545,7 @@ export function Modal({
       className={`fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 motion-reduce:animate-none ${
         closing
           ? 'animate-[fade-in_160ms_ease-in_reverse_forwards]'
-          : 'animate-[fade-in_200ms_ease-out]'
+          : 'animate-fade-in'
       }`}
       onClick={handleBackdropClick}
       onKeyDown={handleKeyDown}
@@ -560,8 +560,8 @@ export function Modal({
           SIZE_CLASS[size]
         } flex-col overflow-hidden rounded-xl bg-cream p-6 shadow-xl motion-reduce:animate-none ${
           closing
-            ? 'animate-[modal-out_160ms_ease-in]'
-            : 'animate-[modal-in_240ms_var(--ease-spring)]'
+            ? 'animate-modal-out'
+            : 'animate-modal-in'
         }`}
       >
         <div

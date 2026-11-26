@@ -263,6 +263,13 @@
   --dur-fast: 150ms;
   --dur-normal: 250ms;
   --dur-slow: 400ms;
+  /* Animation roles (see the `animate-*` @utility rules below). Enter = modal / sheet / toast
+     panels; exit = their mirrored leave (src/components/ui/motion.ts EXIT_FALLBACK_MS must
+     stay above it, asserted by src/__tests__/bans/animationTiming.test.ts); fade = backdrops
+     and banners. */
+  --dur-enter: 240ms;
+  --dur-exit: 160ms;
+  --dur-fade: 200ms;
   --ease-spring: cubic-bezier(0.2, 0.7, 0.2, 1);
   /* Floating nav pill's clearance from the bottom edge (mobile FloatingNavBar:
      insets.bottom + 4). `env()` is 0 wherever there is no home indicator —
@@ -463,6 +470,23 @@
   transition-duration: var(--dur-slow);
 }
 
+/* Named animation shorthands over the keyframes below and the `--dur-*` tokens. Use these in
+   markup instead of `animate-[name_NNNms_...]` (banned by
+   src/__tests__/bans/animationTiming.test.ts). Pair with `motion-reduce:animate-none` where
+   the element already does; the global reduced-motion block also collapses their duration. */
+@utility animate-fade-in {
+  animation: fade-in var(--dur-fade) ease-out;
+}
+@utility animate-modal-in {
+  animation: modal-in var(--dur-enter) var(--ease-spring);
+}
+@utility animate-modal-out {
+  animation: modal-out var(--dur-exit) ease-in;
+}
+@utility animate-sheet-in {
+  animation: sheet-in var(--dur-enter) var(--ease-spring);
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -497,6 +521,38 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
+  }
+
+  /* Hover / press colour changes ease over --dur-fast on EVERY interactive element, so no
+     per-element `transition-colors` can be forgotten (plan W4, app-polish-uniformity.md).
+     - Base layer: any Tailwind `transition-*` / `duration-*` utility, and any inline style, still
+       wins (utilities layer is above base), as does `transition-none`.
+     - Selected by tag and role, NOT by an attribute-substring match on class (themeStaysLightWhereItMust
+       bans those stopgaps). A hover colour on a non-interactive div/li would not ease: make it a
+       button/link, or add `transition-colors duration-fast` there.
+     - Colour properties ONLY. `outline`, `outline-color` and `box-shadow` are deliberately absent:
+       a keyboard focus ring must appear instantly. Transform is absent too (components that
+       animate it opt in with their own `transition-*`).
+     - The reduced-motion block above zeroes transition-duration with !important. */
+  :is(
+    a,
+    button,
+    summary,
+    label[for],
+    input,
+    select,
+    textarea,
+    [role='button'],
+    [role='tab'],
+    [role='menuitem'],
+    [role='option'],
+    [role='switch'],
+    [role='checkbox'],
+    [role='radio']
+  ) {
+    transition-property: color, background-color, border-color, opacity;
+    transition-duration: var(--dur-fast);
+    transition-timing-function: var(--default-transition-timing-function);
   }
 
   body {

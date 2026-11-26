@@ -203,7 +203,7 @@ function ToastItem({
       }}
       className={`pointer-events-auto relative flex min-h-[44px] items-center gap-x-3 overflow-hidden rounded-lg border border-line bg-surface-toast px-4 py-3 shadow-lg max-sm:py-2 motion-reduce:animate-none ${
         expanded ? 'flex-wrap gap-y-1' : ''
-      } ${leaving ? 'animate-[modal-out_160ms_ease-in]' : 'animate-[modal-in_240ms_var(--ease-spring)]'}`}
+      } ${leaving ? 'animate-modal-out' : 'animate-modal-in'}`}
     >
       <div
         ref={messageBoxRef}

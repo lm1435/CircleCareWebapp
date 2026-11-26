@@ -149,7 +149,7 @@ export function StoreReviewBanner(): ReactElement | null {
   return (
     <div
       data-testid="store-review-banner"
-      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line bg-dusk-soft px-4 py-2 sm:px-6 animate-[fade-in_200ms_ease-out] motion-reduce:animate-none"
+      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line bg-dusk-soft px-4 py-2 sm:px-6 animate-fade-in motion-reduce:animate-none"
     >
       <p className="min-w-0 text-sm leading-snug text-ink">{t('storeReviewBanner.message')}</p>
       <div className="flex items-center gap-2">

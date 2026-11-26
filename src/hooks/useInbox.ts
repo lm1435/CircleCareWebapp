@@ -14,6 +14,8 @@ import {
   type InboxUnread,
   type MarkInboxReadInput,
 } from '@/api/inbox';
+import { useTranslation } from 'react-i18next';
+import { useToast } from '@/components/ui';
 import { queryKeys } from '@/lib/queryKeys';
 import { useAuthStore } from '@/store/authStore';
 import { sendWithQuietRetry } from '@/lib/writeRetryQueue';
@@ -83,6 +85,8 @@ interface MarkContext {
  */
 export function useMarkInboxRead(): UseMutationResult<number, Error, MarkInboxReadInput, MarkContext> {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const { t } = useTranslation('common');
   return useMutation<number, Error, MarkInboxReadInput, MarkContext>({
     // In-call quiet retry (2 / 5 / 10 s) on a transport failure: the call is idempotent, so no
     // re-read is needed. The optimistic rows stay marked while it waits; `onError` (the rollback)
@@ -151,13 +155,18 @@ export function useMarkInboxRead(): UseMutationResult<number, Error, MarkInboxRe
       }
       return { previousLists, previousUnread };
     },
-    onError: (_error, _input, context) => {
+    onError: (_error, input, context) => {
       for (const [key, list] of context?.previousLists ?? []) {
         if (list) queryClient.setQueryData(key, list);
       }
       if (context?.previousUnread) {
         queryClient.setQueryData(queryKeys.inboxUnread, context.previousUnread);
       }
+      // Opening a row marks it read in the background and then leaves the page, so a per-call
+      // handler would be dropped with the unmount: the one quiet error toast lives here, after
+      // the quiet retries. The toast shows one message at a time, so rows opened in a row never
+      // stack. Mark-all keeps its own, more specific toast on the page.
+      if ('ids' in input) showToast(t('errors.saveFailed'), 'error');
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.inbox });

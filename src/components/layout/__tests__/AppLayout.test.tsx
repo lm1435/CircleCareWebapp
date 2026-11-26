@@ -194,12 +194,12 @@ describe('AppLayout', () => {
     // The LAST child: the offline banner's always-mounted status region
     // (components/OfflineBanner) sits above the page, in flow.
     const before = main.lastElementChild;
-    expect(before).toHaveClass('animate-[fade-in_200ms_ease-out]');
+    expect(before).toHaveClass('animate-fade-in');
 
     await user.click(within(pill()).getByRole('link', { name: 'Health' }));
 
     const after = screen.getByRole('main').lastElementChild;
-    expect(after).toHaveClass('animate-[fade-in_200ms_ease-out]');
+    expect(after).toHaveClass('animate-fade-in');
     // A new node, not the same one re-rendered: the key changed with the path.
     expect(after).not.toBe(before);
     expect(within(screen.getByRole('main')).getByText('Emergency page stub')).toBeInTheDocument();

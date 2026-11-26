@@ -244,7 +244,7 @@ export function AddMenu({
         aria-hidden="true"
         data-testid="add-menu-backdrop"
         onClick={onClose}
-        className="fixed inset-0 z-40 bg-overlay animate-[fade-in_200ms_ease-out] motion-reduce:animate-none"
+        className="fixed inset-0 z-40 bg-overlay animate-fade-in motion-reduce:animate-none"
       />
       {/* A named landmark, because the pill is portalled to <body> and so no
           longer inside the rail's <aside> (or any landmark): axe's `region`

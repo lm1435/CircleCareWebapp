@@ -71,7 +71,7 @@ describe('Toast action', () => {
     // The toast now plays its 160ms exit rather than vanishing mid-frame; it
     // is retired on `animationend` (spec §4.5).
     const item = toastItem();
-    expect(item.className).toContain('animate-[modal-out_160ms_ease-in]');
+    expect(item.className).toContain('animate-modal-out');
     expect(item).toHaveAttribute('data-leaving');
     fireEvent.animationEnd(item);
     expect(screen.queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
@@ -135,11 +135,11 @@ describe('Toast appearance', () => {
     act(() => show('Saved', 'success'));
 
     const item = toastItem('success');
-    expect(item.className).toContain('animate-[modal-in_240ms_var(--ease-spring)]');
+    expect(item.className).toContain('animate-modal-in');
     expect(item.className).toContain('motion-reduce:animate-none');
 
     fireEvent.click(screen.getByRole('button', { name: /close/i }));
-    expect(toastItem('success').className).toContain('animate-[modal-out_160ms_ease-in]');
+    expect(toastItem('success').className).toContain('animate-modal-out');
   });
 
   it('removes the toast immediately under prefers-reduced-motion', () => {

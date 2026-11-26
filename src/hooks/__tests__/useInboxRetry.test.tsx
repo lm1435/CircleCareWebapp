@@ -8,6 +8,9 @@ vi.mock('@/api/inbox', () => ({
   getInboxUnread: vi.fn(),
   markInboxRead: vi.fn(),
 }));
+const showToast = vi.hoisted(() => vi.fn());
+vi.mock('@/components/ui', () => ({ useToast: () => ({ showToast }) }));
+
 vi.mock('@/lib/analytics', () => ({
   Analytics: { writeRetryScheduled: vi.fn(), writeRetrySucceeded: vi.fn(), writeRetryGaveUp: vi.fn() },
 }));

@@ -320,7 +320,7 @@ export function AppLayout(): ReactElement {
           <ErrorBoundary boundary="circle-page" key={location.pathname}>
             <div
               key={location.pathname}
-              className="animate-[fade-in_200ms_ease-out] motion-reduce:animate-none"
+              className="animate-fade-in motion-reduce:animate-none"
             >
               {/* Removed from / deleted circle: one state for EVERY circle page
                   (mobile twin: CircleDetailScreen's access-removed branch). Only

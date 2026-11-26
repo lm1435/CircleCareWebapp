@@ -145,10 +145,10 @@ describe('Modal', () => {
     it('enters with modal-in on the panel and fade-in on the backdrop', () => {
       renderModal();
       const dialog = screen.getByRole('dialog');
-      expect(dialog.className).toContain('animate-[modal-in_240ms_var(--ease-spring)]');
+      expect(dialog.className).toContain('animate-modal-in');
       expect(dialog.className).toContain('motion-reduce:animate-none');
       const backdrop = dialog.parentElement as HTMLElement;
-      expect(backdrop.className).toContain('animate-[fade-in_200ms_ease-out]');
+      expect(backdrop.className).toContain('animate-fade-in');
       expect(backdrop.className).toContain('motion-reduce:animate-none');
     });
 
@@ -166,7 +166,7 @@ describe('Modal', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
       const dialog = screen.getByRole('dialog');
       expect(dialog).toBeInTheDocument();
-      expect(dialog.className).toContain('animate-[modal-in');
+      expect(dialog.className).toContain('animate-modal-in');
       expect(dialog.className).not.toContain('modal-out');
 
       // No fallback timer was ever armed — a stray `animationend` (or one
@@ -234,7 +234,7 @@ describe('Modal', () => {
       rerenderWith(true);
 
       const dialog = screen.getByRole('dialog');
-      expect(dialog.className).toContain('animate-[modal-in_240ms_var(--ease-spring)]');
+      expect(dialog.className).toContain('animate-modal-in');
       expect(document.body.style.overflow).toBe('hidden');
     });
 
@@ -246,7 +246,7 @@ describe('Modal', () => {
       rerenderWith(false);
       const dialog = screen.getByRole('dialog');
       expect(dialog).toBeInTheDocument();
-      expect(dialog.className).toContain('animate-[modal-out_160ms_ease-in]');
+      expect(dialog.className).toContain('animate-modal-out');
 
       fireEvent.animationEnd(dialog);
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -269,7 +269,7 @@ describe('Modal', () => {
       // The caller ignored it, so the dialog stays fully open — no exit.
       const dialog = screen.getByRole('dialog');
       expect(dialog).toBeInTheDocument();
-      expect(dialog.className).toContain('animate-[modal-in');
+      expect(dialog.className).toContain('animate-modal-in');
       expect(dialog.className).not.toContain('modal-out');
     });
 

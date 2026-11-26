@@ -143,7 +143,7 @@ describe('Modal body scrolling', () => {
   }
 
   /** The panel's exit animation — present only on the `closing` render. */
-  const EXIT_CLASS = 'animate-[modal-out_160ms_ease-in]';
+  const EXIT_CLASS = 'animate-modal-out';
 
   it('keeps the tall body scrollable through the close gesture, unmount left to the exit', () => {
     reduceMotion(false);

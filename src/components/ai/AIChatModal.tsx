@@ -436,7 +436,7 @@ export function AIChatModal({
                         padding="sm"
                         onPress={() => handleSend(suggestion)}
                         data-testid={`ai-chat-suggestion-${suggestion.id ?? index}`}
-                        className="min-h-[44px] w-full text-sm text-ink animate-[fade-in_200ms_ease-out] [animation-fill-mode:both] motion-reduce:animate-none"
+                        className="min-h-[44px] w-full text-sm text-ink animate-fade-in [animation-fill-mode:both] motion-reduce:animate-none"
                         style={{ animationDelay: `${index * 40}ms` }}
                       >
                         {suggestion.text}

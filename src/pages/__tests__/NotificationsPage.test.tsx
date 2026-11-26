@@ -235,10 +235,21 @@ describe('NotificationsPage', () => {
     );
   });
 
-  it('NEGATIVE item 2: a row tap that fails marking read raises no mark-all toast', async () => {
+  it('NEGATIVE item 2: a row tap that fails marking read raises the quiet save toast, never the mark-all one', async () => {
     const items = [makeItem()];
     serve(items);
     mockMark.mockRejectedValue({ success: false, error: { code: 'FORBIDDEN', message: 'x' } });
+    renderPage();
+    const rows = await screen.findAllByTestId('inbox-row');
+    await userEvent.setup({ advanceTimers: () => {} }).click(rows[0]);
+    await waitFor(() => expect(showToast).toHaveBeenCalledTimes(1));
+    expect(showToast).toHaveBeenCalledWith("Couldn't save your changes. Please try again.", 'error');
+    expect(showToast).not.toHaveBeenCalledWith(expect.stringContaining('mark all'), 'error');
+  });
+
+  it('a row tap whose mark-read succeeds raises no toast', async () => {
+    serve([makeItem()]);
+    mockMark.mockResolvedValue(1);
     renderPage();
     const rows = await screen.findAllByTestId('inbox-row');
     await userEvent.setup({ advanceTimers: () => {} }).click(rows[0]);

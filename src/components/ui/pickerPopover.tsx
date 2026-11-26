@@ -798,7 +798,7 @@ export function PickerPopover({
    * enough to select the 4px branch is capped by the viewport long before.
    */
   const box = sheet
-    ? `fixed inset-x-0 bottom-0 z-[61] flex flex-col overflow-hidden rounded-t-2xl border-t border-line-2 bg-cream px-4 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] [@media(min-height:500px)]:pt-3 [@media(min-height:500px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-xl animate-[sheet-in_240ms_var(--ease-spring)] motion-reduce:animate-none`
+    ? `fixed inset-x-0 bottom-0 z-[61] flex flex-col overflow-hidden rounded-t-2xl border-t border-line-2 bg-cream px-4 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] [@media(min-height:500px)]:pt-3 [@media(min-height:500px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-xl animate-sheet-in motion-reduce:animate-none`
     : `fixed z-[60] flex flex-col overflow-hidden rounded-xl border border-line-2 bg-cream p-1 shadow-lg animate-[modal-in_200ms_var(--ease-spring)] motion-reduce:animate-none`;
 
   return createPortal(
@@ -815,7 +815,7 @@ export function PickerPopover({
         <div
           data-picker-scrim
           aria-hidden="true"
-          className="fixed inset-0 z-[60] touch-none bg-overlay animate-[fade-in_200ms_ease-out] motion-reduce:animate-none"
+          className="fixed inset-0 z-[60] touch-none bg-overlay animate-fade-in motion-reduce:animate-none"
         />
       ) : null}
       <div
