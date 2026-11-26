@@ -422,6 +422,78 @@ test.describe('a member takes and drops a shift', () => {
   });
 });
 
+// PROD 2026-11-25 (web error_occurred: shifts_update_failed / SHIFT_ASSIGN_FORBIDDEN, 1 user): a plain member
+// edited a shift someone else holds. The form offered "Me" and "Leave open"; the server refuses both for a
+// member (only the holder, the owner or a manager changes who is on a taken shift). The form now shows
+// both, not pickable, with the reason; everything else on the shift stays editable.
+test.describe('a member edits a shift someone else holds', () => {
+  test('the server refuses Me / Leave open; the form does not offer them, says why, and still saves the rest', async ({
+    request,
+    browser,
+    baseURL,
+  }, testInfo) => {
+    const s = await premiumScene(request);
+    const member = await createRunAccount(uniq('shiftheld'), 'Mia', 'Member');
+    addMembership(s.circleId, member.userId, 'member');
+    // 23:00 - 07:00: never ended while today runs (an ended shift is read-only).
+    const held = await seedShift(s, {
+      title: 'Late cover',
+      scheduled_time: '23:00',
+      duration_minutes: 480,
+      assigned_to: s.owner.userId,
+    });
+    const holder = () => sqlShiftRows(s.circleId).find((r) => r.title.startsWith('Late cover'))?.assigned_to;
+
+    // The rule itself (what production answered): both writes are refused and nothing changes.
+    const memberSession = await apiSession(request, member);
+    const path = `/api/circles/${s.circleId}/events/${held.id}`;
+    const takeOver = await memberSession.patch(path, { assigned_to: member.userId });
+    expect(takeOver.status()).toBe(403);
+    expect(((await takeOver.json()) as { error: { code: string } }).error.code).toBe('SHIFT_ASSIGN_FORBIDDEN');
+    const drop = await memberSession.patch(path, { assigned_to: null });
+    expect(drop.status()).toBe(403);
+    expect(((await drop.json()) as { error: { code: string } }).error.code).toBe('SHIFT_DROP_FORBIDDEN');
+    expect(holder()).toBe(s.owner.userId);
+
+    const context = await browser.newContext();
+    await cookieLogin(context, member, baseURL);
+    const page = await context.newPage();
+    const refused: string[] = [];
+    page.on('response', (res) => {
+      if (res.status() === 403 && res.url().includes('/events/')) refused.push(res.url());
+    });
+    try {
+      await openShifts(page, s.circleId, 'Day');
+      const list = page.getByTestId('shifts-day-list');
+      await expect(list.getByTestId('shift-card')).toHaveCount(1, { timeout: 20_000 });
+      await list.getByRole('button', { name: /^Late cover,/ }).click();
+      const detail = page.getByRole('dialog', { name: 'Late cover' });
+      await detail.getByRole('button', { name: 'Edit', exact: true }).click();
+      const edit = page.getByRole('dialog', { name: 'Edit shift' });
+      const who = edit.getByRole('radiogroup', { name: /^Who/ });
+      await expect(who.getByRole('radio', { name: 'Leave open' })).toBeDisabled();
+      await expect(who.getByRole('radio', { name: 'Me', exact: true })).toBeDisabled();
+      await expect(who.getByRole('radio', { name: /, on it now$/ })).toBeChecked();
+      await expect(edit.getByTestId('shift-form-held-hint')).toHaveText(
+        /^Only .+, the owner or a manager can change who's on this shift\.$/
+      );
+      await who.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: testInfo.outputPath('member-held-shift.png') });
+      await checkA11y(page, 'shift-form-held-by-other', testInfo);
+
+      // The rest of the shift is still theirs to edit: a rename saves, the holder is untouched, no 403.
+      await edit.locator('#shift_name').fill('Late cover B');
+      await edit.getByRole('button', { name: 'Save changes' }).click();
+      await expect(edit).toHaveCount(0, { timeout: 20_000 });
+      await expect.poll(() => sqlShiftRows(s.circleId).map((r) => r.title)).toContain('Late cover B');
+      expect(holder()).toBe(s.owner.userId);
+      expect(refused, 'the form never sent a write the server refuses').toEqual([]);
+    } finally {
+      await context.close();
+    }
+  });
+});
+
 // Owner report (TestFlight 1.4.0 build 9): Shifts > Week offered Take on yesterday's ended "Evening 2:00 PM -
 // 8:00 PM · Open". An ended shift is history: an unfilled one reads "Not covered", nobody may take, drop or
 // assign it (the server answers 409 SHIFT_ENDED), and Edit / Delete stay. "Yesterday" is the recipient's.

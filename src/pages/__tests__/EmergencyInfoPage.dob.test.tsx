@@ -452,7 +452,7 @@ describe('Care summary: the DOB note before exporting', () => {
     expect(
       within(note).getByText('It helps first responders and doctors confirm who Rose is.')
     ).toBeInTheDocument();
-    fireEvent.click(within(note).getAllByRole('button', { name: 'Export anyway' }).slice(-1)[0]);
+    fireEvent.click(within(note).getByRole('button', { name: 'Export anyway' }));
     const sheet = await screen.findByRole('dialog', { name: 'Share care summary' });
     fireEvent.click(within(sheet.querySelector('[data-modal-footer]') as HTMLElement).getByRole('button', { name: 'Share' }));
     await waitFor(() => expect(mockExportPdf).toHaveBeenCalledTimes(1));
@@ -479,13 +479,27 @@ describe('Care summary: the DOB note before exporting', () => {
     expect(dobAdded).toHaveBeenCalledTimes(1);
   });
 
+  it('NEGATIVE: the x is named "Close", not "Export anyway"; pressing it exports nothing and opens no share sheet', async () => {
+    mockDobApi(true);
+    renderPage();
+    const [share] = await screen.findAllByRole('button', { name: 'Share' });
+    fireEvent.click(share);
+    const note = await screen.findByRole('dialog', { name: "Date of birth isn't set." });
+    expect(within(note).getAllByRole('button', { name: 'Export anyway' })).toHaveLength(1);
+    fireEvent.click(within(note).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: "Date of birth isn't set." })).not.toBeInTheDocument());
+    expect(screen.queryByRole('dialog', { name: 'Share care summary' })).not.toBeInTheDocument();
+    expect(mockExportPdf).not.toHaveBeenCalled();
+    expect(mockedPatch).not.toHaveBeenCalled();
+  });
+
   it('NEGATIVE: the note is shown once per visit as an event even when Share is pressed twice', async () => {
     mockDobApi(true);
     renderPage();
     const [share] = await screen.findAllByRole('button', { name: 'Share' });
     fireEvent.click(share);
     const note = await screen.findByRole('dialog', { name: "Date of birth isn't set." });
-    fireEvent.click(within(note).getAllByRole('button', { name: 'Export anyway' }).slice(-1)[0]);
+    fireEvent.click(within(note).getByRole('button', { name: 'Export anyway' }));
     const sheet = await screen.findByRole('dialog', { name: 'Share care summary' });
     fireEvent.click(within(sheet.querySelector('[data-modal-footer]') as HTMLElement).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());

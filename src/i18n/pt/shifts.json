@@ -151,6 +151,7 @@
     "everyWeek": "Toda semana",
     "someDays": "Alguns dias",
     "openHint": "Qualquer pessoa do círculo pode assumir um plantão em aberto.",
+    "heldHint": "Só {{name}}, o proprietário ou um gestor pode alterar quem está neste plantão.",
     "moreDetails": "Mais detalhes",
     "chooseTime": "Escolha um horário",
     "clearEnd": "Remover a data final",

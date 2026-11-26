@@ -357,15 +357,29 @@ function ShiftFormBody({
 
   // Leave open, Me, then the other members in roster order. The CURRENT holder
   // is always listed ("on it now"); one this editor could not pick is shown, not pickable.
+  // A member (not the owner / a manager) editing a shift SOMEONE ELSE holds can change nobody here: the
+  // server refuses "Me" (SHIFT_ASSIGN_FORBIDDEN) and "Leave open" (SHIFT_DROP_FORBIDDEN). Both are
+  // shown, not pickable, with the reason under the tiles (prod 2026-11-25: a member hit the refusal).
+  const heldLocked =
+    isEditing && !!initialAssignee && initialAssignee !== viewerId && !canManageMembers;
+  const holderName = useMemo(() => {
+    const m = members.find((x) => x.id === initialAssignee);
+    return (m ? memberShortName(m) : shift?.assigned_to_user?.first_name?.trim()) || t('shifts:someone');
+  }, [members, initialAssignee, shift, t]);
   const assigneeOptions = useMemo(() => {
     const current = t('shifts:assign.current');
     const mark = (id: string): string | undefined =>
       initialAssignee && id === initialAssignee ? current : undefined;
     const opts: Array<{ value: string; label: string; sub?: string; disabled?: boolean }> = [
-      { value: '', label: t('shifts:form.leaveOpen') },
+      { value: '', label: t('shifts:form.leaveOpen'), ...(heldLocked ? { disabled: true } : {}) },
     ];
     if (viewerId && canCoverShifts(members, viewerId)) {
-      opts.push({ value: viewerId, label: t('shifts:form.me'), sub: mark(viewerId) });
+      opts.push({
+        value: viewerId,
+        label: t('shifts:form.me'),
+        sub: mark(viewerId),
+        ...(heldLocked ? { disabled: true } : {}),
+      });
     }
     for (const m of members) {
       if (m.id === viewerId) continue;
@@ -386,7 +400,7 @@ function ShiftFormBody({
       opts.push({ value: initialAssignee, label: holder, sub: current, disabled: true });
     }
     return opts;
-  }, [t, viewerId, canManageMembers, members, initialAssignee, shift]);
+  }, [t, viewerId, canManageMembers, members, initialAssignee, shift, heldLocked]);
 
   // Judged at the shift's own date (Phoenix and Denver agree in January only).
   const zonesDiffer = shiftZonesDiffer(date, timezone);
@@ -1051,6 +1065,11 @@ function ShiftFormBody({
           {!assignedTo && (
             <Text variant="caption" as="p" data-testid="shift-form-open-hint">
               {t('shifts:form.openHint')}
+            </Text>
+          )}
+          {heldLocked && (
+            <Text variant="caption" as="p" data-testid="shift-form-held-hint">
+              {t('shifts:form.heldHint', { name: holderName })}
             </Text>
           )}
         </section>

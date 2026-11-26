@@ -493,16 +493,19 @@ describe("simple shift form: Who's with Rosa?", () => {
     expect(r).toBeChecked();
   });
 
-  it('a holder a plain member could not pick is shown disabled with "on it now"; Me and Leave open stay pickable', async () => {
+  // The server refuses a member both "Me" and "Leave open" on a shift someone else holds (prod 2026-11-25).
+  it('a holder a plain member could not pick is shown disabled with "on it now"; Me and Leave open are not pickable either', async () => {
     const user = userEvent.setup();
     circle({ canManageMembers: false, viewerRole: 'member' });
     open({ shift: shift({ assigned_to: 'u-ana' }) });
     const ana = radio("Who's with Rosa?", 'Ana, on it now');
     expect(ana).toBeDisabled();
     expect(ana).toBeChecked();
+    expect(radio("Who's with Rosa?", 'Leave open')).toBeDisabled();
+    expect(radio("Who's with Rosa?", 'Me')).toBeDisabled();
     await user.click(radio("Who's with Rosa?", 'Leave open'));
-    expect(radio("Who's with Rosa?", 'Leave open')).toBeChecked();
-    expect(ana).not.toBeChecked();
+    await user.click(radio("Who's with Rosa?", 'Me'));
+    expect(ana).toBeChecked();
   });
 
   it('a manager can pick the holder (enabled); a pick of a disabled tile does nothing', async () => {

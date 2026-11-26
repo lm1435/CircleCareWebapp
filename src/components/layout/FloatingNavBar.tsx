@@ -32,6 +32,10 @@ function sectionOf(pathname: string): string {
 const PILL =
   'fixed inset-x-5 bottom-[var(--nav-inset)] z-30 flex h-16 items-center ' +
   'rounded-full border-[1.5px] border-nav-pill-line bg-nav-pill px-2 ' +
+  // Reflow (WCAG 1.4.10): at 320px the five German labels (HEUTE PFLEGE NEU GESUNDHEIT FRAGEN) are
+  // wider than the pill, and the last cell painted past the viewport. Below 360px the pill takes
+  // narrower side margins and inner padding; LABEL drops most of its tracking.
+  'max-[359px]:inset-x-3 max-[359px]:px-1 ' +
   'shadow-xl backdrop-blur-[12px] min-[600px]:h-[72px] xl:hidden';
 
 /** Mobile `styles.tabItem`: flex 1, centred column, 44 min, 2px gap. */
@@ -39,7 +43,7 @@ const CELL =
   'flex flex-1 flex-col items-center justify-center gap-0.5 min-h-[44px] py-1 relative no-underline';
 
 /** Mobile `styles.tabLabel`: 12/400 uppercase, tracking 1.2, 2px above. */
-const LABEL = 'mt-0.5 text-xs uppercase tracking-[1.2px]';
+const LABEL = 'mt-0.5 text-xs uppercase tracking-[1.2px] max-[359px]:tracking-[0.2px]';
 
 /** Mobile `styles.activeDot`: a 4×4 ink disc pinned to the cell's top edge. */
 const ACTIVE_DOT = 'absolute top-0 h-1 w-1 rounded-full bg-ink';

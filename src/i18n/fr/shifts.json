@@ -151,6 +151,7 @@
     "everyWeek": "Chaque semaine",
     "someDays": "Certains jours",
     "openHint": "Une garde à pourvoir peut être prise par n’importe qui dans le cercle.",
+    "heldHint": "Seuls {{name}}, le propriétaire ou un gestionnaire peuvent changer qui assure cette garde.",
     "moreDetails": "Plus de détails",
     "chooseTime": "Choisir une heure",
     "clearEnd": "Effacer la date de fin",

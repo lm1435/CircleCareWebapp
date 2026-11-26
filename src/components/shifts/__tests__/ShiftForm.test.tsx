@@ -459,6 +459,74 @@ describe('ShiftFormModal (defaults, order, hydration)', () => {
     expect(within(group).getByRole('radio', { name: 'Ana, on it now' })).toBeChecked();
   });
 
+  // PROD 2026-11-25 (error_occurred shifts_update_failed / SHIFT_ASSIGN_FORBIDDEN): a member edited a shift
+  // someone else holds; the form offered "Me" and "Leave open", which the server always refuses.
+  describe('a member editing a shift someone else holds', () => {
+    const anaShift = () => created({ id: 'one', recurrence_rule: null, parent_event_id: null, assigned_to: 'u-ana' });
+    const heldHint = () => screen.queryByTestId('shift-form-held-hint');
+
+    it('POSITIVE: "Leave open" and "Me" are shown, not pickable; the reason names the holder; a press changes nothing', () => {
+      circle({ canManageMembers: false, viewerRole: 'member' });
+      shell(<ShiftFormModal circleId="c" shift={anaShift()} onClose={vi.fn()} />);
+      const group = screen.getByRole('radiogroup', { name: "Who's with Rosa?" });
+      const open = within(group).getByRole('radio', { name: 'Leave open' });
+      const me = within(group).getByRole('radio', { name: 'Me' });
+      expect(open).toBeDisabled();
+      expect(me).toBeDisabled();
+      fireEvent.click(me);
+      fireEvent.click(open);
+      expect(within(group).getByRole('radio', { name: 'Ana, on it now' })).toBeChecked();
+      expect(heldHint()).toHaveTextContent("Only Ana, the owner or a manager can change who's on this shift.");
+      expect(screen.queryByTestId('shift-form-open-hint')).not.toBeInTheDocument();
+    });
+
+    it('NEGATIVE: the owner / a manager keeps every choice and sees no reason line', () => {
+      circle({ canManageMembers: true });
+      shell(<ShiftFormModal circleId="c" shift={anaShift()} onClose={vi.fn()} />);
+      const group = screen.getByRole('radiogroup', { name: "Who's with Rosa?" });
+      for (const radio of within(group).getAllByRole('radio')) expect(radio).toBeEnabled();
+      expect(heldHint()).not.toBeInTheDocument();
+    });
+
+    it('NEGATIVE: a member on THEIR OWN shift may still leave it open; no reason line', () => {
+      circle({ canManageMembers: false, viewerRole: 'member' });
+      shell(
+        <ShiftFormModal
+          circleId="c"
+          shift={created({ id: 'one', recurrence_rule: null, parent_event_id: null, assigned_to: 'u-me' })}
+          onClose={vi.fn()}
+        />
+      );
+      const group = screen.getByRole('radiogroup', { name: "Who's with Rosa?" });
+      expect(within(group).getByRole('radio', { name: 'Leave open' })).toBeEnabled();
+      expect(within(group).getByRole('radio', { name: 'Me, on it now' })).toBeEnabled();
+      expect(heldHint()).not.toBeInTheDocument();
+    });
+
+    it('NEGATIVE: a member on an OPEN shift may still pick "Me"; no reason line', () => {
+      circle({ canManageMembers: false, viewerRole: 'member' });
+      shell(
+        <ShiftFormModal
+          circleId="c"
+          shift={created({ id: 'one', recurrence_rule: null, parent_event_id: null, assigned_to: null })}
+          onClose={vi.fn()}
+        />
+      );
+      const group = screen.getByRole('radiogroup', { name: "Who's with Rosa?" });
+      expect(within(group).getByRole('radio', { name: 'Me' })).toBeEnabled();
+      expect(within(group).getByRole('radio', { name: 'Leave open' })).toBeEnabled();
+      expect(heldHint()).not.toBeInTheDocument();
+    });
+
+    it('NEGATIVE: a member adding a NEW shift is never locked', () => {
+      circle({ canManageMembers: false, viewerRole: 'member' });
+      shell(<ShiftFormModal circleId="c" onClose={vi.fn()} />);
+      const group = screen.getByRole('radiogroup', { name: "Who's with Rosa?" });
+      for (const radio of within(group).getAllByRole('radio')) expect(radio).toBeEnabled();
+      expect(heldHint()).not.toBeInTheDocument();
+    });
+  });
+
   it('marks "Me" when the editor holds it', () => {
     shell(
       <ShiftFormModal

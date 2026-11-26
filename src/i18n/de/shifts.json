@@ -151,6 +151,7 @@
     "everyWeek": "Jede Woche",
     "someDays": "An bestimmten Tagen",
     "openHint": "Offene Schichten kann jede Person im Kreis übernehmen.",
+    "heldHint": "Nur {{name}}, der Inhaber oder ein Mitverwalter kann ändern, wer diese Schicht hat.",
     "moreDetails": "Weitere Details",
     "chooseTime": "Uhrzeit wählen",
     "clearEnd": "Enddatum entfernen",

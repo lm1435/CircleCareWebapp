@@ -151,6 +151,7 @@
     "everyWeek": "Every week",
     "someDays": "Some days",
     "openHint": "Open shifts can be taken by anyone in the circle.",
+    "heldHint": "Only {{name}}, the owner or a manager can change who's on this shift.",
     "moreDetails": "More details",
     "chooseTime": "Choose a time",
     "clearEnd": "Clear the end date",

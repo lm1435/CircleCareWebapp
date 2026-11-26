@@ -151,6 +151,7 @@
     "everyWeek": "Ogni settimana",
     "someDays": "Alcuni giorni",
     "openHint": "Chiunque nella cerchia può prendere un turno scoperto.",
+    "heldHint": "Solo {{name}}, il titolare o un gestore può cambiare chi ha questo turno.",
     "moreDetails": "Altri dettagli",
     "chooseTime": "Scegli un orario",
     "clearEnd": "Rimuovi la data di fine",

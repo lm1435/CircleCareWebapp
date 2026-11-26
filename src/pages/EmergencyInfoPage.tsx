@@ -761,6 +761,8 @@ export default function EmergencyInfoPage(): ReactElement {
           })}
           confirmLabel={t('dobPrompt.addShort')}
           cancelLabel={t('dobPrompt.exportAnyway')}
+          // The x only closes (onDismiss): it must not be announced as "Export anyway", which exports.
+          closeLabel={t('common:close')}
           onConfirm={() => {
             setDobNoteOpen(false);
             setDobDialog('export_prompt');

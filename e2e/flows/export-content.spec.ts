@@ -57,8 +57,8 @@ const MOBILE_COPY = path.join(HERE, '../../../mobile/.maestro/parity/exports/har
 
 type Lang = 'en' | 'es';
 const UI = {
-  en: { history: 'History', exportBtn: 'Export report', dialog: 'Adherence report', share: 'Share', shareDialog: 'Share care summary', edit: 'Edit medical information', period: (d: number) => `Last ${d} days` },
-  es: { history: 'Historial', exportBtn: 'Exportar reporte', dialog: 'Reporte de adherencia', share: 'Compartir', shareDialog: 'Compartir resumen de cuidado', edit: 'Editar información médica', period: (d: number) => `Últimos ${d} días` },
+  en: { history: 'History', exportBtn: 'Export report', dialog: 'Adherence report', share: 'Share', shareDialog: 'Share care summary', dobNote: "Date of birth isn't set.", exportAnyway: 'Export anyway', edit: 'Edit medical information', period: (d: number) => `Last ${d} days` },
+  es: { history: 'Historial', exportBtn: 'Exportar reporte', dialog: 'Reporte de adherencia', share: 'Compartir', shareDialog: 'Compartir resumen de cuidado', dobNote: 'No se ha indicado la fecha de nacimiento.', exportAnyway: 'Exportar de todos modos', edit: 'Editar información médica', period: (d: number) => `Últimos ${d} días` },
 } as const;
 
 function adapters(ctx: APIRequestContext): HD.Adapters {
@@ -219,16 +219,23 @@ async function shareCareSummary(page: Page, circleId: string, lang: Lang): Promi
   const share = page.getByRole('button', { name: UI[lang].share, exact: true });
   await expect(share).toBeEnabled({ timeout: 20_000 });
   const dialog = page.getByRole('dialog', { name: UI[lang].shareDialog });
+  // The fixture recipient has no date of birth, and the owner can add one: since web 1.4.3 Share first
+  // shows the "Date of birth isn't set." note (Add / Export anyway). "Export anyway" goes on to the
+  // share dialog. Either that note or the share dialog must open; a click is repeated only while
+  // NEITHER is up (Share moves slots as the masthead settles), never on top of an open dialog.
+  const dobNote = page.getByRole('dialog', { name: UI[lang].dobNote });
   for (let attempt = 0; attempt < 3; attempt++) {
     await share.click();
-    if (await dialog.isVisible().catch(() => false)) break;
     try {
-      await expect(dialog).toBeVisible({ timeout: 5_000 });
+      await expect(dialog.or(dobNote)).toBeVisible({ timeout: 5_000 });
       break;
     } catch {
-      if (attempt === 2) throw new Error('share dialog never opened');
+      if (attempt === 2) throw new Error('neither the date-of-birth note nor the share dialog opened');
     }
   }
+  expect(await dobNote.isVisible(), 'no date of birth on file: the note comes before the share dialog').toBe(true);
+  await dobNote.getByRole('button', { name: UI[lang].exportAnyway, exact: true }).click();
+  await expect(dialog).toBeVisible({ timeout: 10_000 });
   await dialog.getByRole('button', { name: UI[lang].share, exact: true }).click();
   return readPrinted(page);
 }
