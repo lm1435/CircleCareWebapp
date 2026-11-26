@@ -135,6 +135,22 @@ export function isShiftEvent(event: Pick<CalendarEvent, 'event_type'>): boolean 
   return event.event_type === 'shift';
 }
 
+/**
+ * LOCKED FOR THIS VIEWER (1.4.4 build 6): someone ELSE is on the shift and the viewer is neither the owner
+ * nor a manager (`canManage` = useCircle's canManageMembers). Its date, start, duration and repeat cannot be
+ * changed, nobody else can be put on it and it cannot be deleted (the server answers 403
+ * SHIFT_EDIT_FORBIDDEN / SHIFT_ASSIGN_FORBIDDEN / SHIFT_DROP_FORBIDDEN). Renaming it and its reminders stay
+ * open to any editor. An OPEN shift is never locked. Mobile twin: utils/shifts isShiftLockedForViewer.
+ */
+export function isShiftLockedForViewer(
+  shift: Pick<CalendarEvent, 'assigned_to'> | null | undefined,
+  viewerId: string | null | undefined,
+  canManage: boolean
+): boolean {
+  if (!shift?.assigned_to) return false;
+  return shift.assigned_to !== viewerId && !canManage;
+}
+
 /** OPEN = nobody on it. */
 export function isShiftOpen(shift: Pick<CalendarEvent, 'assigned_to'>): boolean {
   return !shift.assigned_to;

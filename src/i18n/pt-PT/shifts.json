@@ -76,7 +76,8 @@
     "everyWeek": "Todas as semanas",
     "openHint": "Qualquer pessoa do círculo pode assumir um turno por preencher.",
     "saveChanges": "Guardar alterações",
-    "clearEnd": "Remover a data de fim"
+    "clearEnd": "Remover a data de fim",
+    "heldLockedHint": "Só {{name}}, o proprietário ou um gestor pode alterar o horário deste turno, quem está nele, ou eliminá-lo."
   },
   "saved": {
     "title": "\"{{name}}\" guardado",
@@ -117,7 +118,8 @@
     "dropForbidden": "Só quem está no turno, o proprietário ou um gestor pode libertá-lo.",
     "assignForbidden": "Só o proprietário ou um gestor pode colocar outra pessoa num turno.",
     "invalidAssignee": "Essa pessoa não pode ficar num turno.",
-    "permissionDenied": "Não tem permissão para alterar turnos neste círculo."
+    "permissionDenied": "Não tem permissão para alterar turnos neste círculo.",
+    "editForbidden": "Só quem está no turno, o proprietário ou um gestor pode alterar o horário ou eliminá-lo."
   },
   "summaryShort_one": "{{count}} turno · {{open}}",
   "summaryShort_other": "{{count}} turnos · {{open}}",

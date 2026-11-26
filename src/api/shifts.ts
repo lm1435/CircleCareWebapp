@@ -163,6 +163,13 @@ export const isShiftNotAssignedError = (err: unknown): boolean =>
   shiftErrorCode(err) === 'SHIFT_NOT_ASSIGNED';
 export const isShiftDropForbiddenError = (err: unknown): boolean =>
   shiftErrorCode(err) === 'SHIFT_DROP_FORBIDDEN';
+/**
+ * 403 SHIFT_EDIT_FORBIDDEN (1.4.4 build 6): changing the date / time / duration / repeat of, or deleting,
+ * a shift someone else is on needs that person, the owner or a manager. A series edit can be refused
+ * even when the opened occurrence is the viewer's own or open (another occurrence is held by someone else).
+ */
+export const isShiftEditForbiddenError = (err: unknown): boolean =>
+  shiftErrorCode(err) === 'SHIFT_EDIT_FORBIDDEN';
 export const isShiftAssignForbiddenError = (err: unknown): boolean =>
   shiftErrorCode(err) === 'SHIFT_ASSIGN_FORBIDDEN';
 export const isInvalidAssigneeError = (err: unknown): boolean =>

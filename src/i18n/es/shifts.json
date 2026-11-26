@@ -152,6 +152,7 @@
     "someDays": "Algunos días",
     "openHint": "Cualquiera en el círculo puede tomar un turno abierto.",
     "heldHint": "Solo {{name}}, la persona titular o un gestor puede cambiar quién tiene este turno.",
+    "heldLockedHint": "Solo {{name}}, la persona titular o un gestor puede cambiar el horario de este turno, quién lo tiene, o eliminarlo.",
     "moreDetails": "Más detalles",
     "chooseTime": "Elige una hora",
     "clearEnd": "Quitar la fecha de fin",
@@ -242,6 +243,7 @@
     "save": "No pudimos guardar el turno. Inténtalo de nuevo.",
     "delete": "No pudimos eliminar el turno. Inténtalo de nuevo.",
     "dropForbidden": "Solo quien tiene el turno, la persona titular o un gestor puede soltarlo.",
+    "editForbidden": "Solo quien tiene el turno, la persona titular o un gestor puede cambiar su horario o eliminarlo.",
     "assignForbidden": "Solo la persona titular o un gestor puede poner a otra persona en un turno.",
     "invalidAssignee": "Esa persona no puede tener un turno.",
     "permissionDenied": "No tienes permiso para cambiar turnos en este círculo."

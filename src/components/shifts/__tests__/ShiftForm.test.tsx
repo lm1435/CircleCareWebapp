@@ -35,6 +35,8 @@ vi.mock('@/lib/analytics', () => ({
     shiftFormReminderExpanded: vi.fn(),
     shiftEditTasksWarningShown: vi.fn(),
     shiftTakeConflict: vi.fn(),
+    // useShifts reports failed writes through error_occurred.
+    errorOccurred: vi.fn(),
   },
 }));
 vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({
@@ -476,8 +478,113 @@ describe('ShiftFormModal (defaults, order, hydration)', () => {
       fireEvent.click(me);
       fireEvent.click(open);
       expect(within(group).getByRole('radio', { name: 'Ana, on it now' })).toBeChecked();
-      expect(heldHint()).toHaveTextContent("Only Ana, the owner or a manager can change who's on this shift.");
+      // ONE line covers everything locked (build 6): the time, who's on it, deleting.
+      expect(screen.getAllByTestId('shift-form-held-hint')).toHaveLength(1);
+      expect(heldHint()).toHaveTextContent(
+        "Only Ana, the owner or a manager can change this shift's time, who's on it, or delete it."
+      );
+      expect(screen.queryByText("Only Ana, the owner or a manager can change who's on this shift.")).not.toBeInTheDocument();
       expect(screen.queryByTestId('shift-form-open-hint')).not.toBeInTheDocument();
+    });
+
+    // 1.4.4 build 6: the date, start, end and repeat of a shift someone else is on are the holder's,
+    // the owner's or a manager's to change (the server answers 403 SHIFT_EDIT_FORBIDDEN).
+    it('POSITIVE (build 6): date, Starts, Ends and How often are shown, not editable; the name stays editable', () => {
+      circle({ canManageMembers: false, viewerRole: 'member' });
+      shell(<ShiftFormModal circleId="c" shift={anaShift()} onClose={vi.fn()} />);
+      expect(field('shift_date')).toBeDisabled();
+      expect(field('shift_date')).toHaveValue('2026-10-20');
+      const start = screen.getByTestId('shift-start-tile');
+      const end = screen.getByTestId('shift-end-tile');
+      expect(start).toBeDisabled();
+      expect(end).toBeDisabled();
+      fireEvent.click(start);
+      fireEvent.click(end);
+      expect(document.getElementById('shift_start')).toBeNull();
+      expect(document.getElementById('shift_end')).toBeNull();
+      for (const radio of within(screen.getByRole('radiogroup', { name: 'How often?' })).getAllByRole('radio')) {
+        expect(radio).toBeDisabled();
+      }
+      expect(screen.getByTestId('shift-repeat-custom')).toBeDisabled();
+      expect(nameField()).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
+    });
+
+    it('NEGATIVE (build 6): a locked save sends the name and reminders ONLY: never the date, time, duration, repeat or assignee', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      circle({ canManageMembers: false, viewerRole: 'member' });
+      mockUpdate.mockResolvedValue(anaShift());
+      shell(<ShiftFormModal circleId="c" shift={anaShift()} onClose={onClose} />);
+      fireEvent.change(nameField(), { target: { value: 'Early' } });
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+      expect(mockUpdate.mock.calls[0][1]).toBe('one');
+      const sent = mockUpdate.mock.calls[0][2] as Record<string, unknown>;
+      expect(sent.title).toBe('Early');
+      expect(Object.keys(sent).sort()).toEqual(['reminder_lead_minutes', 'reminder_leads_minutes', 'title']);
+      for (const key of ['scheduled_date', 'scheduled_time', 'duration_minutes', 'recurrence_rule', 'recurrence_days', 'assigned_to']) {
+        expect(sent).not.toHaveProperty(key);
+      }
+      expect(Analytics.shiftEdited).toHaveBeenCalledWith({ timeChanged: false, scope: 'occurrence', layout: 'simple' });
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
+    });
+
+    it('NEGATIVE (build 6): "All upcoming shifts" of a held series stays locked: the repeat is not editable and the root gets the name only', async () => {
+      const user = userEvent.setup();
+      circle({ canManageMembers: false, viewerRole: 'member' });
+      const held = created({
+        id: 'root_2026-10-21',
+        parent_event_id: 'root',
+        scheduled_date: '2026-10-21',
+        recurrence_rule: 'daily',
+        assigned_to: 'u-ana',
+      });
+      mockUpdate.mockResolvedValue(held);
+      shell(<ShiftFormModal circleId="c" shift={held} onClose={vi.fn()} />);
+      await user.click(screen.getByRole('radio', { name: 'All upcoming shifts' }));
+      expect(field('shift_date')).toBeDisabled();
+      for (const radio of within(screen.getByRole('radiogroup', { name: 'How often?' })).getAllByRole('radio')) {
+        expect(radio).toBeDisabled();
+      }
+      fireEvent.change(nameField(), { target: { value: 'Nights' } });
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+      expect(mockUpdate.mock.calls[0][1]).toBe('root');
+      expect(Object.keys(mockUpdate.mock.calls[0][2] as object).sort()).toEqual([
+        'reminder_lead_minutes',
+        'reminder_leads_minutes',
+        'title',
+      ]);
+    });
+
+    it('NEGATIVE (build 6): the server refusing a save (403 SHIFT_EDIT_FORBIDDEN, e.g. another occurrence of the series is held) says who may, and closes', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      circle({ canManageMembers: false, viewerRole: 'member' });
+      // The opened occurrence is OPEN (not locked here): only the server knows the series has a held day.
+      mockUpdate.mockRejectedValue({ success: false, error: { code: 'SHIFT_EDIT_FORBIDDEN', message: 'x' } });
+      shell(
+        <ShiftFormModal
+          circleId="c"
+          shift={created({ id: 'one', recurrence_rule: null, parent_event_id: null, assigned_to: null })}
+          onClose={onClose}
+        />
+      );
+      setTime('start', '09:00');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      expect(
+        await screen.findByText('Only the person on a shift, the owner or a manager can change its time or delete it.')
+      ).toBeInTheDocument();
+      expect(onClose).toHaveBeenCalled();
+      // Reported to the digest as a shift update failure (enums only).
+      expect(Analytics.errorOccurred).toHaveBeenCalledWith(
+        'shifts',
+        'shifts_update_failed',
+        expect.objectContaining({ code: 'SHIFT_EDIT_FORBIDDEN', error_kind: 'forbidden' })
+      );
+      // Never the generic "We couldn't save the shift".
+      expect(screen.queryByText("We couldn't save the shift. Try again.")).not.toBeInTheDocument();
     });
 
     it('NEGATIVE: the owner / a manager keeps every choice and sees no reason line', () => {
@@ -486,6 +593,23 @@ describe('ShiftFormModal (defaults, order, hydration)', () => {
       const group = screen.getByRole('radiogroup', { name: "Who's with Rosa?" });
       for (const radio of within(group).getAllByRole('radio')) expect(radio).toBeEnabled();
       expect(heldHint()).not.toBeInTheDocument();
+      // Build 6: the owner / a manager keeps the time controls too.
+      expect(field('shift_date')).toBeEnabled();
+      expect(screen.getByTestId('shift-start-tile')).toBeEnabled();
+      expect(screen.getByTestId('shift-end-tile')).toBeEnabled();
+    });
+
+    it('NEGATIVE (build 6): the owner editing a held shift still sends its time and date', async () => {
+      const user = userEvent.setup();
+      circle({ canManageMembers: true });
+      mockUpdate.mockResolvedValue(anaShift());
+      shell(<ShiftFormModal circleId="c" shift={anaShift()} onClose={vi.fn()} />);
+      setTime('start', '09:00');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+      expect(mockUpdate.mock.calls[0][2]).toEqual(
+        expect.objectContaining({ scheduled_time: '09:00', duration_minutes: 300, scheduled_date: '2026-10-20' })
+      );
     });
 
     it('NEGATIVE: a member on THEIR OWN shift may still leave it open; no reason line', () => {
@@ -501,6 +625,8 @@ describe('ShiftFormModal (defaults, order, hydration)', () => {
       expect(within(group).getByRole('radio', { name: 'Leave open' })).toBeEnabled();
       expect(within(group).getByRole('radio', { name: 'Me, on it now' })).toBeEnabled();
       expect(heldHint()).not.toBeInTheDocument();
+      expect(field('shift_date')).toBeEnabled();
+      expect(screen.getByTestId('shift-start-tile')).toBeEnabled();
     });
 
     it('NEGATIVE: a member on an OPEN shift may still pick "Me"; no reason line', () => {
@@ -516,6 +642,10 @@ describe('ShiftFormModal (defaults, order, hydration)', () => {
       expect(within(group).getByRole('radio', { name: 'Me' })).toBeEnabled();
       expect(within(group).getByRole('radio', { name: 'Leave open' })).toBeEnabled();
       expect(heldHint()).not.toBeInTheDocument();
+      // An OPEN shift stays fully editable by any member with edit rights (build 6).
+      expect(field('shift_date')).toBeEnabled();
+      expect(screen.getByTestId('shift-start-tile')).toBeEnabled();
+      expect(screen.getByTestId('shift-end-tile')).toBeEnabled();
     });
 
     it('NEGATIVE: a member adding a NEW shift is never locked', () => {

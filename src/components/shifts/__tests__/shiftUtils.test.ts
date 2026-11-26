@@ -7,6 +7,7 @@ import {
   countOpen,
   countOpenUpcoming,
   hasShiftEnded,
+  isShiftLockedForViewer,
   isWithin24hOfStart,
   patchOccurrences,
   shiftZonesDiffer,
@@ -271,5 +272,30 @@ describe('formatShiftRepeat uses the shared label for every rule', () => {
 
   it('still says "Repeats" when the rule is simply not known (child row, root loading)', () => {
     expect(formatShiftRepeat(null, true, t, list)).toBe('shifts:repeat.series');
+  });
+});
+
+// 1.4.4 build 6: changing the date / time / duration / repeat of, or deleting, a shift someone else is on
+// needs that person, the owner or a manager.
+describe('isShiftLockedForViewer', () => {
+  it('POSITIVE: someone else is on it and the viewer is not the owner / a manager -> locked', () => {
+    expect(isShiftLockedForViewer({ assigned_to: 'u-ana' }, 'u-me', false)).toBe(true);
+    // An unknown viewer is never treated as the holder.
+    expect(isShiftLockedForViewer({ assigned_to: 'u-ana' }, null, false)).toBe(true);
+    expect(isShiftLockedForViewer({ assigned_to: 'u-ana' }, undefined, false)).toBe(true);
+  });
+  it('NEGATIVE: an OPEN shift is never locked', () => {
+    expect(isShiftLockedForViewer({ assigned_to: null }, 'u-me', false)).toBe(false);
+    expect(isShiftLockedForViewer({ assigned_to: undefined }, 'u-me', false)).toBe(false);
+  });
+  it("NEGATIVE: the viewer's own shift is not locked", () => {
+    expect(isShiftLockedForViewer({ assigned_to: 'u-me' }, 'u-me', false)).toBe(false);
+  });
+  it('NEGATIVE: the owner / a manager is never locked', () => {
+    expect(isShiftLockedForViewer({ assigned_to: 'u-ana' }, 'u-me', true)).toBe(false);
+  });
+  it('NEGATIVE: no shift (a new one) is not locked', () => {
+    expect(isShiftLockedForViewer(null, 'u-me', false)).toBe(false);
+    expect(isShiftLockedForViewer(undefined, 'u-me', false)).toBe(false);
   });
 });

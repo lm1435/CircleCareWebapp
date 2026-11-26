@@ -69,6 +69,7 @@ import {
   formatShiftDuration,
   formatShiftRepeat,
   formatShiftReminders,
+  isShiftLockedForViewer,
   isShiftRepeating,
   memberShortName,
   recurrenceEnum,
@@ -332,7 +333,12 @@ function ShiftFormBody({
   const [editScope, setEditScope] = useState<ShiftScope>('occurrence');
   // "All upcoming shifts" may change the start date and the repeat (the reschedule route).
   const futureEdit = repeatingEdit && editScope === 'future';
-  const repeatEditable = !isEditing || futureEdit;
+  // LOCKED FOR THIS VIEWER (1.4.4 build 6): a member (not the owner / a manager) editing a shift SOMEONE ELSE
+  // is on. The date, start, end and repeat are shown, not editable, and never sent; nobody can be picked
+  // (below). The name and the reminders stay editable. The server answers a refused attempt with 403
+  // SHIFT_EDIT_FORBIDDEN / SHIFT_ASSIGN_FORBIDDEN / SHIFT_DROP_FORBIDDEN.
+  const heldLocked = isShiftLockedForViewer(shift, viewerId, canManageMembers);
+  const repeatEditable = (!isEditing || futureEdit) && !heldLocked;
   const [errors, setErrors] = useState<FieldErrors>({});
   // The Starts / Ends tiles reveal their time input in place; a field with an error stays open.
   const [timeOpen, setTimeOpen] = useState({ start: false, end: false });
@@ -359,9 +365,8 @@ function ShiftFormBody({
   // is always listed ("on it now"); one this editor could not pick is shown, not pickable.
   // A member (not the owner / a manager) editing a shift SOMEONE ELSE holds can change nobody here: the
   // server refuses "Me" (SHIFT_ASSIGN_FORBIDDEN) and "Leave open" (SHIFT_DROP_FORBIDDEN). Both are
-  // shown, not pickable, with the reason under the tiles (prod 2026-11-25: a member hit the refusal).
-  const heldLocked =
-    isEditing && !!initialAssignee && initialAssignee !== viewerId && !canManageMembers;
+  // shown, not pickable (prod 2026-11-25: a member hit the refusal). `heldLocked` (above) is that viewer;
+  // ONE line under "When" says everything that is locked.
   const holderName = useMemo(() => {
     const m = members.find((x) => x.id === initialAssignee);
     return (m ? memberShortName(m) : shift?.assigned_to_user?.first_name?.trim()) || t('shifts:someone');
@@ -510,6 +515,29 @@ function ShiftFormBody({
       const timeChanged =
         startTime !== hm(shift.scheduled_time) || duration !== (shift.duration_minutes ?? duration);
       const scope: ShiftScope = repeatingEdit ? editScope : 'occurrence';
+
+      // LOCKED (someone else is on it; the viewer is not the owner / a manager): ONLY the name and the
+      // reminders are sent. Never the date, the time, the duration, the repeat or the assignee, not even
+      // unchanged: the server refuses those from this viewer (403 SHIFT_EDIT_FORBIDDEN).
+      if (heldLocked) {
+        const eventId = repeatingEdit && scope === 'future' ? shiftRootId(shift) : shift.id;
+        try {
+          await updateShift.mutateAsync({
+            eventId,
+            data: { title: name.trim(), ...shiftReminderBody(reminders) },
+          });
+          Analytics.shiftEdited({
+            timeChanged: false,
+            scope: repeatingEdit ? scope : 'occurrence',
+            layout: 'simple',
+          });
+          onUpdated?.();
+          onClose();
+        } catch (err) {
+          failSave(err, 'edit');
+        }
+        return;
+      }
 
       // ALL UPCOMING with a new start date and / or repeat: the reschedule route splits the
       // series at the date (earlier shifts and who covered them stay as they are).
@@ -736,8 +764,9 @@ function ShiftFormBody({
     span === MAX_SHIFT_MINUTES && startTime && endTime
       ? { start: clock(startTime), end: clock(endTime) }
       : null;
-  const startOpen = timeOpen.start || !!errors.shift_start;
-  const endOpen = timeOpen.end || !!errors.shift_end;
+  // Locked: the tiles never open their time inputs.
+  const startOpen = !heldLocked && (timeOpen.start || !!errors.shift_start);
+  const endOpen = !heldLocked && (timeOpen.end || !!errors.shift_end);
   const toggleTime = (which: 'start' | 'end'): void => {
     const open = which === 'start' ? startOpen : endOpen;
     setTimeOpen((prev) => ({ ...prev, [which]: !open }));
@@ -833,10 +862,18 @@ function ShiftFormBody({
 
         <section aria-labelledby="sf-when" className="flex flex-col gap-3">
           {sectionHeading('sf-when', t('shifts:form.whenQuestion'))}
+          {/* ONE line for everything locked below it (the time, the repeat, who's on it), said before the
+              first locked control. The name above and the reminders below stay editable. */}
+          {heldLocked && (
+            <Text variant="caption" as="p" id="shift-form-held-hint" data-testid="shift-form-held-hint">
+              {t('shifts:form.heldLockedHint', { name: holderName })}
+            </Text>
+          )}
           <DateField
             id="shift_date"
             label={futureEdit ? t('shifts:form.starting') : t('shifts:form.date')}
             required
+            disabled={heldLocked}
             value={date}
             today={recipientToday}
             min={futureEdit ? shift?.scheduled_date : undefined}
@@ -866,7 +903,8 @@ function ShiftFormBody({
               sub={startTime ? clock(startTime) : t('shifts:form.chooseTime')}
               expanded={startOpen}
               invalid={!!errors.shift_start}
-              describedBy="shift-form-duration"
+              disabled={heldLocked}
+              describedBy={heldLocked ? 'shift-form-held-hint' : 'shift-form-duration'}
               onClick={() => toggleTime('start')}
             />
             <ChoiceTileButton
@@ -881,7 +919,8 @@ function ShiftFormBody({
               }
               expanded={endOpen}
               invalid={!!errors.shift_end}
-              describedBy="shift-form-duration"
+              disabled={heldLocked}
+              describedBy={heldLocked ? 'shift-form-held-hint' : 'shift-form-duration'}
               onClick={() => toggleTime('end')}
             />
           </div>
@@ -1065,11 +1104,6 @@ function ShiftFormBody({
           {!assignedTo && (
             <Text variant="caption" as="p" data-testid="shift-form-open-hint">
               {t('shifts:form.openHint')}
-            </Text>
-          )}
-          {heldLocked && (
-            <Text variant="caption" as="p" data-testid="shift-form-held-hint">
-              {t('shifts:form.heldHint', { name: holderName })}
             </Text>
           )}
         </section>

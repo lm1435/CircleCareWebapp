@@ -9,6 +9,7 @@ import { ToastProvider } from '@/components/ui';
 import { Analytics } from '@/lib/analytics';
 import { useCircle } from '@/hooks/useCircle';
 import { useAuthStore } from '@/store/authStore';
+import { queryKeys } from '@/lib/queryKeys';
 import { useShiftsDialogs } from '../ShiftsDialogs';
 
 // The fixtures are dated Oct 2026: pin the wall clock (Date only) BEFORE them, or every open fixture
@@ -441,6 +442,55 @@ describe('Assign', () => {
 });
 
 describe('Delete', () => {
+  // 1.4.4 build 6: deleting a shift someone else is on needs that person, the owner or a manager.
+  describe('who is offered Delete (build 6)', () => {
+    const delButton = (dialog: HTMLElement) => within(dialog).queryByRole('button', { name: 'Delete' });
+
+    it('NEGATIVE: a member is NOT offered Delete on a shift someone else is on; Edit stays', async () => {
+      circle({ canManageMembers: false, viewerRole: 'member', isOwner: false });
+      const { dialog } = await openDetail(shift({ assigned_to: 'u-bo' }));
+      expect(delButton(dialog)).not.toBeInTheDocument();
+      expect(within(dialog).getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    });
+
+    it('POSITIVE: a member is offered Delete on THEIR OWN shift', async () => {
+      circle({ canManageMembers: false, viewerRole: 'member', isOwner: false });
+      const { dialog } = await openDetail(shift({ assigned_to: 'u-ana' }));
+      expect(delButton(dialog)).toBeInTheDocument();
+    });
+
+    it('POSITIVE: a member is offered Delete on an OPEN shift', async () => {
+      circle({ canManageMembers: false, viewerRole: 'member', isOwner: false });
+      const { dialog } = await openDetail(shift({ assigned_to: null }));
+      expect(delButton(dialog)).toBeInTheDocument();
+    });
+
+    it('POSITIVE: the owner / a manager is offered Delete on a shift someone else is on', async () => {
+      circle({ canManageMembers: true });
+      const { dialog } = await openDetail(shift({ assigned_to: 'u-bo' }));
+      expect(delButton(dialog)).toBeInTheDocument();
+    });
+  });
+
+  it('NEGATIVE (build 6): 403 SHIFT_EDIT_FORBIDDEN says who may delete, closes the confirm and refreshes the shifts', async () => {
+    const invalidate = vi.spyOn(QueryClient.prototype, 'invalidateQueries');
+    vi.mocked(deleteEvent).mockRejectedValue({ success: false, error: { code: 'SHIFT_EDIT_FORBIDDEN', message: 'x' } });
+    // The opened occurrence is the viewer's own: only the server knows another day of the series is held.
+    const { user, dialog } = await openDetail(shift());
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    const confirm = await screen.findByRole('dialog', { name: 'Delete shift' });
+    await user.click(within(confirm).getByRole('radio', { name: 'This and future shifts' }));
+    await user.click(within(confirm).getByRole('button', { name: 'Delete' }));
+    expect(
+      await screen.findByText('Only the person on a shift, the owner or a manager can change its time or delete it.')
+    ).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Delete shift' })).not.toBeInTheDocument());
+    expect(screen.queryByText("We couldn't delete the shift. Try again.")).not.toBeInTheDocument();
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.shifts('c') });
+    expect(Analytics.shiftDeleted).not.toHaveBeenCalled();
+    invalidate.mockRestore();
+  });
+
   it('this shift only -> DELETE the ROOT with deleteScope single + the occurrence date', async () => {
     const { user, dialog } = await openDetail(shift());
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));

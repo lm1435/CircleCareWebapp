@@ -453,6 +453,13 @@ test.describe('a member edits a shift someone else holds', () => {
     const drop = await memberSession.patch(path, { assigned_to: null });
     expect(drop.status()).toBe(403);
     expect(((await drop.json()) as { error: { code: string } }).error.code).toBe('SHIFT_DROP_FORBIDDEN');
+    // 1.4.4 build 6: nor may a member move or delete a shift someone else is on.
+    const retime = await memberSession.patch(path, { scheduled_time: '22:00' });
+    expect(retime.status()).toBe(403);
+    expect(((await retime.json()) as { error: { code: string } }).error.code).toBe('SHIFT_EDIT_FORBIDDEN');
+    const remove = await memberSession.delete(path);
+    expect(remove.status()).toBe(403);
+    expect(((await remove.json()) as { error: { code: string } }).error.code).toBe('SHIFT_EDIT_FORBIDDEN');
     expect(holder()).toBe(s.owner.userId);
 
     const context = await browser.newContext();
@@ -468,6 +475,9 @@ test.describe('a member edits a shift someone else holds', () => {
       await expect(list.getByTestId('shift-card')).toHaveCount(1, { timeout: 20_000 });
       await list.getByRole('button', { name: /^Late cover,/ }).click();
       const detail = page.getByRole('dialog', { name: 'Late cover' });
+      // No Delete for this member on someone else's shift; Edit stays (rename, reminders).
+      await expect(detail.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
+      await expect(detail.getByRole('button', { name: /^Delete/ })).toHaveCount(0);
       await detail.getByRole('button', { name: 'Edit', exact: true }).click();
       const edit = page.getByRole('dialog', { name: 'Edit shift' });
       const who = edit.getByRole('radiogroup', { name: /^Who/ });
@@ -475,8 +485,10 @@ test.describe('a member edits a shift someone else holds', () => {
       await expect(who.getByRole('radio', { name: 'Me', exact: true })).toBeDisabled();
       await expect(who.getByRole('radio', { name: /, on it now$/ })).toBeChecked();
       await expect(edit.getByTestId('shift-form-held-hint')).toHaveText(
-        /^Only .+, the owner or a manager can change who's on this shift\.$/
+        /^Only .+, the owner or a manager can change this shift's time, who's on it, or delete it\.$/
       );
+      // The date is shown, not editable.
+      await expect(edit.locator('#shift_date')).toBeDisabled();
       await who.scrollIntoViewIfNeeded();
       await page.screenshot({ path: testInfo.outputPath('member-held-shift.png') });
       await checkA11y(page, 'shift-form-held-by-other', testInfo);

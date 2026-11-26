@@ -61,7 +61,8 @@
     "remindBefore": "Rappeler avant le quart",
     "editScopeLabel": "Quels quarts ?",
     "nameQuestion": "Comment s’appelle le quart ?",
-    "openHint": "Un quart à pourvoir peut être pris par n’importe qui dans le cercle."
+    "openHint": "Un quart à pourvoir peut être pris par n’importe qui dans le cercle.",
+    "heldLockedHint": "Seuls {{name}}, le propriétaire ou un gestionnaire peuvent changer l’horaire de ce quart, qui l’assure, ou le supprimer."
   },
   "saved": {
     "title": "« {{name}} » enregistré",
@@ -99,7 +100,8 @@
     "dropForbidden": "Seuls la personne qui assure le quart, le propriétaire ou un gestionnaire peuvent le libérer.",
     "assignForbidden": "Seuls le propriétaire ou un gestionnaire peuvent attribuer un quart à quelqu’un d’autre.",
     "invalidAssignee": "Cette personne ne peut pas se voir attribuer un quart.",
-    "permissionDenied": "Vous n’avez pas l’autorisation de modifier les quarts de ce cercle."
+    "permissionDenied": "Vous n’avez pas l’autorisation de modifier les quarts de ce cercle.",
+    "editForbidden": "Seuls la personne qui assure le quart, le propriétaire ou un gestionnaire peuvent changer son horaire ou le supprimer."
   },
   "summaryShort_one": "{{count}} quart · {{open}}",
   "summaryShort_other": "{{count}} quarts · {{open}}",

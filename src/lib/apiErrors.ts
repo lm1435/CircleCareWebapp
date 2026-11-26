@@ -765,6 +765,7 @@ const CODE_KINDS: Readonly<Record<string, FailureKind>> = {
   SHIFT_ALREADY_TAKEN: 'conflict', // 409
   SHIFT_ASSIGN_FORBIDDEN: 'forbidden', // 403
   SHIFT_DROP_FORBIDDEN: 'forbidden', // 403
+  SHIFT_EDIT_FORBIDDEN: 'forbidden', // 403
   SHIFT_NOT_ASSIGNED: 'conflict', // 409
   SHIFT_NOT_FOUND: 'not_found', // 404
   SHIFT_INVALID_DATE: 'validation', // 400

@@ -152,6 +152,7 @@
     "someDays": "Alguns dias",
     "openHint": "Qualquer pessoa do círculo pode assumir um plantão em aberto.",
     "heldHint": "Só {{name}}, o proprietário ou um gestor pode alterar quem está neste plantão.",
+    "heldLockedHint": "Só {{name}}, o proprietário ou um gestor pode alterar o horário deste plantão, quem está nele, ou excluí-lo.",
     "moreDetails": "Mais detalhes",
     "chooseTime": "Escolha um horário",
     "clearEnd": "Remover a data final",
@@ -242,6 +243,7 @@
     "save": "Não foi possível salvar o plantão. Tente novamente.",
     "delete": "Não foi possível excluir o plantão. Tente novamente.",
     "dropForbidden": "Só quem está no plantão, o proprietário ou um gestor pode largá-lo.",
+    "editForbidden": "Só quem está no plantão, o proprietário ou um gestor pode alterar o horário dele ou excluí-lo.",
     "assignForbidden": "Só o proprietário ou um gestor pode colocar outra pessoa em um plantão.",
     "invalidAssignee": "Essa pessoa não pode ficar em um plantão.",
     "permissionDenied": "Você não tem permissão para alterar plantões neste círculo."

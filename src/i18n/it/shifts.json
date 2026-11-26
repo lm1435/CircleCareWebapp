@@ -152,6 +152,7 @@
     "someDays": "Alcuni giorni",
     "openHint": "Chiunque nella cerchia può prendere un turno scoperto.",
     "heldHint": "Solo {{name}}, il titolare o un gestore può cambiare chi ha questo turno.",
+    "heldLockedHint": "Solo {{name}}, il titolare o un gestore può cambiare l'orario di questo turno, chi lo ha, o eliminarlo.",
     "moreDetails": "Altri dettagli",
     "chooseTime": "Scegli un orario",
     "clearEnd": "Rimuovi la data di fine",
@@ -242,6 +243,7 @@
     "save": "Non siamo riusciti a salvare il turno. Riprova.",
     "delete": "Non siamo riusciti a eliminare il turno. Riprova.",
     "dropForbidden": "Solo chi ha il turno, il titolare o un gestore può lasciarlo.",
+    "editForbidden": "Solo chi ha il turno, il titolare o un gestore può cambiarne l'orario o eliminarlo.",
     "assignForbidden": "Solo il titolare o un gestore può assegnare un turno a un'altra persona.",
     "invalidAssignee": "A questa persona non si può assegnare un turno.",
     "permissionDenied": "Non hai il permesso di modificare i turni in questa cerchia."

@@ -19,6 +19,7 @@ import { holdsOnlyThisDay,
   formatShiftRepeat,
   formatShiftReminders,
   shiftReminderLeads,
+  isShiftLockedForViewer,
   isShiftOpen,
   isShiftRepeating,
   shiftEnd,
@@ -62,6 +63,7 @@ export interface ShiftDetailModalProps {
  * An ENDED shift (recipient zone, naive start + duration) is history: no Take,
  * Drop or Assign (the server answers 409 SHIFT_ENDED), and an unfilled one reads
  * "Not covered". Edit and Delete stay. In progress is not ended.
+ * A shift SOMEONE ELSE is on offers a member (not the owner / a manager) no Delete (1.4.4 build 6).
  */
 export function ShiftDetailModal({
   circleId,
@@ -110,6 +112,9 @@ export function ShiftDetailModal({
     : '';
   const ended = hasShiftEnded(shift, timezone);
   const canDrop = !open && !ended && canWrite && (assignee?.isYou === true || canManageMembers);
+  // 1.4.4 (6): someone else is on it and the viewer is not the owner / a manager: no Delete (the server
+  // answers 403 SHIFT_EDIT_FORBIDDEN). Edit stays: the name and the reminders are still theirs to change.
+  const locked = isShiftLockedForViewer(shift, viewerId, canManageMembers);
   // Took "Just this one" of a repeating shift: say so, or "Repeats: Daily" + "You" reads as every day.
   const onlyThisDay = holdsOnlyThisDay(shift, ruleSource);
   const whoName = assignee?.isYou ? t('shifts:you') : (assignee?.name ?? '');
@@ -313,14 +318,17 @@ export function ShiftDetailModal({
                 {t('shifts:assign.action')}
               </Button>
             )}
-            <Button
-              size="sm"
-              variant="dangerOutline"
-              offlineKind="change"
-              onClick={() => onAction('delete', shift)}
-            >
-              {t('shifts:delete.action')}
-            </Button>
+            {!locked && (
+              <Button
+                size="sm"
+                variant="dangerOutline"
+                offlineKind="change"
+                data-testid="shift-detail-delete"
+                onClick={() => onAction('delete', shift)}
+              >
+                {t('shifts:delete.action')}
+              </Button>
+            )}
           </div>
         )}
       </div>

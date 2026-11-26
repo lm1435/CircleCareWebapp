@@ -152,6 +152,7 @@
     "someDays": "An bestimmten Tagen",
     "openHint": "Offene Schichten kann jede Person im Kreis übernehmen.",
     "heldHint": "Nur {{name}}, der Inhaber oder ein Mitverwalter kann ändern, wer diese Schicht hat.",
+    "heldLockedHint": "Nur {{name}}, der Inhaber oder ein Mitverwalter kann die Zeit dieser Schicht ändern, wer sie hat, oder sie löschen.",
     "moreDetails": "Weitere Details",
     "chooseTime": "Uhrzeit wählen",
     "clearEnd": "Enddatum entfernen",
@@ -242,6 +243,7 @@
     "save": "Die Schicht konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
     "delete": "Die Schicht konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
     "dropForbidden": "Nur die Person mit der Schicht, der Inhaber oder ein Mitverwalter kann sie abgeben.",
+    "editForbidden": "Nur die Person mit der Schicht, der Inhaber oder ein Mitverwalter kann ihre Zeit ändern oder sie löschen.",
     "assignForbidden": "Nur der Inhaber oder ein Mitverwalter kann jemand anderen für eine Schicht eintragen.",
     "invalidAssignee": "Diese Person kann keine Schicht übernehmen.",
     "permissionDenied": "Sie dürfen Schichten in diesem Kreis nicht ändern."

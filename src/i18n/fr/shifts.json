@@ -152,6 +152,7 @@
     "someDays": "Certains jours",
     "openHint": "Une garde à pourvoir peut être prise par n’importe qui dans le cercle.",
     "heldHint": "Seuls {{name}}, le propriétaire ou un gestionnaire peuvent changer qui assure cette garde.",
+    "heldLockedHint": "Seuls {{name}}, le propriétaire ou un gestionnaire peuvent changer l’horaire de cette garde, qui l’assure, ou la supprimer.",
     "moreDetails": "Plus de détails",
     "chooseTime": "Choisir une heure",
     "clearEnd": "Effacer la date de fin",
@@ -242,6 +243,7 @@
     "save": "Impossible d’enregistrer la garde. Réessayez.",
     "delete": "Impossible de supprimer la garde. Réessayez.",
     "dropForbidden": "Seuls la personne qui assure la garde, le propriétaire ou un gestionnaire peuvent la libérer.",
+    "editForbidden": "Seuls la personne qui assure la garde, le propriétaire ou un gestionnaire peuvent changer son horaire ou la supprimer.",
     "assignForbidden": "Seuls le propriétaire ou un gestionnaire peuvent attribuer une garde à quelqu’un d’autre.",
     "invalidAssignee": "Cette personne ne peut pas se voir attribuer une garde.",
     "permissionDenied": "Vous n’avez pas l’autorisation de modifier les gardes de ce cercle."

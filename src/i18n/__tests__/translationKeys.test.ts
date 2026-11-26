@@ -591,6 +591,9 @@ describe('W5: no unreferenced en keys', () => {
     'shifts:tasks.form.title',
     // 1.4.3: an add from the shift is "this day only" (no repeat choice); the label stays for mobile parity.
     'shifts:tasks.editor.repeatEvery',
+    // 1.4.4 build 6: the locked shift form says ONE line, `shifts:form.heldLockedHint` (time, who's on it,
+    // delete). The narrower "who's on this shift" line stays in the files (same key and words as mobile).
+    'shifts:form.heldHint',
     // Mobile-parity Wave 2, Task 9. Added ahead of the UI that consumes them so
     // both locales land in one reviewable change:
     //   `addMenu.*` -> Task 10 `AddMenu`

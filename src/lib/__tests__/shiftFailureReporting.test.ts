@@ -23,6 +23,7 @@ describe('classifyFailure: every shift code has its HTTP status category', () =>
     ['SHIFT_ALREADY_TAKEN', 'conflict'],
     ['SHIFT_ASSIGN_FORBIDDEN', 'forbidden'],
     ['SHIFT_DROP_FORBIDDEN', 'forbidden'],
+    ['SHIFT_EDIT_FORBIDDEN', 'forbidden'],
     ['SHIFT_NOT_ASSIGNED', 'conflict'],
     ['SHIFT_NOT_FOUND', 'not_found'],
     ['SHIFT_INVALID_DATE', 'validation'],

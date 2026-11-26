@@ -152,6 +152,7 @@
     "someDays": "Some days",
     "openHint": "Open shifts can be taken by anyone in the circle.",
     "heldHint": "Only {{name}}, the owner or a manager can change who's on this shift.",
+    "heldLockedHint": "Only {{name}}, the owner or a manager can change this shift's time, who's on it, or delete it.",
     "moreDetails": "More details",
     "chooseTime": "Choose a time",
     "clearEnd": "Clear the end date",
@@ -242,6 +243,7 @@
     "save": "We couldn't save the shift. Try again.",
     "delete": "We couldn't delete the shift. Try again.",
     "dropForbidden": "Only the person on a shift, the owner or a manager can drop it.",
+    "editForbidden": "Only the person on a shift, the owner or a manager can change its time or delete it.",
     "assignForbidden": "Only the owner or a manager can put someone else on a shift.",
     "invalidAssignee": "That person can't be put on a shift.",
     "permissionDenied": "You don't have permission to change shifts in this circle."
