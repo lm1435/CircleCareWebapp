@@ -138,7 +138,7 @@ test.describe('dark: onboarding', () => {
     // Go to Today -> the onboarding paywall once -> Today.
     await page.getByTestId('first-run-go-to-today').click();
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
-    await expect(page.getByText('Share the care with everyone who helps.')).toBeVisible();
+    await expect(page.getByText('Everyone who helps sees each dose marked.')).toBeVisible();
     await darkScan(page, 'onboarding paywall', testInfo);
     await page.getByRole('button', { name: /Continue with free plan/ }).click();
     await page.waitForURL(new RegExp(`/circles/${circleId}$`), { timeout: 30_000 });

@@ -10,6 +10,7 @@ import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useAuthStore } from '@/store/authStore';
 import { Analytics } from '@/lib/analytics';
 import { firstRunFunnel } from '@/lib/firstRunFunnel';
+import { recordFirstRunChoice } from '@/lib/firstRunChoice';
 import { consumeOnboardingPaywall, peekOnboardingPaywallPending } from '@/lib/onboardingPaywall';
 import { withInviteLocale } from '@/utils/inviteShareUrl';
 import { AllSetStep } from './AllSetStep';
@@ -94,6 +95,10 @@ export function FirstRunWizardModal({
   const handleItemSaved = (item: FirstRunSavedItem): void => {
     // The form calls this, then onSaved, then onClose in ONE tick: the close reads the ref.
     savedRef.current = item;
+    // For the first-run paywall's headline and order (lib/paywallVariant.ts). Tasks leave it unset (default).
+    if (item.type === 'medication' || item.type === 'appointment') {
+      recordFirstRunChoice(circleId, item.type);
+    }
     setSaved(item);
     firstRunFunnel.completed('first_item', circleId);
   };
@@ -117,6 +122,9 @@ export function FirstRunWizardModal({
       Analytics.firstRunInviteAction({ circleId, method: 'later', completed: false });
     }
     firstRunFunnel.completed('all_set', circleId);
+    // An invite link shared or copied on All set leads the paywall with people, whatever the first item was
+    // (mobile: utils/paywallVariant variantForFirstItem). Written before the paywall reads it.
+    if (sharedRef.current) recordFirstRunChoice(circleId, 'invite');
     const owed = peekOnboardingPaywallPending() === circleId;
     if (owed && subscription?.tier === 'free') {
       if (consumeOnboardingPaywall({ circleId })) {

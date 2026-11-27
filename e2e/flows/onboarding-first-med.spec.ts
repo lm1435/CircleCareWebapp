@@ -25,7 +25,8 @@ async function freeAccount(prefix: string) {
 
 /** First run v2: the All set dialog (its hidden title is the eyebrow). */
 const wizard = (page: Page) => page.getByRole('dialog', { name: 'ALL SET' });
-const offerHeading = (page: Page) => page.getByText('Share the care with everyone who helps.');
+// A first MEDICATION leads the first-run paywall with the medication headline (1.4.4, lib/paywallVariant.ts).
+const offerHeading = (page: Page) => page.getByText('Everyone who helps sees each dose marked.');
 const ls = (page: Page, key: string) => page.evaluate((k) => window.localStorage.getItem(k), key);
 
 function trackPaths(page: Page): string[] {

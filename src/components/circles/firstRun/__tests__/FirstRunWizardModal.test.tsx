@@ -10,6 +10,7 @@ import {
   peekOnboardingPaywallPending,
 } from '@/lib/onboardingPaywall';
 import type { FirstRunSavedItem } from '@/components/calendar/AddEventModal';
+import { readFirstRunVariant } from '@/lib/firstRunChoice';
 import { FirstRunWizardModal } from '../FirstRunWizardModal';
 
 // First run v2 (1.4.3): the wizard is the first item (the real form with its type switch; stubbed
@@ -368,5 +369,57 @@ describe('FirstRunWizardModal v2: All set', () => {
     renderWizard();
     await saveFirstItem();
     await waitFor(() => expect(screen.getByTestId('first-run-all-set-title')).toHaveFocus());
+  });
+});
+
+describe('FirstRunWizardModal: first-run paywall variant choice', () => {
+  it('POSITIVE: a saved medication records the medication variant for this circle', async () => {
+    ITEM.value = MED;
+    renderWizard();
+    await saveFirstItem();
+    expect(readFirstRunVariant(CIRCLE_ID)).toBe('medication');
+  });
+
+  it('POSITIVE: an invite link copied on All set leads the paywall with people, whatever was saved', async () => {
+    ITEM.value = MED;
+    markOnboardingPaywallPending(CIRCLE_ID);
+    renderWizard();
+    await saveFirstItem();
+    fireEvent.click(screen.getByTestId('first-run-invite-link'));
+    await waitFor(() =>
+      expect(screen.getByTestId('circle-emblem-seat')).toHaveAttribute('data-filled', 'true')
+    );
+    await userEvent.setup().click(screen.getByTestId('first-run-go-to-today'));
+    expect(readFirstRunVariant(CIRCLE_ID)).toBe('invite');
+  });
+
+  it('NEGATIVE: leaving All set without sharing keeps the saved item\'s variant', async () => {
+    ITEM.value = MED;
+    markOnboardingPaywallPending(CIRCLE_ID);
+    renderWizard();
+    await saveFirstItem();
+    await userEvent.setup().click(screen.getByTestId('first-run-go-to-today'));
+    expect(readFirstRunVariant(CIRCLE_ID)).toBe('medication');
+  });
+
+  it('POSITIVE: a saved appointment records the appointment variant', async () => {
+    ITEM.value = APPT;
+    renderWizard();
+    await saveFirstItem();
+    expect(readFirstRunVariant(CIRCLE_ID)).toBe('appointment');
+  });
+
+  it('NEGATIVE: a saved task records nothing (default paywall)', async () => {
+    ITEM.value = TASK;
+    renderWizard();
+    await saveFirstItem();
+    expect(readFirstRunVariant(CIRCLE_ID)).toBe('default');
+  });
+
+  it('NEGATIVE: Skip for now records nothing, and another circle is untouched', async () => {
+    renderWizard();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-skip' }));
+    expect(readFirstRunVariant(CIRCLE_ID)).toBe('default');
+    expect(readFirstRunVariant('other-circle')).toBe('default');
   });
 });

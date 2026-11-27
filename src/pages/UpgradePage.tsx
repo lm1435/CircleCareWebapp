@@ -40,7 +40,13 @@ import {
   type UpgradeLocationState,
 } from '@/lib/paywallContext';
 import { notifyEarnedPaywallAccepted, notifyEarnedPaywallDismissed } from '@/lib/earnedUpsellSession';
-import { clearDeferredFirstRun, takeDeferredFirstRun } from '@/lib/onboardingPaywall';
+import {
+  clearDeferredFirstRun,
+  peekDeferredFirstRun,
+  takeDeferredFirstRun,
+} from '@/lib/onboardingPaywall';
+import { readFirstRunVariant } from '@/lib/firstRunChoice';
+import { PAYWALL_VARIANT_TABLE, type PaywallVariant, type PremiumFeatureId } from '@/lib/paywallVariant';
 
 /**
  * Web purchase page (RevenueCat Web Billing). Free users land here from the
@@ -71,6 +77,17 @@ export default function UpgradePage(): ReactElement {
     (location.state as UpgradeLocationState | null)?.paywallContext
   );
   const isOnboarding = paywallContext === 'onboarding';
+
+  /**
+   * FIRST-RUN PAYWALL VARIANT (owner-approved 2026-11-26): the first thing the person added in
+   * first-run setup picks the headline and the order of the reasons. Resolved SYNCHRONOUSLY in the
+   * state initializer, so it is fixed before the first paint and never swaps afterwards. The circle
+   * is the parked return target (lib/onboardingPaywall). ONBOARDING ONLY: every other context is
+   * 'default' whatever is stored. Any miss or storage failure is 'default'.
+   */
+  const [variant] = useState<PaywallVariant | undefined>(() =>
+    isOnboarding ? readFirstRunVariant(peekDeferredFirstRun()?.circleId) : undefined
+  );
 
   // PREMIUM = backend tier OR an active entitlement (1.4.3 item 2, hooks/useEffectivePremium.ts).
   // Plans render at once and swap when the entitlement read returns; the Subscribe button is
@@ -130,8 +147,8 @@ export default function UpgradePage(): ReactElement {
   useEffect(() => {
     if (!isOnboarding || paywallShownRef.current) return;
     paywallShownRef.current = true;
-    Analytics.paywallShown(paywallTrigger, false);
-  }, [isOnboarding, paywallTrigger]);
+    Analytics.paywallShown(paywallTrigger, false, variant);
+  }, [isOnboarding, paywallTrigger, variant]);
 
   /**
    * A completed purchase is not a dismissal. Set BEFORE the navigation that
@@ -163,24 +180,28 @@ export default function UpgradePage(): ReactElement {
   const ensureViewed = useCallback((): void => {
     if (viewedRef.current) return;
     viewedRef.current = true;
-    Analytics.planSelectionViewed(paywallContext, viewInfoRef.current);
-  }, [paywallContext]);
+    Analytics.planSelectionViewed(paywallContext, { ...viewInfoRef.current, variant });
+  }, [paywallContext, variant]);
 
   const dismissalRecordedRef = useRef(false);
   const recordDismissal = useCallback((method: PaywallDismissMethod): void => {
     if (dismissalRecordedRef.current || purchasedRef.current) return;
     dismissalRecordedRef.current = true;
     ensureViewed();
-    Analytics.paywallDismissed(paywallContext, {
-      method,
-      secondsVisible: secondsSinceView(),
-      detailsExpanded: detailsExpandedRef.current,
-      scrolled: scrolledRef.current,
-    });
+    Analytics.paywallDismissed(
+      paywallContext,
+      {
+        method,
+        secondsVisible: secondsSinceView(),
+        detailsExpanded: detailsExpandedRef.current,
+        scrolled: scrolledRef.current,
+      },
+      variant
+    );
     // Earned ask only (no-op for every other context): the DURABLE per-trigger
     // dismissal, as mobile's PlanSelectionScreen reports back.
     notifyEarnedPaywallDismissed(paywallContext);
-  }, [paywallContext, ensureViewed, secondsSinceView]);
+  }, [paywallContext, variant, ensureViewed, secondsSinceView]);
 
   /**
    * THE ONLY WAY A BROWSER-BACK IS HEARD. `/upgrade` is a route, not a modal:
@@ -253,9 +274,9 @@ export default function UpgradePage(): ReactElement {
    */
   const handleContinueFree = useCallback((): void => {
     ensureViewed();
-    Analytics.planSelectionFreeSelected(paywallContext);
+    Analytics.planSelectionFreeSelected(paywallContext, variant);
     handleDecline('continue_free');
-  }, [paywallContext, handleDecline, ensureViewed]);
+  }, [paywallContext, variant, handleDecline, ensureViewed]);
 
   /** Where the post-purchase "Continue" lands: onboarding goes to Today too. */
   const handlePurchasedContinue = useCallback((): void => {
@@ -364,6 +385,7 @@ export default function UpgradePage(): ReactElement {
       trialShown: trialShownFor(plan),
       detailsExpanded: detailsExpandedRef.current,
       secondsSinceView: secondsSinceView(),
+      variant,
     });
     notifyEarnedPaywallAccepted(paywallContext);
     purchase.mutate(plan, {
@@ -372,7 +394,7 @@ export default function UpgradePage(): ReactElement {
         // Bought. Recorded BEFORE any state change so the unmount cleanup can
         // never read a stale `false` and log the exit as a dismissal.
         purchasedRef.current = true;
-        Analytics.planSelectionSubscribed(planKey, paywallContext);
+        Analytics.planSelectionSubscribed(planKey, paywallContext, variant);
         // IN ADDITION to `subscribed`, never instead of it — mobile emits both
         // (PlanSelectionScreen.tsx:522-525) so `subscribed` remains the single
         // conversion count and trials are a filterable subset of it.
@@ -382,7 +404,7 @@ export default function UpgradePage(): ReactElement {
         // offer RevenueCat returns. A returning subscriber who re-buys an
         // annual plan that advertises a trial is counted as a trial start on
         // web and would not be on mobile. `subscribed` is unaffected.
-        if (plan.hasFreeTrial) Analytics.planSelectionTrialStarted(planKey, paywallContext);
+        if (plan.hasFreeTrial) Analytics.planSelectionTrialStarted(planKey, paywallContext, variant);
         // 1.4.3 item 4: the funnel events, from the ENTITLEMENT RevenueCat returned (never from
         // what the page advertised). The count of record is the server's webhook event; these are
         // context. A web purchase resolves its own promise, so source is always 'promise'.
@@ -405,7 +427,7 @@ export default function UpgradePage(): ReactElement {
         // IS a signal, and mobile records it (PlanSelectionScreen.tsx:513).
         // They stay on the paywall, so a later exit is still a dismissal.
         if (isUserCancelledError(err)) {
-          Analytics.planSelectionPurchaseCancelled(planKey, paywallContext);
+          Analytics.planSelectionPurchaseCancelled(planKey, paywallContext, variant);
           return;
         }
         showToast(t('error'), 'error');
@@ -539,6 +561,7 @@ export default function UpgradePage(): ReactElement {
           ctaHeld={premium.entitlementChecking}
           isOnboarding={isOnboarding}
           paywallContext={paywallContext}
+          variant={variant}
           onSubscribe={handleSubscribe}
           onContinueFree={handleContinueFree}
           onClose={handleClose}
@@ -722,10 +745,7 @@ export function trialShownFor(plan: WebPlan | null | undefined): boolean {
 }
 
 /** The reason rows on the first view: what people pay for (spec §5, three, no icons). */
-const REASONS = ['caregivers', 'shifts', 'circles'] as const;
-/** Behind "See everything included", in this order (spec §6). */
-const DETAILS = ['voice', 'team', 'exports', 'storage', 'ai'] as const;
-type BenefitId = (typeof REASONS)[number] | (typeof DETAILS)[number];
+type BenefitId = PremiumFeatureId;
 
 const DETAILS_ID = 'upgrade-details';
 
@@ -752,6 +772,8 @@ interface PlansViewProps {
   /** The once-ever post-first-circle ask: its own headline and the free-plan button. */
   isOnboarding: boolean;
   paywallContext: PaywallContext;
+  /** First-run variant (lib/paywallVariant.ts): headline + reason order. Onboarding only. */
+  variant?: PaywallVariant;
   /** `planKey` is passed alongside the plan because analytics must send
    *  mobile's `'monthly' | 'annual'`, not RevenueCat's `$rc_*` identifiers. */
   onSubscribe: (plan: WebPlan, planKey: PlanKey) => void;
@@ -782,6 +804,7 @@ function PlansView({
   ctaHeld = false,
   isOnboarding,
   paywallContext,
+  variant = 'default',
   onSubscribe,
   onContinueFree,
   onClose,
@@ -799,9 +822,17 @@ function PlansView({
     earnedInvite: `${t('headline.earnedInvite.lead')} ${t('headline.earnedInvite.accent')}`,
     shifts: `${t('headline.shifts.lead')} ${t('headline.shifts.accent')}`,
   };
+  // Literal keys again (static key audit). Only the onboarding context reads the variant table.
+  const onboardingHeadlines = {
+    headlineOnboarding: t('headlineOnboarding'),
+    headlineOnboardingMedication: t('headlineOnboardingMedication'),
+    headlineOnboardingInvite: t('headlineOnboardingInvite'),
+    headlineOnboardingAppointment: t('headlineOnboardingAppointment'),
+  };
+  const order = PAYWALL_VARIANT_TABLE[paywallContext === 'onboarding' ? variant : 'default'];
   const headline =
     paywallContext === 'onboarding'
-      ? t('headlineOnboarding')
+      ? onboardingHeadlines[order.headlineKey]
       : contextHeadlines[HEADLINE_KEY[paywallContext]];
 
   const benefits: Record<BenefitId, { title: string; sub: string }> = {
@@ -1031,7 +1062,7 @@ function PlansView({
 
       {/* Three reasons, text only: semibold title, one muted line, hairline between. */}
       <ul data-reasons="" className="m-0 mt-4 list-none p-0">
-        {REASONS.map(reasonRow)}
+        {order.top.map(reasonRow)}
       </ul>
 
       <button
@@ -1048,7 +1079,7 @@ function PlansView({
       <div id={DETAILS_ID}>
         {expanded && (
           <ul data-details="" className="m-0 list-none p-0">
-            {DETAILS.map(reasonRow)}
+            {order.details.map(reasonRow)}
           </ul>
         )}
       </div>

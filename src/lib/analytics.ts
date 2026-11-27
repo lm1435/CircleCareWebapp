@@ -4,6 +4,7 @@ import { analyticsCollectionAllowed } from './analyticsMode';
 import { withPosthog } from './posthogLoader';
 import { getSignupAttributionProps } from './signupAttribution';
 import { DEFAULT_PAYWALL_CONTEXT, type PaywallContext } from './paywallContext';
+import { PAYWALL_VARIANTS, type PaywallVariant } from './paywallVariant';
 import {
   AI_ANALYTICS_LANGUAGES,
   AI_HISTORY_LEN_BUCKETS,
@@ -507,6 +508,19 @@ function pickEnum<T extends string>(value: unknown, allowed: readonly T[], fallb
     : fallback;
 }
 
+/**
+ * First-run paywall variant (lib/paywallVariant.ts) for the paywall events. An enum, never free
+ * text; anything outside it is 'default'. Sent ONLY for the onboarding paywall context.
+ */
+function variantProps(
+  paywallContext: string | undefined,
+  variant: unknown
+): { variant?: PaywallVariant } {
+  return paywallContext === 'onboarding'
+    ? { variant: pickEnum<PaywallVariant>(variant, PAYWALL_VARIANTS, 'default') }
+    : {};
+}
+
 const PLAN_KEYS = ['annual', 'monthly'] as const satisfies readonly PlanKey[];
 
 /** Closed set for the write-retry events (lib/writeRetryQueue.ts `WriteRetryKind`). */
@@ -751,10 +765,11 @@ export const Analytics = {
    */
   planSelectionViewed: (
     paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT,
-    details: { trialShown?: boolean; defaultPlan?: PlanKey } = {}
+    details: { trialShown?: boolean; defaultPlan?: PlanKey; variant?: string } = {}
   ) =>
     capture('plan_selection_viewed', {
       paywall_context: paywallContext,
+      ...variantProps(paywallContext, details.variant),
       layout: 'compact',
       trial_shown: details.trialShown === true,
       default_plan: pickEnum(details.defaultPlan, PLAN_KEYS, 'annual'),
@@ -789,10 +804,12 @@ export const Analytics = {
     trialShown: boolean;
     detailsExpanded: boolean;
     secondsSinceView: number;
+    variant?: string;
   }) =>
     capture('plan_selection_cta_tapped', {
       plan: pickEnum(args.plan, PLAN_KEYS, 'annual'),
       paywall_context: args.paywallContext ?? DEFAULT_PAYWALL_CONTEXT,
+      ...variantProps(args.paywallContext, args.variant),
       trial_shown: args.trialShown === true,
       details_expanded: args.detailsExpanded === true,
       seconds_since_view: wholeSeconds(args.secondsSinceView),
@@ -808,18 +825,40 @@ export const Analytics = {
    * PlanSelectionScreen.tsx:733-746). Mobile fires this AND then dismisses, so
    * a free-selection produces both this and `paywall_dismissed`; web matches.
    */
-  planSelectionFreeSelected: (paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT) =>
-    capture('plan_selection_free_selected', { paywall_context: paywallContext }),
+  planSelectionFreeSelected: (
+    paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT,
+    variant?: string
+  ) =>
+    capture('plan_selection_free_selected', {
+      paywall_context: paywallContext,
+      ...variantProps(paywallContext, variant),
+    }),
 
   /** Checkout completed. `plan` matches mobile's 'monthly' | 'annual'. */
-  planSelectionSubscribed: (plan: PlanKey, paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT) =>
-    capture('plan_selection_subscribed', { plan, paywall_context: paywallContext }),
+  planSelectionSubscribed: (
+    plan: PlanKey,
+    paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT,
+    variant?: string
+  ) =>
+    capture('plan_selection_subscribed', {
+      plan,
+      paywall_context: paywallContext,
+      ...variantProps(paywallContext, variant),
+    }),
 
   /** Fired IN ADDITION to `plan_selection_subscribed` when the purchase that
    *  completed carried a free trial — mobile does the same rather than making
    *  it an either/or, so `subscribed` stays the single conversion count. */
-  planSelectionTrialStarted: (plan: PlanKey, paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT) =>
-    capture('plan_selection_trial_started', { plan, paywall_context: paywallContext }),
+  planSelectionTrialStarted: (
+    plan: PlanKey,
+    paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT,
+    variant?: string
+  ) =>
+    capture('plan_selection_trial_started', {
+      plan,
+      paywall_context: paywallContext,
+      ...variantProps(paywallContext, variant),
+    }),
 
   /**
    * The exact trial-end / first-charge notice was shown (lib/trialCharge.ts):
@@ -924,8 +963,14 @@ export const Analytics = {
    *  payment step, which is a different signal from never starting. */
   planSelectionPurchaseCancelled: (
     plan: PlanKey,
-    paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT
-  ) => capture('plan_selection_purchase_cancelled', { plan, paywall_context: paywallContext }),
+    paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT,
+    variant?: string
+  ) =>
+    capture('plan_selection_purchase_cancelled', {
+      plan,
+      paywall_context: paywallContext,
+      ...variantProps(paywallContext, variant),
+    }),
 
   /**
    * The user left the paywall without buying.
@@ -950,7 +995,8 @@ export const Analytics = {
       secondsVisible: number;
       detailsExpanded: boolean;
       scrolled: boolean;
-    }
+    },
+    variant?: string
   ) =>
     capture(
       'paywall_dismissed',
@@ -958,12 +1004,17 @@ export const Analytics = {
         ? {
             trigger: paywallContext,
             paywall_context: paywallContext,
+            ...variantProps(paywallContext, variant),
             method: pickEnum(details.method, PAYWALL_DISMISS_METHODS, 'back'),
             seconds_visible: wholeSeconds(details.secondsVisible),
             details_expanded: details.detailsExpanded === true,
             scrolled: details.scrolled === true,
           }
-        : { trigger: paywallContext, paywall_context: paywallContext }
+        : {
+            trigger: paywallContext,
+            paywall_context: paywallContext,
+            ...variantProps(paywallContext, variant),
+          }
     ),
 
   // --- Circles ---
@@ -2036,8 +2087,16 @@ export const Analytics = {
    * medication's payoff, or (no first med) the next time Today showed.
    * `voice_try_used` is always false on web (voice is mobile only).
    */
-  paywallShown: (trigger: 'after_first_med' | 'onboarding', voiceTryUsed = false) =>
-    capture('paywall_shown', { trigger, voice_try_used: voiceTryUsed }),
+  paywallShown: (
+    trigger: 'after_first_med' | 'onboarding',
+    voiceTryUsed = false,
+    variant?: string
+  ) =>
+    capture('paywall_shown', {
+      trigger,
+      voice_try_used: voiceTryUsed,
+      variant: pickEnum<PaywallVariant>(variant, PAYWALL_VARIANTS, 'default'),
+    }),
 
   // --- Calendar & events ---
   eventCreated: (circleId: string, eventType: string, recurring: boolean) =>

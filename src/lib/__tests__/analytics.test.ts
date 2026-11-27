@@ -786,6 +786,7 @@ describe('paywall events mirror mobile exactly', () => {
     Analytics.planSelectionViewed('onboarding', { trialShown: true, defaultPlan: 'annual' });
     expect(capture).toHaveBeenCalledWith('plan_selection_viewed', {
       paywall_context: 'onboarding',
+      variant: 'default',
       layout: 'compact',
       trial_shown: true,
       default_plan: 'annual',
@@ -835,6 +836,7 @@ describe('paywall events mirror mobile exactly', () => {
     expect(capture).toHaveBeenCalledWith('plan_selection_cta_tapped', {
       plan: 'annual',
       paywall_context: 'onboarding',
+      variant: 'default',
       trial_shown: true,
       details_expanded: false,
       seconds_since_view: 12,
@@ -860,6 +862,7 @@ describe('paywall events mirror mobile exactly', () => {
     expect(capture).toHaveBeenCalledWith('paywall_dismissed', {
       trigger: 'onboarding',
       paywall_context: 'onboarding',
+      variant: 'default',
       method: 'continue_free',
       seconds_visible: 8,
       details_expanded: true,
@@ -872,6 +875,7 @@ describe('paywall events mirror mobile exactly', () => {
     Analytics.planSelectionFreeSelected('onboarding');
     expect(capture).toHaveBeenCalledWith('plan_selection_free_selected', {
       paywall_context: 'onboarding',
+      variant: 'default',
     });
   });
 
@@ -899,6 +903,7 @@ describe('paywall events mirror mobile exactly', () => {
     expect(capture).toHaveBeenCalledWith('plan_selection_purchase_cancelled', {
       plan: 'annual',
       paywall_context: 'onboarding',
+      variant: 'default',
     });
   });
 
@@ -914,6 +919,7 @@ describe('paywall events mirror mobile exactly', () => {
     expect(capture).toHaveBeenCalledWith('paywall_dismissed', {
       trigger: 'onboarding',
       paywall_context: 'onboarding',
+      variant: 'default',
     });
   });
 
@@ -999,10 +1005,12 @@ describe('onboarding 1.3.1 events (spec analytics contract)', () => {
     expect(capture).toHaveBeenNthCalledWith(1, 'paywall_shown', {
       trigger: 'after_first_med',
       voice_try_used: false,
+      variant: 'default',
     });
     expect(capture).toHaveBeenNthCalledWith(2, 'paywall_shown', {
       trigger: 'onboarding',
       voice_try_used: false,
+      variant: 'default',
     });
   });
 

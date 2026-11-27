@@ -67,6 +67,9 @@
     "body": "A sua subscrição está ativa. Aproveite o acesso completo em todos os seus círculos de cuidado."
   },
   "headlineOnboarding": "Partilhe o cuidado com todos os que ajudam.",
+  "headlineOnboardingMedication": "Todos os que ajudam veem cada dose marcada.",
+  "headlineOnboardingInvite": "Junte todos os que ajudam, não só uma pessoa.",
+  "headlineOnboardingAppointment": "Planeie quem acompanha cada consulta.",
   "onboarding": {
     "continueFreeSub": "1 círculo de cuidado, si + 1 cuidador. Lembretes e alertas são sempre gratuitos."
   },

@@ -180,17 +180,17 @@ describe('UpgradePage — paywall_shown (onboarding 1.3.1)', () => {
   it('fires once with the trigger the opener passed, voice_try_used false', () => {
     renderAt({ paywallContext: 'onboarding', paywallTrigger: 'after_first_med' });
     expect(Analytics.paywallShown).toHaveBeenCalledTimes(1);
-    expect(Analytics.paywallShown).toHaveBeenCalledWith('after_first_med', false);
+    expect(Analytics.paywallShown).toHaveBeenCalledWith('after_first_med', false, 'default');
   });
 
   it('defaults to the onboarding trigger (the no-first-med path)', () => {
     renderAt({ paywallContext: 'onboarding' });
-    expect(Analytics.paywallShown).toHaveBeenCalledWith('onboarding', false);
+    expect(Analytics.paywallShown).toHaveBeenCalledWith('onboarding', false, 'default');
   });
 
   it('an unrecognised trigger is read as onboarding, never invented', () => {
     renderAt({ paywallContext: 'onboarding', paywallTrigger: 'bogus' });
-    expect(Analytics.paywallShown).toHaveBeenCalledWith('onboarding', false);
+    expect(Analytics.paywallShown).toHaveBeenCalledWith('onboarding', false, 'default');
   });
 
   it('is NOT fired for any other paywall context', () => {
@@ -211,7 +211,7 @@ describe('UpgradePage — paywall_context', () => {
   it('reports the view with the context it was opened from', () => {
     renderAt({ paywallContext: 'onboarding' });
 
-    expect(Analytics.planSelectionViewed).toHaveBeenCalledWith('onboarding', { trialShown: false, defaultPlan: 'annual' });
+    expect(Analytics.planSelectionViewed).toHaveBeenCalledWith('onboarding', { trialShown: false, defaultPlan: 'annual', variant: 'default' });
   });
 
   it.each(['capacity', 'invite_cap', 'feature', 'general'] as const)(
@@ -251,7 +251,8 @@ describe('UpgradePage — paywall_context', () => {
     expect(await screen.findByTestId('profile')).toBeInTheDocument();
     expect(Analytics.paywallDismissed).toHaveBeenCalledWith(
       'invite_cap',
-      expect.objectContaining({ method: 'close' })
+      expect.objectContaining({ method: 'close' }),
+      undefined
     );
   });
 
@@ -289,11 +290,12 @@ describe('UpgradePage — declining the onboarding paywall', () => {
 
     await user.click(screen.getByRole('button', { name: /Continue with Free plan/i }));
 
-    expect(Analytics.planSelectionFreeSelected).toHaveBeenCalledWith('onboarding');
+    expect(Analytics.planSelectionFreeSelected).toHaveBeenCalledWith('onboarding', 'default');
     // Mobile fires free_selected and THEN dismisses (PlanSelectionScreen:737).
     expect(Analytics.paywallDismissed).toHaveBeenCalledWith(
       'onboarding',
-      expect.objectContaining({ method: 'continue_free' })
+      expect.objectContaining({ method: 'continue_free' }),
+      'default'
     );
     // Declining leads to the wizard, not a dead end — the deferral survived a
     // full route change.
@@ -314,7 +316,8 @@ describe('UpgradePage — declining the onboarding paywall', () => {
     expectToday(await screen.findByTestId('today'));
     expect(Analytics.paywallDismissed).toHaveBeenCalledWith(
       'onboarding',
-      expect.objectContaining({ method: 'close' })
+      expect.objectContaining({ method: 'close' }),
+      'default'
     );
   });
 
@@ -340,7 +343,8 @@ describe('UpgradePage — declining the onboarding paywall', () => {
 
     expect(Analytics.paywallDismissed).toHaveBeenCalledWith(
       'onboarding',
-      expect.objectContaining({ method: 'back' })
+      expect.objectContaining({ method: 'back' }),
+      'default'
     );
   });
 
@@ -365,7 +369,8 @@ describe('UpgradePage — declining the onboarding paywall', () => {
     expect(await screen.findByTestId('profile')).toBeInTheDocument();
     expect(Analytics.paywallDismissed).toHaveBeenCalledWith(
       'capacity',
-      expect.objectContaining({ method: 'close' })
+      expect.objectContaining({ method: 'close' }),
+      undefined
     );
     expect(peekDeferredFirstRun()).not.toBeNull();
   });
@@ -379,7 +384,7 @@ describe('UpgradePage — purchase', () => {
 
     await user.click(screen.getByRole('button', { name: 'Subscribe: $59.99/yr' }));
 
-    expect(Analytics.planSelectionSubscribed).toHaveBeenCalledWith('annual', 'onboarding');
+    expect(Analytics.planSelectionSubscribed).toHaveBeenCalledWith('annual', 'onboarding', 'default');
     // No trial on this offer, so no trial event.
     expect(Analytics.planSelectionTrialStarted).not.toHaveBeenCalled();
   });
@@ -396,8 +401,8 @@ describe('UpgradePage — purchase', () => {
 
     await user.click(screen.getByRole('button', { name: 'Start 7-day free trial' }));
 
-    expect(Analytics.planSelectionSubscribed).toHaveBeenCalledWith('annual', 'general');
-    expect(Analytics.planSelectionTrialStarted).toHaveBeenCalledWith('annual', 'general');
+    expect(Analytics.planSelectionSubscribed).toHaveBeenCalledWith('annual', 'general', undefined);
+    expect(Analytics.planSelectionTrialStarted).toHaveBeenCalledWith('annual', 'general', undefined);
   });
 
   it('reports the MONTHLY term when the monthly plan is the one bought', async () => {
@@ -412,7 +417,7 @@ describe('UpgradePage — purchase', () => {
 
     await user.click(screen.getByRole('button', { name: 'Subscribe: $59.99/mo' }));
 
-    expect(Analytics.planSelectionSubscribed).toHaveBeenCalledWith('monthly', 'onboarding');
+    expect(Analytics.planSelectionSubscribed).toHaveBeenCalledWith('monthly', 'onboarding', 'default');
   });
 
   it('reports a cancelled checkout without calling it a dismissal or a sale', async () => {
@@ -425,7 +430,7 @@ describe('UpgradePage — purchase', () => {
 
     await user.click(screen.getByRole('button', { name: 'Subscribe: $59.99/yr' }));
 
-    expect(Analytics.planSelectionPurchaseCancelled).toHaveBeenCalledWith('annual', 'onboarding');
+    expect(Analytics.planSelectionPurchaseCancelled).toHaveBeenCalledWith('annual', 'onboarding', 'default');
     expect(Analytics.planSelectionSubscribed).not.toHaveBeenCalled();
     // The user is still sitting on the paywall — a later exit is the dismissal.
     expect(Analytics.paywallDismissed).not.toHaveBeenCalled();

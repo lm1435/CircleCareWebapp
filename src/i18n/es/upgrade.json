@@ -124,6 +124,9 @@
     "notNow": "Ahora no"
   },
   "headlineOnboarding": "Comparte el cuidado con todos los que ayudan.",
+  "headlineOnboardingMedication": "Todos los que ayudan ven cada dosis marcada.",
+  "headlineOnboardingInvite": "Suma a todos los que ayudan, no solo a uno.",
+  "headlineOnboardingAppointment": "Planifica quién cubre cada cita.",
   "seeEverything": "Ver todo lo que incluye",
   "showLess": "Ver menos",
   "subscribeAnnual": "Suscribirse: {{price}}/año",

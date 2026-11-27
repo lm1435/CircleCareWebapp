@@ -12,6 +12,7 @@ import { flushAnalyticsConsentSync } from '@/lib/analyticsConsentSync';
 import { reconcileAnalyticsConsentOwner } from '@/lib/analyticsConsent';
 import { identifyAfterServerReconcile } from '@/lib/analyticsConsentServerReconcile';
 import { clearFirstRun } from '@/lib/firstRunDraft';
+import { clearFirstRunChoices } from '@/lib/firstRunChoice';
 import { clearPendingInviteCode } from '@/lib/pendingInviteCode';
 import { clearDailyUpdateStorage } from '@/lib/dailyUpdateStorage';
 import { Analytics } from '@/lib/analytics';
@@ -174,6 +175,8 @@ function clearLocalSession(): void {
   // First run v2: the "Who are you caring for?" answer (memory) and its started marker belong to
   // this session; the next account in this tab must never inherit someone else's recipient name.
   clearFirstRun();
+  // The first-run paywall variant choices name circle ids: per account, gone with the session.
+  clearFirstRunChoices();
   // BH-024: a care note parked after a failed post (memory only) belongs to this session's user;
   // the next account in this tab must never get it back.
   clearParkedNoteDrafts();

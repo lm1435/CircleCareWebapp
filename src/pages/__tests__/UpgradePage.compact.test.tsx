@@ -295,12 +295,16 @@ describe.each(['en', 'es'] as const)('compact paywall (%s)', (lng) => {
     await screen.findByTestId('picker');
     expect(Analytics.planSelectionFreeSelected).toHaveBeenCalledTimes(1);
     expect(Analytics.paywallDismissed).toHaveBeenCalledTimes(1);
-    expect(Analytics.paywallDismissed).toHaveBeenCalledWith('onboarding', {
-      method: 'continue_free',
-      secondsVisible: expect.any(Number),
-      detailsExpanded: false,
-      scrolled: false,
-    });
+    expect(Analytics.paywallDismissed).toHaveBeenCalledWith(
+      'onboarding',
+      {
+        method: 'continue_free',
+        secondsVisible: expect.any(Number),
+        detailsExpanded: false,
+        scrolled: false,
+      },
+      'default'
+    );
     // A view always precedes its dismissal.
     const viewedOrder = (Analytics.planSelectionViewed as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
     const dismissedOrder = (Analytics.paywallDismissed as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
@@ -356,7 +360,7 @@ describe.each(['en', 'es'] as const)('compact paywall (%s)', (lng) => {
       for (const el of [card, cta, terms]) expect(el.textContent).not.toMatch(L.freeWord);
       unmount();
     }
-    expect(Analytics.planSelectionViewed).toHaveBeenCalledWith('onboarding', { trialShown: false, defaultPlan: 'annual' });
+    expect(Analytics.planSelectionViewed).toHaveBeenCalledWith('onboarding', { trialShown: false, defaultPlan: 'annual', variant: 'default' });
   });
 
   it('N6_no_free_button_outside_onboarding_context', () => {
@@ -420,7 +424,7 @@ describe('compact paywall footer', () => {
     renderAt({ paywallContext: 'capacity' });
     await user.click(screen.getByRole('button', { name: 'Close' }));
     await screen.findByTestId('profile');
-    expect(Analytics.paywallDismissed).toHaveBeenCalledWith('capacity', expect.objectContaining({ method: 'close' }));
+    expect(Analytics.paywallDismissed).toHaveBeenCalledWith('capacity', expect.objectContaining({ method: 'close' }), undefined);
     expect(Analytics.planSelectionViewed).toHaveBeenCalledTimes(1);
   });
 
@@ -437,7 +441,7 @@ describe('compact paywall footer', () => {
   it('plan_selection_viewed reports trial_shown when the default plan shows a trial', () => {
     renderAt({ paywallContext: 'onboarding' });
     expect(Analytics.planSelectionViewed).toHaveBeenCalledTimes(1);
-    expect(Analytics.planSelectionViewed).toHaveBeenCalledWith('onboarding', { trialShown: true, defaultPlan: 'annual' });
+    expect(Analytics.planSelectionViewed).toHaveBeenCalledWith('onboarding', { trialShown: true, defaultPlan: 'annual', variant: 'default' });
   });
 });
 
@@ -489,6 +493,9 @@ const SHARED: Array<[string, string]> = [
   ['seeEverything', 'seeEverything'],
   ['showLess', 'showLess'],
   ['headlineOnboarding', 'headlineOnboarding'],
+  ['headlineOnboardingMedication', 'headlineOnboardingMedication'],
+  ['headlineOnboardingInvite', 'headlineOnboardingInvite'],
+  ['headlineOnboardingAppointment', 'headlineOnboardingAppointment'],
   ['eyebrow', 'eyebrow'],
   ['onboarding.continueFreeSub', 'freePlanSub'],
 ];

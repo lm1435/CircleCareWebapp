@@ -124,6 +124,9 @@
     "notNow": "Nicht jetzt"
   },
   "headlineOnboarding": "Teilen Sie die Pflege mit allen, die helfen.",
+  "headlineOnboardingMedication": "Alle, die helfen, sehen jede abgehakte Dosis.",
+  "headlineOnboardingInvite": "Holen Sie alle dazu, die helfen, nicht nur eine Person.",
+  "headlineOnboardingAppointment": "Planen Sie, wer jeden Termin übernimmt.",
   "seeEverything": "Alles ansehen, was enthalten ist",
   "showLess": "Weniger anzeigen",
   "subscribeAnnual": "Abonnieren: {{price}}/Jahr",
