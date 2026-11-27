@@ -126,7 +126,7 @@ export function FirstMedMarkIt({
             >
               <span className={labelClass}>{t('today.markIt.today')}</span>
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className="break-words text-lg font-semibold text-ink xl:text-base">{name}</span>
+                <span className="break-words text-base font-semibold text-ink">{name}</span>
                 <span className="break-words text-sm text-ink-2">
                   {[dose, t('today.markIt.takenByYou')].filter(Boolean).join(' · ')}
                 </span>
@@ -144,7 +144,7 @@ export function FirstMedMarkIt({
                   phrase. A bare "Mañana" here read as the Morning chip in Spanish (1.4.2). */}
               <span className={labelClass} data-testid="mark-it-next-label">{time}</span>
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className="break-words text-lg font-semibold text-ink xl:text-base">{name}</span>
+                <span className="break-words text-base font-semibold text-ink">{name}</span>
                 <span className="break-words text-sm text-ink-2" data-testid="mark-it-next-sub">
                   {[dose, when].filter(Boolean).join(' · ')}
                 </span>

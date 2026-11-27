@@ -241,15 +241,15 @@ export function QuickAccess({
                 to={`${base}/${tile.segment}`}
                 onClick={() => Analytics.quickAccessTapped(tile.id)}
                 className={[
-                  'flex min-h-[76px] flex-col justify-center gap-1 px-[18px] py-3.5 no-underline transition-colors duration-fast hover:bg-bg-2',
+                  'flex min-h-16 flex-col justify-center gap-0.5 px-[18px] py-3 no-underline transition-colors duration-fast hover:bg-bg-2',
                   lastRow ? '' : 'border-b border-line-2',
                   rightEdge ? '' : 'border-r border-line-2',
                 ]
                   .filter(Boolean)
                   .join(' ')}
               >
-                {/* text-lg at phone width (mobile parity); 18px at desktop density. */}
-                <span className="text-lg font-semibold text-ink xl:text-base">{tileLabel[tile.id]}</span>
+                {/* 18px at every width: the app's tile label is 18 (bodySemiBold). */}
+                <span className="text-base font-semibold text-ink">{tileLabel[tile.id]}</span>
                 <span className="break-words text-sm text-ink-2">{status[tile.id]}</span>
               </Link>
             );

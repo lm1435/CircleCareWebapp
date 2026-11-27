@@ -53,7 +53,7 @@ export function CareTeamRow({ circleId }: CareTeamRowProps): ReactElement | null
           data-testid="today-care-team-link"
         >
           <span className="min-w-0 flex-1">
-            <Text variant="h3" as="span" id="today-care-team-row-heading" className="block text-lg xl:text-base">
+            <Text variant="h3" as="span" id="today-care-team-row-heading" className="block text-base">
               {title}
             </Text>
             <span
