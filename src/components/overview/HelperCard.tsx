@@ -29,7 +29,7 @@ export function HelperCard({ recipientName, action, bodyKind, onAction, onDismis
     <Sheet
       role="region"
       aria-labelledby="helper-card-title"
-      padding="lg"
+      padding="sm"
       className="rounded-2xl"
       data-testid="helper-card"
     >
@@ -64,7 +64,7 @@ export function HelperCard({ recipientName, action, bodyKind, onAction, onDismis
             Analytics.helperTodayCardDismissed();
             onDismiss();
           }}
-          className="inline-flex min-h-11 items-center px-3 text-md font-semibold text-moss-deep"
+          className="inline-flex min-h-11 items-center px-3 text-sm font-semibold text-moss-deep"
         >
           {t('today.helperCard.dismiss')}
         </button>

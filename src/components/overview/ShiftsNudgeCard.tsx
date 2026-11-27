@@ -72,13 +72,13 @@ export function ShiftsNudgeCard({
     <Sheet
       role="region"
       aria-labelledby="shifts-nudge-title"
-      padding="lg"
+      padding="sm"
       className="rounded-2xl"
       data-testid="shifts-nudge-card"
     >
       <div className="mb-3 flex items-center gap-3">
         <Avatar size="sm" name={name} photoUrl={null} colorKey={member.avatar_color ?? null} />
-        <p className="m-0 text-md text-ink-2">
+        <p className="m-0 text-sm text-ink-2">
           {isSelfCare || !recipientName
             ? t('today.shiftsNudge.joinedSelf', { member: name })
             : t('today.shiftsNudge.joined', { member: name, name: recipientName })}
@@ -107,7 +107,7 @@ export function ShiftsNudgeCard({
             Analytics.coachingHintDismissed('shifts_second_caregiver', { upsell });
             onNotNow();
           }}
-          className="inline-flex min-h-11 items-center px-3 text-md font-semibold text-moss-deep"
+          className="inline-flex min-h-11 items-center px-3 text-sm font-semibold text-moss-deep"
         >
           {t('today.notNow')}
         </button>

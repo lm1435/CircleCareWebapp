@@ -189,7 +189,7 @@ export function MedicationDetailModal({
         )}
       </div>
       <p className="m-0 mt-1.5 break-words text-lg font-semibold leading-8 text-ink">{name}</p>
-      {dosage && <p className="m-0 mt-1 text-base text-ink-2">{dosage}</p>}
+      {dosage && <p className="m-0 mt-1 text-md text-ink-2">{dosage}</p>}
     </div>
   );
 

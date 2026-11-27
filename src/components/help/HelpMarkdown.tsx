@@ -52,7 +52,7 @@ export function HelpMarkdown({ source }: HelpMarkdownProps): ReactElement {
           case 'heading': {
             const Tag = block.level === 2 ? 'h2' : 'h3';
             return (
-              <Tag key={key} className="m-0 mt-3 text-lg font-semibold leading-tight text-ink">
+              <Tag key={key} className="m-0 mt-3 text-base font-semibold leading-tight text-ink">
                 {renderInline(block.children, key)}
               </Tag>
             );

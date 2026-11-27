@@ -344,7 +344,7 @@ describe('EmergencyInfoPage', () => {
     expect(screen.getByText('Date of birth').tagName).toBe('DT');
     const dobValue = screen.getByText('March 12, 1948');
     expect(dobValue.tagName).toBe('DD');
-    expect(dobValue).toHaveClass('text-md', 'font-medium', 'text-ink');
+    expect(dobValue).toHaveClass('text-xs', 'font-normal', 'text-ink');
     expect(screen.queryByText('Hypertension, Type 2 diabetes')).not.toBeInTheDocument();
   });
 

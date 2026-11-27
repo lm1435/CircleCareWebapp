@@ -135,7 +135,7 @@ export function DoseAlertsNotice({
       <button
         type="button"
         onClick={openCheckin}
-        className="inline-flex min-h-11 items-center px-3 text-md font-semibold text-moss-deep"
+        className="inline-flex min-h-11 items-center px-3 text-sm font-semibold text-moss-deep"
         data-testid={`dose-alerts-checkin-${surface}`}
       >
         {t('doseAlerts.notice.routineChanged')}
@@ -172,7 +172,7 @@ export function DoseAlertsNotice({
     <Sheet
       role="region"
       aria-labelledby={titleId}
-      padding="lg"
+      padding="sm"
       className="rounded-2xl"
       data-testid="dose-alerts-notice-today"
       data-can-answer={canAnswer ? 'true' : 'false'}

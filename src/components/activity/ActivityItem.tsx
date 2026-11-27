@@ -111,7 +111,7 @@ export function ActivityItem({ activity, timezone }: ActivityItemProps): ReactEl
             one line rather than wrapping. Absent for a mood-only care note
             (`note_preview: null`) — the row is still a link either way. */}
         {notePreview && (
-          <p className="m-0 mt-1 truncate text-sm text-ink-3">{notePreview}</p>
+          <p className="m-0 mt-1 truncate text-xs text-ink-3">{notePreview}</p>
         )}
         <p className="m-0 mt-2 flex items-center gap-1.5 text-xs text-ink-3">
           {/* Actor avatar dot — mirrors mobile's footer initials circle

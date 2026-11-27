@@ -24,13 +24,13 @@ export type TextVariant =
 export const TEXT_CLASS: Record<TextVariant, string> = {
   // The ONE page title (owner 2026-11-11): 32/600/38, tracking -0.6. Every page's h1 renders it,
   // through PageMasthead. Wraps (text-balance + break-words), never truncates.
-  pageTitle: 'text-xl font-semibold leading-[38px] tracking-[-0.6px] text-ink text-balance break-words',
+  pageTitle: 'text-xl font-semibold leading-[38px] max-sm:leading-[34px] tracking-[-0.6px] text-ink text-balance break-words',
   // The second level: 24/600/30. Sheet and modal titles, the web day heading, the Profile name.
-  sheetTitle: 'text-lg font-semibold leading-[30px] tracking-[-0.3px] text-ink text-balance break-words',
+  sheetTitle: 'text-lg font-semibold leading-[30px] max-sm:leading-[26px] tracking-[-0.3px] text-ink text-balance break-words',
   // The line under a page title: 16/500/22, secondary ink.
   pageSubtitle: 'text-md font-medium leading-[22px] text-ink-2',
   h2: 'text-lg font-semibold leading-tight text-ink text-balance',
-  sectionTitle: 'text-lg font-semibold leading-[28px] text-ink text-balance',
+  sectionTitle: 'text-lg font-semibold leading-[28px] max-sm:leading-[26px] text-ink text-balance',
   h3: 'text-base font-semibold leading-tight text-ink text-balance',
   h4: 'text-lg font-semibold leading-normal text-ink text-balance',
   body: 'text-base font-normal leading-relaxed text-ink',

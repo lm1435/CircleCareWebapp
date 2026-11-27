@@ -429,7 +429,7 @@ export function NextUp({
         >
           {time ? (
             <span
-              className={`text-md font-semibold tabular-nums text-ink-2 ${stacked ? '' : 'flex-[0_0_5rem]'}`}
+              className={`text-sm font-semibold tabular-nums text-ink-2 ${stacked ? '' : 'flex-[0_0_5rem]'}`}
             >
               {time}
             </span>

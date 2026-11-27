@@ -29,7 +29,7 @@ export function DoseHint({ recipientName, isSelfCare, onGotIt }: DoseHintProps):
       <Eyebrow className="block mb-1">
         {t('today.doseHint.eyebrow')}
       </Eyebrow>
-      <p className="m-0 text-md text-ink">
+      <p className="m-0 text-sm text-ink">
         {self ? (
           <Trans
             t={t}
@@ -51,7 +51,7 @@ export function DoseHint({ recipientName, isSelfCare, onGotIt }: DoseHintProps):
           Analytics.coachingHintDismissed('first_dose');
           onGotIt();
         }}
-        className="mt-1 inline-flex min-h-11 items-center text-md font-semibold text-moss-deep"
+        className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-moss-deep"
       >
         {t('today.doseHint.gotIt')}
       </button>

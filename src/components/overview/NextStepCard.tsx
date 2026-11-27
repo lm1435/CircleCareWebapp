@@ -65,7 +65,7 @@ export function NextStepCard({
     <Sheet
       role="region"
       aria-labelledby="next-step-title"
-      padding="lg"
+      padding="sm"
       className="rounded-2xl"
       data-testid="next-step-card"
       data-step={step}
@@ -96,7 +96,7 @@ export function NextStepCard({
             Analytics.nextStepDismissed(step);
             onNotNow();
           }}
-          className="inline-flex min-h-11 items-center px-3 text-md font-semibold text-moss-deep"
+          className="inline-flex min-h-11 items-center px-3 text-sm font-semibold text-moss-deep"
         >
           {t('today.notNow')}
         </button>

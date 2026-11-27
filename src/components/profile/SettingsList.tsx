@@ -47,7 +47,7 @@ export function SettingsList({ groups }: { groups: SettingsListGroup[] }): React
                   >
                     <span
                       data-testid="settings-row-label"
-                      className="min-w-0 text-base font-medium text-ink"
+                      className="min-w-0 text-md font-medium text-ink"
                     >
                       {row.label}
                     </span>

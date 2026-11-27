@@ -817,7 +817,7 @@ export default function ProfilePage(): ReactElement {
                 <Icon name="pencil-outline" size="row" />
               </button>
             </div>
-            <p className="m-0 break-all text-sm text-ink-2">{user.email}</p>
+            <p className="m-0 break-all text-xs text-ink-2">{user.email}</p>
           </div>
         </header>
 

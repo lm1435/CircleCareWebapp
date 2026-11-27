@@ -165,7 +165,8 @@ for (const hl of HEADLINES) {
         ]) {
           await page.setViewportSize({ width: vp.width, height: vp.height });
           const m = await measure();
-          expect(m.size).toBe(32);
+          // 32 on desktop; 28 below 640px (phone-width type scale, globals.css, owner 2026-11-26).
+          expect(m.size).toBe(vp.width < 640 ? 28 : 32);
           expect(m.weight).toBeGreaterThanOrEqual(600);
           // --color-ink #1a1916, never coral.
           expect(m.color).toBe('rgb(26, 25, 22)');

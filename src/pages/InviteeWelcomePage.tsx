@@ -111,7 +111,7 @@ export default function InviteeWelcomePage(): ReactElement {
         <ul className="m-0 mt-1 flex list-none flex-col p-0" data-testid="invitee-welcome-items">
           {items.map((item) => (
             <li key={item.key} className="flex flex-col gap-0.5 border-t border-line-2 py-3.5 last:border-b">
-              <span className="text-lg font-semibold text-ink">{item.heading}</span>
+              <span className="text-base font-semibold text-ink">{item.heading}</span>
               <span className="text-sm text-ink-2">{item.sub}</span>
             </li>
           ))}
@@ -126,7 +126,7 @@ export default function InviteeWelcomePage(): ReactElement {
           data-testid="invitee-get-app"
           className="mt-2 flex flex-col gap-2.5 border-t border-line-2 pt-4"
         >
-          <h2 id="invitee-get-app" className="m-0 text-lg font-semibold text-ink">
+          <h2 id="invitee-get-app" className="m-0 text-base font-semibold text-ink">
             {t('welcome.getAppTitle')}
           </h2>
           <p className="m-0 text-sm text-ink-2">{t('welcome.getAppBody')}</p>

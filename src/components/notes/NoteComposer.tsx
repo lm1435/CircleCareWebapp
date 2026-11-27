@@ -205,7 +205,7 @@ export function NoteComposer({
           whose aria-label carries the same (matching) accessible name, so
           announcing the span too would double it up for screen readers. */}
       <div className="flex flex-col gap-1.5">
-        <span aria-hidden="true" className="text-sm font-medium text-ink-2">
+        <span aria-hidden="true" className="text-xs font-medium text-ink-3">
           {t('composer.moodLabel')}
         </span>
         <ChipSelect
@@ -222,7 +222,7 @@ export function NoteComposer({
           group (condition-tags a11y spec); ChipSelect is single-select, so the
           smallest multi capable row is inlined here with the same classes. */}
       <div className="flex flex-col gap-1.5">
-        <span aria-hidden="true" className="text-sm font-medium text-ink-2">
+        <span aria-hidden="true" className="text-xs font-medium text-ink-3">
           {t('composer.categoriesLabel')}
         </span>
         <div

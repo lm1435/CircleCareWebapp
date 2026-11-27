@@ -79,7 +79,7 @@ export function LatestHero({ activity, timezone }: LatestHeroProps): ReactElemen
           </div>
 
           {/* WHAT happened — the headline of the hero. */}
-          <p className="m-0 mt-1.5 text-md leading-snug text-ink">{description}</p>
+          <p className="m-0 mt-1.5 text-sm leading-snug text-ink">{description}</p>
 
           {/* Quiet attribution: who + when (same footer shape as a feed row). */}
           <p className="m-0 mt-2 flex items-center gap-1.5 text-xs text-ink-3">

@@ -124,7 +124,7 @@ export function MoodWeekStrip({ notes, today, onSelectDay }: MoodWeekStripProps)
             >
               <span
                 aria-hidden="true"
-                className={`text-xs font-medium uppercase ${isToday ? 'text-cream' : 'text-ink-3'}`}
+                className={`text-xs font-normal uppercase ${isToday ? 'text-cream' : 'text-ink-3'}`}
               >
                 {getWeekdayName(getDayOfWeek(date), 'narrow')}
               </span>

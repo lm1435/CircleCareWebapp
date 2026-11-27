@@ -82,7 +82,7 @@ export function RecipientHeader({
               <Text variant="mono" as="dt" className="mb-1">
                 {t('recipient.dob')}
               </Text>
-              <dd className="m-0 text-md font-medium leading-relaxed text-ink">{dobLabel}</dd>
+              <dd className="m-0 text-xs font-normal leading-relaxed text-ink">{dobLabel}</dd>
             </dl>
           )}
           {!dobLabel && onAddDob ? (

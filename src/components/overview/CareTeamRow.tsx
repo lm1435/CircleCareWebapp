@@ -49,7 +49,7 @@ export function CareTeamRow({ circleId }: CareTeamRowProps): ReactElement | null
         <SheetRowPressable
           to={`/circles/${circleId}/members`}
           onClick={() => Analytics.careTeamOpened('today_row')}
-          className="min-h-[64px] gap-3 px-[18px] py-3"
+          className="min-h-[52px] gap-2 px-[18px] py-3"
           data-testid="today-care-team-link"
         >
           <span className="min-w-0 flex-1">

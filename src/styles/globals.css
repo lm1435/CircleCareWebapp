@@ -944,3 +944,18 @@
   border: 3px solid var(--color-ink);
   background: var(--color-bg);
 }
+
+/* ── Phone-width type scale (owner 2026-11-26: "make the font smaller on web ... at least on mobile web") ──
+   Below Tailwind's `sm` (640px) the larger steps come down one notch. Deliberately NOT the app's scale: a
+   phone browser shows less of the page than the app (address bar, toolbar), so the same sizes read bigger.
+   `--text-md` stays 16 and `--text-base` never goes under 16: iOS Safari zooms the page when a focused
+   field's text is smaller than 16px. `sm` (14) and `xs` (12) are already the legibility floor. Unlayered on
+   purpose so it wins over the `@theme` values (those live in the `theme` layer). */
+@media (max-width: 639.98px) {
+  :root {
+    --text-base: 16px;
+    --text-lg: 21px;
+    --text-xl: 28px;
+    --text-2xl: 36px;
+  }
+}

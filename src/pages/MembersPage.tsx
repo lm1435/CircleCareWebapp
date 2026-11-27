@@ -154,7 +154,7 @@ export default function MembersPage(): ReactElement {
           <div className="px-5 pb-4">
             {/* card-shell-ok: the member-count pill (mobile memberCountPill), a word-sized label. */}
             <span
-              className="inline-flex items-center rounded-full border border-line-2 bg-bg-2 px-3 py-1 text-sm font-medium text-ink-2"
+              className="inline-flex items-center rounded-full border border-line-2 bg-bg-2 px-3 py-1 text-xs font-medium text-ink-2"
               data-testid="care-team-count"
             >
               {/* Mobile's rule exactly: the singular for one member, the plural otherwise. */}

@@ -52,14 +52,16 @@ test.describe('page titles are one style', () => {
     });
   }
 
-  test('Calendar: the day heading is the 24/600 second level, h1 one line at 390px and the heading wraps without clipping', async ({
+  test('Calendar at 390px: h1 28 on one line, the day heading is the 21/600 second level and wraps without clipping', async ({
     page,
     circleId,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await visitAndCheck(page, `/circles/${circleId}/calendar`);
     const m = await measure(page);
-    expect(m.size).toBe(32);
+    // Phone-width type scale (globals.css, owner 2026-11-26): below 640px the page title is 28 and the
+    // second level is 21. Desktop keeps 32 and 24 (the per-route tests above).
+    expect(m.size).toBe(28);
     expect(m.oneLine).toBe(true);
     const day = page.getByTestId('day-view-title');
     await expect(day).toBeVisible({ timeout: 20_000 });
@@ -74,6 +76,6 @@ test.describe('page titles are one style', () => {
     });
     // The day heading shares its row with Today and the arrows, so on a phone it WRAPS (owner:
     // wrap, never truncate): it must not clip.
-    expect(d).toMatchObject({ size: 24, weight: 600, tag: 'H2', clipped: false });
+    expect(d).toMatchObject({ size: 21, weight: 600, tag: 'H2', clipped: false });
   });
 });
